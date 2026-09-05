@@ -69,6 +69,13 @@ paths = [
 ]
 rules = ["generic-api-key"]
 
+# These public benchmark labels and a torch dtype are not credentials.
+[[allowlists]]
+condition = "AND"
+paths = ['''^tests/pypto_dsv4_decode_csa/''']
+regexTarget = "secret"
+regexes = ['''^A3-TP1-B4-S8-ratio4$''', '''^torch\.bfloat16$''']
+
 # Placeholder allowlist for syntax validation; does not permit any files
 [[allowlists]]
 paths = ["^$"]

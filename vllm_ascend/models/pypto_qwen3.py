@@ -22,9 +22,13 @@ module only dispatches those tensors into ``qwen3_14b.prefill_fwd`` and
 ``qwen3_14b.decode_fwd``. Select it with
 ``hf_overrides={"architectures": ["PyptoQwen3ForCausalLM"]}``.
 
+Single-card fused hosts enqueue through PyPTO L1 ``host_build_graph``
+(no ``npu.synchronize`` inside the PTO API). Set
+``PYPTO_QWEN3_EXECUTION=l2`` to fall back to ChipWorker.
+
 The TP=2 Engine path is experimental and currently supports one request at a
 time without preemption or cache reuse. The validated TP=2 route is the
-offline torchrun example.
+offline torchrun example (still ChipWorker; L1 has no CommCtx).
 """
 
 from __future__ import annotations
@@ -37,7 +41,7 @@ import torch
 from torch import nn
 from vllm.config import VllmConfig
 from vllm.forward_context import get_forward_context
-from vllm.logger import init_logger
+from vllm.logger import logger
 from vllm.model_executor.layers.attention.encoder_only_attention import Attention
 from vllm.sequence import IntermediateTensors
 
@@ -93,8 +97,6 @@ def _tp_cpu_group():
         group = dist.group.WORLD
     return group
 
-logger = init_logger(__name__)
-
 
 class PyptoQwen3ForCausalLM(nn.Module):
     """Fused pypto Qwen3-14B; vanilla ``Qwen3ForCausalLM`` stays the default."""
@@ -130,7 +132,8 @@ class PyptoQwen3ForCausalLM(nn.Module):
         self._bundle: PyptoQwen3WeightBundle | None = None
         self._last_logits: torch.Tensor | None = None
         self._kernels: dict[str, object] | None = None
-        self._chip: PyptoChipSession | None = None
+        self._chip = None
+        self._tp_chip: PyptoChipSession | None = None
         self._tp_comm = None
         self._tp_runner = None
         self._tp_world = 1
@@ -142,9 +145,7 @@ class PyptoQwen3ForCausalLM(nn.Module):
             state = load_hf_state_from_dir(model_path)
         else:
             state = consumed
-        bundle = pin_weight_bundle_dtypes(
-            pack_official_weights(state.items(), padded_vocab=PADDED_VOCAB)
-        )
+        bundle = pin_weight_bundle_dtypes(pack_official_weights(state.items(), padded_vocab=PADDED_VOCAB))
         tp_rank, tp_world = tp_rank_and_world()
         if tp_world != self._configured_tp:
             raise RuntimeError(
@@ -169,17 +170,19 @@ class PyptoQwen3ForCausalLM(nn.Module):
             )
             self.rope_cos = self.rope_cos.float().contiguous().to(device="npu")
             self.rope_sin = self.rope_sin.float().contiguous().to(device="npu")
-            # Create ChipWorker before vLLM sizes the KV pool. The fused host's
-            # workspace is aclrtMalloc'd at init; if that happens after the
-            #  KV reservation the two heaps fight and prefill writes NaNs.
-            # Replay of the same args outside vLLM is finite (argmax 17).
+            # L2 ChipWorker mallocs workspace at construct. L1 only records
+            # RunConfig here; native init waits for the first compiled host.
             if self._chip is None:
                 torch.npu.empty_cache()
-                self._chip = PyptoChipSession()
+                if tp_world > 1:
+                    self._chip = PyptoChipSession()
+                else:
+                    self._ensure_session()
                 free, total = torch.npu.mem_get_info()
+                kind = type(self._chip).__name__
                 print(
-                    f"PYPTO_QWEN3_CHIP_INIT after_weights "
-                    f"free={free/1024**3:.2f}GiB total={total/1024**3:.2f}GiB",
+                    f"PYPTO_QWEN3_SESSION_INIT after_weights session={kind} "
+                    f"free={free / 1024**3:.2f}GiB total={total / 1024**3:.2f}GiB",
                     flush=True,
                 )
         self._bundle = bundle
@@ -208,9 +211,7 @@ class PyptoQwen3ForCausalLM(nn.Module):
         # host gathers embeddings itself. Do the lookup on CPU so weights stay put.
         embed = self._bundle.padded_embed_weight
         ids = input_ids.to(device=embed.device)
-        return torch.nn.functional.embedding(ids, embed).to(
-            device=input_ids.device, dtype=torch.bfloat16
-        )
+        return torch.nn.functional.embedding(ids, embed).to(device=input_ids.device, dtype=torch.bfloat16)
 
     def forward(
         self,
@@ -306,7 +307,7 @@ class PyptoQwen3ForCausalLM(nn.Module):
             flush=True,
         )
         kernels = self._ensure_kernels()
-        chip = None if os.environ.get("PYPTO_QWEN3_CPU_INVOKE") == "1" else self._ensure_chip()
+        chip = None if os.environ.get("PYPTO_QWEN3_CPU_INVOKE") == "1" else self._ensure_session()
 
         if num_prefills > 0 and num_decodes == 0:
             stage = STAGE_PREFILL
@@ -394,20 +395,17 @@ class PyptoQwen3ForCausalLM(nn.Module):
         if num_prefills == 1:
             if int(token_ids.numel()) > TP_TOK_PAD:
                 raise RuntimeError(
-                    f"experimental PyPTO TP prefill supports at most {TP_TOK_PAD} tokens, "
-                    f"got {int(token_ids.numel())}"
+                    f"experimental PyPTO TP prefill supports at most {TP_TOK_PAD} tokens, got {int(token_ids.numel())}"
                 )
             return runner.prefill(token_ids)
         if num_decodes == 1:
             if int(token_ids.numel()) != 1:
                 raise RuntimeError(
-                    "experimental PyPTO TP decode requires exactly one input token, "
-                    f"got {int(token_ids.numel())}"
+                    f"experimental PyPTO TP decode requires exactly one input token, got {int(token_ids.numel())}"
                 )
             if not 1 <= seq <= TP_ENGINE_MAX_SEQ:
                 raise RuntimeError(
-                    f"experimental PyPTO TP decode sequence length {seq} is outside "
-                    f"[1, {TP_ENGINE_MAX_SEQ}]"
+                    f"experimental PyPTO TP decode sequence length {seq} is outside [1, {TP_ENGINE_MAX_SEQ}]"
                 )
             return runner.decode(token_ids, seq)
         raise RuntimeError("unreachable PyPTO TP stage")
@@ -468,12 +466,24 @@ class PyptoQwen3ForCausalLM(nn.Module):
         )
         return self._tp_comm
 
-    def _ensure_chip(self) -> PyptoChipSession:
+    def _ensure_session(self):
         if self._chip is None:
             if torch.npu.is_available():
                 torch.npu.empty_cache()
-            self._chip = PyptoChipSession()
+            from vllm_ascend.models.pypto_qwen3_l1 import PyptoL1Session, l1_execution_enabled
+
+            self._chip = PyptoL1Session() if l1_execution_enabled() else PyptoChipSession()
         return self._chip
+
+    def _ensure_chip(self) -> PyptoChipSession:
+        """TP still uses ChipWorker (L1 has no CommCtx / SHMEM)."""
+        if isinstance(self._chip, PyptoChipSession):
+            return self._chip
+        if self._tp_chip is None:
+            if torch.npu.is_available():
+                torch.npu.empty_cache()
+            self._tp_chip = PyptoChipSession()
+        return self._tp_chip
 
     def _ensure_kernels(self) -> dict[str, object]:
         if self._kernels is not None:
@@ -515,8 +525,7 @@ class PyptoQwen3ForCausalLM(nn.Module):
             raise ValueError(f"max_model_len {max_model_len} exceeds kernel MAX_SEQ {MAX_SEQ}")
         if tp == 2 and max_model_len > TP_ENGINE_MAX_SEQ:
             raise ValueError(
-                f"experimental PyPTO TP Engine max_model_len must be <= {TP_ENGINE_MAX_SEQ}, "
-                f"got {max_model_len}"
+                f"experimental PyPTO TP Engine max_model_len must be <= {TP_ENGINE_MAX_SEQ}, got {max_model_len}"
             )
         expected = {
             "hidden_size": HIDDEN,
@@ -534,9 +543,7 @@ class PyptoQwen3ForCausalLM(nn.Module):
 def _unwrap_attn_metadata(raw: object) -> object:
     if raw is None:
         raise RuntimeError("forward context has no attn_metadata")
-    if hasattr(raw, "slot_mapping") and (
-        hasattr(raw, "block_tables") or hasattr(raw, "block_table")
-    ):
+    if hasattr(raw, "slot_mapping") and (hasattr(raw, "block_tables") or hasattr(raw, "block_table")):
         return raw
     if isinstance(raw, dict):
         for value in raw.values():

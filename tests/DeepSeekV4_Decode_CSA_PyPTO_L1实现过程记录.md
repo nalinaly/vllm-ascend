@@ -5736,3 +5736,11 @@ device 1。执行环境明确为仓库 `.venv` 中的 torch 2.12/torch_npu 2.12�
 - L1 的绝对性能结论仍以无 DFX 的 steady-state ACLGraph benchmark 为准；
 - 若未来必须得到“某一次 L1 replay 自身”的逐核时间线，需要另行设计低开销、可关闭且
   不跨越单算子边界的 L1 child DFX ABI。
+
+## 96. 2026-09-05 性能复现阶段
+
+用户要求在 runtime 退出竞态修复阶段结束后，先重新复现 vLLM-Ascend CSA 性能比较，
+并排查历史异常退出后设备利用率残留 100% 的问题。本阶段沿用第 90 节的 B4/S8/C8191
+TRB ACLGraph 三进程 ABBA 口径，暂不修改算法优化代码。新的过程、环境差异、设备恢复
+边界和结果持续记录于
+[性能复现与设备残留状态排查](pypto_dsv4_decode_csa/20260905_performance_reproduction.md)。

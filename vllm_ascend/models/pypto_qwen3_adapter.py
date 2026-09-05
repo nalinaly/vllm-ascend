@@ -61,6 +61,7 @@ def is_pypto_qwen3_architecture(model_config: Any) -> bool:
     architectures = getattr(hf_config, "architectures", None) or []
     return PYPTO_QWEN3_ARCH in architectures
 
+
 _HF_LAYER_SUFFIXES = (
     ("input_layernorm.weight", "input_rms_weight"),
     ("self_attn.q_proj.weight", "wq"),
@@ -101,6 +102,40 @@ def default_pypto_lib_root() -> Path:
     if env:
         return Path(env)
     return Path(__file__).resolve().parents[3] / "pypto-lib"
+
+
+def prefer_grok_pypto() -> None:
+    """Put ``$PYPTO_ROOT`` (grok_pypto) ahead of the leftover pto/pypto install.
+
+    A scikit-build editable finder in site-packages still remaps ``pypto`` /
+    ``simpler`` onto ``pto/pypto`` even when PYTHONPATH lists grok_pypto first.
+    """
+    root = os.environ.get("PYPTO_ROOT")
+    if not root:
+        return
+    kept = []
+    for finder in sys.meta_path:
+        sources = getattr(finder, "known_source_files", None)
+        if type(finder).__name__ == "ScikitBuildRedirectingFinder" and sources:
+            sample = " ".join(list(sources.values())[:8])
+            if "/pto/pypto/" in sample and "/pto/grok_pypto/" not in sample:
+                continue
+        kept.append(finder)
+    sys.meta_path[:] = kept
+    extras = [
+        Path(root) / "python",
+        Path(root) / "runtime",
+        Path(root) / "runtime" / "python",
+    ]
+    for path in reversed(extras):
+        if path.is_dir():
+            text = str(path)
+            if text in sys.path:
+                sys.path.remove(text)
+            sys.path.insert(0, text)
+
+
+prefer_grok_pypto()
 
 
 def ensure_pypto_lib_on_path(root: Path | None = None) -> Path:
@@ -242,9 +277,7 @@ def block_table_stride(block_table: torch.Tensor, batch: int) -> int:
     if batch < 1:
         raise ValueError(f"batch must be >= 1, got {batch}")
     if flat.numel() % batch != 0:
-        raise ValueError(
-            f"flat block_table length {flat.numel()} is not divisible by batch {batch}"
-        )
+        raise ValueError(f"flat block_table length {flat.numel()} is not divisible by batch {batch}")
     return flat.numel() // batch
 
 
@@ -289,9 +322,7 @@ def build_rope_tables(
     if head_dim % 2 != 0:
         raise ValueError(f"head_dim must be even, got {head_dim}")
     half = head_dim // 2
-    inv_freq = 1.0 / (
-        theta ** (torch.arange(0, half, dtype=torch.float32, device=device) / half)
-    )
+    inv_freq = 1.0 / (theta ** (torch.arange(0, half, dtype=torch.float32, device=device) / half))
     positions = torch.arange(max_seq, dtype=torch.float32, device=device)
     freqs = torch.outer(positions, inv_freq)
     emb = torch.cat((freqs, freqs), dim=-1)
@@ -305,10 +336,7 @@ def split_vllm_layer_kv(layer_kv: Any) -> tuple[torch.Tensor, torch.Tensor]:
     ``(k, v)`` pair of 4-D pages (the allocate path used on this machine).
     """
     if isinstance(layer_kv, (list, tuple)):
-        if (
-            len(layer_kv) == 2
-            and all(isinstance(part, torch.Tensor) and part.ndim == 4 for part in layer_kv)
-        ):
+        if len(layer_kv) == 2 and all(isinstance(part, torch.Tensor) and part.ndim == 4 for part in layer_kv):
             return layer_kv[0], layer_kv[1]
         if len(layer_kv) >= 1:
             return split_vllm_layer_kv(layer_kv[0])
@@ -417,9 +445,7 @@ def compact_vllm_kv_for_contract(
     copied (``seq_lens - chunk_lens``). The current step's slots stay zero so
     an uninitialized vLLM page cannot inject NaNs into the fused host.
     """
-    phys_pages = referenced_page_ids(
-        block_table, slot_mapping, seq_lens, page_size=page_size
-    )
+    phys_pages = referenced_page_ids(block_table, slot_mapping, seq_lens, page_size=page_size)
     page_to_compact = torch.full(
         (int(phys_pages.max().item()) + 1,),
         -1,
@@ -553,9 +579,7 @@ def copy_contract_kv_to_vllm(
         layer_value.copy_(value[offset : offset + rows])
         offset += rows
     if offset != key.shape[0] or offset != value.shape[0]:
-        raise ValueError(
-            f"contract KV rows {key.shape[0]}/{value.shape[0]} != sum of layer rows {offset}"
-        )
+        raise ValueError(f"contract KV rows {key.shape[0]}/{value.shape[0]} != sum of layer rows {offset}")
 
 
 def build_prefill_kernel_args(
@@ -766,9 +790,7 @@ class PyptoChipSession:
         dest = dest_root / f"{self.swimlane_seq:04d}_{tag}"
         dest.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest / "l2_swimlane_records.json")
-        (dest / "meta.json").write_text(
-            json.dumps({"seq": self.swimlane_seq, "tag": tag, "src": str(src)}, indent=2)
-        )
+        (dest / "meta.json").write_text(json.dumps({"seq": self.swimlane_seq, "tag": tag, "src": str(src)}, indent=2))
         self.swimlane_seq += 1
 
     def compile(self, kernel: Any, sample_args: Sequence[torch.Tensor]) -> Any:
@@ -817,18 +839,22 @@ def invoke_pypto_kernel(
     kernel: Any,
     args: Sequence[torch.Tensor],
     *,
-    session: PyptoChipSession | None = None,
+    session: PyptoChipSession | Any | None = None,
     resident: Sequence[torch.Tensor] | None = None,
 ) -> Any:
     """Dispatch a compiled host.
 
-    Production path (*session* set): every argument is materialized on
-    torch_npu and passed by ``data_ptr`` (``child_memory=True``). CPU unit
-    tests / probes omit *session* and keep the host-tensor one-shot path.
+    L1 session: enqueue on the current torch_npu stream. No host
+    ``synchronize``. ChipWorker session: blocking L2 run (legacy).
+    CPU unit tests / probes omit *session* and keep the host-tensor path.
     """
     from pypto.runtime import RunConfig
 
     del resident
+    from vllm_ascend.models.pypto_qwen3_l1 import PyptoL1Session, invoke_pypto_kernel_l1
+
+    if isinstance(session, PyptoL1Session):
+        return invoke_pypto_kernel_l1(kernel, args, session=session)
     if os.environ.get("PYPTO_QWEN3_SAVE_ARGS") == "1":
         save_path = Path(
             os.environ.get(
@@ -839,8 +865,7 @@ def invoke_pypto_kernel(
         if not save_path.exists():
             torch.save([tensor.detach().contiguous().cpu() for tensor in args], save_path)
             print(
-                f"PYPTO_QWEN3_SAVED_ARGS {save_path} n={len(args)} "
-                f"default_dtype={torch.get_default_dtype()}",
+                f"PYPTO_QWEN3_SAVED_ARGS {save_path} n={len(args)} default_dtype={torch.get_default_dtype()}",
                 flush=True,
             )
     if session is None:
@@ -864,10 +889,7 @@ def invoke_pypto_kernel(
         torch.npu.synchronize()
     compiled = session.compile(kernel, live)
     dev_args = [wrap_torch_npu_ptr(tensor) for tensor in live]
-    if any(
-        (device := getattr(arg, "device", None)) is not None and device.type == "cpu"
-        for arg in dev_args
-    ):
+    if any((device := getattr(arg, "device", None)) is not None and device.type == "cpu" for arg in dev_args):
         raise RuntimeError("PyPTO session path still has a CPU tensor after NPU materialize")
     session.worker.run(compiled, *dev_args, config=session.config)
     session.capture_dfx(compiled)

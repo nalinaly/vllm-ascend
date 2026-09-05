@@ -197,6 +197,29 @@ def dsa_forward(
 
     kv_cache = _build_kv_cache(self, forward_context)
 
+    # PyPTO decode CSA is opt-in and layer-owned.  Keeping this as a duck-typed
+    # private hook preserves the public custom-op schema and avoids importing
+    # the optional PyPTO compiler/runtime on the native path.  Once an owner is
+    # installed, an enqueue failure must propagate: falling back after mutable
+    # cache writes may have started would execute the operator twice.
+    pypto_dispatch = getattr(self, "_pypto_dsv4_csa_dispatch", None)
+    if pypto_dispatch is not None:
+        # v1/piecewise ACLGraph marks the ForwardContext itself, while v2
+        # full-graph capture marks Ascend's wrapper-level extra context.  The
+        # adapter must combine both signals before crossing into PyPTO; the
+        # PyPTO runtime remains capture-oblivious and never queries graph state.
+        pypto_capturing = bool(getattr(forward_context, "capturing", False) or _EXTRA_CTX.capturing)
+        pypto_dispatch(
+            forward_context=forward_context,
+            capturing=pypto_capturing,
+            hidden_states=hidden_states,
+            need_gather_q_kv=need_gather_q_kv,
+            output=output,
+            kv_cache=kv_cache,
+            attn_metadata=attn_metadata,
+        )
+        return
+
     self.dsa_attn.impl.forward(
         self.dsa_attn.layer_name, hidden_states, kv_cache, attn_metadata, need_gather_q_kv, output
     )

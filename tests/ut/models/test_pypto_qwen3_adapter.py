@@ -257,10 +257,7 @@ def test_compact_skips_current_chunk_slots() -> None:
 
 
 def test_copy_back_restores_separate_vllm_layers() -> None:
-    layers = [
-        torch.zeros(2, 2, adapter.PAGE_SIZE, adapter.NUM_KV_HEADS, adapter.HEAD_DIM)
-        for _ in range(2)
-    ]
+    layers = [torch.zeros(2, 2, adapter.PAGE_SIZE, adapter.NUM_KV_HEADS, adapter.HEAD_DIM) for _ in range(2)]
     key, value, shared = adapter.stack_vllm_kv_as_contract(layers)
     assert shared is False
     key.fill_(1.0)
@@ -485,3 +482,33 @@ def test_materialize_moves_cpu_seq_lens_onto_npu_with_weights() -> None:
     assert int(wrapped.data_ptr) == int(live[1].data_ptr())
     assert wrapped.shape == tuple(int(dim) for dim in live[1].shape)
     assert wrapped.dtype == live[1].dtype
+
+
+def test_l1_is_default_and_bakes_host_build_graph(monkeypatch) -> None:
+    from vllm_ascend.models.pypto_qwen3_l1 import PyptoL1Session, l1_execution_enabled
+
+    monkeypatch.delenv("PYPTO_QWEN3_EXECUTION", raising=False)
+    assert l1_execution_enabled() is True
+    monkeypatch.setenv("PYPTO_QWEN3_EXECUTION", "l2")
+    assert l1_execution_enabled() is False
+    monkeypatch.delenv("PYPTO_QWEN3_EXECUTION", raising=False)
+    session = PyptoL1Session(device_id=0)
+    assert session.runtime == "host_build_graph"
+    assert session.config.runtime == "host_build_graph"
+
+
+def test_invoke_l1_path_does_not_call_npu_synchronize(monkeypatch) -> None:
+    from vllm_ascend.models.pypto_qwen3_l1 import PyptoL1Session
+
+    session = PyptoL1Session(device_id=0)
+    called = {"n": 0}
+
+    def _fake_invoke(kernel, args):
+        del kernel, args
+        called["n"] += 1
+
+    monkeypatch.setattr(session, "invoke", _fake_invoke)
+    if hasattr(torch, "npu"):
+        monkeypatch.setattr(torch.npu, "synchronize", lambda *a, **k: (_ for _ in ()).throw(AssertionError("sync")))
+    adapter.invoke_pypto_kernel(object(), (torch.zeros(1),), session=session)
+    assert called["n"] == 1

@@ -124,7 +124,11 @@ class NPUWorker(WorkerBase):
 
         ops.register_dummy_fusion_op()
         if get_ascend_device_type() != AscendDeviceType.A5:
-            _register_atb_extensions()
+            try:
+                _register_atb_extensions()
+            except OSError as exc:
+                # PyPTO fused hosts do not need ATB. A CANN-only tree may omit NNAL.
+                logger.warning("ATB extensions unavailable (%s); continuing without ATB", exc)
         register_ascend_customop(vllm_config)
         # init ascend config and soc version
         init_ascend_config(vllm_config)
@@ -795,9 +799,7 @@ class NPUWorker(WorkerBase):
         # returning. The first non-atomic AIC store in the fused 14B host then
         # inherits atomic-add mode and writes NaNs. Device synchronization does
         # not reset this mode; keep the warmup disabled until ATB restores it.
-        if get_ascend_device_type() != AscendDeviceType.A5 and not is_pypto_qwen3_architecture(
-            self.model_config
-        ):
+        if get_ascend_device_type() != AscendDeviceType.A5 and not is_pypto_qwen3_architecture(self.model_config):
             self._warm_up_atb()
         elif is_pypto_qwen3_architecture(self.model_config):
             print("PYPTO_QWEN3_SKIP_ATB_WARMUP", flush=True)
