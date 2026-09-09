@@ -1115,7 +1115,7 @@ def run_a3_single_op_benchmark(config: A3SingleOpBenchmarkConfig) -> BenchmarkRe
                 )
             # ABBA gives each state world exactly the same number of stateful
             # launches.  Validate the final output and all six cache families
-            # after the complete 100-1000 sample trace; a one-step pre-gate is
+            # after the complete configured sample trace; a one-step pre-gate is
             # not allowed to hide steady-state drift.
             post_timing_correctness = _compare_current_results(
                 native_world=native_world,

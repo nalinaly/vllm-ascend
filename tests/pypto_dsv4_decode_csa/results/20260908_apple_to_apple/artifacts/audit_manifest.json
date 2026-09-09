@@ -1,0 +1,57 @@
+{
+  "coverage": {
+    "native": {
+      "model_id": 49,
+      "replays": 6,
+      "device_events": 486,
+      "kernel_rows": 228,
+      "csv_missing_model_ids_resolved_from_device": 6,
+      "kernel_types": {
+        "DynamicQuant": 24,
+        "QuantBatchMatmulV3": 24,
+        "RmsNormDynamicQuant": 6,
+        "RmsNorm": 6,
+        "InplacePartialRotaryMul": 24,
+        "ScatterNdUpdateV2": 24,
+        "triton_rms_kernel": 6,
+        "CompressorMetadata": 12,
+        "Compressor": 12,
+        "MatMulV2": 24,
+        "Muls": 18,
+        "Cast": 18,
+        "VllmQuantLightningIndexer": 6,
+        "SparseAttnSharedkv": 6,
+        "TensorMove": 6,
+        "Neg": 6,
+        "TransposeBatchMatMul": 6
+      },
+      "detail": "native per-kernel"
+    },
+    "pypto": {
+      "model_id": 48,
+      "replays": 6,
+      "device_events": 90,
+      "kernel_rows": 12,
+      "csv_missing_model_ids_resolved_from_device": 12,
+      "kernel_types": {
+        "simpler_aicpu_l1_exec_9a2ff00fe92aa828": 6,
+        "aicore_kernel_0": 6
+      },
+      "detail": "L1 parent kernels only; no child-task swimlane"
+    }
+  },
+  "formal_samples_per_backend": 300,
+  "outliers_removed": 0,
+  "original_trace_timestamps_preserved": true,
+  "profile_not_used_for_formal_percentiles": true,
+  "hashes": {
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/run1/result.json": "ddafaafca9afa0041ea4a3aaf15e55010a3096a3246264d4516b7543b96fb92f",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/run2/result.json": "9bf999a4e01f3cb145f6f7fe2fc1fb11332f69312c87781c8761bc421ff259ce",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/run3/result.json": "8a3dbe22aec28243255f168777729a441d95e368056708837a0f6ab87c017114",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/profile2/raw/decode_csa_tensormap_and_ringbuffer_aclgraph_3257869_1788832570515924418/6c42b4b8ccc347b39c28d0410ff20ed7_3257869_20260908095610517_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json": "75b0d4f00bf5c44960cd18f38ca50379d4ef0ba179e089ee8ec6b4c5d9079f89",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/profile2/raw/decode_csa_tensormap_and_ringbuffer_aclgraph_3257869_1788832570515924418/6c42b4b8ccc347b39c28d0410ff20ed7_3257869_20260908095610517_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv": "eb0cf8b1c2bc76518e38cf9448dad1549c4f06c4dc75183c927e24503c3319b0",
+    "/mnt/workspace/inductor/vllm-ascend/tests/pypto_dsv4_decode_csa/audit_profile_artifacts.py": "caefbebccfc0eb14f5e6b1f8ad7270c6b4e0b4497b8acc7b5a40076ed3890aa0",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/identity/fixture_identity.json": "e7ab280f335d79b332786d92386c9d2b4a5120605d50f1c82194e98291accaa0",
+    "tests/pypto_dsv4_decode_csa/results/20260908_apple_to_apple/profile2/run.log": "d7b6a2cb8533707c419e1e4beca0306399eedfe856d1041e52b03565a9e610d5"
+  }
+}

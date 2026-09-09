@@ -137,9 +137,9 @@ def test_backend_mode_workload_key_has_a_stable_serializable_identity() -> None:
 @pytest.mark.parametrize(
     "policy",
     (
-        {"warmup_iterations": 19, "sample_iterations": 100},
+        {"warmup_iterations": 2, "sample_iterations": 100},
         {"warmup_iterations": 51, "sample_iterations": 100},
-        {"warmup_iterations": 20, "sample_iterations": 99},
+        {"warmup_iterations": 20, "sample_iterations": 9},
         {"warmup_iterations": 20, "sample_iterations": 1_001},
     ),
 )

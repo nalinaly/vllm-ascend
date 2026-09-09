@@ -192,7 +192,7 @@ class BenchmarkKey:
 
 @dataclass(frozen=True, slots=True)
 class SamplingPolicy:
-    """Steady-state policy from the design: 20-50 warmups, 100-1000 samples."""
+    """Steady-state policy supporting quick 3/10 experiments and formal runs."""
 
     warmup_iterations: int = 20
     sample_iterations: int = 100
@@ -201,15 +201,15 @@ class SamplingPolicy:
         if (
             isinstance(self.warmup_iterations, bool)
             or not isinstance(self.warmup_iterations, int)
-            or not 20 <= self.warmup_iterations <= 50
+            or not 3 <= self.warmup_iterations <= 50
         ):
-            raise BenchmarkError("warmup_iterations must be within [20, 50]")
+            raise BenchmarkError("warmup_iterations must be within [3, 50]")
         if (
             isinstance(self.sample_iterations, bool)
             or not isinstance(self.sample_iterations, int)
-            or not 100 <= self.sample_iterations <= 1_000
+            or not 10 <= self.sample_iterations <= 1_000
         ):
-            raise BenchmarkError("sample_iterations must be within [100, 1000]")
+            raise BenchmarkError("sample_iterations must be within [10, 1000]")
 
     def to_dict(self) -> dict[str, int]:
         return {
