@@ -53,6 +53,10 @@ def register_model():
     )
     ModelRegistry.register_model("Qwen3DSparkModel", "vllm_ascend.models.qwen3_dspark:AscendQwen3DSparkForCausalLM")
     ModelRegistry.register_model(
+        "PyptoAttentionQwen3ForCausalLM",
+        "vllm_ascend.models.pypto_qwen3_attention:PyptoAttentionQwen3ForCausalLM",
+    )
+    ModelRegistry.register_model(
         "Qwen3OmniDSparkModel",
         "vllm_ascend.models.qwen3_dspark:AscendQwen3DSparkForCausalLM",
     )

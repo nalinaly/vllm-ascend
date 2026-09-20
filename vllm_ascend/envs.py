@@ -87,6 +87,9 @@ env_variables: dict[str, Callable[[], Any]] = {
     # (safe for Ascend 910B/A3). Set to a positive value to override when
     # auto-detection is unavailable or for debugging UB overflow issues.
     "VLLM_ASCEND_ROPE_UB_SIZE_KB": lambda: int(os.getenv("VLLM_ASCEND_ROPE_UB_SIZE_KB") or 0),
+    # Optional non-sensitive output directory for one Qwen3 PyPTO DFX capture.
+    # Default: None (disabled). Requires torch.compile and ACL Graph to be off.
+    "VLLM_ASCEND_QWEN3_PYPTO_DFX_DIR": lambda: os.getenv("VLLM_ASCEND_QWEN3_PYPTO_DFX_DIR"),
 }
 
 # end-env-vars-definition
