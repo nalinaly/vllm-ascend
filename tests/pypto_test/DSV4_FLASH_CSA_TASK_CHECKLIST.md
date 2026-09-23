@@ -68,6 +68,38 @@
 不改变本步的计算路径与结果。索引复算在 CPU 侧离线做，与 `profile`／`profile-export`
 的分工一致。
 
+### 全局阻塞：本机尚未跑通过任何图模式运行
+
+2026-09-23 两轮 16 卡采集的结论，**影响 T1.2 之后的全部图模式工作**：
+
+| 任务 | 配置 | 结果 |
+| --- | --- | --- |
+| `task_20260923_233825_305642829457` | `--backend pto --graph-mode eager --batch 4` | exit 0，32 步全部无补位 |
+| `task_20260923_234823_326614713564` | `--backend native --graph-mode full_decode_only --batch 5` | exit 1，初始化即失败 |
+
+第一轮证明 **eager 结构上不产生补位**：`allow_dp_padding` 取决于
+`cudagraph_mode != CUDAGraphMode.NONE`，eager 下为 False，各 rank 保留自己的
+token 数；且 eager 不注册捕获档位。所以补位取证必须在图模式下做。
+
+第二轮暴露图模式本身跑不起来：
+
+```
+RuntimeError: Worker failed with error 'aclnnAddRmsNormBias or
+aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found.'
+```
+
+疑似成因（**未验证，勿当结论**）：`vllm_ascend/utils.py:423` 的
+`if not torch.compiler.is_compiling(): bootstrap_custom_op_env()`
+在图编译期间跳过 bootstrap，导致 libopapi.so 未加载；eager 下首次调用发生在
+编译之外，bootstrap 正常执行。`vllm_ascend/ops/layernorm.py:73` 与 `:100`
+在 `enable_custom_op()` 为真时才走 `npu_add_rms_norm_bias`。
+
+交接文档记载本轮 D16 一直是 eager，**本工作区没有任何图模式成功运行的记录**，
+与该现象一致。
+
+需用户定夺：这属于本地环境差异（约束要求如实保留、不自行绕过），
+还是需要修复后再继续。在此之前 T1.2 及其后的图模式项目全部无法推进。
+
 ### T1 的待确认问题
 
 动手前需实测，不能凭推算下结论：
