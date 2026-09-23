@@ -1,6 +1,8 @@
 > **2026-09-23 基线已迁至官方 v0.25.1rc1。** 当前入口为[基线迁移说明](BASELINE_MIGRATION_V0251RC1.md)。
 > 当前 release 已完成H255、每卡B4的离线P/D16接入及生成token对照，详见下方当前状态。
 > 稳态性能及其他场景尚待验证；旧单层精度/图脚本仍需按新接口适配。
+> 2026-09-23 已补采 Native/PTO profiling 与 PTO 泳道图，见验证日志第95节；
+> 那是结构对照与任务依赖诊断，不是稳态延迟或吞吐结论。
 
 # DSV4 Flash：离线 P 缓存与 D16 CSA 性能对照
 
@@ -88,6 +90,40 @@ task-submit --device auto --device-num 16 --max-time 7200 \
 task-submit --device auto --device-num 16 --max-time 7200 \
   'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py decode --bank /path/to/new/bank --output /path/to/pto-d-logs --backend pto --batch 4'
 ```
+
+### 诊断采集：profiling 与泳道图
+
+`profile` 先按 `--warmup-rounds/--warmup-tokens` 预热，排除首次编译和缓存冷读，
+再从第 `--profile-start-step` 个稳态 decode step 起采 `--profile-steps` 个完整 step。
+采集为 CPU+NPU、Level1，关闭 stack/shape/memory/modules；窗口两端各一次同步，
+16 个 rank 同时开窗与关窗，避免单 rank 落后拖住集合通信。
+Native 与 PTO 必须用同一 bank、同一 case/batch 和同一窗口参数，各自单独运行。
+
+```bash
+task-submit --device auto --device-num 16 --max-time 7200 \
+  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py profile --bank /path/to/bank --output /path/to/out/native --backend native --batch 4 --decode-tokens 128 --warmup-rounds 1 --warmup-tokens 96 --profile-start-step 8 --profile-steps 3'
+
+# PTO 用 --backend pto 和另一个全新输出目录，两个后端各需16卡，按顺序执行。
+
+# 解析与对照都是纯 CPU，不占卡；解析不改动原始 PROF 记录，可按需重跑。
+python tests/pypto_test/offline_pd/run.py profile-export --bank /path/to/bank --output /path/to/out/native --profile-ranks 0
+python tests/pypto_test/offline_pd/run.py profile-compare --bank /path/to/bank --output /path/to/out --profile-ranks 0 --profile-steps 3
+```
+
+泳道图单独一轮，只在 `--swimlane-rank` 上开 DFX，并且只捕获该 rank 上
+`--swimlane-layer` 这一层、达到稳态构成的一次 CSA 调用。DFX 带边界同步和诊断开销，
+必须与 profiling 分开运行，其耗时不参与任何对比。
+
+```bash
+task-submit --device auto --device-num 16 --max-time 7200 \
+  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py swimlane --bank /path/to/bank --output /path/to/out/swimlane --backend pto --batch 4 --warmup-rounds 1 --warmup-tokens 96 --swimlane-rank 0 --swimlane-layer 2'
+
+# 转换在仓库根目录执行；kernel_config 自动取自该 rank 日志里实际使用的 JIT 目录，
+# build_output 下还有其他 rank 和历史运行的同名产物，不能按数量或时间猜。
+python tests/pypto_test/offline_pd/run.py swimlane-export --bank /path/to/bank --output /path/to/out/swimlane
+```
+
+生成的 `merged_swimlane.json` 可直接拖入 https://ui.perfetto.dev/ 打开。
 
 本机默认控制地址192.168.0.106、网卡enp23s0f3、DP端口29683，可用参数替换。
 设备仅来自 `$TASK_DEVICE` 的16卡队列分配，P每rank4张、D每rank1张。

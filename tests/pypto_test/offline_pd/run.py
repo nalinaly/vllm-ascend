@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
@@ -16,6 +17,8 @@ import time
 
 
 FORMAL_MODEL = "/data/model/DeepSeek-V4-Flash-0731-w8a8"
+# release 正式配置里第一个 compress_ratio==4 的 target 层，泳道采集默认取它。
+FIRST_TARGET_CSA_LAYER = 2
 
 
 def write_json(path, data):
@@ -127,6 +130,231 @@ def audit(args):
     print(f"PASS: {len(results)} cases, four TP replicas, all target/draft groups")
 
 
+def generate_round(llm, args, case, limit):
+    """每轮都用同一个 offline_key 重新提交，缓存由 connector 从同一 bank 初态恢复。"""
+    from vllm import SamplingParams
+
+    tokens = json.loads((args.bank / case["tokens"]).read_text())
+    params = SamplingParams(temperature=0, max_tokens=limit, ignore_eos=True,
+                            extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
+    start = time.perf_counter()
+    result = llm.generate([{"prompt_token_ids": tokens}] * args.batch, params, use_tqdm=False)
+    return {"elapsed_seconds": time.perf_counter() - start,
+            "output_token_ids": [list(r.outputs[0].token_ids) for r in result]}
+
+
+def diagnose(args, llm, cases):
+    """先预热掉首次编译和缓存冷读，再单独开一次诊断窗口。
+
+    profile 采 PyTorch/NPU 数据用于 Native/PTO 结构对照，swimlane 采一次真实 CSA
+    调用的 PTO DFX 记录。两者都带同步和采集开销，各自单独运行，不互相混用，
+    也不作为稳态延迟或吞吐结论。
+    """
+    # 稳态构成直接取生产入口的 S，不在测试里另写一份常量。
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import QUERY_TOKENS
+
+    case = cases[0]
+    expected_tokens = args.batch * QUERY_TOKENS
+    warmup = [generate_round(llm, args, case, args.warmup_tokens)["elapsed_seconds"]
+              for _ in range(args.warmup_rounds)]
+    common = {"command": args.command, "backend": args.backend, "rank": args.rank,
+              "batch": args.batch, "key": case["key"], "history": case["history"],
+              "warmup_rounds": args.warmup_rounds, "warmup_tokens": args.warmup_tokens,
+              "warmup_elapsed_seconds": warmup, "expected_tokens": expected_tokens}
+    if args.command == "profile":
+        started = llm.collective_rpc("offline_begin_profile", args=(
+            str((args.output / "trace").resolve()), args.profile_start_step,
+            args.profile_steps, expected_tokens, args.batch))
+        measured = generate_round(llm, args, case, args.decode_tokens)
+        window = llm.collective_rpc("offline_end_profile")
+        common.update({
+            "decode_tokens": args.decode_tokens,
+            "profiler": {"activities": ["CPU", "NPU"], "profiler_level": "Level1",
+                         "with_stack": False, "with_modules": False,
+                         "record_shapes": False, "profile_memory": False},
+            "started": started, "window": window,
+            "measured_elapsed_seconds": measured["elapsed_seconds"],
+            "output_token_ids": measured["output_token_ids"],
+            "scope": "窗口含采集与同步开销，仅用于Native/PTO结构对照，不是稳态性能结论",
+        })
+    else:
+        started = llm.collective_rpc("offline_begin_swimlane",
+                                     args=(args.swimlane_layer, expected_tokens))
+        measured = generate_round(llm, args, case, args.warmup_tokens)
+        window = llm.collective_rpc("offline_end_swimlane")
+        common.update({
+            "decode_tokens": args.warmup_tokens, "swimlane_layer": args.swimlane_layer,
+            "started": started, "window": window,
+            "measured_elapsed_seconds": measured["elapsed_seconds"],
+            "output_token_ids": measured["output_token_ids"],
+            "scope": "DFX诊断窗口带边界同步开销，只用于查看任务依赖，不参与耗时对比",
+        })
+    write_json(args.output / f"rank{args.rank}.{args.command}.json", common)
+
+
+def profile_export(args):
+    """离线解析采集到的 PROF 原始数据，生成带 device kernel 的 trace_view.json。
+
+    解析是纯 CPU 工作，放在采集任务之外执行：既不占用设备队列，也便于按需重跑。
+    原始数据保持不变，同一批数据重复解析得到同样的导出文件。
+    """
+    from torch_npu.profiler.profiler import analyse
+
+    root = (args.output / "trace").resolve()
+    wanted = None if args.profile_ranks == "all" else {f"rank{r}" for r in args.profile_ranks.split(",")}
+    exported = []
+    for directory in sorted(root.glob("rank*"), key=lambda p: int(p.name.removeprefix("rank"))):
+        if wanted is not None and directory.name not in wanted:
+            continue
+        captures = sorted(directory.glob("*_ascend_pt"))
+        if len(captures) != 1:
+            raise ValueError(f"Expected one capture under {directory}, found {len(captures)}")
+        capture = captures[0]
+        output = capture / "ASCEND_PROFILER_OUTPUT"
+        if not output.is_dir():
+            analyse(profiler_path=str(capture), max_process_number=args.analyse_processes)
+        trace = output / "trace_view.json"
+        if not trace.is_file():
+            raise RuntimeError(f"Offline analysis produced no trace_view.json under {capture}")
+        exported.append({"rank": directory.name, "capture": str(capture), "trace_view": str(trace),
+                         "trace_view_bytes": trace.stat().st_size,
+                         "exported_files": sorted(p.name for p in output.iterdir())})
+    if not exported:
+        raise ValueError(f"No capture matched --profile-ranks {args.profile_ranks} under {root}")
+    report = {"command": "profile-export", "root": str(root), "exported": exported,
+              "scope": "仅离线解析已采集数据，不改变原始PROF记录，也不产生新的执行结果"}
+    write_json(args.output / "profile_export.json", report)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def profile_compare(args):
+    """对照两次采集：同一 bank/case/batch 与同一 step 窗口，逐个 device kernel 列差异。
+
+    只汇总解析出来的实际 kernel 记录，不另立分类口径。窗口内含 EP 全互联的等待时间，
+    也含采集与同步开销，因此这里给的是结构对照，不是稳态延迟或吞吐结论。
+    """
+    import csv
+
+    rank = f"rank{args.profile_ranks}"
+
+    def load(backend):
+        root = args.output / backend
+        meta = json.loads((root / f"{rank}.profile.json").read_text())
+        if meta["backend"] != backend or meta["command"] != "profile":
+            raise ValueError(f"{root} does not hold a {backend} profile capture")
+        entry = next(item for item in json.loads((root / "profile_export.json").read_text())["exported"]
+                     if item["rank"] == rank)
+        totals, counts, cores = {}, {}, {}
+        with (Path(entry["trace_view"]).parent / "kernel_details.csv").open() as handle:
+            for row in csv.DictReader(handle):
+                name, duration = row["Name"], float(row["Duration(us)"])
+                totals[name] = totals.get(name, 0.0) + duration
+                counts[name] = counts.get(name, 0) + 1
+                cores[row["Accelerator Core"]] = cores.get(row["Accelerator Core"], 0.0) + duration
+        return {"meta": meta, "entry": entry, "totals": totals, "counts": counts, "cores": cores}
+
+    native, pto = load("native"), load("pto")
+    for key in ("key", "history", "batch", "expected_tokens", "decode_tokens"):
+        if native["meta"][key] != pto["meta"][key]:
+            raise ValueError(f"Captures differ in {key}; they are not comparable")
+    windows = {side["meta"]["backend"]: side["meta"]["window"][0] for side in (native, pto)}
+    if {w["profiled_steps"] for w in windows.values()} != {args.profile_steps}:
+        raise ValueError(f"Both captures must cover {args.profile_steps} steady steps: {windows}")
+    kernels = []
+    for name in sorted(native["totals"].keys() | pto["totals"].keys()):
+        left, right = native["totals"].get(name, 0.0), pto["totals"].get(name, 0.0)
+        kernels.append({"name": name, "native_us": round(left, 1), "pto_us": round(right, 1),
+                        "delta_us": round(right - left, 1),
+                        "native_calls": native["counts"].get(name, 0),
+                        "pto_calls": pto["counts"].get(name, 0)})
+    kernels.sort(key=lambda item: abs(item["delta_us"]), reverse=True)
+    report = {
+        "command": "profile-compare", "rank": rank,
+        "fixture": {key: native["meta"][key] for key in ("key", "history", "batch", "expected_tokens")},
+        "window": {side: {"steady_step_indices": [s["steady_step_index"] for s in window["window"]],
+                          "scheduled_tokens": [s["scheduled_tokens"] for s in window["window"]],
+                          "requests": [s["requests"] for s in window["window"]]}
+                   for side, window in windows.items()},
+        "device_totals_us": {side["meta"]["backend"]: round(sum(side["totals"].values()), 1)
+                             for side in (native, pto)},
+        "device_kernel_records": {side["meta"]["backend"]: sum(side["counts"].values())
+                                  for side in (native, pto)},
+        "accelerator_core_us": {side["meta"]["backend"]: {k: round(v, 1) for k, v in sorted(side["cores"].items())}
+                                for side in (native, pto)},
+        "kernels_by_absolute_delta": kernels[:args.compare_top],
+        "output_token_ids_equal": native["meta"]["output_token_ids"] == pto["meta"]["output_token_ids"],
+        "trace_view": {side["meta"]["backend"]: {"path": side["entry"]["trace_view"],
+                                                 "bytes": side["entry"]["trace_view_bytes"]}
+                       for side in (native, pto)},
+        "scope": "3个稳态decode step的结构对照；窗口含EP等待、采集与同步开销，不是稳态性能结论",
+    }
+    write_json(args.output / "profile_comparison.json", report)
+    print(json.dumps({k: v for k, v in report.items() if k != "kernels_by_absolute_delta"},
+                     indent=2, ensure_ascii=False))
+    print(f"\n{'kernel':<54}{'native us':>12}{'pto us':>12}{'delta us':>12}")
+    for item in kernels[:args.compare_top]:
+        print(f"{item['name'][:52]:<54}{item['native_us']:>12.1f}{item['pto_us']:>12.1f}{item['delta_us']:>12.1f}")
+
+
+def swimlane_export(args):
+    """把 DFX 记录转成可直接打开的泳道图，任务名取自本次实际生成的 kernel_config。"""
+    import ast
+    import shutil
+
+    directory = args.output / "swimlane"
+    records, deps = directory / "chip_swimlane_records.json", directory / "deps.json"
+    raw = json.loads(records.read_text())
+    metadata = raw.get("metadata", {})
+    boundaries = metadata.get("run_boundaries", [])
+    if len(boundaries) != 1 or metadata.get("dropped_run_boundaries", 0):
+        raise ValueError(f"Expected exactly one complete DFX window: {metadata}")
+    tasks = raw.get("aicore_tasks", [])
+    if not tasks or not deps.is_file():
+        raise ValueError("DFX capture produced no AICore task or dependency record")
+    table = args.kernel_config
+    if table is None:
+        # 开了 DFX 的 rank 会单独编译一份 kernel，直接从它自己的日志里取实际路径，
+        # build_output 下还有其他 rank 和历史运行的同名产物，不能按时间或数量猜。
+        log = (args.output / f"rank{args.swimlane_rank}.log").read_text()
+        used = sorted(set(re.findall(r"build_output/_jit__decode_csa_tp1_attention_\w+", log)))
+        if len(used) != 1:
+            raise ValueError(f"Pass --kernel-config; rank{args.swimlane_rank} log names {len(used)} JIT builds")
+        table = Path(used[0]) / "kernel_config.py"
+    tree = ast.parse(table.read_text())
+    tables = [node.value for node in tree.body if isinstance(node, ast.Assign)
+              and any(isinstance(target, ast.Name) and target.id == "KERNELS" for target in node.targets)]
+    if len(tables) != 1 or not isinstance(tables[0], ast.List):
+        raise ValueError(f"Unexpected KERNELS table in {table}")
+    names = {}
+    for node in tables[0].elts:
+        values = {ast.literal_eval(key): value for key, value in zip(node.keys, node.values)}
+        names[str(ast.literal_eval(values["func_id"]))] = ast.literal_eval(values["name"])
+    active = {str(k) for task in json.loads(deps.read_text())["tasks"] for k in task["kernel_ids"] if k >= 0}
+    if active - names.keys():
+        raise ValueError(f"Capture used kernel ids absent from {table}: {sorted(active - names.keys())}")
+    shutil.copy2(table, directory / "kernel_config_source.py")
+    name_map = directory / "name_map.json"
+    write_json(name_map, {"callable_id_to_name": names})
+    merged = directory / "merged_swimlane.json"
+    # 转换器会打印任务数、执行与调度占比，存档下来，避免只靠终端回看。
+    converted = subprocess.run([sys.executable, "-m", "simpler_setup.tools.swimlane_converter", str(records),
+                                "--func-names", str(name_map), "-o", str(merged)],
+                               check=True, capture_output=True, text=True)
+    (directory / "converter_output.txt").write_text(converted.stdout + converted.stderr)
+    events = json.loads(merged.read_text())["traceEvents"]
+    slices = sum(event.get("ph") == "X" and event.get("cat") == "event" for event in events)
+    if slices < len(tasks):
+        raise ValueError(f"Converted {slices} device slices for {len(tasks)} AICore tasks")
+    report = {"captured_pypto_launches": len(boundaries), "aicore_task_count": len(tasks),
+              "converted_device_slices": slices, "named_callables": len(names),
+              "kernel_config_source": str(table),
+              "chip_swimlane_records": str(records), "deps_json": str(deps),
+              "merged_swimlane": str(merged),
+              "scope": "DFX诊断窗口带边界同步开销，只用于查看任务与依赖，不参与耗时对比"}
+    write_json(directory / "swimlane_report.json", report)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
 def worker(args):
     from vllm import LLM, SamplingParams
     from vllm.config import KVTransferConfig
@@ -169,6 +397,10 @@ def worker(args):
                    llm.collective_rpc("offline_cache_layout"))
         llm.llm_engine.engine_core.shutdown()
         return
+    if args.command in ("profile", "swimlane"):
+        diagnose(args, llm, cases)
+        llm.llm_engine.engine_core.shutdown()
+        return
     outputs = []
     for case in cases:
         tokens = json.loads((args.bank / case["tokens"]).read_text())
@@ -205,10 +437,12 @@ def launch(args):
     devices = os.environ.get("TASK_DEVICE", "").split(",")
     if len(devices) != 16 or any(not d.isdigit() for d in devices) or len(set(devices)) != 16:
         raise RuntimeError("Run through task-submit --device auto --device-num 16")
-    if args.command == "decode":
+    if args.command in ("decode", "profile", "swimlane"):
         report = json.loads((args.bank / "audit.json").read_text())
         if report["status"] != "PASS":
             raise ValueError("P cache bank must pass audit before D loads it")
+    if args.command == "swimlane" and args.backend != "pto":
+        raise ValueError("Swimlane capture requires --backend pto")
     args.output.mkdir(parents=True, exist_ok=True)
     if any(args.output.glob("rank*.log")):
         raise FileExistsError("Use a fresh --output directory to preserve prior run evidence")
@@ -226,17 +460,27 @@ def launch(args):
                 "VLLM_ASCEND_ENABLE_NZ": "0", "OMP_NUM_THREADS": "4", "OMP_PROC_BIND": "false",
                 "HCCL_IF_IP": args.host, "HCCL_SOCKET_IFNAME": args.nic,
                 "GLOO_SOCKET_IFNAME": args.nic, "TP_SOCKET_IFNAME": args.nic,
-                "HCCL_CONNECT_TIMEOUT": "120", "HCCL_EXEC_TIMEOUT": "204",
+                # 采集窗口会在各 rank 上做同步和落盘，给集合通信留出等待余量。
+                "HCCL_CONNECT_TIMEOUT": "120",
+                "HCCL_EXEC_TIMEOUT": "1800" if args.command in ("profile", "swimlane") else "204",
                 "HCCL_BUFFSIZE": "1024", "HCCL_OP_EXPANSION_MODE": "AIV",
                 "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
                 "VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS": "1800",
                 "PYTHONPATH": str(Path(__file__).resolve().parent.parent) + os.pathsep + env.get("PYTHONPATH", ""),
             })
             env.pop("TORCH_DEVICE_BACKEND_AUTOLOAD", None)
+            # DFX 配置必须在模型加载前绑定，只有被选中的 rank 采集泳道。
+            if args.command == "swimlane" and rank == args.swimlane_rank:
+                env["OFFLINE_PTO_SWIMLANE_DIR"] = str((args.output / "swimlane").resolve())
             cmd = [sys.executable, str(Path(__file__).resolve()), args.command,
                    "--bank", str(args.bank.resolve()), "--output", str(args.output.resolve()),
                    "--rank", str(rank), "--batch", str(args.batch), "--backend", args.backend,
-                   "--decode-tokens", str(args.decode_tokens)]
+                   "--decode-tokens", str(args.decode_tokens),
+                   "--warmup-rounds", str(args.warmup_rounds),
+                   "--warmup-tokens", str(args.warmup_tokens),
+                   "--profile-start-step", str(args.profile_start_step),
+                   "--profile-steps", str(args.profile_steps),
+                   "--swimlane-layer", str(args.swimlane_layer)]
             if args.layout_only:
                 cmd.append("--layout-only")
             file = (args.output / f"rank{rank}.log").open("w")
@@ -267,7 +511,9 @@ def launch(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["plan", "audit", "prefill", "decode"])
+    parser.add_argument("command", choices=["plan", "audit", "prefill", "decode", "profile",
+                                            "profile-export", "profile-compare",
+                                            "swimlane", "swimlane-export"])
     parser.add_argument("--bank", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--histories", default="255,4095,32767,131071,131072,131073")
@@ -279,6 +525,17 @@ def main():
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--decode-tokens", type=int, default=128)
     parser.add_argument("--layout-only", action="store_true", help="加载D模型后仅采集缓存描述符")
+    parser.add_argument("--warmup-rounds", type=int, default=1, help="诊断前的预热轮数，排除首次编译与缓存冷读")
+    parser.add_argument("--warmup-tokens", type=int, default=96, help="每个预热轮的生成token数")
+    parser.add_argument("--profile-start-step", type=int, default=8, help="从第几个稳态decode step开始采集")
+    parser.add_argument("--profile-steps", type=int, default=3, help="采集的完整decode step数")
+    parser.add_argument("--swimlane-rank", type=int, default=0, help="采集PTO DFX泳道的DP rank")
+    parser.add_argument("--swimlane-layer", type=int, default=FIRST_TARGET_CSA_LAYER,
+                        help="采集泳道的target C4层序号")
+    parser.add_argument("--kernel-config", type=Path, help="swimlane-export用于命名任务的JIT kernel_config.py")
+    parser.add_argument("--profile-ranks", default="0", help="profile-export要解析的DP rank，all表示全部")
+    parser.add_argument("--analyse-processes", type=int, default=16, help="离线解析使用的进程数上限")
+    parser.add_argument("--compare-top", type=int, default=25, help="profile-compare列出的kernel差异条数")
     args = parser.parse_args()
     if args.layout_only and args.command != "decode":
         parser.error("--layout-only 仅适用于 decode")
@@ -286,11 +543,16 @@ def main():
         make_plan(args)
     elif args.command == "audit":
         audit(args)
+    elif args.command in ("profile-export", "profile-compare", "swimlane-export"):
+        if args.output is None:
+            parser.error(f"--output is required for {args.command}")
+        {"profile-export": profile_export, "profile-compare": profile_compare,
+         "swimlane-export": swimlane_export}[args.command](args)
     elif args.rank >= 0:
         worker(args)
     else:
         if args.output is None:
-            parser.error("--output is required for prefill/decode")
+            parser.error("--output is required for prefill/decode/profile/swimlane")
         launch(args)
 
 

@@ -3090,3 +3090,72 @@ LOCAL_ARTIFACTS.json，没有新增hash校验，也没有重跑测试或提交�
 当前可用缓存、已完成证据、稳态性能与长场景/多batch待办、原P5缺口，以及仍须
 保持暂停的P3/P4、DP padding和剩余精度排查。文档提供可复用命令和旧脚本适配注意，
 避免新session重新恢复已经可用的环境，或将旧基线PASS和本轮短场景结果外推为完整验收。
+
+## 95. 2026-09-23：新基线 Native/PTO profiling 对照与 PTO 泳道图
+
+用户要求两份可对照的 PyTorch profiling（不带 Python stack、含 device kernel）和一份 PTO 泳道图。
+离线 P/D 工具新增 `profile`、`profile-export`、`profile-compare`、`swimlane`、`swimlane-export`
+五个入口，全部位于 `tests/pypto_test/offline_pd/`，没有为诊断改动生产 CSA 实现。
+泳道所需的 `pypto.torch.init` 诊断参数，由 worker extension 在模型加载前按环境变量补入，
+只作用于被选中的那个 rank；`init` 的诊断配置只能在首次调用时绑定，故不能改为运行中开启。
+
+三次真机运行均使用正式 ModelSlim W8A8、已有 `smoke_bank` 的 h255 输入、每 rank batch4、eager：
+
+| 运行 | 任务 | 终态 |
+| --- | --- | --- |
+| Native profiling | `task_20260923_192802_7342913133` | exit0 |
+| PTO profiling | `task_20260923_193343_85100714792` | exit0 |
+| PTO 泳道采集 | `task_20260923_194020_99836730091` | exit0 |
+
+两次 profiling 各先跑一轮 96 token 预热，排除首次编译与缓存冷读，再在第 8/9/10 个稳态
+decode step 上开窗；两侧窗口每步都是 4 请求 24 token，构成完全一致。本轮 PTO 与 Native
+的 4×128 个输出 token 逐 token 相同。采集为 CPU+NPU、Level1，record_shapes、profile_memory、
+with_stack、with_modules 全部关闭。进程内解析未生成 `ASCEND_PROFILER_OUTPUT`，改由
+`profile-export` 对同一批原始数据离线解析补出，未重跑真机，原始 PROF 记录未修改。
+
+rank0 三步窗口的 device kernel 汇总（微秒；含 EP 等待、采集与同步开销，不是稳态性能结论）：
+
+| 项 | Native | PTO |
+| --- | --- | --- |
+| device 记录条数 | 7647 | 5568 |
+| device 合计 | 1114786.6 | 1452000.0 |
+| MIX_AIV | 992477.3 | 1279666.6 |
+| MIX_AIC | 61601.9 | 83811.8 |
+| AI_CPU | 1270.9 | 43209.9 |
+| AI_CORE | 27084.2 | 19737.8 |
+| AI_VECTOR_CORE | 32352.3 | 25574.1 |
+
+窗口内 CSA 调用为 3 step×21 层＝63 次。PTO 侧恰好出现 63 次
+`aicore_kernel_mode_0_mix_aic`（41404.1）与 63 次 `simpler_aicpu_kernel_exec`（41663.8），
+即每次 CSA 调用一个 AICore kernel 加一个 AICPU 任务，与"一次完整 PTO 提交"的实现一致。
+被吸收的 Native 算子调用数差值均为 63 的整数倍：`VllmQuantLightningIndexer` 63→0，
+`SparseAttnSharedkv` 与 `TransposeBatchMatMul` 各 −63，`Compressor` −126，
+`QuantMatmulV5` 与 `DynamicQuantV2` 各 −189，`ScatterNdUpdateV2` 与
+`InplacePartialRotaryMul` 各 −252，`Matmul` −315。这些减少合计约 35.9 毫秒。
+
+即在 B4/S6/H255 这一档，每次 CSA 调用 Native 约 570 微秒的 device 算子，PTO 为约 657 微秒
+AICore 加约 661 微秒 AICPU。AICore 与 AICPU 属不同执行道，两者不能相加当作延迟；
+是否落在关键路径需结合泳道判断。差值最大的单项是 `MoeDistributeDispatchV2`
+（892722.6→1197223.7，+304501.1），它是 EP 全互联算子、其 device 耗时包含等待对端，
+在没有进一步证据前不能归因为 CSA 计算变慢，这是下一步首要待查项。
+
+泳道采集在 rank0、`model.layers.2.self_attn.attn`、24 token 的真实调用上开了且只开了一个
+DFX 窗口。一次 CSA 调用含 810 个 AICore 任务、46 个命名 callable，跨度 617.80 微秒；
+每任务平均执行 18.10 微秒、平均 dispatch→finish 33.68 微秒，执行占比 53.76%。
+注意力主体利用率高：`qk_pv_aiv` 48 个任务平均 70.06 微秒、执行占比 93.4%，
+`qk_pv_aic` 24 个任务平均 68.51 微秒、占比 94.7%。停顿集中在小任务：
+`merge_norm` 48 个任务执行占比 13.6%，头部开销 73.91 微秒中 NoC 传播占 64.55；
+`weights_proj_reduce` 占比 5.4%；`qr_rms_norm_quant` 占比 9.6%，本地 dcci+ack 达 60.12 微秒；
+`indexer_boundary_init` 14.3%、`indexer_head_coefficients` 16.6%、`quant` 20.3%、
+`csa_cache_writeback` 22.1%、`proj_b_act` 23.4%。DFX 带边界同步与诊断开销，
+只用于查看任务与依赖，不参与耗时对比。
+
+本轮两次 profiling 的预热轮耗时为 Native 17.8 秒、PTO 60.0 秒（各含自身首次编译），
+与此前 D16 整轮观察方向一致；但两者都不是稳态计时，不能据此给出加速比或回归结论。
+旧单层 B40/H131073 ACL Graph 对照是另一档配置，其比值不能外推到本轮 B4/H255。
+稳态性能对照（A1）仍未开展。
+
+产物在 `results/release_csa_profile_20260923/`：`profile_comparison.json` 为对照汇总，
+两份 `trace_view.json` 分别为 47844892 与 36488934 字节，连同 16 rank 的 PROF 原始数据
+共约 829MB 留本地，路径与大小见该目录 `LOCAL_ARTIFACTS.json`；泳道产物
+`swimlane/swimlane/merged_swimlane.json` 可直接拖入 Perfetto 打开。未做任何 hash 校验。

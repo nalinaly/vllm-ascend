@@ -10,6 +10,8 @@
 
 **下一项建议先做：在 tests 下补齐排除编译、缓存 IO、预热和观察 hook 的稳态计时，
 以已有 H255/B4 bank 建立 Native/PTO 对照。** 然后扩展 P 历史长度与 D batch。
+A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见第 2 节与日志第 95 节），
+采集工具已在 `offline_pd/run.py`；A1 稳态计时仍未开展，不要因为有了 profile 就当作性能结论。
 其他 P3/P4 场景、DP padding 改造及剩余数值差异排查仍处于用户要求的暂停状态，
 本次交接不代表恢复这些工作。
 
@@ -79,6 +81,8 @@ release 原生扩展在仓库 `.cache/csa/native-install/`；包含 HcPre/HcPost
 | PyPTO PR #2867 更新验证 | 新旧 CPU 复现均归档；更新后接受真实描述符，继续拒绝真正的可写部分重叠；另有 4 项上游 CPU 测试通过 |
 | 更新后基础运行时与 CSA 编译 | `updated_eager.xml`：1 项 eager 真机通过；`updated_codegen/report.json`：完整 CSA CPU 编译及 PTOAS 通过 |
 | 正式 PTO D16 首次完整运行 | `decode_pto_b4_updated_v4/summary.json`；任务 `task_20260923_175252_286523232409`，exit0，18:04 结束 |
+| Native/PTO profiling 对照 | `release_csa_profile_20260923/profile_comparison.json`；任务 `task_20260923_192802_7342913133`、`task_20260923_193343_85100714792`，均 exit0 |
+| PTO 泳道图 | `release_csa_profile_20260923/swimlane/swimlane/merged_swimlane.json`；任务 `task_20260923_194020_99836730091`，exit0 |
 
 本次 PTO D16 的可确认结论：
 
@@ -130,7 +134,7 @@ release Native 在消费者 stream 生成两份 compact metadata，必须保留�
 | 顺序 | 待做事项 | 建议落点与完成条件 |
 | --- | --- | --- |
 | A1 | H255/B4 稳态性能对照 | 先改 `tests/pypto_test/offline_pd/` 的测试计时；Native/PTO 预热后从相同 bank 初态出发，排除加载、首次编译、首个恢复步骤与观察 hook；记录实际 step、p50/p95、输出 token/s 和峰值显存 |
-| A2 | 新基线 profiling 与 PTO 泳道图 | Native/PTO 分开进程采 PyTorch/NPU profile；PTO DFX 独立运行。确认完整 forward、CSA、Indexer、MoE/EP 和 draft 的耗时与依赖，检查 D2H、同步、重复编译和适配调用 |
+| A2 | 扩展 profiling 分析 | 首轮采集已完成，见日志第95节。仍需定位 `MoeDistributeDispatchV2` 在 PTO 侧多出的约 304 毫秒是 EP 等待还是真实变慢，并核对 AICPU 道是否落在关键路径；必要时按层或按阶段加 marker |
 | A3 | 扩展离线 P 场景 | 继续生成 H4095、32767、131071、131072、131073，每档四种输入；逐档生成、核对有效前缀和层覆盖，再让 D 使用，避免一次盲跑全部长场景 |
 | A4 | 扩展 D batch | 每卡 B=1/4/8/16/24/32/40，GBS=16×B；先 B1/B8 确认新路径，再按资源与结果扩展；记录真实 batch、各层 PTO 命中和 Native 回退，不只记名义 BS |
 | A5 | 汇总真实 DSpark 与 EP 执行 | 将自然接受长度、实际有效推进、输出数和每rank负载写入结果；对齐 Native/PTO 同场景，再形成可比较的性能报告 |
@@ -141,8 +145,14 @@ A1 当前还没有实现专门的稳态计时模式，现有 `decode` 命令只�
 计划建议 5 轮预热、100 个计时样本，但先确认实际步数是否足够；已有 128 输出 token
 通常不足 100 个 decode step。样本不足须如实报告，不凭名义参数宣布采满。
 
-A2 可参考当前 `dsv4_csa_profile.py`、`compare_dsv4_csa_profiles.py` 和工作区
-`vllm-ascend-qwen3-14b-pto` 的采集方式，只参考，不照抄模型逻辑。
+A2 首轮已用 `offline_pd/run.py` 的 `profile`/`profile-export`/`profile-compare`/
+`swimlane`/`swimlane-export` 完成，命令见[离线P/D方案](DSV4_FLASH_CSA_OFFLINE_PD.md)。
+已知结论：每次 CSA 调用 PTO 为 1 个 AICore kernel 加 1 个 AICPU 任务，替代 Native 约 22 个算子；
+在 B4/S6/H255 这一档，PTO 的 AICore 时间反而高于 Native 对应算子之和，泳道显示每任务执行
+占 dispatch→finish 的 53.76%，停顿集中在 `merge_norm`、`weights_proj_reduce`、
+`qr_rms_norm_quant` 等小任务的头部开销。不要把这些诊断数字当作稳态性能结论。
+旧的 `dsv4_csa_profile.py`、`compare_dsv4_csa_profiles.py` 和工作区
+`vllm-ascend-qwen3-14b-pto` 只作参考，不照抄模型逻辑。
 这些旧单层脚本尚未全部适配 release；`dsv4_csa_profile.py` 仍有旧 fingerprint/hash
 流程，不能直接拿旧命令跑本轮。适配时按用户要求去掉新流程中的 hash 检查，
 用必要的结果比较和路径/大小清单。新结果保存到新目录，保留旧结果作为历史证据。
