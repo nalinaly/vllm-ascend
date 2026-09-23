@@ -545,10 +545,12 @@ class NPUPlatform(Platform):
                 "align_decode_capture_sizes", True
             )
             if query_len > 1 and align:
-                ceiling = min(
-                    vllm_config.scheduler_config.max_num_seqs * query_len,
-                    vllm_config.scheduler_config.max_num_batched_tokens,
-                )
+                # max_num_batched_tokens 在这一步可能尚未定值，只在它是正整数时才用它
+                # 设上限，避免 min(x, None)。
+                ceiling = vllm_config.scheduler_config.max_num_seqs * query_len
+                max_batched = vllm_config.scheduler_config.max_num_batched_tokens
+                if isinstance(max_batched, int) and max_batched > 0:
+                    ceiling = min(ceiling, max_batched)
                 aligned = {((size + query_len - 1) // query_len) * query_len for size in original_sizes}
                 aligned.add((ceiling // query_len) * query_len)
                 decode_sizes = sorted(size for size in aligned if 0 < size <= ceiling)
