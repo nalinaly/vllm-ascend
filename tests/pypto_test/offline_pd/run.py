@@ -214,16 +214,38 @@ def audit(args):
           + (f"; {reported} cross-replica prefix differences reported (non-fatal)" if reported else ""))
 
 
-def generate_round(llm, args, case, limit):
+def stagger_limits(batch, limit):
+    """让各请求在不同步数结束，使活跃 batch 逐档下降。
+
+    默认所有请求同一个 max_tokens，会一起结束，活跃 batch 几乎不变——实测
+    256 次 metadata build 里只有收尾的 8 次带补位。要覆盖 G04（档位切换）和
+    G06（请求退出与位置重排），需要 batch 真的一档一档往下走。
+
+    返回从 limit 递减到约 limit/batch 的一组上限，最长的那条保持 limit，
+    这样整轮时长不变、可与非错开的轮次直接比较。
+    """
+    if batch <= 1:
+        return [limit]
+    step = max(1, limit // batch)
+    return [max(1, limit - index * step) for index in range(batch)]
+
+
+def generate_round(llm, args, case, limit, stagger=False):
     """每轮都用同一个 offline_key 重新提交，缓存由 connector 从同一 bank 初态恢复。"""
     from vllm import SamplingParams
 
     tokens = json.loads((args.bank / case["tokens"]).read_text())
-    params = SamplingParams(temperature=0, max_tokens=limit, ignore_eos=True,
-                            extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
+
+    def make(max_tokens):
+        return SamplingParams(temperature=0, max_tokens=max_tokens, ignore_eos=True,
+                              extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
+
+    limits = stagger_limits(args.batch, limit) if stagger else None
+    params = [make(value) for value in limits] if limits else make(limit)
     start = time.perf_counter()
     result = llm.generate([{"prompt_token_ids": tokens}] * args.batch, params, use_tqdm=False)
     return {"elapsed_seconds": time.perf_counter() - start,
+            "max_tokens_per_request": limits or [limit] * args.batch,
             "output_token_ids": [list(r.outputs[0].token_ids) for r in result]}
 
 
@@ -277,10 +299,11 @@ def diagnose(args, llm, cases):
         # 补位只在收尾阶段自然出现，所以按完整 decode_tokens 跑，让尾部请求陆续结束。
         started = llm.collective_rpc("offline_begin_padding_capture", args=(
             str((args.output / "padding").resolve()), args.swimlane_layer))
-        measured = generate_round(llm, args, case, args.decode_tokens)
+        measured = generate_round(llm, args, case, args.decode_tokens, stagger=args.stagger)
         window = llm.collective_rpc("offline_end_padding_capture")
         common.update({
             "decode_tokens": args.decode_tokens, "layer_index": args.swimlane_layer,
+            "stagger": args.stagger, "max_tokens_per_request": measured["max_tokens_per_request"],
             "started": started, "window": window,
             "measured_elapsed_seconds": measured["elapsed_seconds"],
             "output_token_ids": measured["output_token_ids"],
@@ -644,6 +667,8 @@ def launch(args):
                 cmd.append("--recompute-scheduler")
             if args.deterministic:
                 cmd.append("--deterministic")
+            if args.stagger:
+                cmd.append("--stagger")
             if args.capture_sizes:
                 cmd += ["--capture-sizes", *[str(size) for size in args.capture_sizes]]
             if args.layout_only:
@@ -703,6 +728,10 @@ def main():
                         help="D侧执行模式；上线口径为FULL_DECODE_ONLY，eager仅用于定位问题")
     parser.add_argument("--recompute-scheduler", action="store_true",
                         help="开启recompute_scheduler_enable；DP>1下PTO图模式需要它才能跳过DP padding")
+    parser.add_argument("--stagger", action="store_true",
+                        help="让各请求在不同步数结束，使活跃batch逐档下降，"
+                             "覆盖G04档位切换与G06请求退出；默认所有请求同时结束，"
+                             "活跃batch几乎不变，只有收尾几步才产生补位")
     parser.add_argument("--deterministic", action="store_true",
                         help="开启算子级确定性(set_deterministic_level(1))与HCCL_DETERMINISTIC=true；"
                              "用于排查同一DP组内四个TP副本的缓存差异，保留AIV展开模式不变")
