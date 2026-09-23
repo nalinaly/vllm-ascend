@@ -269,10 +269,12 @@ class OfflineCSAObserver:
         original = AscendDSAMetadataBuilder.build
         state = {"dp_rank": rank, "layer_index": layer_index,
                  "captured": 0, "builds_seen": 0, "padded_builds": 0,
+                 "dummy_runs": 0, "dummy_tokens": [],
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
         self._offline_replay_probe(state)
+        self._offline_dummy_probe(state)
 
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
@@ -321,6 +323,28 @@ class OfflineCSAObserver:
 
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
+
+    def _offline_dummy_probe(self, state):
+        """统计本 rank 跑了多少次 dummy batch，以及其中有多少次是空调度。
+
+        空 rank（D04 / T1.6）不能靠耗时推断：rank0 与 rank1 测量耗时相同只能说明
+        两者被 DP 锁步，说明不了引擎到底有没有真的空转。这里直接数
+        NPUModelRunner._dummy_run 的调用次数，并按 with_prefill / num_reqs 分类。
+        """
+        from vllm_ascend.worker.model_runner_v1 import NPUModelRunner
+
+        origin = getattr(NPUModelRunner, "_dummy_run", None)
+        if origin is None:
+            state["dummy_probe"] = "absent"
+            return
+
+        def counted(runner, num_tokens, *args, **kwargs):
+            state["dummy_runs"] += 1
+            state["dummy_tokens"].append(int(num_tokens))
+            return origin(runner, num_tokens, *args, **kwargs)
+
+        NPUModelRunner._dummy_run = counted
+        self._offline_dummy_origin = origin
 
     def _offline_padding_record(self, builder, common, num_reqs_actual, result):
         """落盘这一份补位 metadata 的关键量；拿不到 decode 段时返回 None。"""
@@ -384,7 +408,18 @@ class OfflineCSAObserver:
             from vllm_ascend.worker import model_runner_v1
             model_runner_v1.can_replay_csa_graph = origin
             self._offline_replay_origin = None
+        dummy_origin = getattr(self, "_offline_dummy_origin", None)
+        if dummy_origin is not None:
+            from vllm_ascend.worker.model_runner_v1 import NPUModelRunner
+            NPUModelRunner._dummy_run = dummy_origin
+            self._offline_dummy_origin = None
         self._offline_padding = None
+        tokens = state.pop("dummy_tokens", [])
+        if tokens:
+            histogram = {}
+            for value in tokens:
+                histogram[value] = histogram.get(value, 0) + 1
+            state["dummy_token_histogram"] = dict(sorted(histogram.items()))
         directory, rank = state.pop("directory"), state["dp_rank"]
         records = state.pop("records")
         if records:
