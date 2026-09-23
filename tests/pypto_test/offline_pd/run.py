@@ -214,6 +214,14 @@ def audit(args):
           + (f"; {reported} cross-replica prefix differences reported (non-fatal)" if reported else ""))
 
 
+def rank_values(given, dp, fallback):
+    """把按 rank 给的一组值补齐到 dp 个，不足部分用最后一个值补。"""
+    if not given:
+        return [fallback] * dp
+    values = list(given)
+    return [values[index] if index < len(values) else values[-1] for index in range(dp)]
+
+
 def rank_request_counts(args, dp):
     """每个 DP rank 实际提交多少条请求。
 
@@ -225,10 +233,7 @@ def rank_request_counts(args, dp):
     因 rank 而异），变的只是实际提交的请求条数。所以 --batch 要给成各 rank
     里的最大值。
     """
-    if not args.rank_batches:
-        return [args.batch] * dp
-    given = list(args.rank_batches)
-    counts = [given[index] if index < len(given) else given[-1] for index in range(dp)]
+    counts = rank_values(args.rank_batches, dp, args.batch)
     if any(count < 0 or count > args.batch for count in counts):
         raise ValueError(f"--rank-batches 的每一项都必须在 0..{args.batch} 之间，得到 {counts}")
     return counts
@@ -265,7 +270,10 @@ def generate_round(llm, args, case, limit, stagger=False):
     params = [make(value) for value in limits] if limits else make(limit)
     start = time.perf_counter()
     if submitted == 0:
-        # 空 rank：不提交任何请求，但仍要参与 DP 集合通信（D04 / T1.6）。
+        # 注意语义：这里直接返回，**引擎根本没被调用**，所以它不是 D04 要的
+        # "rank 参与 DP 但没有调度到请求"那条路径，只是"这个 rank 本轮不出题"。
+        # 真实空 rank 要用 --rank-decode-tokens 让某个 rank 的请求提前跑完，
+        # 其余 rank 继续推进，那时它的引擎才会在有 DP 协调的前提下空转。
         return {"elapsed_seconds": 0.0, "max_tokens_per_request": [], "output_token_ids": []}
     result = llm.generate([{"prompt_token_ids": tokens}] * submitted, params, use_tqdm=False)
     return {"elapsed_seconds": time.perf_counter() - start,
@@ -284,6 +292,10 @@ def diagnose(args, llm, cases):
     from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import QUERY_TOKENS
 
     case = cases[0]
+    # 按 rank 的 decode 步数：让某个 rank 提前跑完，其余继续推进，
+    # 那个 rank 的引擎才会在有 DP 协调的前提下空转（D04 / T1.6）。
+    if args.rank_decode_token is not None:
+        args.decode_tokens = args.rank_decode_token
     expected_tokens = args.batch * QUERY_TOKENS
     warmup = [generate_round(llm, args, case, args.warmup_tokens)["elapsed_seconds"]
               for _ in range(args.warmup_rounds)]
@@ -650,6 +662,9 @@ def launch(args):
     prefill = args.command == "prefill"
     tp, dp = (4, 4) if prefill else (1, 16)
     rank_counts = rank_request_counts(args, dp)
+    rank_tokens = rank_values(args.rank_decode_tokens, dp, args.decode_tokens)
+    if any(value != args.decode_tokens for value in rank_tokens):
+        print(f"OFFLINE_RANK_DECODE_TOKENS {rank_tokens}", flush=True)
     if any(count != args.batch for count in rank_counts):
         print(f"OFFLINE_RANK_BATCHES {rank_counts}", flush=True)
     children, files = [], []
@@ -685,7 +700,8 @@ def launch(args):
             cmd = [sys.executable, str(Path(__file__).resolve()), args.command,
                    "--bank", str(args.bank.resolve()), "--output", str(args.output.resolve()),
                    "--rank", str(rank), "--batch", str(args.batch),
-                   "--rank-batch", str(rank_counts[rank]), "--backend", args.backend,
+                   "--rank-batch", str(rank_counts[rank]),
+                   "--rank-decode-tokens", str(rank_tokens[rank]), "--backend", args.backend,
                    "--decode-tokens", str(args.decode_tokens),
                    "--warmup-rounds", str(args.warmup_rounds),
                    "--warmup-tokens", str(args.warmup_tokens),
@@ -762,6 +778,11 @@ def main():
                         help="按DP rank指定各自实际提交的请求数，用于D01~D05的不均衡负载"
                              "与D04/T1.6的空rank；不足部分按最后一个值补齐。"
                              "max_num_seqs仍统一取--batch，所以--batch要给成各rank的最大值")
+    parser.add_argument("--rank-decode-tokens", type=int, nargs="+",
+                        help="按DP rank指定各自的decode步数。让某个rank的请求提前跑完、其余rank继续推进，\n"
+                             "那个rank的引擎才会在有DP协调的前提下空转，这才是D04/T1.6要的真实空rank")
+    parser.add_argument("--rank-decode-token", type=int, default=None,
+                        help="内部参数：launch按--rank-decode-tokens逐个下发，不要手工指定")
     parser.add_argument("--rank-batch", type=int, default=None,
                         help="内部参数：launch按--rank-batches逐个下发给子进程，不要手工指定")
     parser.add_argument("--stagger", action="store_true",
