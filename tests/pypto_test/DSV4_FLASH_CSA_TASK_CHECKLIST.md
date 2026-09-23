@@ -5,7 +5,7 @@
 不写"验证一下""确认无误"这类无法判定的措辞。
 
 状态口径：`未开始` / `进行中` / `已完成` / `暂停`（暂停项不得自行恢复）。
-截至 2026-09-24，已完成 T1.1、T1.2 与 T5.1～T5.3；T1.3 代码完成待数值验收；T5.4 待用户定。
+截至 2026-09-24，已完成 T1.1、T1.2 与 T5.1～T5.4；T1.3、T1.4 代码完成待数值验收。
 
 相关文档：[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)、
 [跨会话交接](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)、
@@ -169,7 +169,7 @@ F03 的在线传输与网络故障恢复不是本轮前置条件——用户当�
 | T5.1 | 决定 `offline_pd/run.py` 未提交改动的去留 | 两个开关都保留：`--graph-mode` 默认 `full_decode_only`，把 decode 默认口径从 eager 改成上线口径；`--recompute-scheduler` 默认关闭，保留它是因为在 T1.9 拿掉 DP 闸门之前，它是让 PTO 在 DP16 走图模式的唯一开关 | **已完成** |
 | T5.2 | 提交 T1.1 的探针与结果 | `dsv4_csa_padding_probe.py` 与 `results/release_csa_padding_20260923/` 入库 | **已完成** |
 | T5.3 | 更正 padding 计划里的 S0 描述 | 原文写"把四处改成显式报错"不可实现——PTO device 代码抛不出 Python 异常，越界读只会读到无关数据。已改为 CPU 复算索引公式，计划正文同步更正并补入 predict 结果 | **已完成** |
-| T5.4 | 决定 `dsv4_perf_accuracy_20260827/` 的去留 | 56K、8 个 shell/py 脚本，无凭据，但含内网地址 `172.21.100.73`～`76`（`config.sh`、`docker_run.sh`、`start_decode.sh`、`start_proxy.sh`）。本仓库推送到公开 fork `github.com/nalinaly/vllm-ascend`，是否连同内网拓扑入库由用户决定；可选择脱敏后入库或永久保持本地 | **待用户决定** |
+| T5.4 | 决定 `dsv4_perf_accuracy_20260827/` 的去留 | **用户 2026-09-24 裁定：不入库，永久保持本地。** 该目录含内网地址 `172.21.100.73`～`76`（`config.sh`、`docker_run.sh`、`start_decode.sh`、`start_proxy.sh`），而本仓库推送到公开 fork `github.com/nalinaly/vllm-ascend`。已加入 `.gitignore` 防止误 `git add`；用户未选择"脱敏后入库"，所以也不要改写地址后再提交 | **已完成** |
 
 ## 6. 保持暂停，不得自行恢复
 

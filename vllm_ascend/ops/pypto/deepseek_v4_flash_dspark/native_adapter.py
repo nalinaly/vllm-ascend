@@ -90,7 +90,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None) -> dict[str, torch
 class NativeCSACall:
     """Fixed-address eager/graph call for uniform six-token target requests.
 
-    Padding/dummy handling and model forward dispatch remain separate gates.
+    整档中可以含补位请求：它们由 kernel 内的 seq_lens 判据屏蔽，此处只校验真实
+    部分仍是完整六行请求。模型前向的派发仍由各自的闸门决定。
     compact_metadata contains the release Native producer's device tensors;
     this descriptor binds them without materializing an expanded buffer.
     """
@@ -112,8 +113,13 @@ class NativeCSACall:
         if positions.dtype != torch.int64 or tuple(positions.shape) != (tokens,):
             raise ValueError("CSA expects the Native INT64 target position vector")
         for name, (metadata, _) in groups.items():
-            if metadata.num_prefills or metadata.num_actual_tokens != tokens:
-                raise ValueError(f"{name}: requires target decode metadata without padding")
+            # 补位档位下 num_actual_tokens 是**实际** token 数，小于 hidden 的整档
+            # 行数（实测 18/24）；补位请求本身由 kernel 内的 seq_lens 判据屏蔽，
+            # 这里只要求真实部分是完整的六行请求。
+            if metadata.num_prefills or metadata.num_actual_tokens > tokens:
+                raise ValueError(f"{name}: requires target decode metadata without prefill rows")
+            if metadata.num_actual_tokens % 6:
+                raise ValueError(f"{name}: CSA requires whole six-token target requests")
             req = self.req[name]
             if req.query_start_loc.numel() != batch + 1 or req.seq_lens.numel() != batch:
                 raise ValueError(f"{name}: inconsistent Native request capacity")
@@ -171,8 +177,16 @@ class NativeCSACall:
             if not self.args[name].is_contiguous() or self.args[name].dtype != torch.bfloat16:
                 raise ValueError(f"{name}: Native BF16 32-token pages must have no additional page padding")
         main = self.req["compressed"]
-        self.native_cos = main.cos[layer_name][:tokens].view(tokens, 64)
-        self.native_sin = main.sin[layer_name][:tokens].view(tokens, 64)
+        # Native 的 decode RoPE 是常驻缓冲的切片视图，按**实际** token 数切
+        # （`vllm_ascend/ops/rope_dsv4.py` 的 use_cache 分支）。图捕获发生在无补位的
+        # 满档 dummy 上，捕获到的是整档视图；补位步只回写前若干行，尾部保留上一步
+        # 的值，与 positions 同机制，不是越界。这里显式要求视图覆盖整档，
+        # 免得在 view 上抛出难以定位的形状错误。
+        cos, sin = main.cos[layer_name], main.sin[layer_name]
+        if cos.shape[0] < tokens or sin.shape[0] < tokens:
+            raise ValueError("CSA requires Native decode RoPE rows covering the whole padded bucket")
+        self.native_cos = cos[:tokens].view(tokens, 64)
+        self.native_sin = sin[:tokens].view(tokens, 64)
         # All CSA consumers use Native interleaved FP32 frequency columns.
         # Keep the Native buffers and their producer waits; no device conversion.
         self.args["freqs_cos"] = self.native_cos

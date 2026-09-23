@@ -13,14 +13,19 @@ def is_csa_model(config) -> bool:
 
 
 def can_replay_csa_graph(*, num_tokens, num_reqs, uniform_decode, padded_tokens) -> bool:
-    """A graph captured with PTO has no device-side mask for dummy requests.
+    """补位请求由 kernel 内的 seq_lens 判据屏蔽，因此补位档位也可以重放。
 
-    Other buckets capture Native and retain Native's padding support. The
-    decision uses scheduler-owned host counts, never device tensor values.
+    原先还要求 ``num_tokens == padded_tokens``，即整档不得含补位；那条一旦命中就
+    把整步退回 eager 并换用未补齐的 BatchDescriptor，等于把补位本身消掉，
+    PTO 因而从未真正走过补位路径。现在 CSA kernel 会按 ``seq_lens == 0`` 跳过
+    补位请求的 compact 行推算与页表读取，可以直接重放。
+
+    ``num_tokens``／``num_reqs`` 是本步的**实际**量，``padded_tokens`` 是档位容量。
+    判定只用调度器持有的主机计数，绝不读设备张量的值。
     """
     captures_pto = 0 < padded_tokens <= MAX_BATCH_SIZE * QUERY_TOKENS and padded_tokens % QUERY_TOKENS == 0
     return not captures_pto or (
-        uniform_decode and num_tokens == padded_tokens and num_tokens == num_reqs * QUERY_TOKENS
+        uniform_decode and num_tokens <= padded_tokens and num_tokens == num_reqs * QUERY_TOKENS
     )
 
 

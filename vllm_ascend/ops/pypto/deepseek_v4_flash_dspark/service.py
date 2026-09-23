@@ -43,17 +43,28 @@ class CSAServiceRuntime:
         batch = tokens // QUERY_TOKENS
         for prefix in self.prefixes.values():
             item = metadata.get(prefix)
-            if item is None or item.num_prefills or item.num_actual_tokens != tokens:
+            # 补位档位下这两个计数不再相等：num_actual_tokens 是**实际** token 数，
+            # num_decodes 是**补齐后**的请求数（实测 18 与 4，整档 24）。补位请求
+            # 由 kernel 内的 seq_lens 判据屏蔽，这里只要求真实部分是完整六行请求。
+            if item is None or item.num_prefills or item.num_actual_tokens > tokens:
                 return False
-            if item.num_decodes != batch:
+            if item.num_actual_tokens % QUERY_TOKENS or item.num_decodes != batch:
                 return False
             req = item.decode
             if req is None or req.seq_lens.numel() != batch or req.query_start_loc.numel() != batch + 1:
                 return False
-            if req.max_seqlen_q != QUERY_TOKENS or req.num_reqs_actual not in (None, batch):
+            actual = item.num_actual_tokens // QUERY_TOKENS
+            if req.max_seqlen_q != QUERY_TOKENS or req.num_reqs_actual not in (None, actual):
                 return False
             if req.ori_win_right not in (None, 0) or req.dspark_swa_indices is not None:
                 return False
+        main = metadata[self.prefixes["compressed"]]
+        if main.num_actual_tokens < tokens and main.decode.cos[self.layer_name].shape[0] < tokens:
+            # Native 的 decode RoPE 视图按实际 token 切片。图捕获发生在无补位的满档
+            # dummy 上，捕获到的就是整档视图，重放不受影响；只有 eager 下真出现补位
+            # 才会切短。那种情况下整档算不出来，让本层回退 Native，
+            # 而不是另建一份冗余缓冲去凑。
+            return False
         swa = metadata[self.prefixes["swa"]].decode
         return swa.ori_win_left in (None, 127)
 
