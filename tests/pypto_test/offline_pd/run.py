@@ -214,6 +214,26 @@ def audit(args):
           + (f"; {reported} cross-replica prefix differences reported (non-fatal)" if reported else ""))
 
 
+def rank_request_counts(args, dp):
+    """每个 DP rank 实际提交多少条请求。
+
+    D01～D05 要的是各 rank 负载不均衡——(4,40)、(40,4)、(8,24)、(16,32)、
+    (0,4)、(0,40)——而 --batch 只能给所有 rank 同一个值。--rank-batches 按
+    rank 逐个指定实际提交数，不足部分按最后一个值补齐。
+
+    max_num_seqs 仍统一取 --batch（各 rank 的容量必须一致，否则捕获档位会
+    因 rank 而异），变的只是实际提交的请求条数。所以 --batch 要给成各 rank
+    里的最大值。
+    """
+    if not args.rank_batches:
+        return [args.batch] * dp
+    given = list(args.rank_batches)
+    counts = [given[index] if index < len(given) else given[-1] for index in range(dp)]
+    if any(count < 0 or count > args.batch for count in counts):
+        raise ValueError(f"--rank-batches 的每一项都必须在 0..{args.batch} 之间，得到 {counts}")
+    return counts
+
+
 def stagger_limits(batch, limit):
     """让各请求在不同步数结束，使活跃 batch 逐档下降。
 
@@ -240,12 +260,16 @@ def generate_round(llm, args, case, limit, stagger=False):
         return SamplingParams(temperature=0, max_tokens=max_tokens, ignore_eos=True,
                               extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
 
-    limits = stagger_limits(args.batch, limit) if stagger else None
+    submitted = args.rank_batch if args.rank_batch is not None else args.batch
+    limits = stagger_limits(submitted, limit) if stagger else None
     params = [make(value) for value in limits] if limits else make(limit)
     start = time.perf_counter()
-    result = llm.generate([{"prompt_token_ids": tokens}] * args.batch, params, use_tqdm=False)
+    if submitted == 0:
+        # 空 rank：不提交任何请求，但仍要参与 DP 集合通信（D04 / T1.6）。
+        return {"elapsed_seconds": 0.0, "max_tokens_per_request": [], "output_token_ids": []}
+    result = llm.generate([{"prompt_token_ids": tokens}] * submitted, params, use_tqdm=False)
     return {"elapsed_seconds": time.perf_counter() - start,
-            "max_tokens_per_request": limits or [limit] * args.batch,
+            "max_tokens_per_request": limits or [limit] * submitted,
             "output_token_ids": [list(r.outputs[0].token_ids) for r in result]}
 
 
@@ -264,7 +288,9 @@ def diagnose(args, llm, cases):
     warmup = [generate_round(llm, args, case, args.warmup_tokens)["elapsed_seconds"]
               for _ in range(args.warmup_rounds)]
     common = {"command": args.command, "backend": args.backend, "rank": args.rank,
-              "batch": args.batch, "key": case["key"], "history": case["history"],
+              "batch": args.batch,
+              "submitted": args.rank_batch if args.rank_batch is not None else args.batch,
+              "key": case["key"], "history": case["history"],
               "warmup_rounds": args.warmup_rounds, "warmup_tokens": args.warmup_tokens,
               "warmup_elapsed_seconds": warmup, "expected_tokens": expected_tokens}
     if args.command == "profile":
@@ -623,6 +649,9 @@ def launch(args):
         raise FileExistsError("Use a fresh --output directory to preserve prior run evidence")
     prefill = args.command == "prefill"
     tp, dp = (4, 4) if prefill else (1, 16)
+    rank_counts = rank_request_counts(args, dp)
+    if any(count != args.batch for count in rank_counts):
+        print(f"OFFLINE_RANK_BATCHES {rank_counts}", flush=True)
     children, files = [], []
     try:
         for rank in range(dp):
@@ -655,7 +684,8 @@ def launch(args):
                 env["OFFLINE_PTO_SWIMLANE_DIR"] = str((args.output / "swimlane").resolve())
             cmd = [sys.executable, str(Path(__file__).resolve()), args.command,
                    "--bank", str(args.bank.resolve()), "--output", str(args.output.resolve()),
-                   "--rank", str(rank), "--batch", str(args.batch), "--backend", args.backend,
+                   "--rank", str(rank), "--batch", str(args.batch),
+                   "--rank-batch", str(rank_counts[rank]), "--backend", args.backend,
                    "--decode-tokens", str(args.decode_tokens),
                    "--warmup-rounds", str(args.warmup_rounds),
                    "--warmup-tokens", str(args.warmup_tokens),
@@ -728,6 +758,12 @@ def main():
                         help="D侧执行模式；上线口径为FULL_DECODE_ONLY，eager仅用于定位问题")
     parser.add_argument("--recompute-scheduler", action="store_true",
                         help="开启recompute_scheduler_enable；DP>1下PTO图模式需要它才能跳过DP padding")
+    parser.add_argument("--rank-batches", type=int, nargs="+",
+                        help="按DP rank指定各自实际提交的请求数，用于D01~D05的不均衡负载"
+                             "与D04/T1.6的空rank；不足部分按最后一个值补齐。"
+                             "max_num_seqs仍统一取--batch，所以--batch要给成各rank的最大值")
+    parser.add_argument("--rank-batch", type=int, default=None,
+                        help="内部参数：launch按--rank-batches逐个下发给子进程，不要手工指定")
     parser.add_argument("--stagger", action="store_true",
                         help="让各请求在不同步数结束，使活跃batch逐档下降，"
                              "覆盖G04档位切换与G06请求退出；默认所有请求同时结束，"

@@ -18,8 +18,12 @@
 这些是用户的长期要求，不随单项任务改变：
 
 - 不自行修改 PyPTO、Simpler、PTOAS、PTO-ISA 的计算或运行时实现；已有的本地环境差异如实保留。
-- 所有 NPU 测试走 `task-submit` 队列；不绕过队列、不停止他人任务；
-  不要用短超时的 `--timeout ... --wait` 当轮询，那会取消尚未运行的任务。
+- 所有 NPU 测试走 `task-submit` 队列；不绕过队列、不停止他人任务。
+  **轮询一律用 `task-submit --status <id>`，绝不要对排队中的任务用 `--wait`。**
+  `--wait` 默认 600 秒超时，超时会把尚未运行的任务直接取消——
+  `task_20260924_012911_128588925572` 就是这样被取消的（状态从 pending 变
+  not_found，三组验收一个都没跑），白丢一轮排队。等待请用
+  `until task-submit --status <id> | grep -qE "completed|failed|cancelled|timeout"; do sleep 30; done`。
 - 不执行新的 hash／摘要校验；记录路径与大小，并做必要的数值比较。
 - 沟通、commit 说明、新增说明性注释一律用中文；提交带 `Signed-off-by`。
 - 不做提交检查、不自动运行格式化、全量测试或提交钩子。
