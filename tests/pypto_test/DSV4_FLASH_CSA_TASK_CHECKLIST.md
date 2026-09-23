@@ -5,7 +5,7 @@
 不写"验证一下""确认无误"这类无法判定的措辞。
 
 状态口径：`未开始` / `进行中` / `已完成` / `暂停`（暂停项不得自行恢复）。
-截至 2026-09-24，已完成 T1.1、T1.2 与 T5.1～T5.4；T1.3、T1.4 代码完成待数值验收。
+截至 2026-09-24，已完成 T1.1～T1.4、T2.2 与 T5.1～T5.4；T3.1 进行中（H4095、H32767 已出）。
 
 相关文档：[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)、
 [跨会话交接](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)、
@@ -52,8 +52,8 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | T1.1 | CPU 复算四处索引，取得越界证据 | `tests/pypto_test/dsv4_csa_padding_probe.py` | 已完成：真实请求四处全部在界内，补位请求在 compact 行号上恒越界，页表类在陈旧 position 超容量时越界。初版按补齐后 token 数算出 10 行，T1.2 实测为 8 行，公式已更正。证据 `results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/` | — | 否 | **已完成** |
 | T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 已完成，任务 `task_20260924_001111_370250932735`：compact 行数实测 8（初版预测 10，公式已更正）；补位请求 `seq_lens=0`、`start_pos=0`、页表行全零；补位段 positions 实测为上一步残留；据此选定方案 C（`seq_lens == 0`），D 因新请求 `start_pos` 同为 0 而有歧义 | T1.1 | 16 | **已完成** |
-| T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收待 T1.4**：放开 host 闸门后 PTO 才会实际走补位路径，届时验证补位与不补位输出逐 bit 相同、整份 allocation 无差异 | T1.2 | 1 | **代码完成，待验收** |
-| T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已达成**（`accept_t14_pto_v5`）：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同，`replay_calls=62`、`rejected=0`。**补位路径的数值验收见下方死结一节** | T1.3 | 16 | **进行中** |
+| T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收已通过**（`task_20260924_024451_206700130649`）：同一负载分别按档位 `12 30`与 `18 30` 跑，前者 256 次 build 中 248 次带补位、后者 152 次，补位量相差 96 次，而两轮输出**逐 token 完全相同**。另修复图捕获时 dummy run 的 compact 行越界（见 T1.Q2） | T1.2 | 16 | **已完成** |
+| T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已通过**：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同（`accept_t14_pto_v5`）；补位档位全部进入图重放（`accept_t13_padded`：`replay_padded=62`、`allowed=62`、`rejected=0`），不再静默回退 Native | T1.3 | 16 | **已完成** |
 | T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
 | T1.6 | 空 rank 整批 dummy | 同上 | `seq_lens=6`、`position=127`、slot 全 `-1` 的整批占位：不写任何 cache／state、输出无非有限值、无越界读 | T1.4 | 1 | 未开始 |
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
