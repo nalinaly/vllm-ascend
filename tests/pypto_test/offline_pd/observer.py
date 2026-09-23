@@ -35,6 +35,8 @@ class OfflineCSAObserver:
     _OFFLINE_DUMMY_CACHE_PROBES = 3
     # 跳过前若干次 dummy：那些是两个 rank 都有的早期步骤，不是空 rank 路径。
     _OFFLINE_DUMMY_CACHE_SKIP = 18
+    # 正常 decode 步的对照样本数。
+    _OFFLINE_STEP_PROBES = 2
 
     def offline_cache_layout(self):
         """只记录真实缓存描述符，用于定位共享存储边界，不读取设备数据。"""
@@ -275,11 +277,13 @@ class OfflineCSAObserver:
                  "captured": 0, "builds_seen": 0, "padded_builds": 0,
                  "dummy_runs": 0, "dummy_tokens": [],
                  "cache_probes": 0, "cache_probe_results": [],
+                 "step_probes": 0, "step_probe_results": [],
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
         self._offline_replay_probe(state)
         self._offline_dummy_probe(state)
+        self._offline_step_probe(state)
 
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
@@ -328,6 +332,59 @@ class OfflineCSAObserver:
 
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
+
+    def _offline_cache_delta(self, views, run):
+        """在 run() 前后比较 views，返回每个视图的变化页信息。
+
+        前后都同步：只在后面同步的话，before 快照可能拍在上一步写入未落盘时。
+        """
+        import torch
+
+        torch.npu.synchronize()
+        before = {name: tensor.clone() for name, tensor in views.items()}
+        result = run()
+        torch.npu.synchronize()
+        changed = {}
+        for name, tensor in views.items():
+            if torch.equal(tensor, before[name]):
+                continue
+            flat_now = tensor.reshape(tensor.shape[0], -1)
+            flat_old = before[name].reshape(before[name].shape[0], -1)
+            rows = (flat_now != flat_old).any(dim=-1).nonzero().flatten().tolist()
+            changed[name] = {"pages": rows[:16], "page_count": len(rows),
+                             "total_pages": int(tensor.shape[0]),
+                             "only_null_block": rows == [0]}
+        return result, changed
+
+    def _offline_step_probe(self, state):
+        """对照组：用同一套探针量一个**正常** decode 步改了多少页。
+
+        dummy 步测出 100 多页变化，而一次 dummy 只有 6 个 token，物理上讲不通。
+        需要知道正常步的量级才能判断是探针有干扰，还是"页数远大于 token 数"
+        本来就是这套缓存布局的常态。
+        """
+        runner = self.model_runner
+        origin = getattr(runner, "execute_model", None)
+        if origin is None:
+            return
+
+        def probed(scheduler_output, *args, **kwargs):
+            if state["step_probes"] >= self._OFFLINE_STEP_PROBES:
+                return origin(scheduler_output, *args, **kwargs)
+            views = self._offline_dummy_cache_views(state)
+            if views is None:
+                return origin(scheduler_output, *args, **kwargs)
+            result, changed = self._offline_cache_delta(
+                views, lambda: origin(scheduler_output, *args, **kwargs))
+            state["step_probes"] += 1
+            state["step_probe_results"].append(
+                {"scheduled_tokens": int(scheduler_output.total_num_scheduled_tokens),
+                 "requests": len(scheduler_output.num_scheduled_tokens),
+                 "changed": changed})
+            return result
+
+        runner.execute_model = probed
+        self._offline_step_origin = origin
 
     def _offline_dummy_cache_views(self, state):
         """取被观察层的 cache/state 视图；拿不到就返回 None，不影响主流程。"""
@@ -469,6 +526,10 @@ class OfflineCSAObserver:
             from vllm_ascend.worker import model_runner_v1
             model_runner_v1.can_replay_csa_graph = origin
             self._offline_replay_origin = None
+        step_origin = getattr(self, "_offline_step_origin", None)
+        if step_origin is not None:
+            self.model_runner.execute_model = step_origin
+            self._offline_step_origin = None
         dummy_origin = getattr(self, "_offline_dummy_origin", None)
         if dummy_origin is not None:
             from vllm_ascend.worker.model_runner_v1 import NPUModelRunner
