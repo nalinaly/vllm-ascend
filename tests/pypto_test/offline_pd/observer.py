@@ -330,12 +330,15 @@ class OfflineCSAObserver:
             decode = metadata[runtime.prefixes[name]].decode
             cos, sin, slots = impl._compute_compressor_metadata(decode)
             slots_cpu = slots.cpu()
+            # slot 的列布局由 DeviceOperator.get_dsa_compressor_slot_mapping_format()
+            # 决定，这里不假定它是 [rows, 2]；按实际维度取第一列用于判负。
+            first = slots_cpu if slots_cpu.dim() == 1 else slots_cpu.reshape(slots_cpu.shape[0], -1)[:, 0]
             compact[name] = {
                 "cos_shape": list(cos.shape), "sin_shape": list(sin.shape),
-                "slot_shape": list(slots_cpu.shape),
+                "slot_shape": list(slots_cpu.shape), "slot_dtype": str(slots_cpu.dtype),
                 "num_compressed_tokens": int(decode.num_compressed_tokens),
-                "slot_negative_rows": int((slots_cpu[:, 0] < 0).sum().item()),
-                "slot_first_column": slots_cpu[:, 0].tolist(),
+                "slot_negative_rows": int((first < 0).sum().item()),
+                "slot_first_column": first.tolist(),
             }
         return {"tokens": int(tokens), "eligible": bool(verdict),
                 "positions": positions.tolist(), "groups": groups, "compact": compact}
