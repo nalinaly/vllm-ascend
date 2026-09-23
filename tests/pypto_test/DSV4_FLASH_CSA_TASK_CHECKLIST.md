@@ -55,7 +55,7 @@
 | T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收已通过**（`task_20260924_024451_206700130649`）：同一负载分别按档位 `12 30`与 `18 30` 跑，前者 256 次 build 中 248 次带补位、后者 152 次，补位量相差 96 次，而两轮输出**逐 token 完全相同**。另修复图捕获时 dummy run 的 compact 行越界（见 T1.Q2） | T1.2 | 16 | **已完成** |
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已通过**：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同（`accept_t14_pto_v5`）；补位档位全部进入图重放（`accept_t13_padded`：`replay_padded=62`、`allowed=62`、`rejected=0`），不再静默回退 Native | T1.3 | 16 | **已完成** |
 | T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
-| T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数与 cache 写入实测 | **判据需修订 + 一处分叉待你定**。空转已证实（rank0 比 rank1 多 7 次 dummy）；无越界读 ✅；输出无非有限值 ✅。原判据"不写任何 cache／state"**对 Native 本身也不成立**（`cmp_kv`/`swa`/`inner_state` 两侧都写），需修订。**`compress_state` 只有 PTO 写**，是真分叉，成因在 CANN 算子内部、读代码判断不了，按"没把握的先不做"未改 kernel | T1.4 | 16 | **待用户定** |
+| T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数 | **部分完成**。空转已证实：rank0 比 rank1 多 7 次 dummy（26 vs 19），与提前 48 token≈8 步吻合，是直接计数而非耗时推断。无越界读 ✅；输出无非有限值 ✅（rank1 与基线逐 token 相同，空 rank 不影响其余 rank）。**"不写任何 cache／state" 既未证实也未证伪**——探针被对照实验判定无效（0-token 步显示 114 页变化），详见下方一节 | T1.4 | 16 | **部分完成** |
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
 | T1.9 | 拿掉 DP 图模式闸门 | `service_config.py:69` | T1.8 通过后删除该 `raise`；删除前后各跑一次同配置，确认行为符合预期 | T1.8 | 16 | 未开始 |
@@ -229,81 +229,36 @@ D04 的 rank0 提交数为 0：不提交任何请求但仍参与 DP 集合通信
 通信方法与图模式，再判定预期 padding 量——清单 T1.7 的判据已有此要求，
 DP16 同样适用，不能用 DP2 的结论替代。
 
-### 空 rank 的 dummy 会写 cache（2026-09-24 实测，待定性）
+### 空 rank 的 dummy 是否写 cache：**探针无效，结论全部撤回**
 
-T1.6 原判据写"不写任何 cache／state"，依据是 dummy 的 slot 全为 `-1`、会被
-kernel 的 `cache_page >= 0` 守卫挡住。**实测证伪**：`accept_t16_emptyrank_v5`
-中 rank0 空转期的 dummy#19/20/21 每次都改写了 `cmp_kv`、`swa`、
-`compress_state`、`inner_state` 四个视图。
+这一节记录一次失败的测量，保留它是为了避免后人重走。
 
-测量本身已排除两处此前的缺陷：克隆**前后都同步**（v4 只在后面同步，before
-快照可能拍在上一步写入未落盘时）；探测点跳过前 18 次 dummy，越过了对照 rank
-的 dummy 总数，因此探到的确实是 rank0 自己请求跑完之后的那些。rank1 只有
-18 次、未触发探测，构成对照。
+原本要验 T1.6 的"不写任何 cache／state"。做法是在 dummy 步前后克隆该层的
+六个缓存视图并逐元素比较。先后修过两轮缺陷（克隆前补同步、跳过前 18 次 dummy
+以避开两个 rank 都有的早期步骤），一度得出结论：四处视图被写，其中
+`compress_state` 只有 PTO 写、Native 不写。
 
-已知的相关代码事实：`model_runner_v1.py` 里 `slot_mapping.gpu.fill_(-1)`
-**只在非图捕获时执行**；而 CSA 的 compact slot mapping
-（`cmp_slot_mapping`／`idx_slot_mapping`）由 Native 的 `compressor_metadata`
-算子从 `start_pos` 与 `block_table` 现算，**不在那次 fill 的覆盖范围内**。
-这能解释 `cmp_kv` 被写，但 `swa` 走的是应被置 -1 的 `ori_slot_mapping`，
-仍无解释——**不要把这条半截推断当成结论**。
+**对照实验推翻了整套测量**（`accept_t16_stepcontrol`）。用同一套前后对比逻辑
+去量 `execute_model`，钩到的前两次恰好是**空闲步——0 个请求、0 个 token**，
+却显示 `cmp_kv` 与 `swa` 各有 114 页、`compress_state` 有 62 页发生变化。
+**一个什么都不算的步骤不可能写 114 页**，所以这个前后差异根本不能归因于被测
+步骤。
 
-**未回答**：写到哪些页、是否落在 0 号 null block、以及该 rank 之后接到新请求
-时这些页会不会被复用而出问题。本轮 rank0 空转后没有再接请求，没测到这一层。
+因此：
 
-**Native 对照结果（`accept_t16_native_control`，同配置同探测点）：**
+- 页数、页号、`only_null_block` 判定全部作废；
+- **那条"`compress_state` 只有 PTO 写"的二值结论同样作废**——对照组显示
+  PTO 的 `compress_state` 在 0-token 步上也会变（62 页／31 页），而没有
+  Native 的同类对照数据；
+- **T1.6 的"不写任何 cache／state"既未证实也未证伪**。先前写的"已被实测
+  证伪"不成立，已删除。
 
-| 视图 | Native | PTO |
-| --- | --- | --- |
-| `cmp_kv` | 写 | 写 |
-| `swa` | 写 | 写 |
-| `inner_state` | 写 | 写 |
-| **`compress_state`** | **不写** | **写** |
+一条待查线索：CSA 的缓存本来就存在**存储重叠**——`observer.py` 的
+`offline_cache_layout` 专门在计算各视图间的 overlaps——无关活动可能因此显形
+为"cache 变了"。未证实。
 
-两个结论：
-
-1. **四处写入里三处是上游既有行为**，Native 一样写。所以 T1.6 原判据
-   "不写任何 cache／state" 对 Native 本身就不成立，**判据需要修订**，
-   不能拿它去要求 PTO。
-2. **`compress_state` 只有 PTO 写，这是真正的 PTO 与 Native 分叉。**
-
-被探层是 `--swimlane-layer` 默认的第 2 层，在 PTO 轮里是 PTO 层、在 Native
-轮里是 Native 层，同层同位对照，可比。
-
-**为什么 Native 不写，读代码判断不了。** Native 的 `compressor` 算子
-（`dsa_v1.py:2415`）用 `state_block_table` 与 `start_pos` 在算子内部自行决定
-写入位置，**不接受 `state_slot_mapping`**；PTO 用的是 Native metadata 里的
-`state_slot_mapping`，寻址方式不同。判定发生在 CANN 算子内部。
-
-PTO 侧写 `compress_state` 的 state commit 循环守卫只有
-`state_page >= 0 and state_offset >= 0`，没有 T1.3 加的 `seq_lens` 判据；
-但 dummy 的 `seq_lens` 是非零的，**补上那个判据也拦不住**，所以不能照搬。
-
-**页级定位（`accept_t16_pages_*`）：数字不可信，只有二值结论可用。**
-
-| 视图 | PTO 变化页数 | Native 变化页数 |
-| --- | --- | --- |
-| `cmp_kv` | 102 / 20677 | 100 / 24834 |
-| `swa` | 103 | 100 |
-| `inner_state` | 17 | 11 |
-| **`compress_state`** | **3（页 34/37/105）** | **不写** |
-
-**为什么不可信**：一次 dummy 只有 6 个 token，最多写 6 个槽位，却观察到 100
-多页变化——物理上讲不通，说明两次 `synchronize()` 之间还有未查明的干扰源在写。
-因此页数、页号与 `only_null_block` 判定都不能用，**不能据此断言"写到了真实页、
-存在复用风险"**。
-
-**仍然可用的是二值结论**：`compress_state` 只有 PTO 写、Native 不写，
-这一点在 `accept_t16_emptyrank_v5` 与 `accept_t16_pages_pto` 两轮独立运行里一致。
-
-要把页级定位做实，需要先找出干扰源——可能的方向是确认
-`_build_kv_cache` 返回的视图是否按层私有、以及 dummy 步之外是否还有异步写
-（如 KV connector）。这项尚未做。
-
-**按"没把握的先不做"处理，不猜着改 kernel。** 需要你定的是：
-是否要求 PTO 在 dummy／空转步上与 Native 一致地不写 `compress_state`；
-若要，还需先查清 Native 算子内部的判定依据。另有一层始终没测：写进去的页
-之后被复用会不会出问题——本轮 rank0 空转后没有再接请求。
+要把这件事做实，需要先有一个能通过"0-token 步应当零变化"这一自检的探针。
+在那之前不要引用本节的任何数字。
 
 ### T1 的待确认问题
 
