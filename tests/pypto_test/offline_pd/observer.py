@@ -31,12 +31,8 @@ _enable_swimlane_init()
 class OfflineCSAObserver:
     # CSA 的五个 cache group：swa、compressed、state、indexer、indexer_state。
     _OFFLINE_PADDING_GROUPS = 5
-    # dummy 步的 cache 写入实测只做前几次：整份克隆代价不小。
-    _OFFLINE_DUMMY_CACHE_PROBES = 3
-    # 跳过前若干次 dummy：那些是两个 rank 都有的早期步骤，不是空 rank 路径。
-    _OFFLINE_DUMMY_CACHE_SKIP = 18
-    # 正常 decode 步的对照样本数。
-    _OFFLINE_STEP_PROBES = 2
+    # dummy 步里取几次 slot mapping 样本。
+    _OFFLINE_SLOT_SAMPLES = 4
 
     def offline_cache_layout(self):
         """只记录真实缓存描述符，用于定位共享存储边界，不读取设备数据。"""
@@ -276,14 +272,14 @@ class OfflineCSAObserver:
         state = {"dp_rank": rank, "layer_index": layer_index,
                  "captured": 0, "builds_seen": 0, "padded_builds": 0,
                  "dummy_runs": 0, "dummy_tokens": [],
-                 "cache_probes": 0, "cache_probe_results": [],
                  "step_probes": 0, "step_probe_results": [],
+                 "in_dummy": False, "slot_samples": 0, "slot_probe_results": [],
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
         self._offline_replay_probe(state)
         self._offline_dummy_probe(state)
-        self._offline_step_probe(state)
+        self._offline_slot_probe(state)
 
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
@@ -333,78 +329,48 @@ class OfflineCSAObserver:
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
 
-    def _offline_cache_delta(self, views, run):
-        """在 run() 前后比较 views，返回每个视图的变化页信息。
+    def _offline_slot_probe(self, state):
+        """记录 dummy 步里 PTO 实际拿到的 slot mapping。
 
-        前后都同步：只在后面同步的话，before 快照可能拍在上一步写入未落盘时。
+        整份缓存视图对比在这套布局下不可能成立——`decode_cache_layout_v1` 实测
+        `cmp_kv` 与 `compress_state` 共用同一块 678MB 分配、重叠 676MB，写一处
+        会让多个视图一起"变化"。改为直接看**输入**：若某个 slot mapping 全为
+        -1，kernel 的 `page >= 0` 守卫就必然挡住，写不进去，与存储布局无关。
         """
-        import torch
-
-        torch.npu.synchronize()
-        before = {name: tensor.clone() for name, tensor in views.items()}
-        result = run()
-        torch.npu.synchronize()
-        changed = {}
-        for name, tensor in views.items():
-            if torch.equal(tensor, before[name]):
-                continue
-            flat_now = tensor.reshape(tensor.shape[0], -1)
-            flat_old = before[name].reshape(before[name].shape[0], -1)
-            rows = (flat_now != flat_old).any(dim=-1).nonzero().flatten().tolist()
-            changed[name] = {"pages": rows[:16], "page_count": len(rows),
-                             "total_pages": int(tensor.shape[0]),
-                             "only_null_block": rows == [0]}
-        return result, changed
-
-    def _offline_step_probe(self, state):
-        """对照组：用同一套探针量一个**正常** decode 步改了多少页。
-
-        dummy 步测出 100 多页变化，而一次 dummy 只有 6 个 token，物理上讲不通。
-        需要知道正常步的量级才能判断是探针有干扰，还是"页数远大于 token 数"
-        本来就是这套缓存布局的常态。
-        """
-        runner = self.model_runner
-        origin = getattr(runner, "execute_model", None)
-        if origin is None:
+        try:
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+        except Exception as error:
+            state["slot_probe"] = f"unavailable: {error!r}"
             return
 
-        def probed(scheduler_output, *args, **kwargs):
-            if state["step_probes"] >= self._OFFLINE_STEP_PROBES:
-                return origin(scheduler_output, *args, **kwargs)
-            views = self._offline_dummy_cache_views(state)
-            if views is None:
-                return origin(scheduler_output, *args, **kwargs)
-            result, changed = self._offline_cache_delta(
-                views, lambda: origin(scheduler_output, *args, **kwargs))
-            state["step_probes"] += 1
-            state["step_probe_results"].append(
-                {"scheduled_tokens": int(scheduler_output.total_num_scheduled_tokens),
-                 "requests": len(scheduler_output.num_scheduled_tokens),
-                 "changed": changed})
-            return result
+        origin = CSAServiceRuntime.__call__
 
-        runner.execute_model = probed
-        self._offline_step_origin = origin
+        def probed(runtime, context, hidden, positions, output, kv_cache):
+            if state["in_dummy"] and state["slot_samples"] < self._OFFLINE_SLOT_SAMPLES:
+                try:
+                    metadata = context.attn_metadata
+                    record = {"dummy_index": state["dummy_runs"], "tokens": int(hidden.shape[0])}
+                    for name, prefix in runtime.prefixes.items():
+                        decode = metadata[prefix].decode
+                        slots = getattr(decode, "slot_mapping", None)
+                        if slots is None:
+                            continue
+                        flat = slots.reshape(-1)
+                        record[name] = {"count": int(flat.numel()),
+                                        "non_negative": int((flat >= 0).sum().item()),
+                                        "max": int(flat.max().item())}
+                    state["slot_samples"] += 1
+                    state["slot_probe_results"].append(record)
+                except Exception as error:
+                    state.setdefault("slot_probe_error", repr(error))
+            return origin(runtime, context, hidden, positions, output, kv_cache)
 
-    def _offline_dummy_cache_views(self, state):
-        """取被观察层的 cache/state 视图；拿不到就返回 None，不影响主流程。"""
-        from types import SimpleNamespace
+        CSAServiceRuntime.__call__ = probed
+        self._offline_slot_origin = origin
 
-        try:
-            from vllm_ascend.ops.dsa import _build_kv_cache
-
-            layers = self.model_runner.get_model().model.layers
-            index = state["layer_index"]
-            attention = layers[index].self_attn
-            if getattr(attention, "compress_ratio", 0) != 4:
-                return None
-            cmp_kv, swa, compress_state, inner_state, key, scale = _build_kv_cache(
-                attention.dsa_attn, SimpleNamespace(virtual_engine=None))
-            return {"cmp_kv": cmp_kv, "swa": swa, "compress_state": compress_state,
-                    "inner_state": inner_state, "indexer_key": key, "indexer_scale": scale}
-        except Exception as error:  # 取不到就退化为只计数，不让诊断打断本轮
-            state.setdefault("cache_probe_error", repr(error))
-            return None
+    def _offline_dummy_body(self, state, origin, runner, num_tokens, args, kwargs):
+        """dummy 的实际执行体；缓存整份对比已废弃，仅保留计数与 slot 取样。"""
+        return origin(runner, num_tokens, *args, **kwargs)
 
     def _offline_dummy_probe(self, state):
         """统计本 rank 跑了多少次 dummy batch，以及其中有多少次是空调度。
@@ -423,43 +389,11 @@ class OfflineCSAObserver:
         def counted(runner, num_tokens, *args, **kwargs):
             state["dummy_runs"] += 1
             state["dummy_tokens"].append(int(num_tokens))
-            # 只对前几次 dummy 做 cache 写入实测：整份克隆代价不小，而"dummy 不写
-            # cache"是个结构性性质，前几次不写就说明守卫生效。按约束不做 hash，
-            # 这里是逐元素数值比较。
-            # 只探"本 rank 自己的请求已经跑完之后"的 dummy：那才是空 rank 路径。
-            # 前几次 dummy 两个 rank 都有（早期步骤），探它们说明不了问题——
-            # v4 实测里 rank1 并不空转却与 rank0 前三次模式完全相同，即为此。
-            if (state["dummy_runs"] <= self._OFFLINE_DUMMY_CACHE_SKIP
-                    or state["cache_probes"] >= self._OFFLINE_DUMMY_CACHE_PROBES):
-                return origin(runner, num_tokens, *args, **kwargs)
-            views = self._offline_dummy_cache_views(state)
-            if views is None:
-                return origin(runner, num_tokens, *args, **kwargs)
-            import torch
-
-            # 克隆前必须同步：否则 before 快照可能拍在上一步真实 decode 的写入
-            # 尚未落盘时，after 看到的差异就成了上一步造成的。v4 漏了这一步。
-            torch.npu.synchronize()
-            before = {name: tensor.clone() for name, tensor in views.items()}
-            result = origin(runner, num_tokens, *args, **kwargs)
-            torch.npu.synchronize()
-            changed = {}
-            for name, tensor in views.items():
-                if torch.equal(tensor, before[name]):
-                    continue
-                # 记录变化落在哪些页：0 号是 vLLM 保留的 null block，
-                # 只写它说明这个分叉是良性的；写到真实页才需要处理。
-                flat_now = tensor.reshape(tensor.shape[0], -1)
-                flat_old = before[name].reshape(before[name].shape[0], -1)
-                rows = (flat_now != flat_old).any(dim=-1).nonzero().flatten().tolist()
-                changed[name] = {"pages": rows[:16], "page_count": len(rows),
-                                 "total_pages": int(tensor.shape[0]),
-                                 "only_null_block": rows == [0]}
-            state["cache_probes"] += 1
-            state["cache_probe_results"].append(
-                {"dummy_index": state["dummy_runs"], "num_tokens": int(num_tokens),
-                 "changed": changed})
-            return result
+            state["in_dummy"] = True
+            try:
+                return self._offline_dummy_body(state, origin, runner, num_tokens, args, kwargs)
+            finally:
+                state["in_dummy"] = False
 
         NPUModelRunner._dummy_run = counted
         self._offline_dummy_origin = origin
@@ -526,10 +460,11 @@ class OfflineCSAObserver:
             from vllm_ascend.worker import model_runner_v1
             model_runner_v1.can_replay_csa_graph = origin
             self._offline_replay_origin = None
-        step_origin = getattr(self, "_offline_step_origin", None)
-        if step_origin is not None:
-            self.model_runner.execute_model = step_origin
-            self._offline_step_origin = None
+        slot_origin = getattr(self, "_offline_slot_origin", None)
+        if slot_origin is not None:
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+            CSAServiceRuntime.__call__ = slot_origin
+            self._offline_slot_origin = None
         dummy_origin = getattr(self, "_offline_dummy_origin", None)
         if dummy_origin is not None:
             from vllm_ascend.worker.model_runner_v1 import NPUModelRunner
