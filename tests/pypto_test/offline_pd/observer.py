@@ -33,6 +33,8 @@ class OfflineCSAObserver:
     _OFFLINE_PADDING_GROUPS = 5
     # dummy 步的 cache 写入实测只做前几次：整份克隆代价不小。
     _OFFLINE_DUMMY_CACHE_PROBES = 3
+    # 跳过前若干次 dummy：那些是两个 rank 都有的早期步骤，不是空 rank 路径。
+    _OFFLINE_DUMMY_CACHE_SKIP = 18
 
     def offline_cache_layout(self):
         """只记录真实缓存描述符，用于定位共享存储边界，不读取设备数据。"""
@@ -367,13 +369,20 @@ class OfflineCSAObserver:
             # 只对前几次 dummy 做 cache 写入实测：整份克隆代价不小，而"dummy 不写
             # cache"是个结构性性质，前几次不写就说明守卫生效。按约束不做 hash，
             # 这里是逐元素数值比较。
-            if state["cache_probes"] >= self._OFFLINE_DUMMY_CACHE_PROBES:
+            # 只探"本 rank 自己的请求已经跑完之后"的 dummy：那才是空 rank 路径。
+            # 前几次 dummy 两个 rank 都有（早期步骤），探它们说明不了问题——
+            # v4 实测里 rank1 并不空转却与 rank0 前三次模式完全相同，即为此。
+            if (state["dummy_runs"] <= self._OFFLINE_DUMMY_CACHE_SKIP
+                    or state["cache_probes"] >= self._OFFLINE_DUMMY_CACHE_PROBES):
                 return origin(runner, num_tokens, *args, **kwargs)
             views = self._offline_dummy_cache_views(state)
             if views is None:
                 return origin(runner, num_tokens, *args, **kwargs)
             import torch
 
+            # 克隆前必须同步：否则 before 快照可能拍在上一步真实 decode 的写入
+            # 尚未落盘时，after 看到的差异就成了上一步造成的。v4 漏了这一步。
+            torch.npu.synchronize()
             before = {name: tensor.clone() for name, tensor in views.items()}
             result = origin(runner, num_tokens, *args, **kwargs)
             torch.npu.synchronize()
