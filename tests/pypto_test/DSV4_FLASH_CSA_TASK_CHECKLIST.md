@@ -5,7 +5,7 @@
 不写"验证一下""确认无误"这类无法判定的措辞。
 
 状态口径：`未开始` / `进行中` / `已完成` / `暂停`（暂停项不得自行恢复）。
-截至 2026-09-23，除 T1.1 外全部未开始。
+截至 2026-09-24，已完成 T1.1、T1.2 与 T5.1～T5.3；T5.4 待用户定。
 
 相关文档：[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)、
 [跨会话交接](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)、
@@ -39,8 +39,8 @@
 
 | ID | 目标 | 落点 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
-| T1.1 | CPU 复算四处索引，取得越界证据 | `tests/pypto_test/dsv4_csa_padding_probe.py` | 已完成：真实请求四处全部在界内，补位请求在 compact 行号上恒越界（32775 vs 10 行），页表类在陈旧 position 超容量时越界。证据 `results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/` | — | 否 | **已完成** |
-| T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 落盘三项：①`cmp_slot_mapping`／`idx_slot_mapping` 的真实 shape 与补位区内容，与 T1.1 的预测行数对照；②补位请求的 `seq_lens`、`start_pos`、页表行实测值；③据此在计划第 4 节的方案 C 与 D 之间定夺，并说明与 Native `compressor_metadata` 输出是否一致 | T1.1 | 16 | 进行中 |
+| T1.1 | CPU 复算四处索引，取得越界证据 | `tests/pypto_test/dsv4_csa_padding_probe.py` | 已完成：真实请求四处全部在界内，补位请求在 compact 行号上恒越界，页表类在陈旧 position 超容量时越界。初版按补齐后 token 数算出 10 行，T1.2 实测为 8 行，公式已更正。证据 `results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/` | — | 否 | **已完成** |
+| T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 已完成，任务 `task_20260924_001111_370250932735`：compact 行数实测 8（初版预测 10，公式已更正）；补位请求 `seq_lens=0`、`start_pos=0`、页表行全零；补位段 positions 实测为上一步残留；据此选定方案 C（`seq_lens == 0`），D 因新请求 `start_pos` 同为 0 而有歧义 | T1.1 | 16 | **已完成** |
 | T1.3 | 加入设备端有效性判据并改四处索引 | `decode_csa.py`、`decode_compressor_ratio4.py`、`decode_indexer_compressor.py`、`decode_sparse_attn_csa.py` | 改动前先读 `dsa_v1.py` 中 Native 对同一件事的处理并在提交说明里写明对照结论；同一批真实请求，补位与不补位两种摆法的输出逐 bit 相同；整份 allocation（含页 padding 与前后保护区）无差异 | T1.2 | 1 | 未开始 |
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py` | G05 通过：小 BS 放进较大合法 bucket，eager 与 graph 输出一致；不再静默回退 Native | T1.3 | 1 | 未开始 |
 | T1.5 | 单卡 graph 覆盖 G04～G06 | `tests/pypto_test/` 下新增或扩展 fixture | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 1 | 未开始 |
@@ -54,21 +54,22 @@
 ### T1.2 的取证方式：挂在真实生产路径上
 
 用户 2026-09-23 定：**一切以当前 release 的生产路径为准**，取证走真实离线 D，
-不复活旧的单层 fixture。
+不复活旧的单层 fixture。旧 fixture 依赖的 `enable_device_metadata`、
+`take_device_metadata_tasks`、`DeviceMetadataExecutor` 在当前 release 中均已删除，
+整条链在 import 阶段即失败；按上述口径不予适配，也不作为参考。
 
-旧单层 fixture 依赖的 `enable_device_metadata`、`take_device_metadata_tasks`、
-`DeviceMetadataExecutor` 在当前 release 中均已删除，整条链在 import 阶段即失败；
-按上述口径不予适配，也不作为参考。release 的 compact metadata 生产方式是
-在 forward 内就地调用 `impl._compute_compressor_metadata(decode_metadata)`，
-在消费者自己的 stream 上返回新张量，无需任何 executor 脚手架。
+挂载点最终选 **`AscendDSAMetadataBuilder.build`**。最初挂 `CSAServiceRuntime.eligible`
+是错的，有两个问题：它只在 PTO 后端存在；而且 `can_replay_csa_graph` 一旦发现需要
+补位就返回 False，使该步回退 eager 并拿到未补齐的 `BatchDescriptor`，等于把要观察的
+padding 自己消掉了。builder 两个后端都会走，不受 CSA 闸门影响。
 
-取证挂在 `CSAServiceRuntime.eligible` 上：补位时 PTO 会回退 Native，
-`__call__` 不会进，而 `eligible` 每步都被调用，且看到的 metadata 与生产路径完全一致。
-命中补位步时落盘小张量，并额外调一次 Native 自己的 compact 生产器量其真实形状，
-不改变本步的计算路径与结果。索引复算在 CPU 侧离线做，与 `profile`／`profile-export`
-的分工一致。
+compact 行数直接读 `decode.num_compressed_tokens`，不额外调用 `compressor_metadata`
+算子——那需要与当前 builder 同一层的 impl，取错层会因 `compress_ratio` 不匹配而报错
+（`task_20260924_000518_3583841341` 即因此失败），也会扰动本步。
 
-### 全局阻塞：本机尚未跑通过任何图模式运行
+索引复算在 CPU 侧离线做，与 `profile`／`profile-export` 的分工一致。
+
+### 已解决：本机图模式此前无法运行
 
 2026-09-23 两轮 16 卡采集的结论，**影响 T1.2 之后的全部图模式工作**：
 
@@ -97,8 +98,19 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 交接文档记载本轮 D16 一直是 eager，**本工作区没有任何图模式成功运行的记录**，
 与该现象一致。
 
-需用户定夺：这属于本地环境差异（约束要求如实保留、不自行绕过），
-还是需要修复后再继续。在此之前 T1.2 及其后的图模式项目全部无法推进。
+**已于 2026-09-24 修复。** 实测确认 `aclnnAddRmsNormBias` 在基础 CANN 9.0.0 的
+`libopapi.so` 和已构建的 CSA 自定义算子包里都不存在，先前"bootstrap 时序"的猜测被证伪。
+真正触发路径是 torch 的 pattern matcher 以 `tracing_mode="real"` 追踪融合 pattern，
+等于真的执行一次 `norm_quant_fusion_pass.py:61` 里的 `npu_add_rms_norm_bias`，
+于是图编译在建 pattern 阶段就崩；eager 不建 pattern 故从未暴露。
+
+修法是配置开关，不改生产代码：`graph_fusion_pass_manager.py:54` 以
+`ascend_compilation_config.get("fuse_norm_quant", True)` 控制该 pass，
+测试驱动在图模式下将其置 false。`task_20260924_001111_370250932735` exit 0，
+本机首次跑通图模式。
+
+**该项偏离上线口径**：参考脚本所在环境具备该算子、融合为开启状态，本机关闭它
+意味着图模式性能不直接等同于线上，T2 的性能对照必须注明这一点。
 
 ### T1 的待确认问题
 
@@ -106,11 +118,11 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 
 | ID | 问题 | 归属 |
 | --- | --- | --- |
-| T1.Q1 | 0 号页是否为 null block。补位页表行填 `0`，若它是真实可用页，补位请求的读会落到别人的数据上，影响"未写区域"比对口径 | T1.2 |
+| ~~T1.Q1~~ | **已答**：vLLM 把 `block_id=0` 保留为 null block（`vllm/v1/core/block_pool.py:188`），初始化时从空闲队列取走并标记 `is_null`，永不分配给任何请求。补位页表行读到的是该保留页，不会串到其他请求的数据 | 已闭环 |
 | T1.Q2 | 空 rank dummy 下 compact 行号按推算会越界，但日志第 81 节记录该用例曾通过，两者矛盾 | T1.6 |
 | T1.Q3 | 补位 token 的 attention 输出会不会带 NaN/Inf 进 MoE。跳过 DP 同步时不传 `mc2_mask`，补位 token 会真的进入专家路由 | T1.7 |
 | T1.Q4 | 放宽闸门后 `num_reqs_actual` 与 `num_decodes` 的实际关系 | T1.4 |
-| T1.Q5 | 真实 runner 的页表按 `max_model_len` 分配，比 fixture 宽，A／D 两处线上可能是"读 0 号页"而非越界。T1.1 只按 fixture 几何推断，未实测 | T1.2 |
+| ~~T1.Q5~~ | **已答**：真实 runner 按 `cdiv(max_model_len, block_size)` 分配页表列（`vllm/v1/worker/gpu_model_runner.py:7039`），比单层 fixture 宽。T1.2 实测样本中 A／D 两处补位请求均在界内，读到的是 0 号页 | 已闭环 |
 
 ## 2. T2　性能对照
 

@@ -160,8 +160,11 @@ def predict(args, const):
     bounds = [index * seq for index in range(args.padded_batch + 1)]
     lengths = [args.history + seq] * args.real_batch + [0] * (args.padded_batch - args.real_batch)
 
-    # 真实 compact 行数，来自 dsa_v1.py:606 _num_compressor_metadata_rows。
-    compact_rows = min(padded_tokens, padded_tokens // ratio + args.padded_batch)
+    # compact 行数来自 dsa_v1.py:606 _num_compressor_metadata_rows。
+    # 注意它用的是**实际** token 数（num_decode_tokens）配**补齐后**的请求数
+    # （num_decodes）。初版误用了补齐后的 token 数，算出 10 行；2026-09-24 的
+    # capture_v4 实测为 8 行，与下面这个公式一致。行数比误算的更小，越界只会更严重。
+    compact_rows = min(real_tokens, real_tokens // ratio + args.padded_batch)
 
     report = {"mode": "predict", "constants": const,
               "scenario": {"real_batch": args.real_batch, "padded_batch": args.padded_batch,
