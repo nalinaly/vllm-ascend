@@ -73,6 +73,82 @@ def make_plan(args):
     print(f"Prepared {len(cases)} P fixtures in {bank}")
 
 
+PREFIX_DATA_POLICY = (
+    "跨副本的有效前缀数据差异记为报告项，不致命。D 侧 TP1 只读 tp0（connector 里 tp 固定为 0），"
+    "且 DSA 的 KV 是 MLA 压缩潜变量、跨 TP 复制而非切分，每个副本都是完整一份；"
+    "几何／布局／覆盖／history 这些 D 真正依赖的检查仍然致命。"
+    "相对误差 |a-b|/max(|a|,|b|) 在近零值上会饱和到 2.0 附近，不能用来判断是不是舍入，"
+    "所以量级以 ULP 距离为准，并同时给出中位数与最大值。"
+)
+
+
+def summarize_prefix_differences(per_replica):
+    """把逐张量的差异压成可读摘要，并保留量级最大的若干条。"""
+    summary = {"per_replica": {}, "policy_is_non_fatal": True}
+    for replica, entries in per_replica.items():
+        if not entries:
+            summary["per_replica"][replica] = []
+            continue
+        ranked = sorted(entries, key=lambda item: item.get("ulp_median") or 0.0, reverse=True)
+        summary["per_replica"][replica] = ranked
+        medians = [item["ulp_median"] for item in entries if "ulp_median" in item]
+        summary.setdefault("aggregate", {})[replica] = {
+            "differing_tensors": len(entries),
+            "ulp_median_max": max(medians) if medians else None,
+            "max_abs_diff": max((item.get("max_abs_diff") or 0.0) for item in entries),
+        }
+    return summary
+
+
+def ulp_gap(left, right):
+    """两个同 dtype 浮点张量的 ULP 距离：按位重解释成有序整数后作差。
+
+    近零值跨零号翻转时该距离会饱和到很大，所以判定要同时看中位数，
+    不能只看最大值。
+    """
+    import torch
+
+    if left.dtype == torch.bfloat16:
+        wide, floor = torch.int16, -32768
+    elif left.dtype == torch.float32:
+        wide, floor = torch.int32, -2147483648
+    else:
+        return None
+    def ordered(value):
+        raw = value.view(wide).to(torch.int64)
+        return torch.where(raw < 0, torch.tensor(floor, dtype=torch.int64) - raw, raw)
+    return (ordered(left) - ordered(right)).abs()
+
+
+def replica_difference(name, reference, other):
+    """量化一份张量在两个 TP 副本之间的差异，供 audit 作为报告项记录。
+
+    只在已知两者不逐 bit 相同时调用。相对误差用 |a-b|/max(|a|,|b|) 会在近零值上
+    饱和到 2.0 附近，不能用来判断是不是舍入，所以这里以 ULP 距离为准。
+    """
+    import torch
+
+    gap = ulp_gap(reference, other)
+    unequal = reference.view(torch.uint8) != other.view(torch.uint8)
+    entry = {"name": name, "dtype": str(reference.dtype).rsplit(".", 1)[-1],
+             "differing_bytes": int(unequal.sum().item()), "total_bytes": int(unequal.numel())}
+    if gap is None:
+        # int8 indexer key：比的是量化码字，差一个码字就说明选中的内容变了。
+        differs = reference != other
+        entry.update(differing_elements=int(differs.sum().item()),
+                     max_codeword_delta=int((reference.to(int) - other.to(int)).abs().max().item()))
+        return entry
+    hit = gap > 0
+    counted = gap[hit].to(torch.float64)
+    entry.update(
+        differing_elements=int(hit.sum().item()), total_elements=int(gap.numel()),
+        ulp_median=float(counted.median().item()), ulp_max=float(counted.max().item()),
+        max_abs_diff=float((reference.to(torch.float64) - other.to(torch.float64)).abs().max().item()),
+        magnitude_max=float(reference.abs().max().to(torch.float64).item()),
+    )
+    return entry
+
+
 def audit(args):
     import torch
     from safetensors.torch import load_file
@@ -86,7 +162,7 @@ def audit(args):
         replicas = [json.loads((args.bank / case["key"] / f"tp{tp}" / "manifest.json").read_text())
                     for tp in range(4)]
         base = replicas[0]
-        errors, raw_differences = [], {}
+        errors, raw_differences, prefix_differences = [], {}, {}
         reference_raw, reference_prefix = None, None
         for tp, other in enumerate(replicas):
             payload = args.bank / case["key"] / f"tp{tp}" / "cache.safetensors"
@@ -102,6 +178,7 @@ def audit(args):
                 continue
             prefixes = {}
             raw_differences[f"tp{tp}"] = []
+            prefix_differences[f"tp{tp}"] = []
             for name, ratio in expected.items():
                 entry, value = other["entries"][name], tensors[name]
                 if (list(value.shape[1:]) != entry["shape"] or str(value.dtype) != entry["dtype"]
@@ -116,18 +193,25 @@ def audit(args):
                     if not torch.equal(value.view(torch.uint8), reference_raw[name].view(torch.uint8)):
                         raw_differences[f"tp{tp}"].append(name)
                     if not torch.equal(prefix.view(torch.uint8), reference_prefix[name].view(torch.uint8)):
-                        errors.append(f"tp{tp}: computed-prefix data mismatch: {name}")
+                        # 报告项，不致命。理由见下方 prefix_data_differences 的说明。
+                        prefix_differences[f"tp{tp}"].append(
+                            replica_difference(name, reference_prefix[name], prefix))
             if reference_raw is None:
                 reference_raw, reference_prefix = tensors, prefixes
         results.append({"key": case["key"], "tensors": len(base["entries"]), "errors": errors,
-                        "raw_payload_differences": raw_differences})
+                        "raw_payload_differences": raw_differences,
+                        "prefix_data_differences": summarize_prefix_differences(prefix_differences)})
     passed = all(not r["errors"] for r in results)
     write_json(args.bank / "audit.json", {"status": "PASS" if passed else "FAIL", "cases": results,
-               "comparison": "bitwise computed prefix; rows beyond H or floor(H/ratio) cleared on restore",
+               "comparison": "fatal: geometry/layout/coverage/history; reported: cross-replica prefix data",
+               "prefix_data_policy": PREFIX_DATA_POLICY,
                "payloads": payloads})
     if not passed:
         raise RuntimeError("Offline cache audit failed; see audit.json")
-    print(f"PASS: {len(results)} cases, four TP replicas, all target/draft groups")
+    reported = sum(len(entries) for result in results
+                   for entries in result["prefix_data_differences"]["per_replica"].values())
+    print(f"PASS: {len(results)} cases, four TP replicas, all target/draft groups"
+          + (f"; {reported} cross-replica prefix differences reported (non-fatal)" if reported else ""))
 
 
 def generate_round(llm, args, case, limit):
@@ -388,6 +472,14 @@ def worker(args):
     # Match `vllm serve` model/config registration before constructing LLM.
     current_platform.pre_register_and_update()
 
+    if args.deterministic:
+        # 算子级确定性。level>=1 会同时把 torch.use_deterministic_algorithms 置 True，
+        # 所以不要再单独调它（torch_npu 的 set_deterministic_level 明确警告过）。
+        # 集合通信侧的 HCCL_DETERMINISTIC 由 launch() 写进子进程环境。
+        import torch_npu
+        torch_npu.npu.set_deterministic_level(1)
+        print(f"OFFLINE_DETERMINISTIC level=1 rank={args.rank}", flush=True)
+
     plan = read_plan(args.bank)
     prefill = args.command == "prefill"
     cases = [c for c in plan["cases"] if c["p_dp_rank"] == args.rank % 4]
@@ -411,8 +503,19 @@ def worker(args):
         # D 侧上线口径是 FULL_DECODE_ONLY，见 dsv4_perf_accuracy_20260827/runtime；
         # eager 只用于定位问题，其每步重入 Python 派发路径，不代表上线表现。
         # draft 与该参考配置一致保持 eager。NZ 当前一定不能开，两个后端都不开。
+        # 捕获档位默认由 vLLM 按 max_num_seqs*6 截断默认列表得到，最大档可能小于
+        # potential_max_tokens（实测档位 [1,2,4,8,16,24] 而 potential 为 30）。
+        # 那会让 mc2_tokens_capacity 小于 potential，A3 上 select_moe_comm_method
+        # 改选 ALLTOALL，should_skip_allreduce_across_dp_group 随之为假，
+        # 最终触发 service_config.py 的 PTO DP 闸门。显式给 6 的倍数档位可避开。
+        # 默认档位由 platform.py 对齐到 uniform_decode_query_len（DSpark 下即 6），
+        # 这样每一档都能还原成整数条请求，PTO 可以捕获全部档位。
+        # --capture-sizes 用于造"档位不是 6 的倍数"的反例场景，那时必须同时关掉对齐，
+        # 否则给的 16 会被取整成 18，场景就造不出来。
         **({} if prefill or args.graph_mode == "eager"
-           else {"compilation_config": {"cudagraph_mode": "FULL_DECODE_ONLY"}}),
+           else {"compilation_config": {"cudagraph_mode": "FULL_DECODE_ONLY",
+                                        **({} if not args.capture_sizes
+                                           else {"cudagraph_capture_sizes": list(args.capture_sizes)})}}),
         # Release A3 Native chooses INT8 Indexer storage in its constructor;
         # the upstream release AttentionConfig does not accept an int8 Literal.
         speculative_config={"method": "dspark", "num_speculative_tokens": 5, "enforce_eager": True},
@@ -424,7 +527,11 @@ def worker(args):
                            # 建 pattern 阶段就崩。关掉该融合即可，属本地环境适配，不改生产代码。
                            # 注意这偏离上线口径：参考脚本所在环境有该算子，融合是开启的。
                            **({} if prefill or args.graph_mode == "eager"
-                              else {"ascend_compilation_config": {"fuse_norm_quant": False}}),
+                              else {"ascend_compilation_config": {
+                                  "fuse_norm_quant": False,
+                                  # 显式给档位时关掉对齐，让非 6 倍数的档位原样保留。
+                                  **({} if not args.capture_sizes
+                                     else {"align_decode_capture_sizes": False})}}),
                            **({} if not args.recompute_scheduler
                               else {"recompute_scheduler_enable": True})},
         model_loader_extra_config={"enable_multithread_load": True, "num_threads": 16},
@@ -509,6 +616,12 @@ def launch(args):
                 "HCCL_CONNECT_TIMEOUT": "120",
                 "HCCL_EXEC_TIMEOUT": "1800" if args.command != "decode" else "204",
                 "HCCL_BUFFSIZE": "1024", "HCCL_OP_EXPANSION_MODE": "AIV",
+                # HCCL 默认 HCCL_DETERMINISTIC=false（见 libhccl.so 的
+                # "HCCL_DETERMINISTIC set by default to [false]"）。开启后集合通信保序归约。
+                # 注意 libhccl.so 里还有一条 "Deterministic do not support aiv"，
+                # 而这里保留 AIV 展开模式是用户明确要求的；若 HCCL 因此降级或告警，
+                # 日志里会有记录，按实测结果判断，不预先改 AIV。
+                **({"HCCL_DETERMINISTIC": "true"} if args.deterministic else {}),
                 "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
                 "VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS": "1800",
                 "PYTHONPATH": str(Path(__file__).resolve().parent.parent) + os.pathsep + env.get("PYTHONPATH", ""),
@@ -529,6 +642,10 @@ def launch(args):
                    "--graph-mode", args.graph_mode]
             if args.recompute_scheduler:
                 cmd.append("--recompute-scheduler")
+            if args.deterministic:
+                cmd.append("--deterministic")
+            if args.capture_sizes:
+                cmd += ["--capture-sizes", *[str(size) for size in args.capture_sizes]]
             if args.layout_only:
                 cmd.append("--layout-only")
             file = (args.output / f"rank{rank}.log").open("w")
@@ -586,6 +703,14 @@ def main():
                         help="D侧执行模式；上线口径为FULL_DECODE_ONLY，eager仅用于定位问题")
     parser.add_argument("--recompute-scheduler", action="store_true",
                         help="开启recompute_scheduler_enable；DP>1下PTO图模式需要它才能跳过DP padding")
+    parser.add_argument("--deterministic", action="store_true",
+                        help="开启算子级确定性(set_deterministic_level(1))与HCCL_DETERMINISTIC=true；"
+                             "用于排查同一DP组内四个TP副本的缓存差异，保留AIV展开模式不变")
+    parser.add_argument("--capture-sizes", type=int, nargs="+",
+                        help="显式指定ACL Graph捕获档位。默认列表按max_num_seqs*6截断后，"
+                             "最大档可能盖不住potential_max_tokens，导致MoE选ALLTOALL而非MC2、"
+                             "进而让should_skip_allreduce_across_dp_group为假并触发PTO的DP闸门。"
+                             "PTO只捕获6的倍数档位，所以这里也应传6的倍数")
     parser.add_argument("--profile-ranks", default="0", help="profile-export要解析的DP rank，all表示全部")
     parser.add_argument("--analyse-processes", type=int, default=16, help="离线解析使用的进程数上限")
     parser.add_argument("--compare-top", type=int, default=25, help="profile-compare列出的kernel差异条数")

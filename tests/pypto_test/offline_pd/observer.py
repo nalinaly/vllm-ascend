@@ -251,11 +251,15 @@ class OfflineCSAObserver:
         """在真实离线 D 上捕获一次带补位请求的 decode 步，落盘 Native metadata 与 compact 形状。
 
         挂在 Native 的 AscendDSAMetadataBuilder.build 上，而不是 CSAServiceRuntime：
-        后者只在 PTO 后端存在，且 can_replay_csa_graph 一旦发现要补位就主动回退 eager，
-        反而把 padding 消掉了。builder 两个后端都会走，看到的就是生产路径的 metadata。
+        后者只在 PTO 后端存在。builder 两个后端都会走，看到的就是生产路径的 metadata。
+        （T1.4 之前 can_replay_csa_graph 还会在补位时主动回退 eager，把 padding 自己
+        消掉，这也是必须挂 builder 的原因之一；该闸门已于 T1.4 放开。）
 
         只读取并落盘小张量，额外只多调一次 Native 自己的 compressor_metadata
         生产器来量其真实形状；不改变本步的计算路径与结果。
+
+        同时统计 can_replay_csa_graph 的判定结果，用来证明补位档位确实进入了图重放，
+        而不是静默回退 Native/eager（T1.4 的完成判据之一）。
         """
         from vllm_ascend.attention.dsa_v1 import AscendDSAMetadataBuilder
 
@@ -265,7 +269,10 @@ class OfflineCSAObserver:
         original = AscendDSAMetadataBuilder.build
         state = {"dp_rank": rank, "layer_index": layer_index,
                  "captured": 0, "builds_seen": 0, "padded_builds": 0,
+                 "replay_calls": 0, "replay_padded": 0,
+                 "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
+        self._offline_replay_probe(state)
 
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
@@ -286,6 +293,34 @@ class OfflineCSAObserver:
         AscendDSAMetadataBuilder.build = probed
         self._offline_padding = (state, original)
         return dict(state)
+
+    def _offline_replay_probe(self, state):
+        """统计 can_replay_csa_graph 的判定，只计数不改判定结果。
+
+        Native 后端不注入 PyptoCSADeepseekV4ForCausalLM，is_csa_model 为假，
+        该函数根本不会被调用，计数保持为 0——这本身就是两个后端的区分证据。
+        """
+        from vllm_ascend.worker import model_runner_v1
+
+        origin = getattr(model_runner_v1, "can_replay_csa_graph", None)
+        if origin is None:
+            state["replay_probe"] = "absent"
+            return
+
+        def counted(*, num_tokens, num_reqs, uniform_decode, padded_tokens):
+            verdict = origin(num_tokens=num_tokens, num_reqs=num_reqs,
+                             uniform_decode=uniform_decode, padded_tokens=padded_tokens)
+            state["replay_calls"] += 1
+            if num_tokens < padded_tokens:
+                state["replay_padded"] += 1
+                if verdict:
+                    state["replay_padded_allowed"] += 1
+            if not verdict:
+                state["replay_rejected"] += 1
+            return verdict
+
+        model_runner_v1.can_replay_csa_graph = counted
+        self._offline_replay_origin = origin
 
     def _offline_padding_record(self, builder, common, num_reqs_actual, result):
         """落盘这一份补位 metadata 的关键量；拿不到 decode 段时返回 None。"""
@@ -344,6 +379,11 @@ class OfflineCSAObserver:
             return {"dp_rank": self.vllm_config.parallel_config.data_parallel_rank, "captured": 0}
         state, original = self._offline_padding
         AscendDSAMetadataBuilder.build = original
+        origin = getattr(self, "_offline_replay_origin", None)
+        if origin is not None:
+            from vllm_ascend.worker import model_runner_v1
+            model_runner_v1.can_replay_csa_graph = origin
+            self._offline_replay_origin = None
         self._offline_padding = None
         directory, rank = state.pop("directory"), state["dp_rank"]
         records = state.pop("records")
