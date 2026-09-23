@@ -90,6 +90,23 @@ decode（`decode_compressor_ratio4.py` 等）用 `s_dim = bs // b_dim` 走等长
 应贴近 DSpark 的 6 的倍数**。已在 `platform.py` 按序列并行那段的既有写法实现，
 并留 `align_decode_capture_sizes` 开关（默认开）以便造反例场景。
 
+### 补位来源的死结（2026-09-24 实测发现）
+
+放开 DP 闸门之后出现一个互相抵消的局面，必须先讲清楚，否则会误以为"补位
+已经覆盖到了"：
+
+- DP 闸门要放行，必须 `should_skip_allreduce_across_dp_group == True`；
+- 而它为真时 **DP 同步被跳过，各 rank 保留自己的 token 数，不产生 DP 补齐**；
+- 档位对齐又消除了档位补齐。
+
+两条来源同时没了。`accept_t14_pto_v5` 实测证实：即便用
+`--rank-batches 3 5` 造出 rank 间不均衡，`padded_builds` 仍为 0。
+
+**解法不需要碰"非 6 倍数"那个遗留项**：给一个跳过某些 6 的倍数的档位表即可。
+`--capture-sizes 12 30` 下 3 条请求（18 token）只能落到 30 档，补成 5 条、
+补 2 条，而每一档仍是整数条请求。这同时构成 T1.3 欠的数值验收——同一负载
+分别按 `12 30`（补位）与 `18 30`（不补位）跑，输出必须逐 bit 相同。
+
 **对 G05 的影响**：档位对齐后每个 batch 都落到自己的精确档位，
 **单 rank 的档位补齐被彻底消除**（`padding_probe_v2` 实测 `padded_reqs` 全为 0）。
 于是 G05"小 BS 放进较大合法 bucket"只剩下 **DP 补齐**这一个来源——各 rank
@@ -219,8 +236,8 @@ DP16 同样适用，不能用 DP2 的结论替代。
 
 | ID | 问题 | 归属 |
 | --- | --- | --- |
+| ~~T1.Q2~~ | **已答且已修**：`_dummy_run` 在图捕获时把所有 `positions` 填成 127、`seq_lens` 填非零，于是 `(127+1)%4==0` 成立、T1.3 的 `seq_lens>0` 守卫放行，推出的 compact 行号 32 远超该档的 12 行——设备实测报 `MTE instruction DDR address out of range`，PTO 首次图捕获即崩。日志第 81 节"该用例曾通过"的矛盾也因此解开：那次 PTO 根本没执行。已按 compact 表的真实行数（动态维）在三处兜住，`88f59bc` | 已闭环 |
 | ~~T1.Q1~~ | **已答**：vLLM 把 `block_id=0` 保留为 null block（`vllm/v1/core/block_pool.py:188`），初始化时从空闲队列取走并标记 `is_null`，永不分配给任何请求。补位页表行读到的是该保留页，不会串到其他请求的数据 | 已闭环 |
-| T1.Q2 | 空 rank dummy 下 compact 行号按推算会越界，但日志第 81 节记录该用例曾通过，两者矛盾 | T1.6 |
 | T1.Q3 | 补位 token 的 attention 输出会不会带 NaN/Inf 进 MoE。跳过 DP 同步时不传 `mc2_mask`，补位 token 会真的进入专家路由 | T1.7 |
 | T1.Q4 | 放宽闸门后 `num_reqs_actual` 与 `num_decodes` 的实际关系 | T1.4 |
 | ~~T1.Q5~~ | **已答**：真实 runner 按 `cdiv(max_model_len, block_size)` 分配页表列（`vllm/v1/worker/gpu_model_runner.py:7039`），比单层 fixture 宽。T1.2 实测样本中 A／D 两处补位请求均在界内，读到的是 0 号页 | 已闭环 |
