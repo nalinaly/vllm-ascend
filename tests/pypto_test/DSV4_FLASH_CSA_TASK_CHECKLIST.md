@@ -54,7 +54,7 @@
 | T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 已完成，任务 `task_20260924_001111_370250932735`：compact 行数实测 8（初版预测 10，公式已更正）；补位请求 `seq_lens=0`、`start_pos=0`、页表行全零；补位段 positions 实测为上一步残留；据此选定方案 C（`seq_lens == 0`），D 因新请求 `start_pos` 同为 0 而有歧义 | T1.1 | 16 | **已完成** |
 | T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收待 T1.4**：放开 host 闸门后 PTO 才会实际走补位路径，届时验证补位与不补位输出逐 bit 相同、整份 allocation 无差异 | T1.2 | 1 | **代码完成，待验收** |
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native，| T1.3 | 16 | **进行中** |
-| T1.5 | 单卡 graph 覆盖 G04～G06 | `tests/pypto_test/` 下新增或扩展 fixture | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 1 | 未开始 |
+| T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
 | T1.6 | 空 rank 整批 dummy | 同上 | `seq_lens=6`、`position=127`、slot 全 `-1` 的整批占位：不写任何 cache／state、输出无非有限值、无越界读 | T1.4 | 1 | 未开始 |
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
@@ -161,6 +161,28 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 
 **该项偏离上线口径**：参考脚本所在环境具备该算子、融合为开启状态，本机关闭它
 意味着图模式性能不直接等同于线上，T2 的性能对照必须注明这一点。
+
+### T1.5 的落点需要改（2026-09-24 发现，待用户定）
+
+原定"单卡 graph 覆盖 G04～G06"，但有两条证据表明这个落点走不通：
+
+**一、单卡全链 fixture 已死，且按既定口径不予复活。**
+`dsv4_csa_service_dynamic.py` 导入 `dsv4_csa_native_fixture`，后者
+`:220` 调用 `builder.enable_device_metadata()`。核实当前 release：
+`enable_device_metadata` 与 `take_device_metadata_tasks` **已删除**，
+`DeviceMetadataExecutor` 只剩 `service.py:92` 的一句注释。整条链在 import
+阶段即失败。用户 2026-09-23 已定：不适配旧接口，取证挂真实生产路径。
+
+**二、G05 单卡已经验不出来。**
+档位按 6 对齐后单 rank 的档位补齐被彻底消除（`padding_probe_v2` 实测
+`padded_reqs` 全为 0），补位只剩 DP 一个来源。
+
+**建议**：把 T1.5 并入 16 卡的离线 D 生产路径，用已有开关覆盖——
+`--stagger` 让活跃 batch 逐档下降覆盖 G04（档位切换）与 G06（请求退出、
+换位、合法页复用），DP 补齐覆盖 G05。这样占卡从 1 变成 16，但不需要新建
+或复活任何 fixture，且验的是线上真实行为。
+
+是否照此改，请你定。在你定之前 T1.5 不动。
 
 ### T1 的待确认问题
 
