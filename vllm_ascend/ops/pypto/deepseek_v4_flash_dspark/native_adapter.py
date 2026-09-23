@@ -70,7 +70,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None) -> dict[str, torch
         "cmp_wkv": weight(main.wkv, (1024, 4096), bf16),
         "cmp_wgate": weight(main.wgate, (1024, 4096), bf16),
         "cmp_ape": main.ape.detach().float().contiguous(),
-        "cmp_norm_w": weight(main.norm, (512,), torch.float32),
+        # Match Native A3 storage; the RMS task widens loaded BF16 tiles.
+        "cmp_norm_w": weight(main.norm, (512,), bf16),
         "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
         "idx_wq_b_scale": scale(indexer.wq_b, 8192),
         "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
@@ -78,7 +79,7 @@ def prepare_weights(attention, hadamard: torch.Tensor | None) -> dict[str, torch
         "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
         "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
         "inner_ape": inner.ape.detach().float().contiguous(),
-        "inner_norm_w": weight(inner.norm, (128,), torch.float32),
+        "inner_norm_w": weight(inner.norm, (128,), bf16),
         "attn_sink": attention.attn_sink.detach().contiguous(),
         "wo_a": weight(attention.wo_a, (8, 4096, 1024), bf16, True),
         "wo_b": weight(attention.wo_b, (8192, 4096), int8, True),

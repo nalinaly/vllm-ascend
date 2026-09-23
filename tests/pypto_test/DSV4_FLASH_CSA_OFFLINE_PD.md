@@ -9,9 +9,16 @@
 
 ## 当前状态
 
-离线 connector、场景生成和16卡分阶段启动入口已实现，正在验证 P 完整模型启动。
-尚无合格离线缓存、D16接入或性能 PASS。首轮短场景用于核对交接合同，
-通过后才生成长场景。P3/P4其他场景和剩余精度排查仍暂停。
+release P TP4×DP4/EP16短场景H255×4已完成，16份缓存副本全部落盘；每份191个tensor，
+覆盖43个target层和3个DSpark层。有效前缀数据直接逐bit比较通过，不使用hash校验。
+D TP1×DP16/EP16每卡B4的Native轮已完成：64个请求均加载P缓存并各输出128token。
+PTO首轮在初始化时发现release A3 compressor norm为BF16、旧适配层要求FP32；
+按用户要求改CSA主入口及两路compressor为BF16，直接绑定Native norm地址，
+在已有RMS设备任务内转换加载的tile，撤销初始化FP32副本；旧重提任务已取消。
+CPU零拷贝准备检查及完整CSA lowering/PTOAS代码生成通过。
+新任务`task_20260923_163126_45104725192`已提交，输出decode_pto_b4_bf16_v3；
+尚无PTO D16执行或性能PASS。
+长场景尚未生成。P3/P4其他场景和剩余精度排查仍暂停。
 
 ## 场景与公平比较
 
@@ -45,6 +52,9 @@ HMA connector。没有修改 PyPTO、Simpler、pypto-lib 或锁定 vLLM 依赖�
   `finalize_kv_connector → wait_for_save` 同步保存。跨块 prefill 的中间状态不作为最终缓存。
 - TP4四个rank分别落盘。manifest 校验各 rank 的内容、dtype、页布局和层覆盖；
   全部一致后，D 才可选取 tp0 的复制缓存。不能把 TP4 分片未经核对直接当成 TP1 缓存。
+- 快照只包含已计算前缀：最后一页超出H（压缩缓存为floor(H/ratio)）的行在CPU序列化副本中清零。
+  schema1原始bank保持不变，D加载时按同一边界清零；draft已预测的未来行不能算作历史缓存。
+  层覆盖明确识别release的`mtp.0/1/2`。按用户要求，不生成或检查hash；直接比较必要数据与布局。
 - D 按自身实际页表重映射，核对全量层名、shape、dtype、block size 和所需逻辑页完整性。
   在报告异步 load 完成之前同步拷贝；之后恢复 Native 调度，不改生产算子输入合同。
 - 文件先写临时文件再发布 manifest；拒绝覆盖已完成缓存。每次场景生成用新 bank。
@@ -58,16 +68,16 @@ source ../env.sh
 python tests/pypto_test/offline_pd/run.py plan --bank /path/to/new/bank
 
 task-submit --device auto --device-num 16 --max-time 7200 \
-  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto && source ../env.sh && python tests/pypto_test/offline_pd/run.py prefill --bank /path/to/new/bank --output /path/to/p-logs'
+  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py prefill --bank /path/to/new/bank --output /path/to/p-logs'
 
 python tests/pypto_test/offline_pd/run.py audit --bank /path/to/new/bank
 
 # P 完成并释放卡、audit通过后，才依次启动两个D后端。
 task-submit --device auto --device-num 16 --max-time 7200 \
-  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto && source ../env.sh && python tests/pypto_test/offline_pd/run.py decode --bank /path/to/new/bank --output /path/to/native-d-logs --backend native --batch 4'
+  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py decode --bank /path/to/new/bank --output /path/to/native-d-logs --backend native --batch 4'
 
 task-submit --device auto --device-num 16 --max-time 7200 \
-  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto && source ../env.sh && python tests/pypto_test/offline_pd/run.py decode --bank /path/to/new/bank --output /path/to/pto-d-logs --backend pto --batch 4'
+  'cd /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1 && source ../env.sh && python tests/pypto_test/offline_pd/run.py decode --bank /path/to/new/bank --output /path/to/pto-d-logs --backend pto --batch 4'
 ```
 
 本机默认控制地址192.168.0.106、网卡enp23s0f3、DP端口29683，可用参数替换。

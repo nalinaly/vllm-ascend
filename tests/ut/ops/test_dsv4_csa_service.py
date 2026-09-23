@@ -14,6 +14,53 @@ from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRun
 from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import MODEL_ARCHITECTURE
 
 
+def test_prepare_weights_keeps_native_bf16_norm_storage(monkeypatch):
+    """Both norm pointers reach the CSA ABI without a widened GM copy."""
+    import torch_npu
+
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import prepare_weights
+
+    monkeypatch.setattr(torch_npu, "get_npu_format", lambda _: 2, raising=False)
+
+    def weight(shape, dtype=torch.bfloat16, channels=None):
+        module = NS(weight=torch.empty(shape, dtype=dtype, device="meta"))
+        if channels is not None:
+            module.weight_scale = torch.empty(channels, device="meta")
+        return module
+
+    def compressor(width):
+        return NS(
+            wkv=weight((width * 2, 4096)), wgate=weight((width * 2, 4096)),
+            ape=torch.empty((4, width * 2), device="meta"),
+            norm=NS(weight=torch.nn.Parameter(torch.arange(width, dtype=torch.bfloat16))),
+        )
+
+    attention = NS(
+        compress_ratio=4, n_local_heads=64, n_local_groups=8,
+        wq_a=weight((1024, 4096)), wq_b=weight((1024, 32768), torch.int8, 32768),
+        wkv=weight((512, 4096)), q_norm=weight((1024,)), kv_norm=weight((512,)),
+        compressor=compressor(512),
+        indexer=NS(wq_b=weight((1024, 8192), torch.int8, 8192),
+                   weights_proj=weight((64, 4096)), compressor=compressor(128)),
+        attn_sink=torch.empty(64, device="meta"), wo_a=weight((8, 4096, 1024)),
+        wo_b=weight((8192, 4096), torch.int8, 4096),
+    )
+    norms = {"cmp_norm_w": attention.compressor.norm,
+             "inner_norm_w": attention.indexer.compressor.norm}
+    original = {key: module.weight for key, module in norms.items()}
+    prepared = prepare_weights(attention, None)
+    for key, module in norms.items():
+        assert module.weight is original[key]
+        assert prepared[key].dtype == torch.bfloat16
+        assert prepared[key].data_ptr() == module.weight.data_ptr()
+        assert torch.equal(prepared[key], module.weight)
+        # FP32 parameters must not be silently accepted by the BF16 ABI.
+        module.weight = torch.nn.Parameter(module.weight.float())
+        with pytest.raises(ValueError, match="Unexpected loaded weight"):
+            prepare_weights(attention, None)
+        module.weight = original[key]
+
+
 @pytest.mark.parametrize(
     "tokens,reqs,bucket,initial,architecture,expected",
     [

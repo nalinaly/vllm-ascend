@@ -157,7 +157,7 @@ def indexer_compressor_pool_projected(
     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32],
     state_table: pl.Tensor[[B_DYN, INNER_STATE_TABLE_COLUMNS_DYN], pl.INT32],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
-    norm_w: pl.Tensor[[HEAD_DIM], pl.FP32],
+    norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     sin: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
@@ -323,14 +323,15 @@ def indexer_compressor_pool_projected(
             variance = pl.add(pl.mul(square_sum, HEAD_DIM_INV), EPS)
             rms = pl.sqrt(variance)
             kv_norm_chunk = pooled_kv[b0 : b0 + RMS_PAD_TILE, 0:NOPE_HEAD_DIM]
-            gamma = norm_w_2d[:, 0:NOPE_HEAD_DIM]
+            # Native A3 widens BF16 gamma inside the RMS computation.
+            gamma = pl.cast(norm_w_2d[:, 0:NOPE_HEAD_DIM], target_type=pl.FP32)
             # Native RowDivs uses vector division, followed by gamma; a
             # reciprocal and multiplication has a different BF16 boundary.
             normed_chunk = pl.col_expand_mul(pl.row_expand_div(kv_norm_chunk, rms), gamma)
             normed_nope = pl.cast(normed_chunk, target_type=pl.BF16, mode="rint")
 
             kv_rope_norm = pooled_kv[b0 : b0 + RMS_PAD_TILE, NOPE_HEAD_DIM:HEAD_DIM]
-            gamma_rope = norm_w_2d[:, NOPE_HEAD_DIM:HEAD_DIM]
+            gamma_rope = pl.cast(norm_w_2d[:, NOPE_HEAD_DIM:HEAD_DIM], target_type=pl.FP32)
             # Interleaved RMSNorm and inverse-RoPE rotation.
             rope_normed = pl.col_expand_mul(pl.row_expand_div(kv_rope_norm, rms), gamma_rope)
             swapped = pl.gather(rope_normed, dim=-1, index=rope_swap_idx)
@@ -361,7 +362,7 @@ def indexer_compressor_pool(
     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
-    norm_w: pl.Tensor[[HEAD_DIM], pl.FP32],
+    norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     sin: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
@@ -550,7 +551,7 @@ def indexer_compressor(
     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
-    norm_w: pl.Tensor[[HEAD_DIM], pl.FP32],
+    norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     sin: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],

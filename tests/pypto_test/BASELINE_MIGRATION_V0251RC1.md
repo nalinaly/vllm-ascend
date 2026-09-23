@@ -6,7 +6,7 @@
 2026-09-23 后续：用户明确要求删除旧工作目录和旧分支，现已完成。新分支已推送；
 共享 Git 元数据迁至工作区 `.git-repositories/vllm-ascend.git`，另两个修复 worktree 保持可用。
 PTOAS / ATB / 构建工具迁至工作区 `.cache/dsv4-toolchain`，`../env.sh` 也指向新 release 环境。
-下文“原目录及 WIP 保留”为迁移时状态；删除前的最终 WIP 和入口快照保存在
+删除前的最终 WIP 和入口快照保存在
 `handoff/legacy_main_18ec20a/`。305 份大快照仍保留在新目录，未纳入 Git。
 
 ## 固定版本与目录
@@ -24,7 +24,7 @@ PTOAS / ATB / 构建工具迁至工作区 `.cache/dsv4-toolchain`，`../env.sh` 
 | 官方 A3 Dockerfile | CANN 9.0.1、Python 3.12、torch / torch_npu 2.10.0 系列；本地尚不是完全相同的镜像 |
 | PyPTO / Simpler | 原 debug 分支 `feat/kernel-mode-integration-test`，未改依赖源码 |
 | 正式权重 | `/data/model/DeepSeek-V4-Flash-0731-w8a8`，ModelSlim W8A8，75 分片 |
-| 旧分支 / HEAD | `dsv4-flash-pto` / `18ec20ae2f93d2c3965ecffdb6c2e9d80fd304c6`，原工作目录及 WIP 保留 |
+| 旧分支 / HEAD | 原 `dsv4-flash-pto` / `18ec20ae2f93d2c3965ecffdb6c2e9d80fd304c6`；分支及目录已删除，最终 WIP 已归档 |
 
 ## 迁移范围与接口处理
 
@@ -61,13 +61,27 @@ B=64 是实现容量上限，不是已完成数值验收的声明。
 - `tests/ut/ops/test_dsv4_csa_service.py`：18 项 CPU 检查；包括实际 runner graph gate、
   Native fallback 条件，以及 release dataclass / 紧凑行 / cache-state 零拷贝绑定和单次调用。
 - 完整 CSA CPU lowering，目标 `a2a3`。
+- release Native C++ 扩展及 14 算子包在本机 CANN 9.0.0 构建、安装通过；`csrc` 与官方基线一致。
+- A3 使用正式 checkpoint layer2 HC 权重执行 HcPre/HcPost，通过输出形状与有限值检查。
+- SAS、QLI、Compressor 三种 Native metadata 真机执行通过。
 
 证据：`results/migration_v0.25.1rc1_20260923/`。未执行提交检查，也未重复历史精度矩阵。
-本次未重建 release 的 Native C++ 扩展或自定义算子包，未运行 release 真机数值 / 图重放 / 完整模型。
-新环境未引用旧 main 的 Native `.so` 或 custom vendor 包。因此不能声称新基线的运行环境或 NPU 验收已完成。
+Native 构建与执行证据：`results/release_offline_pd_20260923/`，包含源码清单、包 SHA256、
+API 符号和构建日志。执行任务 `task_20260923_150737_24250853714` 完成，exit 0。
+HcPre 缺失问题已消除；这次执行检查不代表完整 CSA 数值 / 图重放 / 整模型已验收。
+新环境只加载新 release 的 Native `.so` 与 custom vendor 包。
 
-下一步先构建与 release 源码匹配的 Native 扩展和算子包，覆盖完整模型所需 HcPre / HcPost 等；
-之后用正式权重做最小 B1/B4 eager 与图重放，再恢复 P TP4×DP4 离线 cache → D TP1×DP/EP16。
+按用户要求恢复 P TP4×DP4 离线 cache → D TP1×DP/EP16。
+离线脚本已按 release 接口适配；短场景 H255×4 的 P 任务
+`task_20260923_150829_249108112866` 已完成(exit 0)，16份副本各191个tensor。
+有效前缀直接逐bit比较及全部target/draft层覆盖通过；按用户要求，离线流程不做hash校验。
+首轮D任务`task_20260923_154135_38813947929`的Native轮完成16rank×4request的缓存加载和128token输出。
+PTO轮因compressor norm的BF16/FP32准备约束失败。按用户要求撤销初始化拓宽，
+旧方案任务`task_20260923_161904_380071921124`在排队时取消，未运行。
+CSA主入口及两路compressor均改为直接接收Native BF16 norm，保留原始地址；
+仅在已有RMS设备任务内将加载的gamma tile转FP32，无额外适配调用或FP32权重副本。
+BF16零拷贝准备的CPU回归检查与完整CSA lowering/PTOAS代码生成通过。
+新PTO D16任务`task_20260923_163126_45104725192`已提交，结果待定。
 release 的 Native compressor / QLI 实现与旧 main 不完全相同，数值结果需重新比较。
 
 ```bash
@@ -85,8 +99,8 @@ profiler 数据、泳道图、生成代码和张量快照。旧目录外的相�
 
 `handoff/MIGRATION_PROCESS_FILES.json` 记录旧过程文件的相对路径、字节数和 SHA256。
 需要为 release 调整的入口及新增迁移说明所涉及的原文另存到 `handoff/legacy_main_18ec20a/`。
-历史脚本保留不等于已适配：除本节列出的 release 检查外，其余 Native fixture、服务图重放和
-offline P/D 脚本尚需按 release 接口调整，不能直接拿旧结果作为通过依据。
+历史脚本保留不等于已适配：除本节列出的 release 检查及 offline P/D 入口外，其余 Native fixture
+和服务图重放脚本尚需按 release 接口调整，不能直接拿旧结果作为通过依据。
 
 大 `.pt` 快照完整保留在新工作目录的原路径。Git 保存其清单，普通源码提交不包含多 GiB 张量数据。
 原过程文件与新基线说明单独提交，生产 CSA 提交中不包含测试、文档和历史产物。

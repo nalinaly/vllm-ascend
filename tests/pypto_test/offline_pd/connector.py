@@ -6,7 +6,6 @@ loads h(H), then computes that last token. All target AND draft cache groups
 are saved after the Native runner finalizes speculative decoding.
 """
 
-import hashlib
 import json
 import math
 from dataclasses import dataclass, field
@@ -19,9 +18,7 @@ from vllm.distributed.kv_transfer.kv_connector.v1.base import (
 )
 from vllm.v1.kv_cache_interface import UniformTypeKVCacheSpecs
 
-
-def token_hash(tokens):
-    return hashlib.sha256(json.dumps(list(tokens), separators=(",", ":")).encode()).hexdigest()
+from .prefix import prefix_tensor
 
 
 def atomic_json(path, data):
@@ -33,7 +30,8 @@ def atomic_json(path, data):
 
 def live_blocks(blocks, spec, history):
     """Keep logical indices: SWA holes must never shift the destination pages."""
-    end = math.ceil(history / spec.block_size)
+    rows = history // getattr(spec, "compress_ratio", 1)
+    end = math.ceil(rows / spec.block_size)
     window = getattr(spec, "sliding_window", None)
     start = max(0, end - math.ceil(window / spec.block_size) - 1) if window else 0
     return [(logical, block) for logical, block in enumerate(blocks[:end])
@@ -51,8 +49,10 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
         super().__init__(vllm_config, role, kv_cache_config)
         extra = self._kv_transfer_config.kv_connector_extra_config
         self.root = Path(extra["bank"])
+        self.cases = {case["key"]: case for case in json.loads((self.root / "plan.json").read_text())["cases"]}
         self.producer = self._kv_transfer_config.is_kv_producer
         self.requests = {}
+        self.request_blocks = {}
         self.pending_loads = []
         self.saved = set()
         self.received = set()
@@ -86,6 +86,11 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
         key = params.get("offline_key")
         if key is None:
             raise ValueError("Offline validation requires offline_key for every request")
+        case = self.cases[key]
+        tokens = json.loads((self.root / case["tokens"]).read_text())
+        expected_prompt = tokens[:-1] if self.producer else tokens
+        if request.prompt_token_ids != expected_prompt:
+            raise ValueError("Request prompt differs from the planned offline P/D tokens")
         self.requests[request.request_id] = request
         if self.producer:
             return 0, False
@@ -94,12 +99,20 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
             raise ValueError("Unexpected local prefix hit or preemption in offline decode")
         manifest = json.loads((self._folder(key, 0) / "manifest.json").read_text())
         prefix = request.prompt_token_ids[:-1]
-        if len(prefix) != manifest["history"] or token_hash(prefix) != manifest["token_sha256"]:
+        if len(prefix) != manifest["history"] or len(prefix) != case["history"]:
             raise ValueError("D prompt does not match the saved P prefix")
         return len(prefix), True
 
     def update_state_after_alloc(self, request, blocks, num_external_tokens):
         self.requests[request.request_id] = request
+        if self.producer:
+            # vLLM 0.25.1 get_blocks() wraps the manager's live per-group lists.
+            # Retain those lists, not a get_block_ids() snapshot: chunked
+            # prefill extends them and SWA eviction replaces old entries with
+            # null blocks before the final prompt chunk is saved.
+            if any(not group for group in blocks.blocks):
+                raise ValueError("P requires an allocated page in every target/draft cache group")
+            self.request_blocks[request.request_id] = blocks
         if not self.producer and num_external_tokens:
             self.pending_loads.append({
                 "request_id": request.request_id,
@@ -111,24 +124,23 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
         meta = OfflineMetadata(loads=self.pending_loads)
         self.pending_loads = []
         if self.producer:
+            if scheduler_output.preempted_req_ids:
+                raise ValueError("Offline P cache generation does not support preemption")
             computed = {r.req_id: r.num_computed_tokens for r in scheduler_output.scheduled_new_reqs}
             cached = scheduler_output.scheduled_cached_reqs
             computed.update(zip(cached.req_ids, cached.num_computed_tokens))
             for rid, count in scheduler_output.num_scheduled_tokens.items():
                 request = self.requests[rid]
                 if rid not in self.saved and computed[rid] + count == request.num_prompt_tokens:
-                    state = scheduler_output.kv_connector_block_state
-                    if state is None:
-                        raise RuntimeError("Pinned Native scheduler must expose live HMA block tables")
                     meta.saves.append({
                         "key": request.kv_transfer_params["offline_key"],
                         "history": request.num_prompt_tokens,
-                        "token_sha256": token_hash(request.prompt_token_ids),
-                        "blocks": state.get_block_ids(rid),
+                        "blocks": self.request_blocks[rid].get_block_ids(),
                     })
                     self.saved.add(rid)
         for rid in scheduler_output.finished_req_ids:
             self.requests.pop(rid, None)
+            self.request_blocks.pop(rid, None)
             self.saved.discard(rid)
         return meta
 
@@ -157,12 +169,14 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
                 pairs = live_blocks(request["blocks"][gid], spec, request["history"])
                 ids = torch.tensor([b for _, b in pairs], dtype=torch.int64, device=cache.device)
                 value = cache.index_select(0, ids).cpu().contiguous()
+                ratio = getattr(spec, "compress_ratio", 1)
+                value = prefix_tensor(value, [i for i, _ in pairs], spec.block_size, request["history"], ratio)
                 tensors[name] = value
                 entries[name] = {
                     "logical_blocks": [i for i, _ in pairs], "group": gid,
                     "block_size": spec.block_size, "shape": list(value.shape[1:]),
+                    "compress_ratio": ratio,
                     "dtype": str(value.dtype), "stride": list(cache.stride()),
-                    "sha256": hashlib.sha256(value.view(torch.uint8).numpy().tobytes()).hexdigest(),
                 }
             # Save logical contents, including INT8 scales/state, never a raw
             # address dump: P and D allocate different physical block numbers.
@@ -170,8 +184,8 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
             save_file(tensors, str(tmp))
             tmp.replace(folder / "cache.safetensors")
             atomic_json(folder / "manifest.json", {
-                "schema": 1, "history": request["history"],
-                "token_sha256": request["token_sha256"], "p_dp_rank": self.dp,
+                "schema": 2, "history": request["history"],
+                "p_dp_rank": self.dp,
                 "p_tp_rank": self.tp, "entries": entries,
             })
             print(f"OFFLINE_CACHE_SAVED {folder} history={request['history']} tensors={len(entries)}", flush=True)
@@ -198,6 +212,12 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
                 expected = {i for i, _ in live_blocks(blocks, spec, manifest["history"])}
                 if expected != {entry["logical_blocks"][row] for row, _ in pairs}:
                     raise ValueError(f"Incomplete offline cache: {name}")
+                ratio = getattr(spec, "compress_ratio", 1)
+                if entry.get("compress_ratio", ratio) != ratio:
+                    raise ValueError(f"TP4→TP1 compression differs: {name}")
+                # Also handles the original schema-1 bank without modifying
+                # its raw payload; the audit checks the same prefix boundary.
+                value = prefix_tensor(value, entry["logical_blocks"], spec.block_size, manifest["history"], ratio)
                 if pairs:
                     rows = torch.tensor([row for row, _ in pairs], dtype=torch.int64)
                     ids = torch.tensor([b for _, b in pairs], dtype=torch.int64, device=cache.device)

@@ -284,7 +284,7 @@ def compressor_ratio4_pool(
 def compressor_ratio4_cache_write(
     kv: pl.Tensor[[T_DYN, HEAD_DIM], pl.FP32],
     pooled_kv: pl.Tensor[[BS_PAD, HEAD_DIM], pl.FP32],
-    norm_w: pl.Tensor[[HEAD_DIM], pl.FP32],
+    norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
     cos: pl.Tensor[[COMPRESSED_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     sin: pl.Tensor[[COMPRESSED_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
@@ -361,12 +361,13 @@ def compressor_ratio4_cache_write(
         rms = pl.sqrt(variance)
         for k0 in pl.range(0, NOPE_HEAD_DIM, HEAD_TILE):
             kv_norm_chunk = pooled_kv[b0 : b0 + RMS_PAD_TILE, k0 : k0 + HEAD_TILE]
-            gamma = norm_w_2d[:, k0 : k0 + HEAD_TILE]
+            # Native A3 widens BF16 gamma inside the RMS computation.
+            gamma = pl.cast(norm_w_2d[:, k0 : k0 + HEAD_TILE], target_type=pl.FP32)
             normed_chunk = pl.col_expand_mul(pl.row_expand_div(kv_norm_chunk, rms), gamma)
             normed_kv[b0 : b0 + RMS_PAD_TILE, k0 : k0 + HEAD_TILE] = normed_chunk
 
         kv_rope_norm = pooled_kv[b0 : b0 + RMS_PAD_TILE, NOPE_HEAD_DIM:HEAD_DIM]
-        gamma_rope = norm_w_2d[:, NOPE_HEAD_DIM:HEAD_DIM]
+        gamma_rope = pl.cast(norm_w_2d[:, NOPE_HEAD_DIM:HEAD_DIM], target_type=pl.FP32)
         # Interleaved RMSNorm and inverse-RoPE rotation.
         rope_normed = pl.col_expand_mul(pl.row_expand_div(kv_rope_norm, rms), gamma_rope)
         rope_ones = pl.full([RMS_PAD_TILE, ROPE_HEAD_DIM], dtype=pl.FP32, value=1.0)
@@ -409,7 +410,7 @@ def compressor_ratio4(
     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
-    norm_w: pl.Tensor[[HEAD_DIM], pl.FP32],
+    norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
     cos: pl.Tensor[[COMPRESSED_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     sin: pl.Tensor[[COMPRESSED_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],

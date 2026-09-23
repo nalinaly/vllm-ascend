@@ -59,24 +59,25 @@ def main() -> None:
                 device=str(device),
             )
         elif args.op == "qli":
-            op = torch.ops._C_ascend.npu_quant_lightning_indexer_v2_metadata
+            op = torch.ops._C_ascend.npu_vllm_quant_lightning_indexer_metadata
             result = op(
+                actual_seq_lengths_query=bounds[1:],
+                actual_seq_lengths_key=seq_lens,
                 num_heads_q=64,
                 num_heads_k=1,
                 head_dim=128,
-                topk=512,
-                quant_mode=2,  # A3 INT8, matching DeviceOperator.get_dsa_indexer_quant_mode.
-                cu_seqlens_q=bounds,
-                seqused_k=seq_lens // ratio,
-                cmp_residual_k=seq_lens % ratio,
+                query_quant_mode=0,
+                key_quant_mode=0,
                 batch_size=batch,
                 max_seqlen_q=query,
-                max_seqlen_k=131084 // ratio,
-                layout_q="TND",
-                layout_k="PA_BBND",
-                mask_mode=3,
+                max_seqlen_k=131084,
+                layout_query="TND",
+                layout_key="PA_BSND",
+                sparse_count=512,
+                sparse_mode=3,
+                pre_tokens=(1 << 63) - 1,
+                next_tokens=(1 << 63) - 1,
                 cmp_ratio=ratio,
-                device=str(device),
             )
         else:
             op = torch.ops._C_ascend.compressor_metadata

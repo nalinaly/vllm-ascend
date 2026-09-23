@@ -2817,3 +2817,169 @@ Git纳入文档、脚本、日志、报告及profiler记录。305份 .pt 大快�
 SHA256与文件大小见 handoff/MIGRATION_PROCESS_FILES.json。
 证据与接续步骤见 [基线迁移说明](BASELINE_MIGRATION_V0251RC1.md)，
 新CPU证据在 results/migration_v0.25.1rc1_20260923/。
+
+## 86. 2026-09-23：删除旧分支/工作目录，恢复离线 P/D 工作
+
+用户要求继续迁移前的 P TP4×DP4 → D TP1×DP/EP16，并明确允许删除旧目录及库上旧分支。
+先核对305份本地大快照均存在且大小符合已保存SHA256清单，迁出PTOAS、ATB和构建工具到
+工作区 `.cache/dsv4-toolchain`，保存最终旧WIP、入口及环境快照；共享Git目录迁至
+`.git-repositories/vllm-ascend.git`，修复新目录和两个独立bugfix worktree引用。
+新分支e048502推送并核对远端SHA后，以expected-old-SHA lease删除远端dsv4-flash-pto，
+再删除其本地分支和旧工作目录。Native安装包只读目录恢复当前用户删除权限后清理完成。
+未删除nalinaly/vllm-ascend仓库及其他远端分支。
+
+新基线C++ Native扩展以CANN9.0.0、torch2.10.0、系统GCC10、CMake3.31、Make -j8构建，
+安装到新目录 `.cache/csa/native-install`，真实CPU导入通过。源码未加入旧main的CANN兼容补丁。
+正在从release自带csrc源码构建14算子custom包，包含HcPre/HcPost、CSA所需Native算子和MoE算子；
+编译日志在 `.cache/csa/setup-release/`。构建完成、符号检查和真机执行前不记HcPre已可用。
+
+离线脚本按release去掉不支持的indexer_kv_dtype=int8配置，实际A3 Indexer仍为INT8。
+该vLLM没有main的kv_connector_block_state，改保留update_state_after_alloc返回的KVCacheBlocks
+中Native manager持有的各组list引用，在最终prefill chunk读取最新块号，保留SWA空洞与后续追加；
+未修改vLLM调度器。CPU检查通过真实KVCacheBlocks的替换/追加可见性及C4/C128压缩页数。
+压缩缓存只保存floor(H/ratio)个有效压缩行覆盖的页，避免把speculation预分配页当作前缀缓存。
+P计划使用正式权重、history255×4先走通；尚未生成release离线缓存。
+
+本次14算子包源码均为官方v0.25.1rc1已有csrc；`git diff 9bf964cb4b87c8cd0d6852c41a55b3c29711fa95 -- csrc`
+为空。attention目录包含compressor、compressor_metadata、vllm_quant_lightning_indexer、
+vllm_quant_lightning_indexer_metadata、sparse_attn_sharedkv、sparse_attn_sharedkv_metadata、
+rms_norm_dynamic_quant、inplace_partial_rotary_mul；moe目录包含scatter_nd_update_v2、hc_pre、
+hc_post、moe_gating_top_k_hash、moe_gating_top_k、dequant_swiglu_quant。
+HcPre/HcPost设备入口分别为`csrc/moe/hc_pre/op_kernel/hc_pre.cpp`和
+`csrc/moe/hc_post/op_kernel/hc_post.cpp`，定义及tiling在各自op_host目录。
+`csrc/torch_binding.cpp`中npu_hc_pre_v2走run_hc_pre_fusion→aclnnHcPre，npu_hc_post走aclnnHcPost。
+这是Native服务依赖的恢复，不是新增14个PTO算子；独立PTO CSA的范围未改变。
+
+14算子包于15:06构建完成(exit 0)，安装到本地`.cache/csa/csa-native-ops-install`。
+`libcust_opapi.so`已导出aclnnHcPre/HcPost及CSA所需API，env.sh现加载该release包。
+源码树、包SHA256、API符号及构建/安装日志保存在`results/release_offline_pd_20260923/native_build/`。
+真机执行任务`task_20260923_150737_24250853714`已提交：正式layer2 HC权重及三种Native metadata；结果待定。
+
+任务`task_20260923_150737_24250853714`完成(exit 0)：正式checkpoint layer2的HcPre/HcPost
+在A3实际执行PASS；SAS、QLI、Compressor三种metadata执行均PASS。该结果只确认算子可用，
+不代表完整模型或精度验证。HcPre缺失问题已消除。P TP4×DP4/EP16短场景任务
+`task_20260923_150829_249108112866`已提交，输入为release_offline_pd_20260923/smoke_bank。
+
+15:18:30检查：P任务task_20260923_150829_249108112866自15:08:29提交后累计排队10分钟，
+仍为pending；当前其他任务占用16张卡。本次主动等待按10分钟上限结束，保留原排队任务，
+没有重复提交或取消。7200秒为启动后运行超时，不是排队超时；尚无P缓存产出。
+
+15:29检查：P任务task_20260923_150829_249108112866已转为running，约15:28获得全部16卡；
+四个P DP进程启动，日志进入world_size=16的HCCL初始化。尚无缓存产出，继续核对实际执行。
+
+
+## 87. 2026-09-23：release P缓存产出、前缀边界修正、提交D16
+
+P任务`task_20260923_150829_249108112866`约15:28获得16卡，完成正式模型与draft加载、
+启动预热和H255×4的prefill，exit0并释放全部卡。每rank模型权重22.8821GB；四个DP场景
+各落盘四个TP副本，共16份cache.safetensors，每份191个tensor，总约354MiB。
+路径为`results/release_offline_pd_20260923/smoke_bank/`。大payload留本地并加入ignore，
+路径和大小在audit.json中，日志在prefill_v1/rank*.log。没有继续重复P或重跑精度矩阵。
+
+首次audit FAIL：脚本未识别release的mtp.0/1/2名字；另mtp.1/mtp.2原始副本末页第31行不同，
+即全局position255。H255的历史有效范围是0～254，DSpark已把未来预测写入position255，
+该行不属于本次P→D应恢复的前缀。43个target层与mtp.0原始缓存相同。
+原始payload和首次失败audit_raw_v1.json完整保留；不修改Native或PTO计算，也不恢复逐bit精度排查。
+
+新增测试专用prefix.py：CPU保存/恢复副本清除H之后的行，压缩缓存边界为floor(H/ratio)，
+已有schema1 bank在D恢复时使用相同边界；不改有效行、不改Native allocation或算子热路径。
+层覆盖由正式config明确生成43个target层和3个mtp层的191个tensor合同。
+单次CPU边界检查覆盖ratio1/4/128：原始输入不变、有效行逐bit保留、最后有效行差异不会被屏蔽。
+
+用户明确要求“不要搞什么hash校验”：已从offline_pd的plan/audit/save/load路径移除hash生成
+与校验，包括模型配置、token和缓存payload；不再将hash作为任何D启动前提。
+改为直接比较prompt token列表、必要layout及有效前缀tensor字节。
+最终audit PASS：四场景、四TP副本、全部191个tensor的有效前缀逐bit一致。
+早期产物中已有的摘要字段仅作为原始历史记录保留，新流程不读取/计算它们。
+
+D任务`task_20260923_154135_38813947929`已提交，TP1×DP16/EP16，每卡B4，先Native再PTO，
+两者使用同一H255×4 bank。输出目录为decode_native_b4_v1和decode_pto_b4_v1。
+尚无D运行结果；该轮先验证接入，包含IO的elapsed不作为稳态性能结果。
+
+D任务约16:09获得16卡。Native轮完成16rank×4request，64次OFFLINE_CACHE_LOADED，
+各请求均输出128token，21个target CSA层逐rank均有执行记录。16份rank报告齐全，
+Native执行汇总见decode_native_b4_v1/summary.json；这不是输出精度或稳态性能验收。
+PTO轮已自动启动，结果待定。
+
+
+## 88. 2026-09-23：Native D16通过，PTO初始化norm dtype修正
+
+> 本节的初始化FP32转换方案已被用户否决；未上卡，排队任务已取消。实际修正见第89节。
+
+任务`task_20260923_154135_38813947929`的Native阶段完成，16份rank报告均有4个请求，
+每请求128token，共8192token；64次缓存加载、每rank全部21个target C4层执行。
+证据为`release_offline_pd_20260923/decode_native_b4_v1/summary.json`及rank日志/JSON。
+这确认短场景P TP4×DP4缓存能在D TP1×DP16/EP16实际恢复并decode，不代表精度或性能验收。
+
+PTO阶段在16:16初始化失败，组合任务最终exit1。root cause为
+native_adapter.prepare_weights要求cmp_norm_w FP32，而release A3 Native加载的是BF16。
+这是迁移遗漏：release Compressor构造器仅A5指定FP32；A3沿用模型BF16，Native设备kernel
+在RMS前把norm转为FP32。该错误在第一份norm检查处中止，尚无PTO CSA实际执行或缓存加载。
+
+只修本仓库native_adapter：两份compressor norm允许已加载BF16/FP32，在模型初始化时
+一次性转FP32供现有PTO ABI使用。BF16→FP32保持数值精确，不修改Native parameter或dtype，
+不新增forward中的适配、同步或host取值，不改PyPTO/Simpler/pypto-lib/CANN算子。
+CPU用正式checkpoint的两份norm值、其他权重meta tensor验证prepare_weights通过，
+BF16/FP32来源均精确转换，Native参数对象保持不变；证据pto_norm_prepare_cpu.json。
+未重复Native D、未运行提交检查或hash校验。
+
+只重提PTO D B4任务`task_20260923_161904_380071921124`，输出decode_pto_b4_v2；结果待定。
+后续24个长短P场景的输入已生成于full_bank/plan.json，尚未执行P长场景。
+
+
+## 89. 2026-09-23：CSA直接接收Native BF16 norm
+
+用户明确要求Native使用BF16时必须修改PTO算子入口，不接受初始化时转换FP32。
+已在排队阶段取消旧方案任务`task_20260923_161904_380071921124`，未执行该方案。
+撤销prepare_weights中的BF16/FP32宽松检查和两次.float()，严格接收BF16；
+cmp_norm_w[512]和inner_norm_w[128]直接绑定Native原始连续权重。
+
+完整CSA入口以及两路compressor的所有norm参数声明改为BF16。
+已有rmsnorm_rope_cache_write和rmsnorm_rope任务加载BF16 gamma tile后cast FP32，
+再沿用原RMS/乘gamma/RoPE计算顺序，与release A3 Native的加载及计算dtype一致。
+未增加适配调用、GM FP32 norm缓冲、host取值或单独的cast kernel；未修改依赖仓库。
+
+新增一项CPU回归检查：两份norm dtype、数值、data_ptr均保持Native原样，
+Native Parameter对象不变，并拒绝向BF16 ABI传入FP32参数；通过。
+证据`release_offline_pd_20260923/pto_bf16_norm_cpu.log`。
+完整CSA CPU lowering通过，证据`pto_bf16_norm_lower/report.json`。
+继续PTOAS代码生成及PTO D16实际接入验证，不重复Native轮或精度矩阵，不执行hash校验。
+
+完整CSA CPU编译含PTOAS通过：`pto_bf16_norm_codegen/report.json`及
+`pto_bf16_norm_codegen_v2.log`。生成的两份RMS C++均从BF16 GlobalTensor加载，
+并在原有kernel内执行TCVT到FP32。首次CPU编译命令误用RunConfig.output_dir，
+在编译前报参数错误；改用本地API的save_kernels_dir后通过，未修改编译器。
+
+PTO D TP1×DP16/EP16 B4已重提为`task_20260923_163126_45104725192`，
+使用同一正式权重及smoke_bank，输出`decode_pto_b4_bf16_v3`。
+提交时等待16卡资源，尚无设备执行结果，不预记PASS。
+
+16:46状态复查：BF16入口任务task_20260923_163126_45104725192仍pending，
+排队约14分钟，16卡被其他任务占用，尚无decode_pto_b4_bf16_v3输出目录。
+同时核对正式权重：config含dspark_block_size=5、target_layer_ids=[40,41,42]、
+markov_rank=256；quant_model_weights.safetensors.index.json中包含mtp.0/1/2，
+共7028个draft相关tensor条目（含量化参数）。Native D rank0日志明确从同一路径
+加载DSpark draft，报告loaded:124 params（运行时融合/分片后的参数计数，非checkpoint tensor数），
+并出现真实speculative acceptance统计。该目录已包含DSpark权重，无需另配draft目录。
+
+16:50复查：task_20260923_163126_45104725192仍pending，累计排队约19分钟。
+16张卡全部由其他任务占用，本任务输出目录仍未创建，尚未启动，无新增执行结果。
+保留原任务排队，未重复提交或改动其他用户任务。
+
+
+## 90. 2026-09-23：整理本次提交范围
+
+按用户要求整理为一次本地提交。tests之外仅4个生产文件：CSA入口、主compressor、
+Indexer compressor和Native adapter中的BF16 norm接口与设备tile转换；根目录交接文档
+不加入本次更新，当前环境/验证进展统一记入tests下已有迁移说明和本日志。
+
+tests提交release离线P/D接口适配、前缀边界处理、HcPre/HcPost与metadata smoke、
+BF16零拷贝CPU回归，以及已完成的P/Native D记录、PTO初始化失败和CPU编译记录。
+初始化转FP32的中间方案保留历史证据，明确已废弃，不作为当前实现或设备PASS。
+BF16修正后的PTO D16任务仍在等待资源，本次提交不宣称PTO D16精度或性能通过。
+
+大权重不纳入仓库；16份cache.safetensors、未执行长场景的可再生成token列表、
+重复编译中间产物留本地。路径及字节数见本轮results/LOCAL_ARTIFACTS.json，
+不新增或执行hash校验。只保留两份RMS生成C++作为BF16加载/内部TCVT证据，
+加上完整lowering、编译报告及文本日志；不提交.so/.o/.bin/.run等二进制或安装包。
+复用已有验证结果，不重跑测试或提交检查；提交说明记录已通过项、失败/取消任务及待验证项。
