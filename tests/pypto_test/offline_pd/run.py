@@ -475,13 +475,11 @@ def launch(args):
             raise ValueError("P cache bank must pass audit before D loads it")
     if args.command == "swimlane" and args.backend != "pto":
         raise ValueError("Swimlane capture requires --backend pto")
-    if args.command == "padding-capture":
-        if args.backend != "pto":
-            raise ValueError("Padding capture hooks CSAServiceRuntime.eligible; use --backend pto")
-        if args.graph_mode != "eager":
-            # PTO 在 DP16 图模式下会被 service_config 的 DP 闸门拒绝；
-            # 本诊断只量 metadata 形状，metadata 生产在两种模式下同源。
-            raise ValueError("Padding capture currently requires --graph-mode eager")
+    if args.command == "padding-capture" and args.graph_mode == "eager":
+        # 补位只来自图模式：eager 下 cudagraph_mode 为 NONE，allow_dp_padding 随之为 False，
+        # 也不注册捕获档位，结构上不产生补位请求（首轮 eager 采集 32 步 0 命中已证实）。
+        # 挂载点在 Native 的 metadata builder 上，两个后端都能用。
+        raise ValueError("Padding only occurs under graph mode; use --graph-mode full_decode_only")
     args.output.mkdir(parents=True, exist_ok=True)
     if any(args.output.glob("rank*.log")):
         raise FileExistsError("Use a fresh --output directory to preserve prior run evidence")
