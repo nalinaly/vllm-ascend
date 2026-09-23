@@ -701,7 +701,7 @@ def launch(args):
                    "--bank", str(args.bank.resolve()), "--output", str(args.output.resolve()),
                    "--rank", str(rank), "--batch", str(args.batch),
                    "--rank-batch", str(rank_counts[rank]),
-                   "--rank-decode-tokens", str(rank_tokens[rank]), "--backend", args.backend,
+                   "--rank-decode-token", str(rank_tokens[rank]), "--backend", args.backend,
                    "--decode-tokens", str(args.decode_tokens),
                    "--warmup-rounds", str(args.warmup_rounds),
                    "--warmup-tokens", str(args.warmup_tokens),
