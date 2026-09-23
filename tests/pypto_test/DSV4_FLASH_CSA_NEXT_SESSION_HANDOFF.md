@@ -12,10 +12,15 @@
 以已有 H255/B4 bank 建立 Native/PTO 对照。** 然后扩展 P 历史长度与 D batch。
 A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见第 2 节与日志第 95～96 节），
 采集工具已在 `offline_pd/run.py`；A1 稳态计时仍未开展，不要因为有了 profile 就当作性能结论。
-**已定位到主要瓶颈在主机侧**：每次 CSA 调用 `dsv4_csa::_pypto_attention_mutate` 约 94.9 毫秒，
-其中 AscendCL 调用只占 0.1%，同期设备空闲；设备 kernel 约 657 微秒。每步 21 次调用合计约
-1993 毫秒，可解释 PTO 与 Native 每步 2343 毫秒差值的约 85%。该路径属 PyPTO 启动实现，
-按用户约束未自行修改，需要先取得主机侧函数级证据再讨论方案。
+**已定位到主要瓶颈在主机侧，并查到具体函数**：每次 CSA 调用
+`dsv4_csa::_pypto_attention_mutate` 约 94.9 毫秒，其中 AscendCL 调用只占 0.1%，同期设备空闲；
+设备 kernel 约 657 微秒。每步 21 次调用合计约 1993 毫秒，可解释 PTO 与 Native 每步
+2343 毫秒差值的约 85%。主机侧采样显示开销的 99.8% 在 PyPTO `jit/decorator.py` 的
+`_resolve_compiled`：它每次调用都重新遍历各子函数 AST（`_get_source_hash` →
+`_constant_dependency_names`，以及 `_resolve_constexpr_bindings` →
+`_expand_constexpr_variants` → `_dep_call_nodes`），`ast.walk` 占整次调用的 79%。
+两处输入都只有运行期不变的函数对象，属缓存键的重复推导。该路径在 PyPTO 内，
+按用户约束未自行修改、也未验证任何修复方案，需要用户决定是走上游还是本地方案。
 其他 P3/P4 场景、DP padding 改造及剩余数值差异排查仍处于用户要求的暂停状态，
 本次交接不代表恢复这些工作。
 

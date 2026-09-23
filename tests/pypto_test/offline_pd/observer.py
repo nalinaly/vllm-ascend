@@ -179,6 +179,71 @@ class OfflineCSAObserver:
                                f"requested {state['requested_steps']}; see window")
         return state
 
+    def offline_begin_host_profile(self, directory, start_step, steps, expected_tokens, expected_requests):
+        """在稳态 step 上开 cProfile，定位 CSA 调用里的主机侧耗时函数。
+
+        cProfile 会放大 Python 调用开销，得到的是相对归因，不能与设备侧耗时直接相加，
+        也不能当作稳态性能结论。窗口构成判定与 NPU 采集一致，只统计满批稳态 step。
+        """
+        import cProfile
+
+        if getattr(self, "_offline_host_profile", None) is not None:
+            raise RuntimeError("Host profiling is already active")
+        rank = self.vllm_config.parallel_config.data_parallel_rank
+        profiler = cProfile.Profile()
+        runner = self.model_runner
+        original = runner.execute_model
+        state = {"dp_rank": rank, "start_step": start_step, "requested_steps": steps,
+                 "expected_tokens": expected_tokens, "expected_requests": expected_requests,
+                 "seen_steady_steps": 0, "profiled_steps": 0, "closed": False,
+                 "path": os.path.join(directory, f"rank{rank}.prof")}
+
+        def profiled(scheduler_output, *args, **kwargs):
+            tokens = scheduler_output.total_num_scheduled_tokens
+            requests = len(scheduler_output.num_scheduled_tokens)
+            steady = tokens == expected_tokens and requests == expected_requests
+            index = state["seen_steady_steps"]
+            if steady:
+                state["seen_steady_steps"] += 1
+            active = steady and index >= start_step and state["profiled_steps"] < steps
+            if active and state["profiled_steps"] == 0:
+                profiler.enable()
+            try:
+                return original(scheduler_output, *args, **kwargs)
+            finally:
+                if active:
+                    state["profiled_steps"] += 1
+                    if state["profiled_steps"] == steps:
+                        profiler.disable()
+                        state["closed"] = True
+
+        runner.execute_model = profiled
+        self._offline_host_profile = (state, profiler, original)
+        return {"dp_rank": rank, "path": state["path"]}
+
+    def offline_end_host_profile(self):
+        import pstats
+
+        state, profiler, original = self._offline_host_profile
+        self.model_runner.execute_model = original
+        self._offline_host_profile = None
+        if state["profiled_steps"] and not state["closed"]:
+            profiler.disable()
+            state["closed"] = True
+        if state["profiled_steps"] != state["requested_steps"]:
+            raise RuntimeError(f"Host-profiled {state['profiled_steps']} steady steps, "
+                               f"requested {state['requested_steps']}")
+        os.makedirs(os.path.dirname(state["path"]), exist_ok=True)
+        profiler.dump_stats(state["path"])
+        rows = []
+        for func, (calls, primitive, total, cumulative, _) in pstats.Stats(profiler).stats.items():
+            rows.append({"function": f"{func[0]}:{func[1]}({func[2]})", "calls": calls,
+                         "primitive_calls": primitive, "tottime_seconds": round(total, 4),
+                         "cumtime_seconds": round(cumulative, 4)})
+        state["top_by_tottime"] = sorted(rows, key=lambda r: r["tottime_seconds"], reverse=True)[:30]
+        state["top_by_cumtime"] = sorted(rows, key=lambda r: r["cumtime_seconds"], reverse=True)[:30]
+        return state
+
     def offline_begin_swimlane(self, layer_index, expected_tokens):
         """只给一层、一次达到稳态构成的 CSA 调用开 DFX 窗口，其余调用保持原路径。"""
         import pypto.torch

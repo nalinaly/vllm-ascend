@@ -177,6 +177,18 @@ def diagnose(args, llm, cases):
             "output_token_ids": measured["output_token_ids"],
             "scope": "窗口含采集与同步开销，仅用于Native/PTO结构对照，不是稳态性能结论",
         })
+    elif args.command == "hostprofile":
+        started = llm.collective_rpc("offline_begin_host_profile", args=(
+            str((args.output / "host").resolve()), args.profile_start_step,
+            args.profile_steps, expected_tokens, args.batch))
+        measured = generate_round(llm, args, case, args.decode_tokens)
+        window = llm.collective_rpc("offline_end_host_profile")
+        common.update({
+            "decode_tokens": args.decode_tokens, "started": started, "window": window,
+            "measured_elapsed_seconds": measured["elapsed_seconds"],
+            "output_token_ids": measured["output_token_ids"],
+            "scope": "cProfile放大Python调用开销，只用于主机侧相对归因，不与设备耗时相加",
+        })
     else:
         started = llm.collective_rpc("offline_begin_swimlane",
                                      args=(args.swimlane_layer, expected_tokens))
@@ -397,7 +409,7 @@ def worker(args):
                    llm.collective_rpc("offline_cache_layout"))
         llm.llm_engine.engine_core.shutdown()
         return
-    if args.command in ("profile", "swimlane"):
+    if args.command in ("profile", "hostprofile", "swimlane"):
         diagnose(args, llm, cases)
         llm.llm_engine.engine_core.shutdown()
         return
@@ -437,7 +449,7 @@ def launch(args):
     devices = os.environ.get("TASK_DEVICE", "").split(",")
     if len(devices) != 16 or any(not d.isdigit() for d in devices) or len(set(devices)) != 16:
         raise RuntimeError("Run through task-submit --device auto --device-num 16")
-    if args.command in ("decode", "profile", "swimlane"):
+    if args.command in ("decode", "profile", "hostprofile", "swimlane"):
         report = json.loads((args.bank / "audit.json").read_text())
         if report["status"] != "PASS":
             raise ValueError("P cache bank must pass audit before D loads it")
@@ -462,7 +474,7 @@ def launch(args):
                 "GLOO_SOCKET_IFNAME": args.nic, "TP_SOCKET_IFNAME": args.nic,
                 # 采集窗口会在各 rank 上做同步和落盘，给集合通信留出等待余量。
                 "HCCL_CONNECT_TIMEOUT": "120",
-                "HCCL_EXEC_TIMEOUT": "1800" if args.command in ("profile", "swimlane") else "204",
+                "HCCL_EXEC_TIMEOUT": "1800" if args.command != "decode" else "204",
                 "HCCL_BUFFSIZE": "1024", "HCCL_OP_EXPANSION_MODE": "AIV",
                 "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
                 "VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS": "1800",
@@ -511,7 +523,7 @@ def launch(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["plan", "audit", "prefill", "decode", "profile",
+    parser.add_argument("command", choices=["plan", "audit", "prefill", "decode", "profile", "hostprofile",
                                             "profile-export", "profile-compare",
                                             "swimlane", "swimlane-export"])
     parser.add_argument("--bank", type=Path, required=True)

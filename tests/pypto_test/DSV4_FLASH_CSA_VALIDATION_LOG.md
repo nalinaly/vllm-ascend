@@ -3198,3 +3198,45 @@ DFX 窗口。一次 CSA 调用含 810 个 AICore 任务、46 个命名 callable�
 说明该结论不是 profiler 开销造成的。进一步定位需要主机侧函数级证据，
 当前 trace 按用户要求关闭了 Python stack，无法在 `_pypto_attention_mutate` 内部再细分。
 相关实现位于 PyPTO 启动路径，按用户约束不自行修改其运行时实现。
+
+## 97. 2026-09-23：主机侧开销定位到 PyPTO 每次调用重复遍历 AST
+
+承第96节。第95～96节的 trace 按用户要求未采 Python stack，无法在
+`_pypto_attention_mutate` 内部细分，故新增 `hostprofile` 入口：在稳态 step 上开
+cProfile，窗口构成判定与 NPU 采集一致。任务 `task_20260923_195929_134956311463`
+exit0，同样使用正式 W8A8、smoke_bank 的 h255、每 rank batch4、eager，预热一轮后
+对第 8、9 两个稳态 step 采样，共 42 次 CSA 调用；测量轮 62.5 秒，与第95节的 61.7 秒
+同量级，说明 cProfile 只作用于 22 步中的 2 步，未显著改变整轮。
+
+rank0 采样内的 PyPTO 调用链（cumtime 秒 / 调用次数）：
+
+| 函数 | cumtime | 次数 |
+| --- | --- | --- |
+| `jit/decorator.py:3374(__call__)` | 13.35 | 42 |
+| `jit/decorator.py:3139(_resolve_compiled)` | 13.33 | 42 |
+| `jit/decorator.py:2707(_get_source_hash)` | 6.80 | 42 |
+| `jit/decorator.py:902(_constant_dependency_names)` | 6.57 | 1764 |
+| `jit/decorator.py:2735(_resolve_constexpr_bindings)` | 6.08 | 42 |
+| `jit/decorator.py:1942(_expand_constexpr_variants)` | 6.08 | 42 |
+| `jit/decorator.py:1740(_dep_call_nodes)` | 5.81 | 1764 |
+
+即每次 kernel 调用都进入 `_resolve_compiled`，其占整个调用的 99.8%。它内部沿两条路径
+重新遍历各子函数的 AST：`_get_source_hash` → `_constant_dependency_names`，以及
+`_resolve_constexpr_bindings` → `_expand_constexpr_variants` → `_dep_call_nodes`。
+1764＝42 次调用×42 个子函数，与该 CSA kernel 的 46 个命名 callable 量级一致。
+自耗时最高的是 Python 标准库 `ast.py`：`iter_child_nodes` 3.65 秒／7290864 次、
+`iter_fields` 2.06 秒／8668506 次、`walk` 1.95 秒／3699864 次，`ast.walk` 累计 10.58 秒、
+占 kernel 调用的 79%。
+
+两处遍历的输入都只有函数对象（以及 `_dep_call_nodes` 的依赖调用名），源码在运行期不变，
+结果可按函数缓存。也就是说，这部分开销来自缓存键的重复推导，而不是编译、
+描述符校验或 kernel 下发；与第96节"窗口内 AscendCL 仅占 0.1%"一致。
+
+量级互相印证：cProfile 下每次 CSA 调用约 318 毫秒，第96节无 cProfile 的 NPU trace 为
+94.9 毫秒，比值约 3.4 倍，属 cProfile 对 Python 密集路径的正常放大。
+
+边界：cProfile 放大 Python 调用开销，上述秒数只用于相对归因，不能与设备耗时相加，
+也不是稳态性能结论。相关实现位于 PyPTO 的 JIT 装饰器路径，按用户约束未自行修改，
+也未验证任何修复方案的效果。证据为
+`results/release_csa_profile_20260923/hostprofile_pto/host_hotspots.json`
+及同目录 16 份 `rank*.prof` 与 `rank*.hostprofile.json`。
