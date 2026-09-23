@@ -417,6 +417,14 @@ def worker(args):
         # the upstream release AttentionConfig does not accept an int8 Literal.
         speculative_config={"method": "dspark", "num_speculative_tokens": 5, "enforce_eager": True},
         additional_config={"weight_nz_mode": 0, "enable_kv_nz": False, "enable_dsa_cp": False,
+                           # 本机 CANN 9.0.0 的 libopapi.so 与已构建的 CSA 自定义算子包里都没有
+                           # aclnnAddRmsNormBias。norm_quant 融合 pass 的 pattern 里直接调用
+                           # npu_add_rms_norm_bias，而 PyTorch 的 pattern matcher 用
+                           # tracing_mode="real" 追踪 pattern，等于真的执行一次，于是图编译在
+                           # 建 pattern 阶段就崩。关掉该融合即可，属本地环境适配，不改生产代码。
+                           # 注意这偏离上线口径：参考脚本所在环境有该算子，融合是开启的。
+                           **({} if prefill or args.graph_mode == "eager"
+                              else {"ascend_compilation_config": {"fuse_norm_quant": False}}),
                            **({} if not args.recompute_scheduler
                               else {"recompute_scheduler_enable": True})},
         model_loader_extra_config={"enable_multithread_load": True, "num_threads": 16},
