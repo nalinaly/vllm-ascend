@@ -523,6 +523,46 @@ class NPUPlatform(Platform):
                 compilation_config.cudagraph_capture_sizes = sp_aclgraph_sizes
                 update_cudagraph_capture_sizes(vllm_config, sp_aclgraph_sizes)
 
+        # 投机解码下每条 decode 请求恒占 uniform_decode_query_len 行（DSpark 5 个投机
+        # token 即 6 行），但 vLLM 给的捕获档位是纯 token 计数的通用列表——实测
+        # max_num_seqs=5 时为 [1, 2, 4, 8, 16, 24]，与 6 毫无关系。档位不是该长度的
+        # 倍数时，_pad_query_start_loc_for_fia 只能插入一条长度不足的 dummy 请求来满足
+        # TND 的 hidden_states.shape[0] == query_start_loc[-1] 不变式，这一档的 T 就
+        # 还原不成整数条请求。同时 mc2_tokens_capacity 取自最大档、potential_max_tokens
+        # 取 max(最大档, max_num_seqs*query_len)，两者不一致会让 MoE 退到 ALLTOALL。
+        # 把档位按 query_len 向上取整并补上真正的最大形状，可从根上避免这两个问题。
+        if (
+            compilation_config.cudagraph_mode != CUDAGraphMode.NONE
+            and not vllm_config.model_config.enforce_eager
+            and vllm_config.speculative_config is not None
+            and compilation_config.cudagraph_capture_sizes
+        ):
+            query_len = 1 + vllm_config.speculative_config.num_speculative_tokens
+            original_sizes = compilation_config.cudagraph_capture_sizes
+            # 显式关掉对齐是为了能造出"档位不是 query_len 倍数"的场景，
+            # 用来验证该档确实退回 Native 且结果仍然正确；生产路径保持对齐。
+            align = (vllm_config.additional_config or {}).get("ascend_compilation_config", {}).get(
+                "align_decode_capture_sizes", True
+            )
+            if query_len > 1 and align:
+                ceiling = min(
+                    vllm_config.scheduler_config.max_num_seqs * query_len,
+                    vllm_config.scheduler_config.max_num_batched_tokens,
+                )
+                aligned = {((size + query_len - 1) // query_len) * query_len for size in original_sizes}
+                aligned.add((ceiling // query_len) * query_len)
+                decode_sizes = sorted(size for size in aligned if 0 < size <= ceiling)
+                if decode_sizes and decode_sizes != original_sizes:
+                    logger.info(
+                        "Aligned ACL graph capture sizes to the uniform decode query length %d: %s -> %s",
+                        query_len,
+                        original_sizes,
+                        decode_sizes,
+                    )
+                    compilation_config.max_cudagraph_capture_size = decode_sizes[-1]
+                    compilation_config.cudagraph_capture_sizes = decode_sizes
+                    update_cudagraph_capture_sizes(vllm_config, decode_sizes)
+
         # Encoder-decoder models currently only support PIECEWISE mode
         # TODO(Jian Li): Confirm this behavior and explain why
         if (
