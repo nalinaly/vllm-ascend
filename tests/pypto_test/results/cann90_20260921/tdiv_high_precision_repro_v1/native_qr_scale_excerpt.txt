@@ -1,0 +1,26 @@
+293:     __aicore__ inline void ScaleTensor(
+294:         LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
+295:         int32_t nums)
+296:     {
+297:         float maxTemp;
+298:         float scaleTemp;
+299:         event_t eventVS;
+300:         event_t eventSV;
+301:         Abs(tmpTensor, srcTensor, size); // tmpLocal <-- |y * smooth1|
+302:         PipeBarrier<PIPE_V>();
+303:         for (int32_t rid = 0; rid < nums; ++rid) {
+304:             ReduceMaxInplace(tmpTensor[rid * this->numLastDimAligned], this->numLastDim);
+305:             eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+306:             SetFlag<HardEvent::V_S>(eventVS);
+307:             WaitFlag<HardEvent::V_S>(eventVS);
+308:             maxTemp = tmpTensor[rid * this->numLastDimAligned].GetValue(0); // Reduce
+309:             scaleTemp = this->quantMaxVal / maxTemp;
+310:             scaleTensor.SetValue(rid, 1 / scaleTemp);
+311:             eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+312:             SetFlag<HardEvent::S_V>(eventSV);
+313:             WaitFlag<HardEvent::S_V>(eventSV);
+314:             auto srcSlice = srcTensor[rid * this->numLastDimAligned];
+315:             Muls(srcSlice, srcSlice, scaleTemp, this->numLastDim);
+316:         }
+317:     }
+318: 

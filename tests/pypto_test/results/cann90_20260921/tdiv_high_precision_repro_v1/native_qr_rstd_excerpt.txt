@@ -1,0 +1,12 @@
+139:         // reduce#1 for mean
+140:         for (int32_t rid = 0; rid < nums; ++rid) {
+141:             auto roundOffset = rid * this->numLastDimAligned;
+142:             float squareSumTemp =
+143:                 ReduceSumHalfInterval(yLocalFp32[roundOffset], this->numLastDim); // aveLocalTemp <-- E(x**2)
+144:             float rstdLocalTemp = 1 / sqrt(squareSumTemp * this->aveNum + this->eps);
+145:             event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+146:             SetFlag<HardEvent::S_V>(eventSV);
+147:             WaitFlag<HardEvent::S_V>(eventSV);
+148:             Muls(
+149:                 xLocalFp32[roundOffset], xLocalFp32[roundOffset], rstdLocalTemp,
+150:                 this->numLastDim); // xLocalFp32 <- x * rstd

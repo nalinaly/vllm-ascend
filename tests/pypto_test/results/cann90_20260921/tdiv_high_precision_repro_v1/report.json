@@ -1,0 +1,309 @@
+{
+  "status": "REPRODUCED",
+  "scope": "A3 FP32 tensor/tensor TDIV; not a full CSA accuracy or performance test",
+  "shape": [
+    16,
+    256
+  ],
+  "seed": 20260922,
+  "exact_rational_checked": 4096,
+  "inputs": "positive finite normal FP32, nonzero denominators, normal finite quotients",
+  "device": 0,
+  "device_name": "Ascend910_9392",
+  "torch": "2.10.0+cpu",
+  "torch_npu": "2.10.0.post2",
+  "pypto": {
+    "path": "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto",
+    "commit": "02c0026993b08353e6cee4fdb93e86eddabb8701",
+    "branch": "feat/kernel-mode-integration-test"
+  },
+  "pto_isa": {
+    "path": "/data/pyptouser/qinchuanyu/pto-eager/simpler/build/pto-isa",
+    "commit": "03e45c4bda48a6909feb239f0acc45f04176c2a1",
+    "branch": "",
+    "include/pto/npu/a2a3/TDiv.hpp": "8c821f23c020930ae4126eda99545568f35a3878a86ad30b8ef9c74d90b59173",
+    "docs/isa/TDIV.md": "3030b97aabb7322709295324440ab8a1be806b9eaad57a51102edd47e3a0b69d"
+  },
+  "ptoas": {
+    "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/.cache/csa/ptoas-0.61/bin/ptoas",
+    "version": "ptoas 0.61"
+  },
+  "cann_path": "/usr/local/Ascend/cann-9.0.0",
+  "comparisons": {
+    "high_vs_default": {
+      "different_elements": 0,
+      "max_ulp": 0
+    },
+    "default_vs_exact_fp32": {
+      "different_elements": 244,
+      "max_ulp": 1
+    },
+    "high_vs_exact_fp32": {
+      "different_elements": 244,
+      "max_ulp": 1
+    },
+    "scalar_vs_exact_fp32": {
+      "different_elements": 0,
+      "max_ulp": 0
+    }
+  },
+  "examples": [
+    {
+      "row": 0,
+      "column": 0,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 3.821843711193651e-05,
+      "denominator_bits": "0x38204cbc",
+      "default": 26165.3828125,
+      "default_bits": "0x46cc6ac4",
+      "high": 26165.3828125,
+      "high_bits": "0x46cc6ac4",
+      "scalar": 26165.380859375,
+      "scalar_bits": "0x46cc6ac3",
+      "reference": 26165.380859375,
+      "reference_bits": "0x46cc6ac3"
+    },
+    {
+      "row": 0,
+      "column": 8,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.00215465878136456,
+      "denominator_bits": "0x3b0d352d",
+      "default": 464.1106262207031,
+      "default_bits": "0x43e80e29",
+      "high": 464.1106262207031,
+      "high_bits": "0x43e80e29",
+      "scalar": 464.110595703125,
+      "scalar_bits": "0x43e80e28",
+      "reference": 464.110595703125,
+      "reference_bits": "0x43e80e28"
+    },
+    {
+      "row": 0,
+      "column": 17,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 1145.753173828125,
+      "denominator_bits": "0x448f381a",
+      "default": 0.0008727883687242866,
+      "default_bits": "0x3a64cbd6",
+      "high": 0.0008727883687242866,
+      "high_bits": "0x3a64cbd6",
+      "scalar": 0.0008727883105166256,
+      "scalar_bits": "0x3a64cbd5",
+      "reference": 0.0008727883105166256,
+      "reference_bits": "0x3a64cbd5"
+    },
+    {
+      "row": 0,
+      "column": 18,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 18.32302474975586,
+      "denominator_bits": "0x4192958e",
+      "default": 0.05457613989710808,
+      "default_bits": "0x3d5f8b3b",
+      "high": 0.05457613989710808,
+      "high_bits": "0x3d5f8b3b",
+      "scalar": 0.054576143622398376,
+      "scalar_bits": "0x3d5f8b3c",
+      "reference": 0.054576143622398376,
+      "reference_bits": "0x3d5f8b3c"
+    },
+    {
+      "row": 0,
+      "column": 19,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 8.975257514975965e-05,
+      "denominator_bits": "0x38bc398c",
+      "default": 11141.7421875,
+      "default_bits": "0x462e16f8",
+      "high": 11141.7421875,
+      "high_bits": "0x462e16f8",
+      "scalar": 11141.7412109375,
+      "scalar_bits": "0x462e16f7",
+      "reference": 11141.7412109375,
+      "reference_bits": "0x462e16f7"
+    },
+    {
+      "row": 0,
+      "column": 46,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.0011489278404042125,
+      "denominator_bits": "0x3a96979f",
+      "default": 870.3766479492188,
+      "default_bits": "0x4459981b",
+      "high": 870.3766479492188,
+      "high_bits": "0x4459981b",
+      "scalar": 870.376708984375,
+      "scalar_bits": "0x4459981c",
+      "reference": 870.376708984375,
+      "reference_bits": "0x4459981c"
+    },
+    {
+      "row": 0,
+      "column": 47,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 1405.2186279296875,
+      "denominator_bits": "0x44afa6ff",
+      "default": 0.000711633067112416,
+      "default_bits": "0x3a3a8ce3",
+      "high": 0.000711633067112416,
+      "high_bits": "0x3a3a8ce3",
+      "scalar": 0.0007116330089047551,
+      "scalar_bits": "0x3a3a8ce2",
+      "reference": 0.0007116330089047551,
+      "reference_bits": "0x3a3a8ce2"
+    },
+    {
+      "row": 0,
+      "column": 48,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.0007787304348312318,
+      "denominator_bits": "0x3a4c23b7",
+      "default": 1284.1414794921875,
+      "default_bits": "0x44a08487",
+      "high": 1284.1414794921875,
+      "high_bits": "0x44a08487",
+      "scalar": 1284.141357421875,
+      "scalar_bits": "0x44a08486",
+      "reference": 1284.141357421875,
+      "reference_bits": "0x44a08486"
+    },
+    {
+      "row": 0,
+      "column": 49,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.0005315567250363529,
+      "denominator_bits": "0x3a0b582b",
+      "default": 1881.266845703125,
+      "default_bits": "0x44eb288a",
+      "high": 1881.266845703125,
+      "high_bits": "0x44eb288a",
+      "scalar": 1881.2667236328125,
+      "scalar_bits": "0x44eb2889",
+      "reference": 1881.2667236328125,
+      "reference_bits": "0x44eb2889"
+    },
+    {
+      "row": 0,
+      "column": 53,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.03217899054288864,
+      "denominator_bits": "0x3d03ce1e",
+      "default": 31.076175689697266,
+      "default_bits": "0x41f89c02",
+      "high": 31.076175689697266,
+      "high_bits": "0x41f89c02",
+      "scalar": 31.0761775970459,
+      "scalar_bits": "0x41f89c03",
+      "reference": 31.0761775970459,
+      "reference_bits": "0x41f89c03"
+    },
+    {
+      "row": 0,
+      "column": 84,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 8.758920669555664,
+      "denominator_bits": "0x410c248a",
+      "default": 0.11416932195425034,
+      "default_bits": "0x3de9d19b",
+      "high": 0.11416932195425034,
+      "high_bits": "0x3de9d19b",
+      "scalar": 0.11416931450366974,
+      "scalar_bits": "0x3de9d19a",
+      "reference": 0.11416931450366974,
+      "reference_bits": "0x3de9d19a"
+    },
+    {
+      "row": 0,
+      "column": 92,
+      "numerator": 1.0,
+      "numerator_bits": "0x3f800000",
+      "denominator": 0.0159224234521389,
+      "denominator_bits": "0x3c826fbe",
+      "default": 62.80451202392578,
+      "default_bits": "0x427b37d2",
+      "high": 62.80451202392578,
+      "high_bits": "0x427b37d2",
+      "scalar": 62.804508209228516,
+      "scalar_bits": "0x427b37d1",
+      "reference": 62.804508209228516,
+      "reference_bits": "0x427b37d1"
+    }
+  ],
+  "generated_code": {
+    "build_output/_jit_scalar_division_rpivgg_a/ptoas/scalar_division_incore_0.cpp": {
+      "sha256": "dff166bd1555dbe43ea393b74ed82ee536c044f31285c0b60d6988fcd8ca6a8d",
+      "division_lines": []
+    },
+    "build_output/_jit_scalar_division_rpivgg_a/ptoas/scalar_division_incore_0.pto": {
+      "sha256": "35dbe332cf0cfe0a547749c390ccfddcb6ed66af9d740d762e767ad3f5531618",
+      "division_lines": [
+        "%numerator__ssa_v0_view = pto.make_tensor_view %arg0, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":40:5)",
+        "%denominator__ssa_v0_view = pto.make_tensor_view %arg1, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":40:5)",
+        "%result__ssa_v0_view = pto.make_tensor_view %arg2, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":40:5)",
+        "%row__ssa_v0 = arith.index_cast %__pypto_spmd_block_idx : i32 to index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":40:5)",
+        "%values__tile = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c256_index : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":41:9)",
+        "pto.texpands ins(%cst_4 : f32) outs(%values__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":41:9)",
+        "%flat_offset_mul = arith.muli %row__ssa_v0, %c256_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":43:13)",
+        "%flat_offset = arith.addi %flat_offset_mul, %column__idx_v0 : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":43:13)",
+        "%left__tile = pto.load_scalar %arg0[%flat_offset] : !pto.ptr<f32> -> f32 loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":43:13)",
+        "%0 = arith.muli %row__ssa_v0, %c256_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":44:13)",
+        "%1 = arith.addi %0, %column__idx_v0 : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":44:13)",
+        "%right__tile = pto.load_scalar %arg1[%1] : !pto.ptr<f32> -> f32 loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":44:13)",
+        "%2 = arith.divf %left__tile, %right__tile : f32 loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":45:13)",
+        "%3 = arith.muli %c0_index, %c256_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":45:13)",
+        "%4 = arith.addi %3, %column__idx_v0 : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":45:13)",
+        "pto.tsetval ins(%4, %2 : index, f32) outs(%values__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":45:13)",
+        "%5 = arith.maxsi %row__ssa_v0, %c0_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":46:9)",
+        "%result__ssa_v0_pview = pto.partition_view %result__ssa_v0_view, offsets = [%5, %c0_index], sizes = [%c1_index, %c256_index] : !pto.tensor_view<?x?xf32> -> !pto.partition_tensor_view<1x256xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":46:9)",
+        "pto.tstore ins(%values__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%result__ssa_v0_pview : !pto.partition_tensor_view<1x256xf32>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":46:9)"
+      ]
+    },
+    "build_output/_jit_vector_division_3c383nkn/ptoas/vector_division_incore_0.cpp": {
+      "sha256": "7b1851da1cb6629e4b850f853698a60d3f66e86359f362bd4bd494c8650a0abc",
+      "division_lines": [
+        "TDIV(v64, v47, v56);",
+        "TDIV<pto::DivAlgorithm::HIGH_PRECISION>(v72, v47, v56);"
+      ]
+    },
+    "build_output/_jit_vector_division_3c383nkn/ptoas/vector_division_incore_0.pto": {
+      "sha256": "5499c5ddc9ae122887df126db0932999c8dc0b15448a141341bc254af004fb7c",
+      "division_lines": [
+        "%numerator__ssa_v0_view = pto.make_tensor_view %arg0, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":26:5)",
+        "%denominator__ssa_v0_view = pto.make_tensor_view %arg1, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":26:5)",
+        "%normal__ssa_v0_view = pto.make_tensor_view %arg2, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":26:5)",
+        "%precise__ssa_v0_view = pto.make_tensor_view %arg3, shape = [%c16_index, %c256_index], strides = [%c256_index, %c1_index] {layout = #pto.layout<nd>} : !pto.tensor_view<?x?xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":26:5)",
+        "%row__ssa_v0 = arith.index_cast %__pypto_spmd_block_idx : i32 to index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":26:5)",
+        "%left__tile = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c256_index : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":27:9)",
+        "%1 = arith.maxsi %row__ssa_v0, %c0_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":27:9)",
+        "%numerator__ssa_v0_pview = pto.partition_view %numerator__ssa_v0_view, offsets = [%1, %c0_index], sizes = [%c1_index, %c256_index] : !pto.tensor_view<?x?xf32> -> !pto.partition_tensor_view<1x256xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":27:9)",
+        "pto.tload ins(%numerator__ssa_v0_pview : !pto.partition_tensor_view<1x256xf32>) outs(%left__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":27:9)",
+        "%right__tile = pto.alloc_tile addr = %c1024_i64 valid_row = %c1_index valid_col = %c256_index : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":28:9)",
+        "%2 = arith.maxsi %row__ssa_v0, %c0_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":28:9)",
+        "%denominator__ssa_v0_pview = pto.partition_view %denominator__ssa_v0_view, offsets = [%2, %c0_index], sizes = [%c1_index, %c256_index] : !pto.tensor_view<?x?xf32> -> !pto.partition_tensor_view<1x256xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":28:9)",
+        "pto.tload ins(%denominator__ssa_v0_pview : !pto.partition_tensor_view<1x256xf32>) outs(%right__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":28:9)",
+        "%t__tile = pto.alloc_tile addr = %c2048_i64 valid_row = %c1_index valid_col = %c256_index : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":29:9)",
+        "pto.tdiv ins(%left__tile, %right__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%t__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":29:9)",
+        "%3 = arith.maxsi %row__ssa_v0, %c0_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":29:9)",
+        "%normal__ssa_v0_pview = pto.partition_view %normal__ssa_v0_view, offsets = [%3, %c0_index], sizes = [%c1_index, %c256_index] : !pto.tensor_view<?x?xf32> -> !pto.partition_tensor_view<1x256xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":29:9)",
+        "pto.tstore ins(%t__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%normal__ssa_v0_pview : !pto.partition_tensor_view<1x256xf32>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":29:9)",
+        "%0 = pto.alloc_tile addr = %c0_i64 valid_row = %c1_index valid_col = %c256_index : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":30:9)",
+        "pto.tdiv ins(%left__tile, %right__tile : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) {precisionType = #pto<div_precision high_precision>} loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":30:9)",
+        "%4 = arith.maxsi %row__ssa_v0, %c0_index : index loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":30:9)",
+        "%precise__ssa_v0_pview = pto.partition_view %precise__ssa_v0_view, offsets = [%4, %c0_index], sizes = [%c1_index, %c256_index] : !pto.tensor_view<?x?xf32> -> !pto.partition_tensor_view<1x256xf32> loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":30:9)",
+        "pto.tstore ins(%0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=256, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%precise__ssa_v0_pview : !pto.partition_tensor_view<1x256xf32>) loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto/tests/pypto_test/repro_tdiv_high_precision.py\":30:9)"
+      ]
+    }
+  }
+}
