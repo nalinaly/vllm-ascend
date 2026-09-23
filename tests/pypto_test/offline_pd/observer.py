@@ -31,6 +31,8 @@ _enable_swimlane_init()
 class OfflineCSAObserver:
     # CSA 的五个 cache group：swa、compressed、state、indexer、indexer_state。
     _OFFLINE_PADDING_GROUPS = 5
+    # dummy 步的 cache 写入实测只做前几次：整份克隆代价不小。
+    _OFFLINE_DUMMY_CACHE_PROBES = 3
 
     def offline_cache_layout(self):
         """只记录真实缓存描述符，用于定位共享存储边界，不读取设备数据。"""
@@ -270,6 +272,7 @@ class OfflineCSAObserver:
         state = {"dp_rank": rank, "layer_index": layer_index,
                  "captured": 0, "builds_seen": 0, "padded_builds": 0,
                  "dummy_runs": 0, "dummy_tokens": [],
+                 "cache_probes": 0, "cache_probe_results": [],
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
@@ -324,6 +327,26 @@ class OfflineCSAObserver:
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
 
+    def _offline_dummy_cache_views(self, state):
+        """取被观察层的 cache/state 视图；拿不到就返回 None，不影响主流程。"""
+        from types import SimpleNamespace
+
+        try:
+            from vllm_ascend.ops.dsa import _build_kv_cache
+
+            layers = self.model_runner.get_model().model.layers
+            index = state["layer_index"]
+            attention = layers[index].self_attn
+            if getattr(attention, "compress_ratio", 0) != 4:
+                return None
+            cmp_kv, swa, compress_state, inner_state, key, scale = _build_kv_cache(
+                attention.dsa_attn, SimpleNamespace(virtual_engine=None))
+            return {"cmp_kv": cmp_kv, "swa": swa, "compress_state": compress_state,
+                    "inner_state": inner_state, "indexer_key": key, "indexer_scale": scale}
+        except Exception as error:  # 取不到就退化为只计数，不让诊断打断本轮
+            state.setdefault("cache_probe_error", repr(error))
+            return None
+
     def _offline_dummy_probe(self, state):
         """统计本 rank 跑了多少次 dummy batch，以及其中有多少次是空调度。
 
@@ -341,7 +364,26 @@ class OfflineCSAObserver:
         def counted(runner, num_tokens, *args, **kwargs):
             state["dummy_runs"] += 1
             state["dummy_tokens"].append(int(num_tokens))
-            return origin(runner, num_tokens, *args, **kwargs)
+            # 只对前几次 dummy 做 cache 写入实测：整份克隆代价不小，而"dummy 不写
+            # cache"是个结构性性质，前几次不写就说明守卫生效。按约束不做 hash，
+            # 这里是逐元素数值比较。
+            if state["cache_probes"] >= self._OFFLINE_DUMMY_CACHE_PROBES:
+                return origin(runner, num_tokens, *args, **kwargs)
+            views = self._offline_dummy_cache_views(state)
+            if views is None:
+                return origin(runner, num_tokens, *args, **kwargs)
+            import torch
+
+            before = {name: tensor.clone() for name, tensor in views.items()}
+            result = origin(runner, num_tokens, *args, **kwargs)
+            torch.npu.synchronize()
+            changed = [name for name, tensor in views.items()
+                       if not torch.equal(tensor, before[name])]
+            state["cache_probes"] += 1
+            state["cache_probe_results"].append(
+                {"dummy_index": state["dummy_runs"], "num_tokens": int(num_tokens),
+                 "changed": changed})
+            return result
 
         NPUModelRunner._dummy_run = counted
         self._offline_dummy_origin = origin
