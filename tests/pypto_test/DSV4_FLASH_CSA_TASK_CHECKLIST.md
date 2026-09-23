@@ -184,6 +184,35 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 
 是否照此改，请你定。在你定之前 T1.5 不动。
 
+### T1.8 的执行配方（DP16 六组负载）
+
+驱动已支持按 rank 指定实际提交数（`--rank-batches`，2026-09-24 加入）。
+`max_num_seqs` 统一取 `--batch`，所以 `--batch` 要给成各 rank 里的最大值；
+不足的 rank 用 `--rank-batches` 逐个指定，其余 rank 按最后一个值补齐。
+
+统一前缀（`B` 为 bank，`R` 为结果根目录）：
+
+```
+COMMON="--bank $B --graph-mode full_decode_only --decode-tokens 64 --recompute-scheduler --backend pto"
+```
+
+| 用例 | 负载 | 命令追加 |
+| --- | --- | --- |
+| D01 | `(4,40)` | `--batch 40 --rank-batches 4 40` |
+| D02 | `(40,4)` | `--batch 40 --rank-batches 40 4` |
+| D03a | `(8,24)` | `--batch 24 --rank-batches 8 24` |
+| D03b | `(16,32)` | `--batch 32 --rank-batches 16 32` |
+| D04a | `(0,4)` | `--batch 4 --rank-batches 0 4` |
+| D04b | `(0,40)` | `--batch 40 --rank-batches 0 40` |
+| D05 | 连续切换 | 依次跑上述各组，比对图重选与 metadata buffer 复用 |
+
+D04 的 rank0 提交数为 0：不提交任何请求但仍参与 DP 集合通信，
+这既是 D04 的空 rank 路径，也是 T1.6 整批 dummy 的前提。
+
+每组都要先记录 `should_skip_allreduce_across_dp_group` 的实际返回值、
+通信方法与图模式，再判定预期 padding 量——清单 T1.7 的判据已有此要求，
+DP16 同样适用，不能用 DP2 的结论替代。
+
 ### T1 的待确认问题
 
 动手前需实测，不能凭推算下结论：
@@ -297,14 +326,17 @@ F03 的在线传输与网络故障恢复不是本轮前置条件——用户当�
 ## 7. 建议执行顺序
 
 ```
-T1.2 → T1.3 → T1.4 → T1.5 ┐
-                  └ T1.6 ┴→ T1.7(DP2) → T1.8(DP16) → T1.9
-                                                       ├→ T2.1 → T2.2
-                                                       │         └→ T2.3 → T2.4
-                                                       └→ T3.2 → T4.2
-T3.1 可与 T1 并行（只用 P 侧，不依赖 padding）
-T5.1～T5.4 随时可做，不占卡
+T1.2 ✅ → T1.3 ✅代码 → T1.4 ⏳验收中 → T1.5 ⏸待定落点 ┐
+                                       └ T1.6 ────────┴→ T1.7(DP2) → T1.8(DP16) → T1.9
+                                                                                    ├→ T2.1 → T2.3 → T2.4
+                                                                                    └→ T3.2 → T4.2
+T2.2 ✅（已完成，不再依赖 T2.1）
+T3.1 可与 T1 并行（只用 P 侧，不依赖 padding）：H4095 ✅、H32767 ⏳ 生成中
+T5.1～T5.4 ✅ 全部完成
 ```
 
-关键路径是 T1.2 到 T1.9。T2 和 T4 的多数项都压在 T1.9 之后，
+关键路径是 T1.4 到 T1.9。T2 和 T4 的多数项都压在 T1.9 之后，
 因为在 PTO 拿不到图模式之前，性能数字和 graph 相关验收都没有意义。
+
+**当前唯二需要你拍板的**：T1.5 的落点（见上），以及 T2.5 的 PyPTO
+`_resolve_compiled` 处置。其余条目要么在跑、要么依赖关系明确。
