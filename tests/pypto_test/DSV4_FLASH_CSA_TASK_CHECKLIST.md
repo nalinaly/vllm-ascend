@@ -279,6 +279,27 @@ PTO 侧写 `compress_state` 的 state commit 循环守卫只有
 `state_page >= 0 and state_offset >= 0`，没有 T1.3 加的 `seq_lens` 判据；
 但 dummy 的 `seq_lens` 是非零的，**补上那个判据也拦不住**，所以不能照搬。
 
+**页级定位（`accept_t16_pages_*`）：数字不可信，只有二值结论可用。**
+
+| 视图 | PTO 变化页数 | Native 变化页数 |
+| --- | --- | --- |
+| `cmp_kv` | 102 / 20677 | 100 / 24834 |
+| `swa` | 103 | 100 |
+| `inner_state` | 17 | 11 |
+| **`compress_state`** | **3（页 34/37/105）** | **不写** |
+
+**为什么不可信**：一次 dummy 只有 6 个 token，最多写 6 个槽位，却观察到 100
+多页变化——物理上讲不通，说明两次 `synchronize()` 之间还有未查明的干扰源在写。
+因此页数、页号与 `only_null_block` 判定都不能用，**不能据此断言"写到了真实页、
+存在复用风险"**。
+
+**仍然可用的是二值结论**：`compress_state` 只有 PTO 写、Native 不写，
+这一点在 `accept_t16_emptyrank_v5` 与 `accept_t16_pages_pto` 两轮独立运行里一致。
+
+要把页级定位做实，需要先找出干扰源——可能的方向是确认
+`_build_kv_cache` 返回的视图是否按层私有、以及 dummy 步之外是否还有异步写
+（如 KV connector）。这项尚未做。
+
 **按"没把握的先不做"处理，不猜着改 kernel。** 需要你定的是：
 是否要求 PTO 在 dummy／空转步上与 Native 一致地不写 `compress_state`；
 若要，还需先查清 Native 算子内部的判定依据。另有一层始终没测：写进去的页
