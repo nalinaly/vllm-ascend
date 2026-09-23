@@ -126,6 +126,7 @@ from vllm_ascend.eplb.core.eplb_device_transfer_loader import D2DExpertWeightLoa
 from vllm_ascend.eplb.core.eplb_worker import EplbProcess
 from vllm_ascend.eplb.eplb_updator import EplbUpdator
 from vllm_ascend.model_executor.offloader import create_offloader
+from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import can_replay_csa_graph, is_csa_model
 from vllm_ascend.ops.rotary_embedding import set_cos_and_sin, update_cos_sin
 from vllm_ascend.patch.worker.patch_draft_quarot import patch_load_weights
 from vllm_ascend.quantization.utils import enable_fa_quant
@@ -2709,12 +2710,13 @@ class NPUModelRunner(GPUModelRunner):
         )
         has_lora = num_active_loras > 0 if force_has_lora is None else force_has_lora
 
+        csa_actual_tokens = num_tokens
         # ruff: noqa: E731
         def dispatch_cudagraph(num_tokens, disable_full=False, valid_modes=None):
             if force_eager:
                 return (CUDAGraphMode.NONE, BatchDescriptor(num_tokens_padded))
 
-            return self.cudagraph_dispatcher.dispatch(
+            mode, descriptor = self.cudagraph_dispatcher.dispatch(
                 num_tokens=num_tokens,
                 has_lora=has_lora,
                 uniform_decode=uniform_decode,
@@ -2722,6 +2724,15 @@ class NPUModelRunner(GPUModelRunner):
                 invalid_modes={CUDAGraphMode.FULL} if disable_full else None,
                 num_active_loras=num_active_loras,
             )
+            # Python forward gates do not run during graph replay. Only replay
+            # a captured CSA bucket for complete, unpadded six-token requests.
+            if mode == CUDAGraphMode.FULL and is_csa_model(self.vllm_config):
+                if not can_replay_csa_graph(
+                    num_tokens=csa_actual_tokens, num_reqs=num_reqs,
+                    uniform_decode=uniform_decode, padded_tokens=descriptor.num_tokens,
+                ):
+                    return CUDAGraphMode.NONE, BatchDescriptor(num_tokens)
+            return mode, descriptor
 
         cudagraph_mode, batch_descriptor = dispatch_cudagraph(num_tokens_padded, use_cascade_attn or has_encoder_output)
         num_tokens_padded = batch_descriptor.num_tokens
@@ -3454,6 +3465,11 @@ class NPUModelRunner(GPUModelRunner):
                 from vllm.model_executor.model_loader.default_loader import DefaultModelLoader
                 DefaultModelLoader._init_ep_weight_filter = mock_pass
             self.model: nn.Module = get_model(vllm_config=self.vllm_config)
+            # vLLM 0.25.1 has no model-level post-load hook. Prepare CSA only
+            # after get_model has finalized all Native quantized parameters,
+            # and before memory profiling or graph capture.
+            if is_csa_model(self.vllm_config):
+                self.model.process_weights_after_loading()
             for name, _ in self.model.named_parameters():
                 # sinks is a kind of parameter in attention
                 # only set in weight name
