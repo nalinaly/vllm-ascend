@@ -164,6 +164,11 @@ def worker(args):
         **({} if prefill else {"worker_extension_cls": "offline_pd.observer.OfflineCSAObserver"}),
     )
     print(f"OFFLINE_MODEL_READY role={args.command} dp={args.rank}", flush=True)
+    if args.layout_only:
+        write_json(args.output / f"rank{args.rank}.cache_layout.json",
+                   llm.collective_rpc("offline_cache_layout"))
+        llm.llm_engine.engine_core.shutdown()
+        return
     outputs = []
     for case in cases:
         tokens = json.loads((args.bank / case["tokens"]).read_text())
@@ -232,6 +237,8 @@ def launch(args):
                    "--bank", str(args.bank.resolve()), "--output", str(args.output.resolve()),
                    "--rank", str(rank), "--batch", str(args.batch), "--backend", args.backend,
                    "--decode-tokens", str(args.decode_tokens)]
+            if args.layout_only:
+                cmd.append("--layout-only")
             file = (args.output / f"rank{rank}.log").open("w")
             files.append(file)
             children.append(subprocess.Popen(cmd, env=env, stdout=file, stderr=subprocess.STDOUT, start_new_session=True))
@@ -271,7 +278,10 @@ def main():
     parser.add_argument("--backend", choices=["native", "pto"], default="native")
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--decode-tokens", type=int, default=128)
+    parser.add_argument("--layout-only", action="store_true", help="加载D模型后仅采集缓存描述符")
     args = parser.parse_args()
+    if args.layout_only and args.command != "decode":
+        parser.error("--layout-only 仅适用于 decode")
     if args.command == "plan":
         make_plan(args)
     elif args.command == "audit":

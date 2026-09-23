@@ -22,7 +22,7 @@ PTOAS / ATB / 构建工具迁至工作区 `.cache/dsv4-toolchain`，`../env.sh` 
 | 环境入口 | `source ../env-dsv4-0251rc1.sh` |
 | 当前 CANN / PTA | CANN 9.0.0，torch / torch_npu 2.10.0；具体包版本见环境快照 |
 | 官方 A3 Dockerfile | CANN 9.0.1、Python 3.12、torch / torch_npu 2.10.0 系列；本地尚不是完全相同的镜像 |
-| PyPTO / Simpler | 原 debug 分支 `feat/kernel-mode-integration-test`，未改依赖源码 |
+| PyPTO / Simpler | debug分支 `feat/kernel-mode-integration-test`：5495749 / 166852bf；保留已有torch_npu 2.10本地适配并同步SDK版本绑定，详见日志第92节 |
 | 正式权重 | `/data/model/DeepSeek-V4-Flash-0731-w8a8`，ModelSlim W8A8，75 分片 |
 | 旧分支 / HEAD | 原 `dsv4-flash-pto` / `18ec20ae2f93d2c3965ecffdb6c2e9d80fd304c6`；分支及目录已删除，最终 WIP 已归档 |
 
@@ -81,7 +81,14 @@ PTO轮因compressor norm的BF16/FP32准备约束失败。按用户要求撤销�
 CSA主入口及两路compressor均改为直接接收Native BF16 norm，保留原始地址；
 仅在已有RMS设备任务内将加载的gamma tile转FP32，无额外适配调用或FP32权重副本。
 BF16零拷贝准备的CPU回归检查与完整CSA lowering/PTOAS代码生成通过。
-新PTO D16任务`task_20260923_163126_45104725192`已提交，结果待定。
+新PTO D16任务`task_20260923_163126_45104725192`完成，exit1：16rank的BF16权重准备
+及64个请求缓存恢复通过，首次PTO调用前被idx_kv_cache可写别名检查拒绝，未进入设备计算。
+已确认所有重叠均为同字节范围的合法共享视图。PyPTO/Simpler调试分支已更新并重新安装
+至5495749/166852bf，PR #2867解决上述参数检查；CPU描述符回归、ABI一致性、完整CSA
+编译和一个eager真机用例通过。重测任务`task_20260923_175252_286523232409`已完成
+exit0：D TP1×DP16/EP16、history255、每rank B4的64请求均完成128 token生成；
+16rank×21层均记录PTO执行，8192个输出token与此前Native D16完全一致。
+本轮含首次编译及IO，不作为稳态性能结论；详见验证日志第91～93节。
 release 的 Native compressor / QLI 实现与旧 main 不完全相同，数值结果需重新比较。
 
 ```bash

@@ -2983,3 +2983,97 @@ BF16修正后的PTO D16任务仍在等待资源，本次提交不宣称PTO D16�
 不新增或执行hash校验。只保留两份RMS生成C++作为BF16加载/内部TCVT证据，
 加上完整lowering、编译报告及文本日志；不提交.so/.o/.bin/.run等二进制或安装包。
 复用已有验证结果，不重跑测试或提交检查；提交说明记录已通过项、失败/取消任务及待验证项。
+
+17:02复查：BF16入口PTO D16任务task_20260923_163126_45104725192仍pending，
+累计排队约31分钟。当前14张卡由其他任务占用，仅8、15号卡空闲；本任务需要同时16卡。
+队列中另有3个更早提交的16卡任务。本任务输出目录尚未创建，无新增真机执行结果。
+
+
+## 91. 2026-09-23：BF16准备通过，真实D16暴露缓存共享存储约束
+
+任务`task_20260923_163126_45104725192`约17:19开始，17:22:44在首个PTO调用前失败，exit1。
+全部16个rank均完成21个CSA层的BF16权重准备和4个请求缓存恢复，共64次加载。
+首次PTO调用在PyPTO的参数描述符别名检查处报错：
+`Parameter 'idx_kv_cache' partially overlaps another tensor with a writable alias`。
+未进入CSA设备计算，不属于输出精度失败。证据为`decode_pto_b4_bf16_v3/summary.json`及rank日志。
+
+只读检查发现：Native缓存规划允许不同缓存组共享底层分配，依靠独立页表使用不同物理页；
+当前PyPTO `_validate_aliases` 仅合并地址、字节数、形状、stride、dtype全部相同的精确视图。
+同一字节范围的FP32状态视图与INT8索引缓存视图会触发当前拒绝条件。
+新增纯CPU复现`dsv4_csa_shared_storage_repro.py`，调用现有生产视图函数及原始别名检查，
+确认上述行为；证据`shared_storage_cpu.json`，不依赖模型数值或NPU执行。
+
+测试工具增加`--layout-only`：加载真实D模型后仅通过RPC记录21个CSA层的缓存描述符、
+地址范围及重叠关系，不读取设备张量内容、不启动PTO计算。任务
+`task_20260923_172807_209419913258`已运行，输出`decode_cache_layout_v1`，
+用于确认实际服务是否属于该共享场景。当前未放宽检查、未修改依赖仓库或生产算子，
+也未引入缓存复制来绕开错误。
+
+描述符采集任务已完成exit0：16rank×21层共336份层记录，672对重叠均为完全相同
+的起始地址和字节范围，没有真正的部分范围重叠。包括主compress_state与cmp_kv
+（FP32/BF16），以及inner_compress_state与idx_kv_cache（FP32/INT8）。
+证据decode_cache_layout_v1/summary.json及16份rank*.cache_layout.json。
+
+用户提供PyPTO PR https://github.com/hw-native-sys/pypto/pull/2867 。核对其差异：
+_validate_aliases的等价键从地址/字节数/shape/stride/dtype改为地址/字节数，
+同时继续拒绝真实的可写部分重叠，正好覆盖本次全部重叠描述符。
+本地PyPTO仍为02c0026，包含旧检查，尚未更新依赖或重新进行PTO D16计算。
+
+## 92. 2026-09-23：更新两套调试分支并重测共享缓存接入
+
+按用户要求，两仓库均保持`feat/kernel-mode-integration-test`分支并fast-forward：
+PyPTO `02c0026 → 5495749`，包含PR #2867；Simpler `e914837d → 166852bf`。
+更新前已有的PyPTO本地torch_npu 2.10.0.post2支持及对应测试、说明继续保留；
+完整原始差异另存工作区`.cache/update-20260923/pypto-before.patch`及Git stash。
+上游PyPTO的Simpler绑定仍为32dff953，故将原有本地版本绑定和runtime子模块一起
+同步到实际安装的166852bf，保持Python ABI、torch_npu扩展和Simpler SDK一致。
+没有自行改写别名检查、Simpler运行时实现或CSA生产代码。
+
+在`.venv-dsv4-0251rc1`中从本地源码重新安装，两者使用现有CANN 9.0和GCC 15；
+Simpler编译A2/A3 runtime及绑定，PyPTO启用已有torch_npu adapter构建选项。
+安装日志保存在工作区`.cache/update-20260923/`，不复制其他checkout的动态库。
+
+扩展CPU复现脚本，增加修复后预期及真实D16描述符回归。更新后的检查接受
+同字节范围的FP32/INT8视图，仍拒绝真正的可写部分重叠；16rank×21层全部通过。
+证据`shared_storage_updated_cpu.json`及对应日志。这仅验证参数检查，
+尚不代表PTO设备执行、输出精度或性能通过；安装完成后重提同一正式权重、
+smoke_bank及B4的PTO D16，不重复Native D轮和精度矩阵。
+
+两套安装均完成；安装后的Python ABI、PyPTO torch_npu adapter、Simpler绑定以及
+runtime子模块均报告166852bf，torch 2.10.0/torch_npu 2.10.0.post2版本检查通过，
+证据`dependencies_updated.json`。PyPTO首次沿用2路构建，调整为显式8路上限时中断
+重启；中断轮进入安装阶段后因旧动态库RPATH报错，没有成功安装。后续增量完成
+全部编译及链接后重新安装成功，最终日志在`dependency_update/`，不使用中断轮产物。
+上游4项别名CPU测试通过；更新后完整CSA CPU编译含PTOAS通过，
+证据`dependency_update/alias-ut.log`、`updated_codegen/report.json`。
+
+17:52重提PTO D16 B4任务`task_20260923_175252_286523232409`，输出
+`decode_pto_b4_updated_v4`，正式权重及smoke_bank不变，128个生成token/请求。
+提交时8张卡被其他任务占用，当前等待16卡资源，尚未启动CSA设备计算。
+等待期间仅补一个上游eager真机用例（eager-1），任务
+`task_20260923_175431_29119437928`，用于检查新运行时实际下发，不属于模型精度测试。
+
+该eager真机任务完成exit0，1项通过（16.24秒），包含设备标量累加、constexpr
+特化及结果检查。证据`updated_eager.xml`、`dependency_update/eager-device.log`。
+17:55复查D16任务仍pending；本轮可确认更新、安装、ABI、共享缓存参数检查、
+完整CSA编译和基础eager执行通过，不能提前记录D16运行或CSA精度/性能通过。
+
+## 93. 2026-09-23：更新依赖后真实PTO D16首次完整运行通过
+
+复查任务`task_20260923_175252_286523232409`已完成exit0，rank日志显示18:04:22
+正常结束。使用正式ModelSlim W8A8权重、既有P TP4×DP4生成的history255离线bank，
+D为TP1×DP16/EP16，每rank batch4，64个请求均生成128 token，共8192 token。
+全部16rank的21个target C4层均实际走到PTO路径，未再出现共享缓存别名拒绝。
+
+每rank每层的观察计数一致：`pto_tokens24=22`、`pto_tokens18=1`，
+即S6的B4与B3调用；同时`native_tokens6=8`、`native_tokens1=1`，
+保留Native的非PTO派发，不能把整条模型链表述为完全由PTO执行。
+全部rank-layer累计7728次PTO CSA调用。未新增生产代码或修改依赖实现。
+
+直接比较已有`decode_native_b4_v1`与本轮相同rank/case/request的输出token列表，
+64/64请求逐token完全一致，8192个生成token无差异。该结果是本次短历史场景的
+整模型生成结果对照，不代替各层张量精度、长历史、其他batch及完整P3/P4验收。
+
+结果汇总`decode_pto_b4_updated_v4/summary.json`，明细为16份rank*.json和日志。
+本轮elapsed包含首次编译、离线缓存IO及观察hook，不据此给出稳态吞吐或延迟结论。
+下一步尚需有统一warmup与计时范围的Native/PTO性能对照，以及计划内其他离线场景。
