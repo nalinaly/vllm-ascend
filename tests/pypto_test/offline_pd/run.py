@@ -189,6 +189,19 @@ def diagnose(args, llm, cases):
             "output_token_ids": measured["output_token_ids"],
             "scope": "cProfile放大Python调用开销，只用于主机侧相对归因，不与设备耗时相加",
         })
+    elif args.command == "padding-capture":
+        # 补位只在收尾阶段自然出现，所以按完整 decode_tokens 跑，让尾部请求陆续结束。
+        started = llm.collective_rpc("offline_begin_padding_capture", args=(
+            str((args.output / "padding").resolve()), args.swimlane_layer))
+        measured = generate_round(llm, args, case, args.decode_tokens)
+        window = llm.collective_rpc("offline_end_padding_capture")
+        common.update({
+            "decode_tokens": args.decode_tokens, "layer_index": args.swimlane_layer,
+            "started": started, "window": window,
+            "measured_elapsed_seconds": measured["elapsed_seconds"],
+            "output_token_ids": measured["output_token_ids"],
+            "scope": "只读取metadata并多调一次Native自己的compact生产器量形状，不改变本步计算结果",
+        })
     else:
         started = llm.collective_rpc("offline_begin_swimlane",
                                      args=(args.swimlane_layer, expected_tokens))
@@ -416,7 +429,7 @@ def worker(args):
                    llm.collective_rpc("offline_cache_layout"))
         llm.llm_engine.engine_core.shutdown()
         return
-    if args.command in ("profile", "hostprofile", "swimlane"):
+    if args.command in ("profile", "hostprofile", "swimlane", "padding-capture"):
         diagnose(args, llm, cases)
         llm.llm_engine.engine_core.shutdown()
         return
@@ -456,12 +469,19 @@ def launch(args):
     devices = os.environ.get("TASK_DEVICE", "").split(",")
     if len(devices) != 16 or any(not d.isdigit() for d in devices) or len(set(devices)) != 16:
         raise RuntimeError("Run through task-submit --device auto --device-num 16")
-    if args.command in ("decode", "profile", "hostprofile", "swimlane"):
+    if args.command in ("decode", "profile", "hostprofile", "swimlane", "padding-capture"):
         report = json.loads((args.bank / "audit.json").read_text())
         if report["status"] != "PASS":
             raise ValueError("P cache bank must pass audit before D loads it")
     if args.command == "swimlane" and args.backend != "pto":
         raise ValueError("Swimlane capture requires --backend pto")
+    if args.command == "padding-capture":
+        if args.backend != "pto":
+            raise ValueError("Padding capture hooks CSAServiceRuntime.eligible; use --backend pto")
+        if args.graph_mode != "eager":
+            # PTO 在 DP16 图模式下会被 service_config 的 DP 闸门拒绝；
+            # 本诊断只量 metadata 形状，metadata 生产在两种模式下同源。
+            raise ValueError("Padding capture currently requires --graph-mode eager")
     args.output.mkdir(parents=True, exist_ok=True)
     if any(args.output.glob("rank*.log")):
         raise FileExistsError("Use a fresh --output directory to preserve prior run evidence")
@@ -535,7 +555,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["plan", "audit", "prefill", "decode", "profile", "hostprofile",
                                             "profile-export", "profile-compare",
-                                            "swimlane", "swimlane-export"])
+                                            "swimlane", "swimlane-export",
+                                            "padding-capture"])
     parser.add_argument("--bank", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--histories", default="255,4095,32767,131071,131072,131073")

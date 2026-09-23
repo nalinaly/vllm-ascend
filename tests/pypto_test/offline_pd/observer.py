@@ -244,6 +244,121 @@ class OfflineCSAObserver:
         state["top_by_cumtime"] = sorted(rows, key=lambda r: r["cumtime_seconds"], reverse=True)[:30]
         return state
 
+    def offline_begin_padding_capture(self, directory, layer_index):
+        """在真实离线 D 上捕获一次带补位请求的 decode 步，落盘 Native metadata 与 compact 形状。
+
+        挂在 eligible 而不是 __call__：补位时 PTO 会回退 Native，__call__ 根本不会进，
+        而 eligible 每步都被调用，且看到的 metadata 与生产路径完全一致。
+
+        只读取并落盘小张量，额外只多调一次 Native 自己的 compressor_metadata
+        生产器来量其真实形状；不改变本步的计算路径与结果。
+        """
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+
+        if getattr(self, "_offline_padding", None) is not None:
+            raise RuntimeError("Padding capture is already active")
+        rank = self.vllm_config.parallel_config.data_parallel_rank
+        attention = self.model_runner.get_model().model.layers[layer_index].self_attn
+        wanted = getattr(attention.dsa_attn, "_pto_csa_runtime", None)
+        if wanted is None:
+            raise ValueError(f"Layer {layer_index} has no PTO CSA runtime")
+        original = CSAServiceRuntime.eligible
+        state = {"dp_rank": rank, "layer_index": layer_index,
+                 "layer_name": wanted.layer_name, "captured": 0, "steps_seen": 0}
+
+        def probed(runtime, context, hidden, positions):
+            verdict = original(runtime, context, hidden, positions)
+            if runtime is not wanted:
+                return verdict
+            state["steps_seen"] += 1
+            if not state["captured"]:
+                record = self._offline_padding_record(runtime, context, hidden, positions, verdict)
+                if record is not None:
+                    state["captured"] += 1
+                    self._offline_padding_write(directory, rank, record)
+            return verdict
+
+        CSAServiceRuntime.eligible = probed
+        self._offline_padding = (state, original)
+        return dict(state)
+
+    def _offline_padding_record(self, runtime, context, hidden, positions, verdict):
+        """只在本步确实存在补位请求时返回记录，否则返回 None。"""
+        import torch
+
+        metadata = context.attn_metadata
+        if metadata is None:
+            return None
+        tokens = hidden.shape[0]
+        groups = {}
+        padded = False
+        for name, prefix in runtime.prefixes.items():
+            item = metadata.get(prefix)
+            if item is None or item.decode is None:
+                return None
+            decode = item.decode
+            seq_lens = decode.seq_lens
+            # Native 的补位判据：seq_lens 清零、start_pos 清零、页表行清零。
+            zero_len = int(torch.count_nonzero(seq_lens == 0).item())
+            entry = {
+                "num_actual_tokens": int(item.num_actual_tokens),
+                "num_decodes": int(item.num_decodes),
+                "num_reqs_actual": None if decode.num_reqs_actual is None else int(decode.num_reqs_actual),
+                "seq_lens": seq_lens.tolist(),
+                "seq_lens_zero_count": zero_len,
+                "block_table_shape": list(decode.block_table.shape),
+                "query_start_loc": decode.query_start_loc.tolist(),
+            }
+            start_pos = getattr(decode, "start_pos", None)
+            if start_pos is not None:
+                entry["start_pos"] = start_pos.tolist()
+            # 每行页表的非零列数，用来区分被清零的补位行。
+            entry["block_table_nonzero_per_row"] = torch.count_nonzero(
+                decode.block_table, dim=-1).flatten().tolist()
+            groups[name] = entry
+            if entry["num_reqs_actual"] is not None and entry["num_reqs_actual"] < entry["num_decodes"]:
+                padded = True
+            if entry["num_actual_tokens"] < tokens or zero_len:
+                padded = True
+        if not padded:
+            return None
+
+        # 量 Native 自己的 compact 生产器在这份补位 metadata 上的真实输出。
+        impl = runtime.wrapper.dsa_attn.impl
+        compact = {}
+        for name in ("compressed", "indexer"):
+            decode = metadata[runtime.prefixes[name]].decode
+            cos, sin, slots = impl._compute_compressor_metadata(decode)
+            slots_cpu = slots.cpu()
+            compact[name] = {
+                "cos_shape": list(cos.shape), "sin_shape": list(sin.shape),
+                "slot_shape": list(slots_cpu.shape),
+                "num_compressed_tokens": int(decode.num_compressed_tokens),
+                "slot_negative_rows": int((slots_cpu[:, 0] < 0).sum().item()),
+                "slot_first_column": slots_cpu[:, 0].tolist(),
+            }
+        return {"tokens": int(tokens), "eligible": bool(verdict),
+                "positions": positions.tolist(), "groups": groups, "compact": compact}
+
+    def _offline_padding_write(self, directory, rank, record):
+        import json
+        import pathlib
+
+        target = pathlib.Path(directory)
+        target.mkdir(parents=True, exist_ok=True)
+        path = target / f"padding_capture_rank{rank}.json"
+        path.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+    def offline_end_padding_capture(self):
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+
+        if getattr(self, "_offline_padding", None) is None:
+            return {"dp_rank": self.vllm_config.parallel_config.data_parallel_rank, "captured": 0}
+        state, original = self._offline_padding
+        CSAServiceRuntime.eligible = original
+        self._offline_padding = None
+        return dict(state)
+
     def offline_begin_swimlane(self, layer_index, expected_tokens):
         """只给一层、一次达到稳态构成的 CSA 调用开 DFX 窗口，其余调用保持原路径。"""
         import pypto.torch

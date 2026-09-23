@@ -40,7 +40,7 @@
 | ID | 目标 | 落点 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
 | T1.1 | CPU 复算四处索引，取得越界证据 | `tests/pypto_test/dsv4_csa_padding_probe.py` | 已完成：真实请求四处全部在界内，补位请求在 compact 行号上恒越界（32775 vs 10 行），页表类在陈旧 position 超容量时越界。证据 `results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/` | — | 否 | **已完成** |
-| T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | 取证入口待定，见下方阻塞 | 落盘三项：①`cmp_slot_mapping`／`idx_slot_mapping` 的真实 shape 与补位区内容，与 T1.1 的预测行数对照；②补位请求的 `seq_lens`、`start_pos`、页表行实测值；③据此在计划第 4 节的方案 C 与 D 之间定夺，并说明与 Native `compressor_metadata` 输出是否一致 | T1.1 | 见下 | **阻塞，待用户定路线** |
+| T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 落盘三项：①`cmp_slot_mapping`／`idx_slot_mapping` 的真实 shape 与补位区内容，与 T1.1 的预测行数对照；②补位请求的 `seq_lens`、`start_pos`、页表行实测值；③据此在计划第 4 节的方案 C 与 D 之间定夺，并说明与 Native `compressor_metadata` 输出是否一致 | T1.1 | 16 | 进行中 |
 | T1.3 | 加入设备端有效性判据并改四处索引 | `decode_csa.py`、`decode_compressor_ratio4.py`、`decode_indexer_compressor.py`、`decode_sparse_attn_csa.py` | 改动前先读 `dsa_v1.py` 中 Native 对同一件事的处理并在提交说明里写明对照结论；同一批真实请求，补位与不补位两种摆法的输出逐 bit 相同；整份 allocation（含页 padding 与前后保护区）无差异 | T1.2 | 1 | 未开始 |
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py` | G05 通过：小 BS 放进较大合法 bucket，eager 与 graph 输出一致；不再静默回退 Native | T1.3 | 1 | 未开始 |
 | T1.5 | 单卡 graph 覆盖 G04～G06 | `tests/pypto_test/` 下新增或扩展 fixture | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 1 | 未开始 |
@@ -51,27 +51,22 @@
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
 
-### T1.2 的阻塞：旧单层 fixture 对本 release 已失效
+### T1.2 的取证方式：挂在真实生产路径上
 
-原计划复用 `dsv4_csa_service_dynamic.py` / `make_numerical_fixture` 构造补位 metadata，
-该前提不成立。这三个接口在当前 release 里都**已不存在**，只在
-`results/cann90_20260921/.../source/` 的历史归档中还有：
+用户 2026-09-23 定：**一切以当前 release 的生产路径为准**，取证走真实离线 D，
+不复活旧的单层 fixture。
 
-| 旧单层 fixture 依赖 | 调用处 | 当前 release |
-| --- | --- | --- |
-| `AscendDSAMetadataBuilder.enable_device_metadata()` | `dsv4_csa_native_fixture.py:220` | 不存在 |
-| `AscendDSAMetadataBuilder.take_device_metadata_tasks()` | `dsv4_csa_native_forward.py:93` | 不存在 |
-| `vllm_ascend.worker.device_metadata.DeviceMetadataExecutor` | `dsv4_csa_native_forward.py:22` | 文件已删除 |
+旧单层 fixture 依赖的 `enable_device_metadata`、`take_device_metadata_tasks`、
+`DeviceMetadataExecutor` 在当前 release 中均已删除，整条链在 import 阶段即失败；
+按上述口径不予适配，也不作为参考。release 的 compact metadata 生产方式是
+在 forward 内就地调用 `impl._compute_compressor_metadata(decode_metadata)`，
+在消费者自己的 stream 上返回新张量，无需任何 executor 脚手架。
 
-整条单层 fixture 链在 import 阶段就会失败。三条可选路线，**代价不同，需用户选**：
-
-| 路线 | 做法 | 代价与风险 |
-| --- | --- | --- |
-| A | 把单层 fixture 链适配到 release 的新 metadata 生产机制 | 工作量未知；且交接文档对 P3 G08 有明确告诫——"release 的 metadata 生产方式不同，需要按实际机制验证，**不能强行引入旧接口**"，容易擦到暂停区 |
-| B | 在真实离线 D 上加诊断 hook，取补位步的 metadata 与 compact 形状 | 走的是 release 正确路径，无需复活 fixture；但要 16 卡。现有离线 D 尾部天然出现补位（文档记录过 B3 收尾） |
-| C | 不复活整条 fixture，只直接构造 `AscendDSAMetadataBuilder` 并手工喂入张量 | 比 A 小，但仍需自行补齐 release 下 compact metadata 的生产方式，可能同样擦到 G08 |
-
-在用户选定之前 T1.2 不动，T1.3 及其后全部挂起。
+取证挂在 `CSAServiceRuntime.eligible` 上：补位时 PTO 会回退 Native，
+`__call__` 不会进，而 `eligible` 每步都被调用，且看到的 metadata 与生产路径完全一致。
+命中补位步时落盘小张量，并额外调一次 Native 自己的 compact 生产器量其真实形状，
+不改变本步的计算路径与结果。索引复算在 CPU 侧离线做，与 `profile`／`profile-export`
+的分工一致。
 
 ### T1 的待确认问题
 
