@@ -10,8 +10,12 @@
 
 **下一项建议先做：在 tests 下补齐排除编译、缓存 IO、预热和观察 hook 的稳态计时，
 以已有 H255/B4 bank 建立 Native/PTO 对照。** 然后扩展 P 历史长度与 D batch。
-A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见第 2 节与日志第 95 节），
+A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见第 2 节与日志第 95～96 节），
 采集工具已在 `offline_pd/run.py`；A1 稳态计时仍未开展，不要因为有了 profile 就当作性能结论。
+**已定位到主要瓶颈在主机侧**：每次 CSA 调用 `dsv4_csa::_pypto_attention_mutate` 约 94.9 毫秒，
+其中 AscendCL 调用只占 0.1%，同期设备空闲；设备 kernel 约 657 微秒。每步 21 次调用合计约
+1993 毫秒，可解释 PTO 与 Native 每步 2343 毫秒差值的约 85%。该路径属 PyPTO 启动实现，
+按用户约束未自行修改，需要先取得主机侧函数级证据再讨论方案。
 其他 P3/P4 场景、DP padding 改造及剩余数值差异排查仍处于用户要求的暂停状态，
 本次交接不代表恢复这些工作。
 
@@ -134,7 +138,7 @@ release Native 在消费者 stream 生成两份 compact metadata，必须保留�
 | 顺序 | 待做事项 | 建议落点与完成条件 |
 | --- | --- | --- |
 | A1 | H255/B4 稳态性能对照 | 先改 `tests/pypto_test/offline_pd/` 的测试计时；Native/PTO 预热后从相同 bank 初态出发，排除加载、首次编译、首个恢复步骤与观察 hook；记录实际 step、p50/p95、输出 token/s 和峰值显存 |
-| A2 | 扩展 profiling 分析 | 首轮采集已完成，见日志第95节。仍需定位 `MoeDistributeDispatchV2` 在 PTO 侧多出的约 304 毫秒是 EP 等待还是真实变慢，并核对 AICPU 道是否落在关键路径；必要时按层或按阶段加 marker |
+| A2 | 定位 CSA 主机侧开销 | 首轮采集与设备空闲分析已完成，见日志第95～96节。下一步取 `_pypto_attention_mutate` 内部的主机侧函数级证据（如单 rank 短窗口的 Python 级采样），确认 94.9 毫秒花在描述符构建、参数校验还是任务图组装；`MoeDistributeDispatchV2` 的 304 毫秒已与 EP 等待一致，优先级下调 |
 | A3 | 扩展离线 P 场景 | 继续生成 H4095、32767、131071、131072、131073，每档四种输入；逐档生成、核对有效前缀和层覆盖，再让 D 使用，避免一次盲跑全部长场景 |
 | A4 | 扩展 D batch | 每卡 B=1/4/8/16/24/32/40，GBS=16×B；先 B1/B8 确认新路径，再按资源与结果扩展；记录真实 batch、各层 PTO 命中和 Native 回退，不只记名义 BS |
 | A5 | 汇总真实 DSpark 与 EP 执行 | 将自然接受长度、实际有效推进、输出数和每rank负载写入结果；对齐 Native/PTO 同场景，再形成可比较的性能报告 |
