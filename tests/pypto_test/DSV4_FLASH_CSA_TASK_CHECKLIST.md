@@ -90,6 +90,13 @@ decode（`decode_compressor_ratio4.py` 等）用 `s_dim = bs // b_dim` 走等长
 应贴近 DSpark 的 6 的倍数**。已在 `platform.py` 按序列并行那段的既有写法实现，
 并留 `align_decode_capture_sizes` 开关（默认开）以便造反例场景。
 
+**对 G05 的影响**：档位对齐后每个 batch 都落到自己的精确档位，
+**单 rank 的档位补齐被彻底消除**（`padding_probe_v2` 实测 `padded_reqs` 全为 0）。
+于是 G05"小 BS 放进较大合法 bucket"只剩下 **DP 补齐**这一个来源——各 rank
+token 数不同时统一补到最大值，实测 `18 -> 24`、补 1 条请求。这正是生产路径上
+真实发生的情形，走的也是同一套 kernel 判据，所以 G05 仍然可验，只是必须在
+DP 场景下验，单卡验不出来。
+
 顺带修好了 MoE 通信选择：`mc2_tokens_capacity` 取自最大档、
 `potential_max_tokens` 取 `max(最大档, max_num_seqs*6)`，原先 24 与 30 不等
 使 A3 退到 ALLTOALL；对齐后档位为 `[6,12,18,24,30]`，两者相等，MC2 得以选中。

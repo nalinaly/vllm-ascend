@@ -202,7 +202,15 @@ def predict(args, const):
 
 
 def padding_map(capture_sizes, seq, max_batch):
-    """每个真实 batch 落到哪个捕获档位，以及补出多少请求。"""
+    """每个真实 batch 落到哪个捕获档位，以及补出多少请求。
+
+    注意 2026-09-24 之后的默认行为已改变：`platform.py` 会把档位按
+    `uniform_decode_query_len`（DSpark 下即 6）向上取整并补齐最大形状，
+    因此生产路径上每个 batch 都能落到自己的精确档位，**档位补齐不再发生**，
+    补位只来自 DP 各 rank 的 token 数对齐。下面 `--capture-sizes` 的默认值是
+    对齐前 DP2 实测的旧档位，保留它是为了能复算对齐前的情形；要看当前行为
+    请显式传入对齐后的档位（如 `--capture-sizes 6 12 18 24 30`）。
+    """
     sizes = sorted(capture_sizes)
     result = []
     for batch in range(1, max_batch + 1):
@@ -231,7 +239,8 @@ def main():
     parser.add_argument("--capture-sizes", type=int, nargs="+",
                         default=[6, 12, 18, 24, 36, 42, 48, 60, 66, 72, 84, 90, 96, 108, 114, 120,
                                  132, 138, 144, 156, 162, 168, 180, 186, 192, 204, 210, 216, 228, 234, 240],
-                        help="实际捕获档位，默认取 native_dp_v1 记录的 DP2 结果")
+                        help="实际捕获档位。默认是 2026-09-24 档位对齐之前 native_dp_v1 记录的 "
+                             "DP2 结果，仅用于复算对齐前的情形；对齐后请显式传入 6 的倍数档位")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
 
