@@ -386,8 +386,18 @@ class OfflineCSAObserver:
             before = {name: tensor.clone() for name, tensor in views.items()}
             result = origin(runner, num_tokens, *args, **kwargs)
             torch.npu.synchronize()
-            changed = [name for name, tensor in views.items()
-                       if not torch.equal(tensor, before[name])]
+            changed = {}
+            for name, tensor in views.items():
+                if torch.equal(tensor, before[name]):
+                    continue
+                # 记录变化落在哪些页：0 号是 vLLM 保留的 null block，
+                # 只写它说明这个分叉是良性的；写到真实页才需要处理。
+                flat_now = tensor.reshape(tensor.shape[0], -1)
+                flat_old = before[name].reshape(before[name].shape[0], -1)
+                rows = (flat_now != flat_old).any(dim=-1).nonzero().flatten().tolist()
+                changed[name] = {"pages": rows[:16], "page_count": len(rows),
+                                 "total_pages": int(tensor.shape[0]),
+                                 "only_null_block": rows == [0]}
             state["cache_probes"] += 1
             state["cache_probe_results"].append(
                 {"dummy_index": state["dummy_runs"], "num_tokens": int(num_tokens),
