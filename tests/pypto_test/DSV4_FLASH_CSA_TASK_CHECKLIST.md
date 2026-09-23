@@ -49,7 +49,7 @@
 | T1.1 | CPU 复算四处索引，取得越界证据 | `tests/pypto_test/dsv4_csa_padding_probe.py` | 已完成：真实请求四处全部在界内，补位请求在 compact 行号上恒越界，页表类在陈旧 position 超容量时越界。初版按补齐后 token 数算出 10 行，T1.2 实测为 8 行，公式已更正。证据 `results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/` | — | 否 | **已完成** |
 | T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 已完成，任务 `task_20260924_001111_370250932735`：compact 行数实测 8（初版预测 10，公式已更正）；补位请求 `seq_lens=0`、`start_pos=0`、页表行全零；补位段 positions 实测为上一步残留；据此选定方案 C（`seq_lens == 0`），D 因新请求 `start_pos` 同为 0 而有歧义 | T1.1 | 16 | **已完成** |
 | T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收待 T1.4**：放开 host 闸门后 PTO 才会实际走补位路径，届时验证补位与不补位输出逐 bit 相同、整份 allocation 无差异 | T1.2 | 1 | **代码完成，待验收** |
-| T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py` | G05 通过：小 BS 放进较大合法 bucket，eager 与 graph 输出一致；不再静默回退 Native | T1.3 | 1 | 未开始 |
+| T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native，并**另造一档非 6 倍数场景**验证该档确实退回 Native 且结果正确 | T1.3 | 16 | **进行中** |
 | T1.5 | 单卡 graph 覆盖 G04～G06 | `tests/pypto_test/` 下新增或扩展 fixture | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 1 | 未开始 |
 | T1.6 | 空 rank 整批 dummy | 同上 | `seq_lens=6`、`position=127`、slot 全 `-1` 的整批占位：不写任何 cache／state、输出无非有限值、无越界读 | T1.4 | 1 | 未开始 |
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
@@ -57,6 +57,38 @@
 | T1.9 | 拿掉 DP 图模式闸门 | `service_config.py:69` | T1.8 通过后删除该 `raise`；删除前后各跑一次同配置，确认行为符合预期 | T1.8 | 16 | 未开始 |
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
+
+### 档位为什么必须是 6 的倍数（2026-09-24 定论）
+
+这条解释了 T1.4 遇到的第四个阻塞，也回答了"S 恒为 6 为什么还会有形状问题"。
+
+**padding 不发生在 S 这一维，而在请求数那一维。** 一步 decode 的 token 总数是
+`batch × 6`；S=6 来自 `DECODE_SEQ = 1 + DSPARK_SPEC_TOKENS`，从不变动。变的是
+batch，而 ACL Graph 要固定形状，所以把 batch 补到最近的档位，补的是**整条假请求**
+（实测 `query_start_loc = [0,6,12,18,24]`，第 4 条 `seq_lens=0`）。
+
+**但档位是纯 token 计数。** Native 的布局是 TND——`model_runner_v1.py` 里
+"when the layout is TND, the first dimension of hidden_states must equal the last
+element of actual_seq_lengths_q"——档位只有 T 一个数字，B 和 S 压扁在一起。
+vLLM 默认档位来自通用列表（实测 `[1,2,4,8,16,24]`），与 6 无关；vllm_ascend 里
+唯二调整它的地方（950 等距抽样、序列并行按 TP 对齐）也都不按 6 对齐。
+
+档位不是 6 的倍数时，`_pad_query_start_loc_for_fia` 走混合分支，**插入一条
+长度为剩余全部 token 的 dummy 请求**：档位 16、2 条真实请求会得到
+`query_start_loc = [0, 6, 12, 16]`，最后一条长度 4。此时 `s_dim = 16 // 3 = 5`，
+PTO 的所有索引全错——不只是尾部那条。
+
+**处置：修档位，不改 kernel。** pypto-lib 的参考实现把两条路径有意分开——
+prefill（`prefill_compressor_ratio4.py`）用 `query_start_loc` 走真 TND，
+decode（`decode_compressor_ratio4.py` 等）用 `s_dim = bs // b_dim` 走等长 S，
+因为 decode 的 S 恒为 6。把 PTO decode 改成 TND 会与参考实现分叉，收益仅限于
+一种上游本可避免的形状。用户 2026-09-24 定：**vllm_ascend 的档位设计不合适，
+应贴近 DSpark 的 6 的倍数**。已在 `platform.py` 按序列并行那段的既有写法实现，
+并留 `align_decode_capture_sizes` 开关（默认开）以便造反例场景。
+
+顺带修好了 MoE 通信选择：`mc2_tokens_capacity` 取自最大档、
+`potential_max_tokens` 取 `max(最大档, max_num_seqs*6)`，原先 24 与 30 不等
+使 A3 退到 ALLTOALL；对齐后档位为 `[6,12,18,24,30]`，两者相等，MC2 得以选中。
 
 ### T1.2 的取证方式：挂在真实生产路径上
 
@@ -174,12 +206,16 @@ swa／attn 集中在最后一页的第 24～30 行（最后 7 个位置），sta
 不成立。那个指标用 `|a-b|/max(|a|,|b|)`，在近零值上会饱和到 2.0 附近，
 度量本身有问题，不能据此断定非舍入。
 
-待用户决定的处置：audit 现在要求四个副本逐 bit 相同，但 Native 在 TP+EP 下
-从不保证这一点，而 D 侧只读 tp0（`connector.py` 里 tp 固定为 0，且 DSA 的 KV
-是 MLA 压缩潜变量、跨 TP 复制而非切分，每个副本都是完整一份）。建议把几何／
-布局／覆盖／history 这些 D 真正依赖的检查保持致命，把跨副本数据比较降为报告项
-并附实测量级。这与"不要为了消除 draft 未来预测行的原始差异而放宽有效前缀检查"
-的约束相邻，故不自行执行。
+**已处置（2026-09-24 用户批准）**：audit 原本要求四个副本逐 bit 相同，但 Native
+在 TP+EP 下从不保证这一点，而 D 侧只读 tp0（`connector.py` 里 tp 固定为 0，且
+DSA 的 KV 是 MLA 压缩潜变量、跨 TP 复制而非切分，每个副本都是完整一份）。
+现在几何／布局／覆盖／history 这些 D 真正依赖的检查保持致命，跨副本数据比较
+降为报告项并附 ULP 中位／最大值与 `max_abs_diff`。H4095 audit 已 PASS，
+报告 1761 处非致命差异，bank 可交给 D 使用。
+
+**仍未回答**：这些舍入差异的**来源**没有定位。`--deterministic`
+（`torch_npu.npu.set_deterministic_level(1)` + `HCCL_DETERMINISTIC=true`，
+保留 AIV）已经加进驱动但还没跑过，用来验证开确定性后四个副本是否变为一致。
 
 H255 直接复用 `smoke_bank`，不必为矩阵重新生成。
 `full_bank/plan.json` 已有 24 个场景的输入计划但**没有对应长场景缓存**，
