@@ -318,36 +318,15 @@ class OfflineCSAObserver:
         if positions is not None:
             entry["positions"] = positions[: int(getattr(common, "num_input_tokens", 0)) or None].tolist()
 
-        # 量 Native 自己的 compact 生产器在这份补位 metadata 上的真实输出。
-        # 只有 compressor_ratio > 1 的组才走 compact 路径。
-        if int(getattr(builder, "compressor_ratio", 0)) > 1:
-            impl = self._offline_padding_impl()
-            if impl is not None:
-                cos, sin, slots = impl._compute_compressor_metadata(decode)
-                slots_cpu = slots.cpu()
-                # slot 列布局由 DeviceOperator.get_dsa_compressor_slot_mapping_format()
-                # 决定，不假定是 [rows, 2]；按实际维度取第一列判负。
-                first = slots_cpu if slots_cpu.dim() == 1 else slots_cpu.reshape(slots_cpu.shape[0], -1)[:, 0]
-                entry["compact"] = {
-                    "cos_shape": list(cos.shape), "sin_shape": list(sin.shape),
-                    "slot_shape": list(slots_cpu.shape), "slot_dtype": str(slots_cpu.dtype),
-                    "num_compressed_tokens": int(decode.num_compressed_tokens),
-                    "slot_negative_rows": int((first < 0).sum().item()),
-                    "slot_first_column": first.tolist(),
-                }
+        # compact 行数就是 Native 自己算好的 num_compressed_tokens
+        # （dsa_v1.py:606 _num_compressor_metadata_rows 的结果），直接读取即可，
+        # 不额外调用 compressor_metadata 算子：那需要与本 builder 同一层的 impl，
+        # 取错层会因 compress_ratio 不匹配而报错，也会扰动本步。
+        rows = getattr(decode, "num_compressed_tokens", None)
+        if rows is not None:
+            entry["num_compressed_tokens"] = int(rows)
         return entry
 
-    def _offline_padding_impl(self):
-        """取任一 DSA attention 的 impl 用于调用 compact 生产器；找不到返回 None。"""
-        model = self.model_runner.get_model()
-        for layer in getattr(getattr(model, "model", None), "layers", []):
-            attention = getattr(layer, "self_attn", None)
-            wrapper = getattr(attention, "dsa_attn", None)
-            inner = getattr(wrapper, "dsa_attn", None)
-            impl = getattr(inner, "impl", None)
-            if impl is not None and hasattr(impl, "_compute_compressor_metadata"):
-                return impl
-        return None
 
     def _offline_padding_write(self, directory, rank, records):
         import json
