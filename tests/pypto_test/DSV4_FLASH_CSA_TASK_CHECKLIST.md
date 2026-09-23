@@ -136,7 +136,7 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | 两侧同配置、同 bank 初态；给出每步耗时与设备占用对照；明确标注这是图模式结果 | T1.9 | 16 | 未开始 |
-| T2.2 | 标注 eager 期结论的适用范围 | 日志第 95～97 节补上说明：`_resolve_compiled` 每次重复遍历 AST 是 eager 特有现象，图模式下 decode step 捕获一次后只重放，该结论不适用于生产路径 | T2.1 | 否 | 未开始 |
+| T2.2 | 标注 eager 期结论的适用范围 | 已完成：验证日志新增第 98 节。第 95～97 节三轮全是 eager（当时图模式起不来），`_resolve_compiled` 按调用次数计费是 eager 特有现象，图模式下只在预热与捕获时走一遍。同时标注了两个未决前提：PTO 的 kernel 下发是否可被图捕获尚在 T1.4 验证中；本机关闭 `fuse_norm_quant` 偏离上线口径 | 无（不依赖 T2.1 数据） | 否 | **已完成** |
 | T2.3 | 稳态性能测量（原 A1） | 预热后从相同 bank 初态出发，排除加载、首次编译、首个恢复步骤与观察 hook；记录实际 step 数、p50/p95、输出 token/s、峰值显存；样本不足须如实报告，不按名义参数宣布采满 | T2.1 | 16 | 未开始 |
 | T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | 自然接受长度、实际有效推进、输出数、各 rank 负载落盘；Native/PTO 同场景对齐 | T2.3 | 16 | 未开始 |
 | T2.5 | 决定 PyPTO `_resolve_compiled` 重复遍历 AST 的处置 | 该路径在 PyPTO 内，按约束不自行修改。需用户决定走上游还是本地方案；在此之前只记录，不改 | T2.1 | 否 | **待用户决定** |

@@ -3240,3 +3240,38 @@ rank0 采样内的 PyPTO 调用链（cumtime 秒 / 调用次数）：
 也未验证任何修复方案的效果。证据为
 `results/release_csa_profile_20260923/hostprofile_pto/host_hotspots.json`
 及同目录 16 份 `rank*.prof` 与 `rank*.hostprofile.json`。
+
+## 98. 2026-09-24：第95～97节结论的适用范围限于 eager，不代表上线路径
+
+T2.2。第95～97节的三轮测量（`task_20260923_195243_*`、`task_20260923_195929_134956311463`
+等）全部以 `--graph-mode eager` 运行——当时本机图模式根本起不来，
+`aclnnAddRmsNormBias` 在基础 CANN 9.0.0 的 `libopapi.so` 和已构建的 CSA 自定义算子包
+里都不存在，`norm_quant` 融合 pass 的 pattern 被 PyTorch 以 `tracing_mode="real"`
+追踪时会真的执行一次，图编译在建 pattern 阶段即崩。该阻塞已于 2026-09-24 通过
+配置开关 `ascend_compilation_config: {fuse_norm_quant: False}` 绕开，
+`task_20260924_001111_370250932735` 是本工作区第一次跑通图模式。
+
+因此需要明确标注：
+
+- **上线口径是 ACL Graph `FULL_DECODE_ONLY`，不是 eager。** eager 每步都重新进入
+  Python 派发路径，图模式下 decode step 捕获一次之后只做重放，
+  `model_runner_v1.py` 里那句 "Python forward gates do not run during graph replay"
+  就是这个意思。
+- 所以第97节"每次 kernel 调用都进入 `_resolve_compiled`、占调用耗时 99.8%"
+  是 **eager 特有现象**：那条路径按调用次数计费，而图模式下它只在预热与捕获时走一遍，
+  不随 decode step 累积。把第95～96节"PTO 慢在主机侧、设备大部分时间空闲"的结论
+  搬到生产配置上是不成立的。
+- 同理，第95节的 Native/PTO 每步耗时对照也只是 eager 下的结构对照，
+  不能当作上线性能差距。
+
+**一个尚未证实的前提**：上述推理成立的条件是 PTO 的 kernel 下发本身可被图捕获。
+截至本节，图模式跑通的那一轮用的是 `--backend native`；PTO 在 `FULL_DECODE_ONLY`
+下的首次运行正在验证中（见 T1.4）。在拿到该结果之前，不要把"图模式下 PTO 主机开销
+消失"当作已确认的结论，只能说"eager 下的归因不适用于图模式"。
+
+**另一处偏离上线口径**：本机关闭了 `fuse_norm_quant`，而参考脚本所在环境具备该算子、
+融合是开启的。因此 T2.1 之后给出的图模式性能数字同样不直接等同于线上，
+必须随数字一并注明这一点。
+
+T2.5（是否处置 PyPTO 的 `_resolve_compiled` 重复遍历 AST）不受本节影响，
+仍按约束不自行修改，待用户决定走上游还是本地方案。
