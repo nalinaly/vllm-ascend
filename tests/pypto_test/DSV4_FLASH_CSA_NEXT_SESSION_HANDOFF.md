@@ -23,7 +23,10 @@ A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见�
 按用户约束未自行修改、也未验证任何修复方案，需要用户决定是走上游还是本地方案。
 其他 P3/P4 场景及剩余数值差异排查仍处于用户要求的暂停状态，本次交接不代表恢复这些工作。
 **DP 同步 padding / full graph 已于 2026-09-23 由用户明确要求恢复**，实施方案见
-[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)；该计划尚未实施，未跑任何 NPU 任务。
+[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)。
+
+全部待做事项的逐项执行清单见 [执行清单](DSV4_FLASH_CSA_TASK_CHECKLIST.md)，
+其中含完成判据、依赖、占卡数与仍须保持暂停的项目。
 
 ## 1. 工作目录、分支和环境
 

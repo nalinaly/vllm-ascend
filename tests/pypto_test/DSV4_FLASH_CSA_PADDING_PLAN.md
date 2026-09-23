@@ -128,20 +128,61 @@ indexer 已经天然安全：它用 `kv_seq_lens[b] // 4` 算 `visible_count`，
 **一句话结论：真正要改的是三处 compressor／indexer-compressor 的 compact 行推算，
 外加 sparse attention 的 SWA 页表计划。其余靠现有保护或本就安全。**
 
+S0 的 predict 已把这四处按严重度分开：compact 行号（B、C）恒越界，属内存安全问题，
+优先处理；页表类（A、D）只在陈旧 position 超出当前批次页表容量时越界，
+否则读到补位行的 `0` 号页，属正确性问题。详见下一节 S0。
+
 ## 6. 分阶段实施
 
 每阶段独立可验证，失败就停在该阶段定位，不跳过。
 
-### S0　证据先行，不改代码
+### S0　证据先行，不改生产代码
 
-在现有 eager 路径下构造一个带补位请求的单层 fixture（复用
-`dsv4_csa_service_dynamic.py` 的入口），把上表"需要改"的四处**改成显式报错**而不是静默跳过，
-确认它们确实会被陈旧 position 命中。目的是拿到失败现场，避免照着推测改。
+**本节初稿写的是"把四处改成显式报错"，那是错的，不可实现**：PTO 的 device 代码
+抛不出 Python 异常，越界读只会读到无关数据，不会产生失败现场。改为在 CPU 上
+把四处索引公式原样复算，再和张量真实边界比较。常量从生产模块导入，避免与 kernel 漂移。
 
-同时记录一次真实的 `num_tokens` / `num_tokens_padded` / `num_reqs` / `num_reqs_padded`
-四元组序列，作为后续用例的输入依据。
+入口 `dsv4_csa_padding_probe.py`，两种模式：
 
-产出：`results/<新目录>/padding_probe_v1/`。
+- `predict`：纯 CPU。按 Native padding 协议构造补位批次，复算四处索引。无需设备与队列。
+- `capture`：一张 NPU。用 Native 真实 metadata builder 造出补位后的 device 张量，
+  取回 CPU 后用同一套公式复算，并与真实形状比较。
+
+#### predict 结果（2026-09-23，已完成）
+
+真实批 B3 补到 B4、`compact` 行数 10，两种陈旧 position 取值：
+
+| 索引点 | stale = history | stale ≫ history |
+| --- | --- | --- |
+| `cmp_slot_mapping` 行 | 越界 32775 vs 10 | 越界 |
+| `idx_slot_mapping` 行 | 越界 32775 vs 10 | 越界 |
+| `state_table` 列 | 在界内 | 越界 65535 vs 133 |
+| `ori_block_table` 列 | 在界内 | 越界 4096 vs 11 |
+
+真实请求四处全部在界内，只有补位请求越界。据此把第 5 节的风险分成两类：
+
+- **compact 行号（B、C）恒越界**，与陈旧 position 大小无关。compact metadata 张量按
+  **当前步的 token 数**分配（`min(24, 24//4+4) = 10` 行），而行号是
+  `offsets + (position+1)//4`，position 一到真实历史量级就跳到三万以上。属内存安全问题。
+- **页表类（A、D）只在陈旧 position 超过当前批次的页表容量时越界**。均匀批次下补位
+  请求的 position 与真实请求同量级，读到的是补位行里的 `0` 号页——不越界，但是无关
+  数据，属正确性问题。混合批次是离线 D 的常态，所以四处都要处理，B、C 优先级更高。
+
+证据：`results/release_csa_padding_20260923/padding_probe_v1/{uniform,mixed}/padding_probe.json`。
+
+注意这里的页表列数按单层 fixture 的分配公式推出；真实 runner 按 `max_model_len`
+一次性分配，通常更宽，**A、D 在线上更可能是"读 0 号页"而不是越界**，这一点未实测。
+
+顺带发现：`dsv4_csa_service_dynamic.py` 等既有 fixture 传的是 `num_actual_reqs`，
+而 builder 读的是 `num_reqs_actual`（`dsa_v1.py:630`），该 kwarg 一直被静默忽略，
+**说明补位路径此前从未被任何测试覆盖**。真实 runner 传的是对的（`model_runner_v1.py:2962`）。
+
+#### capture 待办
+
+predict 的越界结论建立在"compact 张量只有 10 行"上，该行数来自
+`_num_compressor_metadata_rows`（`dsa_v1.py:606`）的纯 Python 推算，而张量实际由
+device 算子 `compressor_metadata` 产出。需在设备上确认其真实 shape，
+并一并回答第 8 节的 Q1、Q5。
 
 ### S1　设备端有效性判据
 

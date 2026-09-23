@@ -393,12 +393,19 @@ def worker(args):
         max_model_len=max(c["history"] for c in cases) + args.decode_tokens + 32,
         max_num_seqs=1 if prefill else args.batch,
         max_num_batched_tokens=2048 if prefill else max(256, args.batch * 6),
-        enable_prefix_caching=False, enforce_eager=True, seed=1024,
+        enable_prefix_caching=False, enforce_eager=prefill or args.graph_mode == "eager", seed=1024,
         gpu_memory_utilization=0.9, block_size=32,
+        # D 侧上线口径是 FULL_DECODE_ONLY，见 dsv4_perf_accuracy_20260827/runtime；
+        # eager 只用于定位问题，其每步重入 Python 派发路径，不代表上线表现。
+        # draft 与该参考配置一致保持 eager。NZ 当前一定不能开，两个后端都不开。
+        **({} if prefill or args.graph_mode == "eager"
+           else {"compilation_config": {"cudagraph_mode": "FULL_DECODE_ONLY"}}),
         # Release A3 Native chooses INT8 Indexer storage in its constructor;
         # the upstream release AttentionConfig does not accept an int8 Literal.
         speculative_config={"method": "dspark", "num_speculative_tokens": 5, "enforce_eager": True},
-        additional_config={"weight_nz_mode": 0, "enable_kv_nz": False, "enable_dsa_cp": False},
+        additional_config={"weight_nz_mode": 0, "enable_kv_nz": False, "enable_dsa_cp": False,
+                           **({} if not args.recompute_scheduler
+                              else {"recompute_scheduler_enable": True})},
         model_loader_extra_config={"enable_multithread_load": True, "num_threads": 16},
         kv_transfer_config=connector, disable_log_stats=False,
         **({} if prefill else {"worker_extension_cls": "offline_pd.observer.OfflineCSAObserver"}),
@@ -492,7 +499,10 @@ def launch(args):
                    "--warmup-tokens", str(args.warmup_tokens),
                    "--profile-start-step", str(args.profile_start_step),
                    "--profile-steps", str(args.profile_steps),
-                   "--swimlane-layer", str(args.swimlane_layer)]
+                   "--swimlane-layer", str(args.swimlane_layer),
+                   "--graph-mode", args.graph_mode]
+            if args.recompute_scheduler:
+                cmd.append("--recompute-scheduler")
             if args.layout_only:
                 cmd.append("--layout-only")
             file = (args.output / f"rank{rank}.log").open("w")
@@ -545,6 +555,10 @@ def main():
     parser.add_argument("--swimlane-layer", type=int, default=FIRST_TARGET_CSA_LAYER,
                         help="采集泳道的target C4层序号")
     parser.add_argument("--kernel-config", type=Path, help="swimlane-export用于命名任务的JIT kernel_config.py")
+    parser.add_argument("--graph-mode", choices=["full_decode_only", "eager"], default="full_decode_only",
+                        help="D侧执行模式；上线口径为FULL_DECODE_ONLY，eager仅用于定位问题")
+    parser.add_argument("--recompute-scheduler", action="store_true",
+                        help="开启recompute_scheduler_enable；DP>1下PTO图模式需要它才能跳过DP padding")
     parser.add_argument("--profile-ranks", default="0", help="profile-export要解析的DP rank，all表示全部")
     parser.add_argument("--analyse-processes", type=int, default=16, help="离线解析使用的进程数上限")
     parser.add_argument("--compare-top", type=int, default=25, help="profile-compare列出的kernel差异条数")
