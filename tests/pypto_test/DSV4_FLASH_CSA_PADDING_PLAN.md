@@ -91,18 +91,54 @@ indexer 已经天然安全：它用 `kv_seq_lens[b] // 4` 算 `visible_count`，
 
 ## 4. 设计决定：设备端有效性从哪来
 
-图重放时 host 标量在捕获时就固定了，`num_reqs_actual` 这类 host 字段不能用。
-设备侧只能依赖 Native 每步就地刷新的 device 张量。三个候选：
+**本节初稿是只看 PTO 侧推导出来的，已按用户要求改为先对照 Native 的实际做法。**
+
+### Native 自己怎么处理补位请求
+
+Native 的机制分两层，必须分清，因为只有一层在图重放时还起作用：
+
+1. **主机侧，每步在 metadata 构建时执行。** runner 把真实请求数作为 host int
+   `num_reqs_actual` 传给 builder（`model_runner_v1.py:2961`），builder 据此
+   **就地清零补位请求的 device 张量**（`dsa_v1.py:1002`～`1004`）：
+
+   ```python
+   if num_reqs_actual is not None and num_reqs_actual < self.num_decodes:
+       self.start_pos_decode[num_reqs_actual:].fill_(0)
+       self.block_table[num_reqs_actual : self.num_decodes, ...].fill_(0)
+   ```
+
+   这些是对固定地址的就地写，每步都做，发生在重放之前，**图重放照样生效**。
+
+2. **算子侧，逐请求的行为全部来自 device 张量。** decode 路径传给算子的是
+   `actual_seq_lengths_query = query_start_loc`、`actual_seq_lengths_key = seq_lens`
+   两个 device 张量（`dsa_v1.py:2277`～`2278`），不是 host 标量。
+
+唯一以 host int 形式进入 device 算子的是 `compressor_metadata(..., num_reqs_actual)`
+（`dsa_v1.py:1623`）。该调用位于 forward 内，会被一起捕获，**其整数在捕获时就冻结**；
+捕获用的 dummy run 没有 padding，所以冻结值等于档位大小。也就是说重放时
+Native 的这个算子把补位请求当成真实请求来算，靠的是第 1 层已经把它们的
+`start_pos` 和 `block_table` 清零，使算出来的位置落到 0 号页而非真实数据上。
+
+### PTO 应当照着这条线走
+
+结论：**逐请求的判据只能来自 Native 每步就地刷新的 device 张量，不能来自 host 标量。**
+这一点 Native 自己也是这么做的，不是 PTO 的特殊限制。
 
 | 方案 | 做法 | 评价 |
 | --- | --- | --- |
-| A | 只依赖现有 `slot >= 0` 保护 | 不够。挡不住页表补位行，也挡不住陈旧 position 导致的越界读 |
-| B | 新增一个有效请求数／掩码入参 | 需要在重放前做 H2D，而 PTO 的 forward 在图内，无法自己更新；要改 Native 侧的预处理 |
-| **C** | **用 `kv_seq_lens[b] == 0` 判定补位请求** | **选它。** 无新增入参、无新增缓冲、不改 Native 协议 |
+| A | 只依赖现有 `slot >= 0` 保护 | 不够。挡不住页表补位行的 `0`，也挡不住陈旧 position 导致的越界读 |
+| B | 新增有效请求数／掩码入参 | 若做成 host 标量则与 Native 的 `compressor_metadata` 同样会被冻结；若做成 device 张量则需在重放前 H2D，而 PTO forward 在图内无法自行更新 |
+| C | 用 `kv_seq_lens[b] == 0` 判定 | 数据来源正确（是 Native 每步刷新的 `self.seq_lens` 视图），但**判据本身是 PTO 自创的**，Native 并不用它来区分补位 |
+| D | 用 Native 已经归一化的量：补位请求 `start_pos == 0` 且页表行为 `0` | 与 Native 第 1 层的语义完全一致 |
 
-选 C。依据是第 2 节确认的事实：补位请求的 `seq_lens` 恒为 0，
-且它是 `self.seq_lens` 的视图，runner 每步刷新，重放时地址不变、内容更新。
-这与 indexer 已经在用的判据是同一个，口径统一。
+**C 与 D 需要在 T1.2 用实测数据定夺，本计划不预先锁定。** 判定依据是：
+在真实补位 metadata 上，两者是否都能无歧义地区分补位请求
+（注意真实请求在 H 很小时 `start_pos` 也可能为 0，这正是 D 需要实测的点），
+以及哪一个与 Native 的 `compressor_metadata` 实际输出一致。
+
+PTO 当前并未接收 `start_pos`，若选 D 需要在 `native_adapter.py` 里补上绑定；
+该字段是 Native 既有的 `metadata.decode.start_pos`，属于绑定既有 device 张量，
+不构成新增冗余缓冲。
 
 空 rank 的整批 dummy 不走这条判据，单独按第 6 节 S4 处理。
 
