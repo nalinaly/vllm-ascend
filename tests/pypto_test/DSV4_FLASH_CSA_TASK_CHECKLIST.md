@@ -33,6 +33,13 @@
   eager 只用于定位问题，其结论不代表上线表现。
 - 不过度测试：失败先定位，只重跑受影响项。
 
+**运行入口**：所有涉及 vllm／torch_npu 的命令都必须先
+`source /data/pyptouser/qinchuanyu/pto-eager/env-dsv4-0251rc1.sh`，
+它负责激活 `.venv-dsv4-0251rc1` 并设置 CANN 9.0.0、PTOAS、ATB 与
+`ASCEND_CUSTOM_OPP_PATH`。系统默认的 `/data/server-toolkits/miniconda3/bin/python`
+里没有 vllm，直接用它提交会在 `from vllm import LLM` 处失败
+（`task_20260924_004251_10658422228` 即因此白跑一轮）。
+
 ## 1. T1　padding 支持（当前主线）
 
 方案见 [padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)。用户已于 2026-09-23 指派恢复。
@@ -143,6 +150,36 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 | --- | --- | --- | --- | --- | --- |
 | T3.1 | 扩展离线 P 长场景（原 A3） | 逐档生成 H4095／32767／131071／131072／131073，每档四种输入；每档先核对有效前缀与层覆盖再交给 D 使用，不一次盲跑全部 | — | 16 | 未开始 |
 | T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32/40，GBS=16×B；先 B1/B8 确认新路径再按资源扩展；记录真实 batch、各层 PTO 命中与 Native 回退，不只记名义 BS | T1.9 | 16 | 未开始 |
+
+### T3.1 现状：H4095 bank 已生成，但 audit FAIL（成因已查清，待用户定处置）
+
+`h4095_bank` 四个 case 都已产出，audit 报 `computed-prefix data mismatch`，
+错误全在 tp1／tp2／tp3（tp0 是基准）。2026-09-24 用
+`dsv4_csa_bank_replica_diff.py` 测出差异分布，结论是**BF16 末位舍入噪声**：
+
+| 张量 | 存储 | 差异元素 | ULP 中位 | p90 | p99 |
+| --- | --- | --- | --- | --- | --- |
+| `layers.2.swa_cache` | BF16 | 1528/81920 | 1 | 6 | 60 |
+| `layers.2.attn` | BF16 | 83/524288 | 1 | 3 | 13 |
+| `layers.16.compressor.state_cache` | FP32 | 14336/20480 | 12677 | 106854 | 1057230 |
+| `layers.2.indexer.compressor.state_cache` | FP32 | 3584/5120 | 8752 | 57606 | 589815 |
+
+FP32 两项的 ULP 数看着大，但 FP32 的 12677 ULP ≈ 相对 1.5e-3，而 BF16 的
+eps = 2⁻⁸ ≈ 3.9e-3——state_cache 是 FP32 存储、BF16 精度计算，中位差异只有
+0.4 个 BF16 ULP。`max_abs_diff` 实测 0.024～0.045。差异自层 1 起每层都有，
+swa／attn 集中在最后一页的第 24～30 行（最后 7 个位置），state 类则是约 70%
+元素各差一点点——都符合"TP/EP 归约顺序不确定"的特征。H255 因序列短未显形。
+
+**更正一条早先的错误判断**：先前记录的"最大相对误差 6.17／28.8，不是纯舍入"
+不成立。那个指标用 `|a-b|/max(|a|,|b|)`，在近零值上会饱和到 2.0 附近，
+度量本身有问题，不能据此断定非舍入。
+
+待用户决定的处置：audit 现在要求四个副本逐 bit 相同，但 Native 在 TP+EP 下
+从不保证这一点，而 D 侧只读 tp0（`connector.py` 里 tp 固定为 0，且 DSA 的 KV
+是 MLA 压缩潜变量、跨 TP 复制而非切分，每个副本都是完整一份）。建议把几何／
+布局／覆盖／history 这些 D 真正依赖的检查保持致命，把跨副本数据比较降为报告项
+并附实测量级。这与"不要为了消除 draft 未来预测行的原始差异而放宽有效前缀检查"
+的约束相邻，故不自行执行。
 
 H255 直接复用 `smoke_bank`，不必为矩阵重新生成。
 `full_bank/plan.json` 已有 24 个场景的输入计划但**没有对应长场景缓存**，
