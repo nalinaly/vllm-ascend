@@ -1,7 +1,8 @@
-> **2026-09-23 基线已迁至官方 v0.25.1rc1。** 当前入口为[基线迁移说明](tests/pypto_test/BASELINE_MIGRATION_V0251RC1.md)。
-> 新分支已推送；按用户要求，旧 `dsv4-flash-pto` 本地/远端分支和旧工作目录已删除。
-> `../env.sh` 与 `../env-dsv4-0251rc1.sh` 均选择新 release 环境。
-> 下方历史 PASS 对应旧基线；本次 release 尚未进行真机数值验收。历史脚本需按新接口适配。
+> **2026-09-23 后续开发已迁移到新工作目录。**
+> 新分支 `dsv4-flash-pto-v0.25.1rc1` 基于官方 `v0.25.1rc1`；
+> 生产提交 `d276d98`、过程文件提交 `e048502`，当前仅本地提交。
+> 入口：[新基线迁移说明](../vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/BASELINE_MIGRATION_V0251RC1.md)。
+> 新目录保留全部过程文件和本地大快照；18项CPU检查与完整lowering通过，release真机验证待做。
 
 # DeepSeek-V4 Flash CSA：16卡环境接续入口
 
