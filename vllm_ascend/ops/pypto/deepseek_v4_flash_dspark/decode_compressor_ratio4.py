@@ -402,9 +402,17 @@ def compressor_ratio4_cache_write(
                 metadata_row = pl.cast(pl.read(compact_offsets, [token // S]), pl.INDEX) + pl.cast(
                     (token_pos + 1) // COMPRESS_RATIO, pl.INDEX
                 )
-                cache_page = pl.read(cmp_slot_mapping, [metadata_row, 0])
-                cache_offset = pl.read(cmp_slot_mapping, [metadata_row, 1])
-                if cache_page >= 0 and cache_offset >= 0:
+                # compact 表只有 Native 算好的 num_compressed_tokens 行，超出即无效。
+                # 图捕获的 dummy run 会把所有 position 填成 127（model_runner_v1.py），
+                # 而 (127+1)%4==0 成立、seq_lens 又非零，于是推出的行号是 32，
+                # 远超该档的 12 行——实测就是这里触发 MTE DDR 越界。
+                # Native 不会遇到：它的 compressor_metadata 算子按 num_compressed_tokens
+                # 产出行，消费端从不用 position 反推行号。这里按张量真实行数兜住。
+                compact_rows = pl.tensor.dim(cmp_slot_mapping, 0)
+                safe_row = pl.min(metadata_row, compact_rows - 1)
+                cache_page = pl.read(cmp_slot_mapping, [safe_row, 0])
+                cache_offset = pl.read(cmp_slot_mapping, [safe_row, 1])
+                if metadata_row < compact_rows and cache_page >= 0 and cache_offset >= 0:
                     cache_row = pl.cast(cache_page, pl.INDEX) * BLOCK_SIZE + cache_offset
                     kv_row_fp32 = normed_kv[token : token + 1, 0:HEAD_DIM]
                     kv_flat[token : token + 1, :] = kv_row_fp32

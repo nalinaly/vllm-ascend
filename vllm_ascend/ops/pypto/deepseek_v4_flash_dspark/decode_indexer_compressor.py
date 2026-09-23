@@ -493,9 +493,14 @@ def indexer_compressor_write(
                 metadata_row = pl.cast(pl.read(compact_offsets, [request]), pl.INDEX) + pl.cast(
                     (token_pos + 1) // COMPRESS_RATIO, pl.INDEX
                 )
-                native_page = pl.read(idx_slot_mapping, [metadata_row, 0])
-                native_offset = pl.read(idx_slot_mapping, [metadata_row, 1])
-                if native_page >= 0 and native_offset >= 0:
+                # compact 表只有 Native 算好的行数，超出即无效。图捕获的 dummy run
+                # 把所有 position 填成 127，(127+1)%4==0 成立而 seq_lens 非零，
+                # 推出的行号会远超该档行数，必须按张量真实行数兜住。
+                idx_rows = pl.tensor.dim(idx_slot_mapping, 0)
+                safe_row = pl.min(metadata_row, idx_rows - 1)
+                native_page = pl.read(idx_slot_mapping, [safe_row, 0])
+                native_offset = pl.read(idx_slot_mapping, [safe_row, 1])
+                if metadata_row < idx_rows and native_page >= 0 and native_offset >= 0:
                     cache_row = pl.cast(native_page, pl.INDEX) * BLOCK_SIZE + native_offset
                     kv_flat[token : token + 1, :] = kv_blk_f32[inner : inner + 1, :]
                     cache_page = cache_row // BLOCK_SIZE
@@ -529,9 +534,13 @@ def indexer_compressor_write(
                 metadata_row = pl.cast(pl.read(compact_offsets, [request]), pl.INDEX) + pl.cast(
                     (token_pos + 1) // COMPRESS_RATIO, pl.INDEX
                 )
-                native_page = pl.read(idx_slot_mapping, [metadata_row, 0])
-                native_offset = pl.read(idx_slot_mapping, [metadata_row, 1])
-                if native_page >= 0 and native_offset >= 0:
+                # 同上：按 compact 表的真实行数兜住，dummy run 的 position=127
+                # 会推出远超该档行数的行号。
+                idx_rows = pl.tensor.dim(idx_slot_mapping, 0)
+                safe_row = pl.min(metadata_row, idx_rows - 1)
+                native_page = pl.read(idx_slot_mapping, [safe_row, 0])
+                native_offset = pl.read(idx_slot_mapping, [safe_row, 1])
+                if metadata_row < idx_rows and native_page >= 0 and native_offset >= 0:
                     cache_row = pl.cast(native_page, pl.INDEX) * BLOCK_SIZE + native_offset
                     # Merge exactly one scale into the aligned 64-byte
                     # region. One task serializes updates to shared pages.

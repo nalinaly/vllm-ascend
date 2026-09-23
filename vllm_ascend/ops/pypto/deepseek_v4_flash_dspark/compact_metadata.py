@@ -52,6 +52,10 @@ def load_compact_rope_rows(
             compact_row = pl.cast(pl.read(offsets, [token // DECODE_SEQ]), pl.INDEX) + pl.cast(
                 (position + 1) // COMPRESS_RATIO, pl.INDEX
             )
-            cosine = pl.gather_row(cosine, cos, [row, 0], [compact_row, 0], [1, ROPE_DIM])
-            sine = pl.gather_row(sine, sin, [row, 0], [compact_row, 0], [1, ROPE_DIM])
+            # 这两张 RoPE 表和 compact slot mapping 同高，只有 Native 算好的
+            # num_compressed_tokens 行。图捕获的 dummy run 把 position 填成 127，
+            # 推出的行号会远超该档行数，必须按真实行数兜住。
+            if compact_row < pl.tensor.dim(cos, 0):
+                cosine = pl.gather_row(cosine, cos, [row, 0], [compact_row, 0], [1, ROPE_DIM])
+                sine = pl.gather_row(sine, sin, [row, 0], [compact_row, 0], [1, ROPE_DIM])
     return cosine, sine
