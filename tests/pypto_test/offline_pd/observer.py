@@ -369,8 +369,36 @@ class OfflineCSAObserver:
         self._offline_slot_origin = origin
 
     def _offline_dummy_body(self, state, origin, runner, num_tokens, args, kwargs):
-        """dummy 的实际执行体；缓存整份对比已废弃，仅保留计数与 slot 取样。"""
-        return origin(runner, num_tokens, *args, **kwargs)
+        """dummy 的实际执行体；顺便读一次常驻 slot mapping 缓冲。
+
+        图重放不跑 Python 前向闸门，所以 hook CSAServiceRuntime.__call__ 在
+        dummy 步上一次都不会触发（实测 dummy_runs=26 而 slot_samples=0）。
+        但重放读的就是这些固定地址的常驻缓冲，从 Python 侧可以直接读到。
+        `model_runner_v1.py` 在非图捕获时会把它们填成 -1，这里核实是否属实：
+        若确为全 -1，kernel 的 `page >= 0` 守卫必然挡住主 slot 那条写入路径。
+        """
+        result = origin(runner, num_tokens, *args, **kwargs)
+        if state["slot_samples"] >= self._OFFLINE_SLOT_SAMPLES:
+            return result
+        try:
+            import torch
+
+            torch.npu.synchronize()
+            record = {"dummy_index": state["dummy_runs"], "num_tokens": int(num_tokens),
+                      "groups": {}}
+            for gid in range(len(runner.kv_cache_config.kv_cache_groups)):
+                slots = runner.input_batch.block_table[gid].slot_mapping.gpu
+                flat = slots.reshape(-1)
+                record["groups"][str(gid)] = {
+                    "count": int(flat.numel()),
+                    "non_negative": int((flat >= 0).sum().item()),
+                    "max": int(flat.max().item()),
+                }
+            state["slot_samples"] += 1
+            state["slot_probe_results"].append(record)
+        except Exception as error:
+            state.setdefault("slot_probe_error", repr(error))
+        return result
 
     def _offline_dummy_probe(self, state):
         """统计本 rank 跑了多少次 dummy batch，以及其中有多少次是空调度。
