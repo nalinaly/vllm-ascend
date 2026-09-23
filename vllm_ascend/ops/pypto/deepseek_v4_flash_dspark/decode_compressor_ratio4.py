@@ -160,6 +160,7 @@ def compressor_ratio4_pool_projected(
     state_table: pl.Tensor[[B_DYN, STATE_TABLE_COLUMNS_DYN], pl.INT32],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     pooled_kv: pl.Out[pl.Tensor[[BS_PAD, HEAD_DIM], pl.FP32]],
     kv_proj_pad: pl.Out[pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32]],
     score_proj_pad: pl.Out[pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32]],
@@ -184,11 +185,17 @@ def compressor_ratio4_pool_projected(
         pool_worker = pl.tile.get_block_idx()
         for c_idx in pl.range(pool_worker, b_dim, pool_workers):
             first_pos_b = pl.read(position_ids, [c_idx * s_dim])
+            # Native 把补位请求的 seq_lens 清零（model_runner_v1.py:1162），真实 decode
+            # 请求恒 >= S，故此处可无歧义识别补位。补位 token 的 position 是上一步的
+            # 陈旧残留，用它推算的 state 列号会落到本请求页表之外，必须跳过。
+            c_len = pl.read(seq_lens, [c_idx])
             for s_idx in pl.range(s_dim):
                 token = c_idx * s_dim + s_idx
                 token_pos = pl.read(position_ids, [token])
+                # 置零保持无条件：补位 token 的 pooled_kv 仍要有确定值，
+                # 否则后续 RMSNorm 会在未初始化数据上产生非有限值。
                 pooled_kv[token : token + 1, :] = pl.full([1, HEAD_DIM], dtype=pl.FP32, value=0.0)
-                if (token_pos + 1) % COMPRESS_RATIO == 0:
+                if c_len > 0 and (token_pos + 1) % COMPRESS_RATIO == 0:
                     window_start = token_pos - STATE_LEN + 1
                     for h0 in pl.range(0, HEAD_DIM, POOL_HEAD_TILE):
                         # Native normalizes all eight probabilities before
@@ -253,6 +260,7 @@ def compressor_ratio4_pool(
     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     pooled_kv: pl.Out[pl.Tensor[[BS_PAD, HEAD_DIM], pl.FP32]],
     kv_proj_pad: pl.Out[pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32]],
     score_proj_pad: pl.Out[pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32]],
@@ -272,6 +280,7 @@ def compressor_ratio4_pool(
         state_table,
         ape,
         position_ids,
+        seq_lens,
         pooled_kv,
         kv_proj_pad,
         score_proj_pad,
@@ -296,6 +305,7 @@ def compressor_ratio4_cache_write(
     kv_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
     score_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     state_slot_mapping: pl.Tensor[[T_DYN, 2], pl.INT32],
     pool_tid: pl.Scalar[pl.TASK_ID],
     late_write_dep: pl.Scalar[pl.TASK_ID],
@@ -386,7 +396,9 @@ def compressor_ratio4_cache_write(
         for inner in pl.range(rms_blk_rows):
             token = b0 + inner
             token_pos = pl.read(position_ids, [token])
-            if (token_pos + 1) % COMPRESS_RATIO == 0:
+            # compact metadata 按当前步的实际 token 数分配，补位请求用陈旧 position
+            # 推出的行号会远超其行数（实测 84 vs 8 行），必须先按 seq_lens 排除。
+            if pl.read(seq_lens, [token // S]) > 0 and (token_pos + 1) % COMPRESS_RATIO == 0:
                 metadata_row = pl.cast(pl.read(compact_offsets, [token // S]), pl.INDEX) + pl.cast(
                     (token_pos + 1) // COMPRESS_RATIO, pl.INDEX
                 )
@@ -416,6 +428,7 @@ def compressor_ratio4(
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
     cmp_kv_cache: pl.Tensor[[CMP_BLOCK_NUM_DYN, BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     cmp_slot_mapping: pl.Tensor[[COMPRESSED_ROWS_DYN, 2], pl.INT32],
     state_slot_mapping: pl.Tensor[[T_DYN, 2], pl.INT32],
     late_dep: pl.Scalar[pl.TASK_ID],
@@ -431,6 +444,7 @@ def compressor_ratio4(
         wgate,
         ape,
         position_ids,
+        seq_lens,
         pooled_kv,
         kv_proj_pad,
         score_proj_pad,
@@ -451,6 +465,7 @@ def compressor_ratio4(
         kv_proj_pad,
         score_proj_pad,
         position_ids,
+        seq_lens,
         state_slot_mapping,
         pool_tid,
         pool_tid,

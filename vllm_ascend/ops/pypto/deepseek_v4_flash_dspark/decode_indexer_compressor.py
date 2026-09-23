@@ -414,6 +414,7 @@ def indexer_compressor_write(
     idx_slot_mapping: pl.Tensor[[INDEXER_ROWS_DYN, 2], pl.INT32],
     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     rms_tid: pl.Scalar[pl.TASK_ID],
     hadamard_dep: pl.Scalar[pl.TASK_ID],
 ):
@@ -483,7 +484,10 @@ def indexer_compressor_write(
                 - 1
                 - first_pos % COMPRESS_RATIO
             )
-            if local_token < S:
+            # compact metadata 按本步实际 token 数分配；补位请求的 position 是上一步残留，
+            # 据此推出的行号会越界（实测 84 vs 8 行）。Native 把补位请求 seq_lens 清零，
+            # 真实 decode 请求恒 >= S，故可无歧义排除。
+            if pl.read(seq_lens, [request]) > 0 and local_token < S:
                 token = request * S + local_token
                 token_pos = pl.read(position_ids, [token])
                 metadata_row = pl.cast(pl.read(compact_offsets, [request]), pl.INDEX) + pl.cast(
@@ -516,7 +520,10 @@ def indexer_compressor_write(
                 - 1
                 - first_pos % COMPRESS_RATIO
             )
-            if local_token < S:
+            # compact metadata 按本步实际 token 数分配；补位请求的 position 是上一步残留，
+            # 据此推出的行号会越界（实测 84 vs 8 行）。Native 把补位请求 seq_lens 清零，
+            # 真实 decode 请求恒 >= S，故可无歧义排除。
+            if pl.read(seq_lens, [request]) > 0 and local_token < S:
                 token = request * S + local_token
                 token_pos = pl.read(position_ids, [token])
                 metadata_row = pl.cast(pl.read(compact_offsets, [request]), pl.INDEX) + pl.cast(
@@ -558,6 +565,7 @@ def indexer_compressor(
     hadamard: pl.Tensor[[HEAD_DIM, HEAD_DIM], pl.BF16],
     idx_kv_cache: pl.Tensor[[IDX_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     idx_slot_mapping: pl.Tensor[[INDEXER_ROWS_DYN, 2], pl.INT32],
     inner_state_slot_mapping: pl.Tensor[[T_DYN, 2], pl.INT32],
     late_dep: pl.Scalar[pl.TASK_ID],
@@ -589,6 +597,7 @@ def indexer_compressor(
         idx_slot_mapping,
         compact_offsets,
         position_ids,
+        seq_lens,
         rms_tid,
         hadamard_dep,
     )

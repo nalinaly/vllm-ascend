@@ -163,6 +163,7 @@ def sparse_attn_csa(
     cmp_block_table: pl.Tensor[[B_DYN, COMPRESSED_TABLE_COLUMNS_DYN], pl.INT32],
     idx_topk: pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32],
     position_ids: pl.Tensor[[T_DYN, 1], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     attn_sink: pl.Tensor[[H], pl.FP32],
     freqs_cos: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
     freqs_sin: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
@@ -204,6 +205,13 @@ def sparse_attn_csa(
                 # Match the Native page-valid window, including short histories
                 # and negative page entries. Intervals from distinct pages do not overlap.
                 v_length = pl.min(c_position + 1, WIN)
+                # 补位请求的 position 是上一步残留，用它推出的页表列号可能超出本请求
+                # 的页表宽度。Native 把补位请求的 seq_lens 清零，真实 decode 请求恒 >= S。
+                # 把窗口长度压到 0 后，下面的 v_hi > v_lo 恒不成立，既不读页表，
+                # v_block_valid 与 v_valid 也保持为 0，该 token 的 SWA 偏置全为 NEG_INF，
+                # attention 退化为只剩 sink，输出有限且与真实请求无关。
+                if pl.read(seq_lens, [bias_request]) <= 0:
+                    v_length = pl.cast(0, pl.INDEX)
                 v_start = c_position - v_length + 1
                 v_head = v_start % BLOCK_SIZE
                 v_columns = pl.cast(pl.arange(0, [1, WIN], dtype=pl.INT32), pl.FP32)
@@ -457,6 +465,7 @@ def sparse_attn_csa_tp1(
     cmp_block_table: pl.Tensor[[B_DYN, COMPRESSED_TABLE_COLUMNS_DYN], pl.INT32],
     idx_topk: pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32],
     position_ids: pl.Tensor[[T_DYN, 1], pl.INT64],
+    seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     attn_sink: pl.Tensor[[H], pl.FP32],
     freqs_cos: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
     freqs_sin: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
@@ -484,6 +493,7 @@ def sparse_attn_csa_tp1(
         cmp_block_table,
         idx_topk,
         position_ids,
+        seq_lens,
         attn_sink,
         freqs_cos,
         freqs_sin,
