@@ -2,6 +2,8 @@
 > 下方旧阶段统计对应迁移前基线，历史脚本需按新接口适配。最新 release 结果见验证日志第93节：
 > H255、每卡B4的真实PTO D16已跑通，8192个生成token与Native一致；尚无稳态性能结论，
 > 不据此将旧P0～P5矩阵整体标为通过。其他P3/P4与剩余精度排查仍按用户要求暂停。
+> 后续session从[剩余事项交接文档](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)开始，
+> 其中列明当前环境、已完成证据、可继续工作、暂停范围和执行入口。
 
 # DeepSeek-V4 Flash CSA 接入 PyPTO 验证计划
 

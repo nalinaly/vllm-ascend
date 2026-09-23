@@ -3077,3 +3077,16 @@ D为TP1×DP16/EP16，每rank batch4，64个请求均生成128 token，共8192 to
 结果汇总`decode_pto_b4_updated_v4/summary.json`，明细为16份rank*.json和日志。
 本轮elapsed包含首次编译、离线缓存IO及观察hook，不据此给出稳态吞吐或延迟结论。
 下一步尚需有统一warmup与计时范围的Native/PTO性能对照，以及计划内其他离线场景。
+
+## 94. 2026-09-23：提交本轮验证并整理后续session交接
+
+按用户要求，本轮测试工具、失败定位、依赖安装记录和D16成功证据已用详细中文说明
+提交为`f9bdbb5`并推送至`dsv4-flash-pto-v0.25.1rc1`。全部105个文件位于
+tests/pypto_test，没有新增生产源码改动；大权重、缓存快照和二进制未提交。
+根目录build_output的16份JIT产物及重复CPU编译中间文件保留本地，路径/大小已记入
+LOCAL_ARTIFACTS.json，没有新增hash校验，也没有重跑测试或提交检查。
+
+另建`DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md`，独立整理环境与本地依赖差异、
+当前可用缓存、已完成证据、稳态性能与长场景/多batch待办、原P5缺口，以及仍须
+保持暂停的P3/P4、DP padding和剩余精度排查。文档提供可复用命令和旧脚本适配注意，
+避免新session重新恢复已经可用的环境，或将旧基线PASS和本轮短场景结果外推为完整验收。
