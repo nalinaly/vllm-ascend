@@ -51,7 +51,14 @@ MAX_SEQ_LEN = M.max_position_embeddings
 
 Q_PROJ_TILE = 256  # qproj K-tile (Q_LORA reduction)
 
-QPROJ_MM_N_TILE = 512  # qproj output-column tile
+# qproj 输出列分块。由 512 降到 256，对标上游 e68e091。
+# 数值上完全中性：qproj 是 INT8xINT8->INT32 累加，整数累加精确，且 N 维切分
+# 不改变 K 的累加顺序，所以结果逐 bit 不变（这条路径也没有 Native 累加序对齐逻辑）。
+# 收益有两处：H*HEAD_DIM=32768，512 时只有 64 个 SPMD 块，摊到 24 个 AIC 上是
+# 16 核跑 3 块、8 核跑 2 块，不均衡比 1.5；256 时 128 块，变成 8 核跑 6、16 核跑 5，
+# 不均衡比降到 1.2。另外 L0C 占用从 512*64*4=128KiB 降到 64KiB，不再顶满累加器上限，
+# 给双缓冲留出空间。泳道实测该任务 1653us 对上游 875us（1.9x）。
+QPROJ_MM_N_TILE = 256  # qproj output-column tile
 
 Q_LORA_TILE = 256  # qr rms-norm / quant N granularity
 
