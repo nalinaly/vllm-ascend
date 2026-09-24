@@ -370,16 +370,22 @@ def diagnose(args, llm, cases):
         })
     elif args.command == "steady":
         started = llm.collective_rpc("offline_begin_steady", args=(args.warmup_steps,))
-        measured = generate_round(llm, args, case, args.decode_tokens)
-        window = llm.collective_rpc("offline_end_steady")
-        common.update({
-            "decode_tokens": args.decode_tokens, "warmup_steps": args.warmup_steps,
-            "started": started, "window": window,
-            "measured_elapsed_seconds": measured["elapsed_seconds"],
-            "output_token_ids": measured["output_token_ids"],
-            "scope": "窗口内不加额外同步，单步耗时可能含等待上一步设备任务的时间，"
-                     "总和与吞吐可用，单步p50/p95为近似",
-        })
+        common.update({"decode_tokens": args.decode_tokens, "warmup_steps": args.warmup_steps,
+                       "started": started, "stage": "measuring",
+                       "scope": "窗口内不加额外同步，单步耗时可能含等待上一步设备任务的时间，"
+                                "总和与吞吐可用，单步p50/p95为近似"})
+        # 先落一份带 stage 的记录：这一轮多次被外部信号在 decode 中途打断，
+        # 而收尾才写盘导致什么都拿不到。哪怕只走到这里，也要留下证据。
+        write_json(args.output / f"rank{args.rank}.{args.command}.json", common)
+        try:
+            measured = generate_round(llm, args, case, args.decode_tokens)
+            common.update({"measured_elapsed_seconds": measured["elapsed_seconds"],
+                           "output_token_ids": measured["output_token_ids"]})
+        finally:
+            # 即使 generate 被打断，也把已采到的单步耗时取回来。
+            common["window"] = llm.collective_rpc("offline_end_steady")
+            common["stage"] = "measured" if "measured_elapsed_seconds" in common else "interrupted"
+            write_json(args.output / f"rank{args.rank}.{args.command}.json", common)
     elif args.command == "padding-capture":
         # 补位只在收尾阶段自然出现，所以按完整 decode_tokens 跑，让尾部请求陆续结束。
         started = llm.collective_rpc("offline_begin_padding_capture", args=(
@@ -577,6 +583,13 @@ def worker(args):
     from vllm import LLM, SamplingParams
     from vllm.config import KVTransferConfig
     from vllm.platforms import current_platform
+
+    # 父进程退出时会给整个子进程组发 SIGTERM，默认动作是立即终止，finally 不会执行，
+    # 已采到的数据就全丢了。转成 SystemExit 让清理与落盘有机会跑完。
+    def terminated(signum, frame):
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, terminated)
 
     # Match `vllm serve` model/config registration before constructing LLM.
     current_platform.pre_register_and_update()
