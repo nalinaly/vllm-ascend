@@ -463,9 +463,34 @@ python tests/pypto_test/offline_pd/run.py profile \
 | --- | --- | --- | --- | --- | --- |
 | T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | `results/release_csa_perf_8k_20260924/` | **已完成**，按主要指标（b16/s6/TP1/EP-DP16/8k）在图模式下采完整 PyTorch profiling（CPU+NPU、Level1、带 device kernel、`with_stack=False`）。两侧采样窗口完全对齐（第 8/9/10 步，均 96 token / 16 请求），**输出逐 token 相同**。设备侧总耗时 Native 240,013µs vs PTO 347,302µs（**PTO 慢 45%**），kernel 记录数 7,520 vs 5,378。按引擎：AI_CPU 1,270 → **81,318**（主因）、MIX_AIC 91,468 → 141,966；AI_CORE、AI_VECTOR_CORE、MIX_AIV 三项 PTO 均更低。详见下方归因 | T1.9 | 16 | **已完成** |
 | T2.2 | 标注 eager 期结论的适用范围 | 已完成：验证日志新增第 98 节。第 95～97 节三轮全是 eager（当时图模式起不来），`_resolve_compiled` 按调用次数计费是 eager 特有现象，图模式下只在预热与捕获时走一遍。同时标注了两个未决前提：PTO 的 kernel 下发是否可被图捕获尚在 T1.4 验证中；本机关闭 `fuse_norm_quant` 偏离上线口径 | 无（不依赖 T2.1 数据） | 否 | **已完成** |
-| T2.3 | 稳态性能测量（原 A1） | 预热后从相同 bank 初态出发，排除加载、首次编译、首个恢复步骤与观察 hook；记录实际 step 数、p50/p95、输出 token/s、峰值显存；样本不足须如实报告，不按名义参数宣布采满 | T2.1 | 16 | 未开始 |
-| T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | 自然接受长度、实际有效推进、输出数、各 rank 负载落盘；Native/PTO 同场景对齐 | T2.3 | 16 | 未开始 |
+| T2.3 | 稳态性能测量（原 A1） | **Native 侧已出**（`results/release_csa_steady_8k_20260924/native`）：16 rank、每 rank 62～63 个采样步、`sufficient=True`。中位：单步 p50 **55.77ms**、p95 **57.10ms**、每 rank **1635.07 token/s**、峰值显存 **50.93GiB**。口径：窗口内不加额外同步，单步耗时可能含等待上一步设备任务的时间，总和与吞吐可用、单步 p50/p95 为近似。PTO 侧重跑中 | T2.1 | 16 | **进行中** |
+| T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | **取数已接上并出首批数据**：走 `llm.get_metrics()` 公开出口（`SpecDecodingStats` 由 scheduler 聚合，与 worker 不同进程，`collective_rpc` 够不着）。Native 稳态轮实测 `num_drafts=1310`、`num_draft_tokens=6550`、`num_accepted_tokens=6400` → **自然接受长度 4.885**、**每步实际推进 5.885 token**、接受率 **97.7%**。按 T4.4 要求不注入假定值，取不到计数时记 `sufficient=false`。待 PTO 侧同场景数据做对齐 | T2.3 | 16 | **进行中** |
 | T2.5 | 决定 PyPTO `_resolve_compiled` 重复遍历 AST 的处置 | 该路径在 PyPTO 内，按约束不自行修改。需用户决定走上游还是本地方案；在此之前只记录，不改 | T2.1 | 否 | **待用户决定** |
+
+### T3.2 已出三点的完整分析（B=1／8／16）
+
+| | rank | 目标层 | 各 rank 输出组数 | 每请求 token | 单轮耗时 min／中位／max |
+| --- | --- | --- | --- | --- | --- |
+| B=1 | 16 | 21 | 4 | 64 | 2.18／7.78／20.80s |
+| B=8 | 16 | 21 | 4 | 128 | 3.83／5.63／21.20s |
+| B=16 | 16 | 21 | 4 | 128 | 5.69／11.18／25.66s |
+
+**输出组数恒为 4** 与设计一致：bank 每档有四个输入 variant，worker 按 `rank % 4` 取，
+所以 16 个 rank 只应产生 4 组不同输出，且同 variant 的 rank 之间逐 token 相同。
+
+**捕获期档位覆盖**（计数 336 = 21 层 × 16 rank，即每层每 rank 一次；672 为两次）：
+
+- B=1：`pto_tokens6` 672；Native 只有 `tokens1`／`tokens6`／`tokens256` 各 336
+- B=8：PTO 覆盖 6／12／18／24／36／42／48 共 7 档，各 672
+- B=16：PTO 覆盖 6／12／18／24／36／42／48／60／66／72／84／90／96 共 **13 档**，各 672，
+  与引擎日志里的 `cudagraph_capture_sizes: [6,12,18,24,36,42,48,60,66,72,84,90,96]` 完全一致，
+  **全部是 6 的倍数**，档位对齐生效
+
+Native 侧只在 `tokens1`、`tokens256` 和该 batch 的最大 token 数上各有一次，属非 decode 形状
+与预热，不构成 decode 路径的回退。结合 T1.4／T1.7 已确认的 `rejected=0`，可判定
+**21 个目标层在所有档位上都走 PTO，没有静默回退**。
+
+B=24／32 因上述 `exit=130` 未出，T3.2 保持"进行中"。
 
 ### 排队任务期间不要改 kernel 源文件
 
