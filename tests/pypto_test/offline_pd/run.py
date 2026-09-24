@@ -255,6 +255,41 @@ def stagger_limits(batch, limit):
     return [max(1, limit - index * step) for index in range(batch)]
 
 
+def spec_decode_metrics(llm):
+    """从 Prometheus 快照取 DSpark 的真实接受统计（T2.4／T4.4）。
+
+    走 llm.get_metrics() 这条公开出口，而不是钻 EngineCore：SpecDecodingStats 由
+    scheduler 聚合，而 scheduler 与 worker 不在同一进程，worker extension 的
+    collective_rpc 够不着它。LLM 构造时已设 disable_log_stats=False，否则取不到。
+
+    自然接受长度按 num_accepted_tokens / num_drafts 算，不注入任何假定值：
+    每次 draft 除了被接受的草稿 token，还必定产出 1 个由目标模型给出的 token，
+    所以每步实际推进为该比值加一。per_pos 是逐位置接受数，用来看接受在草稿
+    序列上的分布，而不是只看一个平均值。
+    """
+    counters, per_pos = {}, None
+    for metric in llm.get_metrics():
+        if metric.name == "vllm:spec_decode_num_accepted_tokens_per_pos":
+            per_pos = list(getattr(metric, "values", []) or [])
+        elif metric.name.startswith("vllm:spec_decode_"):
+            counters[metric.name[len("vllm:spec_decode_"):]] = getattr(metric, "value", None)
+    drafts = counters.get("num_drafts") or 0
+    draft_tokens = counters.get("num_draft_tokens") or 0
+    accepted = counters.get("num_accepted_tokens") or 0
+    report = {"counters": counters, "num_accepted_tokens_per_pos": per_pos}
+    if drafts:
+        report["accepted_per_draft"] = accepted / drafts
+        report["advance_per_step"] = accepted / drafts + 1.0
+        report["draft_tokens_per_draft"] = draft_tokens / drafts
+    if draft_tokens:
+        report["acceptance_rate"] = accepted / draft_tokens
+    if per_pos and drafts:
+        report["acceptance_rate_per_pos"] = [value / drafts for value in per_pos]
+    # 取不到就如实留空，由读者判断，不要用名义 num_speculative_tokens 顶替。
+    report["sufficient"] = bool(drafts)
+    return report
+
+
 def generate_round(llm, args, case, limit, stagger=False):
     """每轮都用同一个 offline_key 重新提交，缓存由 connector 从同一 bank 初态恢复。"""
     from vllm import SamplingParams
@@ -371,6 +406,7 @@ def diagnose(args, llm, cases):
             "output_token_ids": measured["output_token_ids"],
             "scope": "DFX诊断窗口带边界同步开销，只用于查看任务依赖，不参与耗时对比",
         })
+    common["spec_decode"] = spec_decode_metrics(llm)
     write_json(args.output / f"rank{args.rank}.{args.command}.json", common)
 
 
@@ -649,7 +685,8 @@ def worker(args):
         outputs.append({"key": case["key"], "submitted": submitted,
                         "elapsed_including_io_seconds": elapsed,
                         "output_token_ids": [list(r.outputs[0].token_ids) for r in result],
-                        "csa_observation": observation})
+                        "csa_observation": observation,
+                        "spec_decode": None if prefill else spec_decode_metrics(llm)})
         write_json(args.output / f"rank{args.rank}.json", {"role": args.command, "backend": args.backend,
                    "rank": args.rank, "batch": args.batch, "cases": outputs})
         if observation is not None and args.backend == "pto":
