@@ -20,11 +20,16 @@ def main() -> None:
     try:
         from pypto.runtime import RunConfig
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark import config
+        from vllm_ascend.ops.pypto.variant import selected_variant, variant_package
+        package = variant_package()
+        config = __import__(f"{package}.config", fromlist=["config"])
+        report["variant"] = selected_variant()
 
         assert tuple(sys.argv) == argv_before, "kernel import changed service argv"
         assert config.TP == 1 and config.DECODE_SEQ == 6
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.decode_csa import decode_csa_tp1_attention_test
+        decode_csa_tp1_attention_test = __import__(
+            f"{package}.decode_csa", fromlist=["decode_csa_tp1_attention_test"]
+        ).decode_csa_tp1_attention_test
 
         kernels = [decode_csa_tp1_attention_test]
         report["kernels"] = []

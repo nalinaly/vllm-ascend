@@ -44,7 +44,10 @@ def _enable_selection_counter():
     才覆盖得到捕获期。Native 后端没有这个模块，import 失败即跳过。
     """
     try:
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+        # 钩子必须补到实际在跑的那一套算子上，否则 PTO_CSA_VARIANT 一切换就全落空。
+        from vllm_ascend.ops.pypto.variant import variant_package
+        CSAServiceRuntime = __import__(
+            f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
     except Exception:
         return
 
@@ -539,7 +542,10 @@ class OfflineCSAObserver:
         -1，kernel 的 `page >= 0` 守卫就必然挡住，写不进去，与存储布局无关。
         """
         try:
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+            # 钩子必须补到实际在跑的那一套算子上，否则 PTO_CSA_VARIANT 一切换就全落空。
+            from vllm_ascend.ops.pypto.variant import variant_package
+            CSAServiceRuntime = __import__(
+                f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
         except Exception as error:
             state["slot_probe"] = f"unavailable: {error!r}"
             return
@@ -712,7 +718,10 @@ class OfflineCSAObserver:
             self._offline_recapture_origin = None
         slot_origin = getattr(self, "_offline_slot_origin", None)
         if slot_origin is not None:
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+            # 钩子必须补到实际在跑的那一套算子上，否则 PTO_CSA_VARIANT 一切换就全落空。
+            from vllm_ascend.ops.pypto.variant import variant_package
+            CSAServiceRuntime = __import__(
+                f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
             CSAServiceRuntime.__call__ = slot_origin
             self._offline_slot_origin = None
         dummy_origin = getattr(self, "_offline_dummy_origin", None)
@@ -737,7 +746,10 @@ class OfflineCSAObserver:
         """只给一层、一次达到稳态构成的 CSA 调用开 DFX 窗口，其余调用保持原路径。"""
         import pypto.torch
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+        # 钩子必须补到实际在跑的那一套算子上，否则 PTO_CSA_VARIANT 一切换就全落空。
+        from vllm_ascend.ops.pypto.variant import variant_package
+        CSAServiceRuntime = __import__(
+            f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
 
         if getattr(self, "_offline_swimlane", None) is not None:
             raise RuntimeError("Swimlane capture is already active")
@@ -768,7 +780,10 @@ class OfflineCSAObserver:
         return dict(state)
 
     def offline_end_swimlane(self):
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+        # 钩子必须补到实际在跑的那一套算子上，否则 PTO_CSA_VARIANT 一切换就全落空。
+        from vllm_ascend.ops.pypto.variant import variant_package
+        CSAServiceRuntime = __import__(
+            f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
 
         if self._offline_swimlane is None:
             return {"dp_rank": self.vllm_config.parallel_config.data_parallel_rank,
