@@ -33,7 +33,7 @@ def validate_configuration(config):
     import torch
     from vllm.config import CUDAGraphMode
     from vllm_ascend.ascend_config import get_ascend_config
-    from vllm_ascend.utils import enable_dsa_cp, oproj_tp_enable, should_skip_allreduce_across_dp_group
+    from vllm_ascend.utils import enable_dsa_cp, oproj_tp_enable
 
     hf = config.model_config.hf_config
     expected = {"hidden_size": 4096, "num_attention_heads": 64, "head_dim": 512,
@@ -71,5 +71,8 @@ def validate_configuration(config):
     if graph_mode != CUDAGraphMode.NONE:
         if config.compilation_config.cudagraph_num_of_warmups < 1:
             raise ValueError("PTO CSA requires a warmup call before each graph capture")
-        if parallel.data_parallel_size > 1 and not should_skip_allreduce_across_dp_group(config):
-            raise ValueError("PTO CSA full graphs require Native to skip DP padding; use eager until P4 is validated")
+        # 这里原本要求 should_skip_allreduce_across_dp_group 为真才允许 DP>1 的图模式，
+        # 即只在"DP 补齐不会发生"的配置下放行，否则拒绝启动。那是算子 padding 尚未
+        # 完善时的临时保护。现在补位处理已经就位——kernel 按 seq_lens == 0 跳过补位
+        # 请求，compact 行号按表的真实行数兜住，三道 host 闸门也已放开——DP 补齐
+        # 场景下的 aclgraph 本来就是目标，故移除该拒绝。
