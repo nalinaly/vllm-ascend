@@ -548,23 +548,42 @@ mtime 是 17:51:53，正落在窗口内。这不是代码缺陷，是操作失�
 **规则：有任务在队列里排着或正在跑时，不要编辑它会加载的 kernel 源文件。**
 改动要么等任务落地，要么先把任务取消。
 
-### exit=130 的成因尚未查清，不要再给结论
+### exit=130 的成因：`task-submit --max-time` 默认只有 300 秒
 
-T3.2 的多轮任务反复报 `exit=130`（SIGINT）。期间我给过两个归因，**都已被证伪**：
+**已查明。** 队列默认值是
 
-1. "本地前台 python 导入 vllm 干扰队列任务"——第三次中断时没有跑任何此类命令。
-2. "多批 shell 循环死在批次边界"——B=24／B=32 改成单命令任务后一样 `exit=130`。
+```
+MAX_TIME=300    # 任务最大执行时间（秒），0=不限
+--max-time N    任务最大执行时间(秒，默认 300，0=不限)
+```
 
-现有事实，不做进一步推断：
+不加 `--max-time` 的任务满 300 秒即被 daemon 的 max-time watchdog 杀掉，队列记为
+`completed (exit=130)`。DSV4 光加载 75 个权重分片就约 4.5 分钟，PTO 的 JIT 图捕获
+再加 70 秒以上，**几乎必然超时**。
 
-- 父进程**零输出**被 SIGINT 带走（`launch()` 把 SIGINT 转成 `SystemExit(130)`，不打印）
-- 16 个 rank 全部停在 **ACL 图捕获 17/19**，日志为 `Parent process exited, terminating worker queues`
-- B=1／8／16 全部成功，B=24／32 全部失败
-- 时长 5m7s 与 10m16s，而同期 13m38s 的 steady 任务正常结束，**不是超时**
-- 队列日志除设备锁的获取与释放外没有任何其他信息
+证据来自给父进程信号处理器加的诊断：
 
-`tests/pypto_test/offline_pd/run.py` 已有 `profile`／`profile-export`／`profile-compare`／
-`swimlane`／`swimlane-export` 命令，命令行见[离线 P/D 方案](DSV4_FLASH_CSA_OFFLINE_PD.md)。
+```
+OFFLINE_SIGNAL SIGTERM(15) pid=2738064 pgid=2737696 ppid=1
+  ... run.py line 850, in launch / time.sleep(2)
+```
+
+收到的是 **SIGTERM(15) 而非 SIGINT**，且 `ppid=1`——外层 bash wrapper 已被杀、python
+被 reparent 给 init，正是 watchdog 杀进程组的形态。`130` 只是队列客户端侧的约定退出码，
+不代表进程收到了 SIGINT。
+
+该结论解释了此前全部现象：反复出现的 4m51s～5m8s 就是 300 秒；B=1／8／16 因加载加短
+decode 刚好卡在线内而成功，B=24／32 图捕获更久而超时；Native steady 成功而 PTO steady
+失败，是 PTO 的 JIT 把图捕获从 11s 拉到 72s；Native 开 EPLB 也失败，是 EPLB 子进程拉长
+了启动；accuracy PTO 数据完整却 `exit=130`，是 decode 跑完后在收尾阶段撞线。注意
+`--list` 显示的时长含排队等待，不等于执行时长，判断是否撞线要看任务日志的首末时间戳。
+
+**此前我在本节给过三个归因，全部错误**：本地前台 python 干扰队列、多批 shell 循环死在
+批次边界、PTO 后端才会挂。三次都建立在"exit=130 即 SIGINT"这个错误前提上，且没有先去读
+队列的默认值。代价是至少八轮任务白跑。
+
+**处置：跑模型的任务一律显式 `--max-time 3600`。** 纯 CPU 的短任务（lowering、trace
+导出）默认值够用。
 
 ### 泳道图必须在 eager 下采
 
