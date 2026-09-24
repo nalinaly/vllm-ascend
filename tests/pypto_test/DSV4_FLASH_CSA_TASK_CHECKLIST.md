@@ -59,8 +59,34 @@
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
 | T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已执行（`05ba642`），顺序按用户 2026-09-24 的决定提前**：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，之前只是算子 padding 没完善，既然基本处理了就应该放开闸门遇到问题解决具体问题"。删除后 `_sync_metadata_across_dp` 会真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景 | — | 16 | **已执行，待 D01～D05 验证** |
+| T1.10 | eager + embedding_tp 的 DP 补齐 | `finegrained_tp_config.embedding_tensor_parallel_size` + eager 用例 | 开启 embedding TP 后在 eager 下跑通：DP 补齐正确产生、PTO 输出与 Native 一致、`_forward_embed_tp` 的静态缓冲容量不被超出。**低优先级**（用户 2026-09-24 定），排在 D01～D05 之后 | T1.9 | 16 | 未开始（低优先级） |
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
+
+### embedding_tp 为什么会在 eager 下引出 DP 补齐（T1.10 的背景）
+
+`allow_dp_padding` 的四个条件里有 `or embedding_tp_enable()`，**它与 cudagraph
+无关**。原因在建组逻辑（`distributed/parallel_state.py` 的 `_create_or_get_group`）：
+
+```python
+rank_grid = torch.arange(world_size).reshape(global_pp_size, global_dp_size, global_tp_size)
+group = stage_ranks[chunk * group_size : (chunk + 1) * group_size, tp_idx].tolist()
+                    ↑ 切的是 DP 维
+```
+
+**embedding TP 组是沿 DP 维切的**，不是沿 TP 维。TP=1／DP=16 且
+`embedding_tp_size=4` 时，rank{0,1,2,3} 一组、{4,5,6,7} 一组，组内成员是不同的
+DP rank。而 `_forward_embed_tp` 在组内做 **all_gather + reduce_scatter**，
+要求组内每个 rank 贡献的 token 数完全一致，否则拼接偏移与切分边界对不上。
+所以必须先把这些 DP rank 的 token 数补齐——这就是那个 `or` 的由来。
+`oproj_tp_enable` 同理（`_OTP` 用同一个 `_create_or_get_group`）。
+
+连带一条：`_forward_embed_tp` 的静态缓冲按
+`capacity = get_potential_max_tokens()` 分配，超了直接 `raise`。
+`potential_max_tokens` 正是档位对齐时动过的那个量，**两者是同一个来源**——
+若开 embedding TP 而档位配置不当，会直接在这里报错。
+
+当前 `embedding_tensor_parallel_size` 为 0（未开），所以这条路径现在遇不到。
 
 ### 验收口径与 DP 补齐的定位（2026-09-24 用户定）
 
