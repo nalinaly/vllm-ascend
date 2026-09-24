@@ -682,7 +682,14 @@ def launch(args):
                 # 采集窗口会在各 rank 上做同步和落盘，给集合通信留出等待余量。
                 "HCCL_CONNECT_TIMEOUT": "120",
                 "HCCL_EXEC_TIMEOUT": "1800" if args.command != "decode" else "204",
-                "HCCL_BUFFSIZE": "1024", "HCCL_OP_EXPANSION_MODE": "AIV",
+                # 上线口径 decode 侧为 1800（dsv4_perf_accuracy_20260827/runtime/decode/run_dp_template.sh），
+                # prefill 侧为 1024。1024 在 max_num_seqs=40 时不够：算子按
+                # ((maxBs*tokenNeedSizeDispatch*epWorldSize*localMoeExpertNum)
+                #  + (maxBs*tokenNeedSizeCombine*(k+sharedExpertNum))) * 2 计算，
+                # maxBs=240 需 1043MB，实测直接在 npu_moe_distribute_dispatch_v2
+                # 报 HCCL_BUFFSIZE_EP is too SMALL（错误码 561002）。
+                "HCCL_BUFFSIZE": "1024" if prefill else "1800",
+                "HCCL_OP_EXPANSION_MODE": "AIV",
                 # HCCL 默认 HCCL_DETERMINISTIC=false（见 libhccl.so 的
                 # "HCCL_DETERMINISTIC set by default to [false]"）。开启后集合通信保序归约。
                 # 注意 libhccl.so 里还有一条 "Deterministic do not support aiv"，
