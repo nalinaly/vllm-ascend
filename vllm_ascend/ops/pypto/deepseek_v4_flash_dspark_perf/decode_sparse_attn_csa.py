@@ -91,9 +91,13 @@ QK_PROB_READY_EVENT = 2
 
 QK_PV_READY_EVENT = 3
 
-# Native A3 softmax rounds probabilities after each 512-candidate update.
-# Cube transfers remain smaller so Q and KV fit in A3 L1 together.
-ATTN_K_TILE = 512
+# 性能版取 128，与上游一致。精度版取 512 是为了复刻 Native A3 每 512 个候选更新一次
+# softmax 的舍入节奏，块内再用一个常驻 FP32 累加器把四个 128 子块串起来；本版本放弃
+# 该性质。取 128 后 ATTN_K_TILE // ATTN_CUBE_KV_TILE 退化为 1，那些子块循环自然变成
+# 单次迭代，matmul_acc 的 init_cond 恒真，等价于上游的普通 matmul。
+# 派生量与上游对齐：SPARSE_BLOCKS = 1 + ceil(512/128) = 5、PADDED_TOPK = 640，
+# 与上游 max(2, ceil((WIN+CMP_TOPK)/128)) = 5 得到的 640 完全一致。
+ATTN_K_TILE = 128
 
 ATTN_CUBE_KV_TILE = 128
 
@@ -235,9 +239,11 @@ def sparse_attn_csa(
                 pl.write(valid_block_mask, [bias_t, 0], v_block_valid)
 
                 sparse_bias[bias_t : bias_t + 1, 0:WIN] = pl.mul(pl.sub(v_valid, 1.0), -NEG_INF)
-                sparse_bias[bias_t : bias_t + 1, WIN:ATTN_K_TILE] = pl.full(
-                    [1, ATTN_K_TILE - WIN], dtype=pl.FP32, value=NEG_INF
-                )
+                # WIN == ATTN_K_TILE 时滑窗块没有尾巴要补，空切片在 DSL 里不合法。
+                if WIN < ATTN_K_TILE:
+                    sparse_bias[bias_t : bias_t + 1, WIN:ATTN_K_TILE] = pl.full(
+                        [1, ATTN_K_TILE - WIN], dtype=pl.FP32, value=NEG_INF
+                    )
                 sparse_bias[bias_t : bias_t + 1, ATTN_K_TILE:ATTN_K_TILE + CMP_TOPK] = pl.mul(
                     pl.minimum(c_out, 0.0), -NEG_INF
                 )
@@ -387,9 +393,9 @@ def sparse_attn_csa(
                             sm_alpha = pl.exp(pl.sub(sm_old_m, sm_max))
                             sm_exp = pl.exp(pl.row_expand_sub(sm_masked, sm_max))
                             sm_sum = pl.add(pl.mul(sm_old_l, sm_alpha), pl.row_sum(sm_exp, qk_reduce_tmp))
-                            # Native SAS uses CAST_ROUND for probabilities: ties
-                            # round away from zero, unlike the final output cast.
-                            sm_probability = pl.cast(sm_exp, target_type=pl.BF16, mode="round")
+                            # 性能版用 rint（就近偶数），与上游一致。精度版用 round
+                            # 是为了复刻 Native SAS 的 CAST_ROUND——半数远离零。
+                            sm_probability = pl.cast(sm_exp, target_type=pl.BF16, mode="rint")
                             pl.store(sm_probability, [sm_row, 0], probability_transfer)
                             pl.store(sm_max, [sm_row, 0], mi_transfer)
                             pl.store(sm_sum, [sm_row, 0], li_transfer)

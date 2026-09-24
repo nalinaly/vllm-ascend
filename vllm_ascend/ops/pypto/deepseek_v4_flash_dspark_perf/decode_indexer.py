@@ -48,10 +48,6 @@ IDX_HEAD_DIM = M.index_head_dim
 
 HADAMARD_SCALE = IDX_HEAD_DIM**-0.5
 
-# A3 Native QLI FixpSToL1 uses DEQF16 with 0x3a800000 (1/1024).
-NATIVE_QLI_QK_SCALE = 1.0 / 1024
-
-NATIVE_QLI_WEIGHT_ROWS = 16
 
 IDX_NOPE_HEAD_DIM = M.index_nope_head_dim
 
@@ -388,46 +384,6 @@ def indexer_topk_single_leaf_publish(
 
 
 @pl.jit.inline(auto_scope=False)
-def indexer_head_coefficients(
-    qr_hadamard_scale_dq: pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32],
-    weights: pl.Tensor[[T_PAD, IDX_N_HEADS], pl.FP32],
-    position_ids: pl.Tensor[[T_DYN], pl.INT64],
-    qh_quant_tid: pl.Scalar[pl.TASK_ID],
-    weights_tid: pl.Scalar[pl.TASK_ID],
-) -> tuple[pl.Tensor[[T_PAD * NATIVE_QLI_WEIGHT_ROWS, IDX_N_HEADS], pl.FP16], pl.Scalar[pl.TASK_ID]]:
-    """Shared production FP16 coefficients used by the QLI Cube reduction."""
-    # Keep coefficients in owned GM/L1 storage: a cross-core pipe slot cannot
-    # remain live while the same slot transports each candidate score tile.
-    coefficients = pl.create_tensor([T_PAD * NATIVE_QLI_WEIGHT_ROWS, IDX_N_HEADS], dtype=pl.FP16)
-    with pl.spmd(
-        TOPK_QUERY_WORKERS,
-        name_hint="indexer_head_coefficients",
-        deps=[qh_quant_tid, weights_tid],
-        allow_early_resolve=True,
-    ) as coefficients_tid:
-        coefficient_worker = pl.tile.get_block_idx()
-        coefficient_count = pl.tensor.dim(position_ids, 0)
-        for coefficient_query in pl.range(coefficient_worker, coefficient_count, TOPK_QUERY_WORKERS):
-            coefficient_head_begin = coefficient_query * IDX_N_HEADS
-            query_scale = pl.reshape(
-                qr_hadamard_scale_dq[coefficient_head_begin : coefficient_head_begin + IDX_N_HEADS, 0:1],
-                [1, IDX_N_HEADS],
-            )
-            query_weight = weights[coefficient_query : coefficient_query + 1, 0:IDX_N_HEADS]
-            # Native QLI ProcessVec0 materializes this product in FP16.
-            head_coefficient = pl.cast(pl.mul(query_scale, query_weight), pl.FP16, mode="rint")
-            coefficient_rows = pl.col_expand_mul(
-                pl.full([NATIVE_QLI_WEIGHT_ROWS, IDX_N_HEADS], dtype=pl.FP32, value=1.0),
-                pl.cast(head_coefficient, pl.FP32),
-            )
-            coefficient_row = coefficient_query * NATIVE_QLI_WEIGHT_ROWS
-            coefficients[coefficient_row : coefficient_row + NATIVE_QLI_WEIGHT_ROWS, :] = pl.cast(
-                coefficient_rows, pl.FP16
-            )
-    return coefficients, coefficients_tid
-
-
-@pl.jit.inline(auto_scope=False)
 def indexer_score_topk_forest(
     qr_hadamard_i8: pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8],
     qr_hadamard_scale_dq: pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32],
@@ -454,13 +410,12 @@ def indexer_score_topk_forest(
     pair_arena = pl.create_tensor([TOPK_ARENA_ROWS, TOPK_PAIR_WIDTH], dtype=pl.FP32)
     # The whole batch uses query rows for one leaf, or private lane rows for multiple leaves.
     score_arena = pl.create_tensor([SCORE_ARENA_ROWS, TOPK_CANDIDATES_PER_LEAF], dtype=pl.FP32)
-    coefficients, coefficients_tid = indexer_head_coefficients(
-        qr_hadamard_scale_dq, weights, position_ids, qh_quant_tid, weights_tid
-    )
+    # 性能版不外提 head 系数：上游在 leaf 内按 query 现算，省掉一个独占关键路径
+    # 约 40.7us 的任务；精度版保留外提是为了配合 Cube 规约的 FP16 权重行布局。
     with pl.spmd(
         TOPK_SCORE_WORKERS,
         name_hint="indexer_score_topk_leaf",
-        deps=[coefficients_tid, cache_write_tid],
+        deps=[qh_quant_tid, weights_tid, cache_write_tid],
         allow_early_resolve=True,
         optimizations=[pl.cross_core_slot(slot_num=1)],
     ) as score_tid:
@@ -493,10 +448,14 @@ def indexer_score_topk_forest(
                 lane_stride = single_leaf * SCORE_LANE_ROWS + (1 - single_leaf) * lane_span
                 query_head_begin = query * IDX_N_HEADS
                 query_vector = qr_hadamard_i8[query_head_begin : query_head_begin + IDX_N_HEADS, 0:IDX_HEAD_DIM]
-                coefficient_begin = query * NATIVE_QLI_WEIGHT_ROWS
-                coefficients_l1 = coefficients[
-                    coefficient_begin : coefficient_begin + NATIVE_QLI_WEIGHT_ROWS, 0:IDX_N_HEADS
-                ]
+                # 两个 Vector lane 共用这一 query 的 head 系数。
+                for _aiv_coeff in pl.split_aiv(2, mode=pl.SplitMode.NONE):
+                    query_scale = pl.reshape(
+                        qr_hadamard_scale_dq[query_head_begin : query_head_begin + IDX_N_HEADS, 0:1],
+                        [1, IDX_N_HEADS],
+                    )
+                    query_weight = weights[query : query + 1, 0:IDX_N_HEADS]
+                    head_coefficient = pl.reshape(pl.mul(query_scale, query_weight), [IDX_N_HEADS, 1])
                 for score_begin in pl.pipeline(0, lane_span, SCORE_LANE_ROWS, stage=2):
                     read_begin = score_begin * (1 + single_leaf)
                     # Native packs 4096 contiguous key bytes before the FP16
@@ -525,14 +484,11 @@ def indexer_score_topk_forest(
                             )
                         key_rows = pl.reshape(key_bytes, [SCORE_LANE_ROWS, IDX_HEAD_DIM])
                         kv_i8 = pl.aic_gather(key_rows)
+                    # 性能版改用 Vector 的 col_sum 规约 head，与上游一致：省掉
+                    # 每个 score tile 一次 FP32->FP16 转换和一次 Cube matmul。
+                    # 精度版那条链（NATIVE_QLI_QK_SCALE + FP16 rint + Cube）是为了
+                    # 复刻 Native 的 QK tile 与规约精度，本版本刻意放弃该性质。
                     score_i32 = pl.matmul(query_vector, kv_i8, out_dtype=pl.INT32, b_trans=True)
-                    # Match Native's FP16 QK tile and FP32 Cube reduction.
-                    for score_aiv in pl.split_aiv(2, mode=pl.SplitMode.LEFT_RIGHT):
-                        score_shard = pl.aiv_shard(score_i32)
-                        score_fp32 = pl.maximum(pl.cast(score_shard, pl.FP32), 0.0)
-                        score_half = pl.cast(pl.mul(score_fp32, NATIVE_QLI_QK_SCALE), pl.FP16, mode="rint")
-                        scores_l1 = pl.aic_gather(score_half)
-                    weighted_scores = pl.matmul(coefficients_l1, scores_l1, out_dtype=pl.FP32)
                     # Each lane owns a contiguous candidate-column range.
                     for aiv_id in pl.split_aiv(2, mode=pl.SplitMode.LEFT_RIGHT):
                         lane_begin = aiv_id * lane_stride
@@ -557,8 +513,11 @@ def indexer_score_topk_forest(
                                 [1, BLOCK_SIZE * 2],
                             )
                         kv_scale = pl.reinterpret_view(kv_scale_bytes, pl.FP16)
-                        weighted_shard = pl.aiv_shard(weighted_scores)
-                        score_row = weighted_shard[0:1, :]
+                        score_shard = pl.aiv_shard(score_i32)
+                        score_fp32 = pl.cast(score_shard, target_type=pl.FP32, mode="none")
+                        score_fp32 = pl.maximum(score_fp32, 0.0)
+                        score_fp32 = pl.row_expand_mul(score_fp32, head_coefficient)
+                        score_row = pl.reshape(pl.col_sum(score_fp32), [1, SCORE_LANE_ROWS])
                         score_row = pl.mul(score_row, pl.cast(kv_scale, pl.FP32))
                         score_row_id = single_leaf * query + (1 - single_leaf) * (worker * 2 + aiv_id)
                         score_col = single_leaf * (read_begin + lane_begin) + (1 - single_leaf) * score_begin
