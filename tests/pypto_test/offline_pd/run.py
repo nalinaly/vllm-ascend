@@ -619,10 +619,15 @@ def worker(args):
         if not prefill:
             llm.collective_rpc("offline_begin_observation")
         start = time.perf_counter()
-        result = llm.generate([prompt] * (1 if prefill else args.batch), params, use_tqdm=False)
+        # decode 也要认 --rank-batches：此前这里写死 args.batch，导致按 rank 指定的
+        # 提交数被忽略，所谓"不均衡负载"实际仍是均衡的（eager_pto_imbalanced 那轮
+        # 16 个 rank 都提交了 40 条即为此）。max_num_seqs 仍统一取 args.batch。
+        submitted = 1 if prefill else (args.rank_batch if args.rank_batch is not None else args.batch)
+        result = llm.generate([prompt] * submitted, params, use_tqdm=False)
         elapsed = time.perf_counter() - start
         observation = None if prefill else llm.collective_rpc("offline_end_observation")
-        outputs.append({"key": case["key"], "elapsed_including_io_seconds": elapsed,
+        outputs.append({"key": case["key"], "submitted": submitted,
+                        "elapsed_including_io_seconds": elapsed,
                         "output_token_ids": [list(r.outputs[0].token_ids) for r in result],
                         "csa_observation": observation})
         write_json(args.output / f"rank{args.rank}.json", {"role": args.command, "backend": args.backend,
