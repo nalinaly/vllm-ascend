@@ -382,8 +382,14 @@ def diagnose(args, llm, cases):
             common.update({"measured_elapsed_seconds": measured["elapsed_seconds"],
                            "output_token_ids": measured["output_token_ids"]})
         finally:
-            # 即使 generate 被打断，也把已采到的单步耗时取回来。
-            common["window"] = llm.collective_rpc("offline_end_steady")
+            # 即使 generate 被打断，也把已采到的单步耗时取回来。取不回来也不能让
+            # 异常吃掉后面的写盘——上一轮就是 RPC 在引擎被杀时抛错，导致 16 份
+            # 记录全停在 stage=measuring。
+            try:
+                common["window"] = llm.collective_rpc("offline_end_steady")
+            except BaseException as exc:  # noqa: BLE001 - 收尾尽力而为
+                common["window"] = None
+                common["window_error"] = f"{type(exc).__name__}: {exc}"
             common["stage"] = "measured" if "measured_elapsed_seconds" in common else "interrupted"
             write_json(args.output / f"rank{args.rank}.{args.command}.json", common)
     elif args.command == "padding-capture":
@@ -721,6 +727,15 @@ def worker(args):
 
 def launch(args):
     def interrupted(signum, frame):
+        # 多轮任务报 exit=130（SIGINT）而父进程无任何输出，来源一直查不出来。
+        # 把信号号、进程与进程组、以及收到信号时的调用栈打出来，让下一轮自证。
+        import traceback
+        name = signal.Signals(signum).name
+        print(f"OFFLINE_SIGNAL {name}({signum}) pid={os.getpid()} pgid={os.getpgrp()} "
+              f"ppid={os.getppid()}", flush=True)
+        traceback.print_stack(frame)
+        sys.stdout.flush()
+        sys.stderr.flush()
         raise SystemExit(128 + signum)
 
     signal.signal(signal.SIGTERM, interrupted)
