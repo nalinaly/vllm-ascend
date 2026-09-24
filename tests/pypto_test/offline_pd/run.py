@@ -709,6 +709,13 @@ def launch(args):
                 # 而这里保留 AIV 展开模式是用户明确要求的；若 HCCL 因此降级或告警，
                 # 日志里会有记录，按实测结果判断，不预先改 AIV。
                 **({"HCCL_DETERMINISTIC": "true"} if args.deterministic else {}),
+                # EPLB 除了 eplb_config.dynamic_eplb 这个配置项，还要求同时设这个
+                # 环境变量，否则 VllmConfig 构造时就被 pydantic 断言拦下：
+                # "The environment variable DYNAMIC_EPLB or EXPERT_MAP_RECORD of
+                #  the EPLB must be set to true"（ascend_config.py 里两者是 or 关系）。
+                # 该组的 HCCL 缓冲由 dynamic_eplb 组单独配（utils.py 的 100MB），
+                # 与 HCCL_BUFFSIZE 无关，不必同步调整。
+                **({"DYNAMIC_EPLB": "true"} if args.eplb else {}),
                 "PYTORCH_NPU_ALLOC_CONF": "expandable_segments:True",
                 "VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS": "1800",
                 "PYTHONPATH": str(Path(__file__).resolve().parent.parent) + os.pathsep + env.get("PYTHONPATH", ""),
