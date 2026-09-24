@@ -188,9 +188,11 @@ class OfflineCSAObserver:
             torch.npu.synchronize()
             profiler.stop()
             state["closed"] = True
-        if state["profiled_steps"] != state["requested_steps"]:
-            raise RuntimeError(f"Profiled {state['profiled_steps']} steady steps, "
-                               f"requested {state['requested_steps']}; see window")
+        # 采不到足够样本时**不要抛异常**：异常会让整个 rank 的 json 落不了盘，
+        # 连同 observed 里的诊断信息一起丢失——T2.1 前两轮就是这样，失败了却
+        # 拿不到"实际每步调度了多少 token"，只能另想办法查。这里如实记进报告，
+        # 由调用方按 profiled_steps 判断是否可用。
+        state["sufficient"] = state["profiled_steps"] == state["requested_steps"]
         return state
 
     def offline_begin_host_profile(self, directory, start_step, steps, expected_tokens, expected_requests):
@@ -296,18 +298,21 @@ class OfflineCSAObserver:
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
             state["builds_seen"] += 1
+            # dummy 步里暂存 decode metadata，供 dummy 返回后复算 compact slot。
+            # 注意**不能**挂在补位分支里：dummy run 的所有请求都是假的、
+            # num_reqs_actual == num_reqs，根本不带补位，挂那儿永远采不到样本
+            # （compact_slot_probe 那轮即因此 0 样本）。
+            # 也不在这里直接算：算子虽只产出 metadata、不碰 KV cache，
+            # 放在 build 内仍有扰动本步的风险。
+            if state["in_dummy"] and state["compact_samples"] < self._OFFLINE_COMPACT_SAMPLES:
+                ratio = int(getattr(builder, "compressor_ratio", 0))
+                if ratio == 4 and getattr(result, "decode", None) is not None:
+                    state["pending_compact"] = (ratio, result.decode)
             actual = kwargs.get("num_reqs_actual")
             padded = actual is not None and actual < common_attn_metadata.num_reqs
             if not padded:
                 return result
             state["padded_builds"] += 1
-            # dummy 步里把 decode metadata 暂存，供跑完之后复算 compact slot。
-            # 不在这里算：算子调用虽然只产出 metadata、不碰 KV cache，
-            # 但放在 build 内仍有扰动本步的风险，等 dummy 返回后再算更稳。
-            if state["in_dummy"] and state["compact_samples"] < self._OFFLINE_COMPACT_SAMPLES:
-                ratio = int(getattr(builder, "compressor_ratio", 0))
-                if ratio == 4 and getattr(result, "decode", None) is not None:
-                    state["pending_compact"] = (ratio, result.decode)
             # 一步里每个 cache group 各 build 一次，采满一轮即停，不逐步累积。
             if state["captured"] < self._OFFLINE_PADDING_GROUPS:
                 record = self._offline_padding_record(builder, common_attn_metadata, actual, result)
