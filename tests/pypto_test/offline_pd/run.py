@@ -370,11 +370,13 @@ def diagnose(args, llm, cases):
         })
     elif args.command == "bitcompare":
         started = llm.collective_rpc("offline_begin_bitcompare",
-                                     args=(args.swimlane_layer, expected_tokens, args.compare_samples))
+                                     args=(args.swimlane_layer, expected_tokens,
+                                           args.compare_samples, args.compare_mode))
         measured = generate_round(llm, args, case, args.decode_tokens)
         common.update({
             "decode_tokens": args.decode_tokens, "layer_index": args.swimlane_layer,
-            "compare_samples": args.compare_samples, "started": started,
+            "compare_samples": args.compare_samples, "compare_mode": args.compare_mode,
+            "started": started,
             "window": llm.collective_rpc("offline_end_bitcompare"),
             "measured_elapsed_seconds": measured["elapsed_seconds"],
             "output_token_ids": measured["output_token_ids"],
@@ -845,6 +847,7 @@ def launch(args):
                    "--profile-steps", str(args.profile_steps),
                    "--warmup-steps", str(args.warmup_steps),
                    "--compare-samples", str(args.compare_samples),
+                   "--compare-mode", args.compare_mode,
                    "--swimlane-layer", str(args.swimlane_layer),
                    "--graph-mode", args.graph_mode]
             if args.recompute_scheduler:
@@ -904,6 +907,8 @@ def main():
     parser.add_argument("--layout-only", action="store_true", help="加载D模型后仅采集缓存描述符")
     parser.add_argument("--warmup-rounds", type=int, default=1, help="诊断前的预热轮数，排除首次编译与缓存冷读")
     parser.add_argument("--warmup-tokens", type=int, default=96, help="每个预热轮的生成token数")
+    parser.add_argument("--compare-mode", choices=["native", "self"], default="native",
+                        help="native=与Native对比；self=PTO自比对，用于确认PTO自身是否可复现")
     parser.add_argument("--compare-samples", type=int, default=3,
                         help="bitcompare采集多少个被比对的step；每个样本都要多跑一次Native，代价不低")
     parser.add_argument("--warmup-steps", type=int, default=8,

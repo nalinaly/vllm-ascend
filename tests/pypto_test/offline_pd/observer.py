@@ -264,7 +264,7 @@ class OfflineCSAObserver:
         state["sufficient"] = state["profiled_steps"] == state["requested_steps"]
         return state
 
-    def offline_begin_bitcompare(self, layer_index, expected_tokens, max_samples):
+    def offline_begin_bitcompare(self, layer_index, expected_tokens, max_samples, mode):
         """在真实生产路径上逐 bit 比对 PTO 与 Native 的 CSA 层输出张量。
 
         挂点选 CSAServiceRuntime.__call__ 而不是离线 fixture：那套 fixture
@@ -297,8 +297,10 @@ class OfflineCSAObserver:
         # 直接用会在 dsa_forward 里报 'DSAAttention' object has no attribute 'prefix'。
         native_prefix = attention.dsa_attn.prefix
         original = CSAServiceRuntime.__call__
+        if mode not in ("native", "self"):
+            raise ValueError(f"mode must be 'native' or 'self', got {mode!r}")
         state = {"dp_rank": rank, "layer_index": layer_index, "layer_name": wanted.layer_name,
-                 "native_prefix": native_prefix,
+                 "native_prefix": native_prefix, "mode": mode,
                  "expected_tokens": expected_tokens, "max_samples": max_samples,
                  "samples": [], "seen": 0}
 
@@ -310,11 +312,19 @@ class OfflineCSAObserver:
                 return original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
             result = original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
             pto = output.detach().clone()
-            dsa_forward(hidden, context.flash_comm_v1_enabled, output, native_prefix)
+            if mode == "self":
+                # PTO 自比对：同一输入再跑一遍 PTO。这是跨实现比对的前提——kv_fp32 用
+                # atomic=pl.AtomicType.Add 且 KV_OK=2，同一输出位置由两个 K 分片的块
+                # 原子加，FP32 加法不结合，到达顺序不同低位就不同。自身都不可复现时，
+                # 与 Native 的 bit 比对无从归因。注意 torch 的确定性开关管不到 PTO
+                # kernel 内部的原子加。
+                original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
+            else:
+                dsa_forward(hidden, context.flash_comm_v1_enabled, output, native_prefix)
             native = output.detach().clone()
             equal = bool(torch.equal(pto, native))
             record = {"step": state["seen"], "shape": list(pto.shape), "dtype": str(pto.dtype),
-                      "bit_equal": equal}
+                      "mode": mode, "bit_equal": equal}
             if not equal:
                 diff = (pto.float() - native.float()).abs()
                 mismatch = pto.ne(native)

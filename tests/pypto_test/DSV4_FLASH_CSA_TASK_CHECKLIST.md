@@ -585,6 +585,44 @@ decode 刚好卡在线内而成功，B=24／32 图捕获更久而超时；Native
 **处置：跑模型的任务一律显式 `--max-time 3600`。** 纯 CPU 的短任务（lowering、trace
 导出）默认值够用。
 
+### 精度版与 Native **不是 bit 一致**（2026-09-24 首次测定）
+
+此前精度版只验过输出 token 相同与 DSpark 接受计数相同，从未验过张量。新增的
+`bitcompare` 命令在生产路径上挂 `CSAServiceRuntime.__call__`，同一步里先跑 PTO
+再跑对照实现，各自 clone 该层输出后 `torch.equal`。
+
+**基线先行：PTO 自比对 48/48 全部 bit 相同。** 这一步是必需的——`qkv_proj_rope.py`
+有四处 `atomic=pl.AtomicType.Add`，其中 `kv_fp32` 两处在结构上有竞争（`KV_OK=2`，
+同一 `kv_col0` 由两个 K 分片原子加到同一片内存，FP32 加法不结合）。实测证明当前形状下
+它**没有**造成不确定性，因此不需要改 `KV_OK`，那个性能与可复现性的取舍不用做。
+注意 `torch_npu.npu.set_deterministic_level(1)` 与 `HCCL_DETERMINISTIC` 管不到
+PTO kernel 内部的原子加，自比对是唯一能确认这点的办法。
+
+**结论（b=16、8k、eager、`--deterministic`）：**
+
+| 对照 | bit 相等 | 不同元素 | `max_abs` | 显著 ULP |
+| --- | --- | --- | --- | --- |
+| PTO vs PTO | **48/48** | — | — | — |
+| PTO vs Native | **4/48** | 1.77% | 0.031 | 27 |
+
+开确定性前后数字完全一致（4/48、1.77%、0.031、ULP 27），差异不来自归约顺序随机性。
+自比对全通过排除了 PTO 侧不可复现。**所以这是 PTO 与 Native 之间稳定、可复现的实现差异。**
+
+三层深度对照（层 2／22／42）显示**差异不随深度单调增长**：`max_abs` 都在 0.016～0.031、
+相对 Native 量级约 0.25～0.5%，不同元素占比 1.77%／6.31%／4.06% 波动而非递增。
+即每层内部的固定量级差异，不是逐层累积。
+
+**定位更正**：精度版的准确描述是"**输出 token 与 DSpark 接受行为与 Native 完全一致，
+层输出在 BF16 末位有约 0.5% 量级的差异**"，不是"与 Native bit 级一致"。
+`NATIVE_*` 那套按构造对齐（读 Native 编译出的 CCE 复刻累加次序）减小了差异但没有消除。
+这不推翻任何已有验收——逐 token 相同在 B=1～40、8k／32k／131k、D01～D05、16 rank 上
+都是实测的，差异小到不改变 argmax。
+
+**指标教训**：首版 ULP 用 `view(int16)` 直接相减，BF16 位模式按有符号整数解释时跨零会得到
+约 32768 的假差值，因此报出过 `max_ulp=32307`。已改单调序（负数映射成 `0x8000 - bits`），
+并增加只在同号且绝对值不低于 scale 千分之一的元素上统计的 `max_ulp_significant`。
+这与早先在 P bank 上误用饱和相对误差是同一类错误。
+
 ### 泳道图必须在 eager 下采
 
 首轮泳道采集（`results/release_csa_perf_8k_20260924/swimlane/`）跟着 decode 的上线口径
