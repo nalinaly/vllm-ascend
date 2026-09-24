@@ -104,6 +104,8 @@ CSA_PROJECTION_PACK_ROW_TILE = 8
 CSA_PROJECTION_PACK_WORKERS = 16
 CSA_ALL_VISIBLE_WORKERS = 16
 CSA_WB_TOKEN_TILE = 8
+CSA_ROPE_SIGN_T_TILE = 4  # RoPE 符号行块，沿用上游 csa_rope_interleave 的 4 行
+CSA_ROPE_WORKERS = 16
 CSA_WB_WORKERS = 48  # CSA cache-write workers
 TP1_CSA_WB_WORKERS = 8  # TP1 CSA cache-write workers
 
@@ -212,19 +214,31 @@ def _decode_csa_tp1_attention(
     idx_sin_signed = pl.create_tensor([t_dim, ROPE_HEAD_DIM], dtype=pl.FP32)
     cmp_row_offsets = pl.create_tensor([pl.tensor.dim(cmp_seq_lens, 0)], dtype=pl.INT32)
     idx_row_offsets = pl.create_tensor([pl.tensor.dim(kv_seq_lens, 0)], dtype=pl.INT32)
-    # Reuse this task for per-request compact offsets and normal-RoPE signs.
-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_rope_sign") as rope_tid:
+    # 逐请求 compact 偏移是跨请求前缀和，只能串行；RoPE 符号是逐块独立的，可并行。
+    # 原先两件事共用一个 CORE_GROUP 任务，整段被前缀和拖成串行——泳道实测
+    # csa_rope_sign count=1、Exec 13.42us 却独占一个串行窗口。拆成两个任务，
+    # 符号那段走 SPMD，靠 deps 保证偏移先算好。
+    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets") as offsets_tid:
         build_compact_row_offsets(cmp_query_start_loc, cmp_seq_lens, cmp_row_offsets)
         build_compact_row_offsets(idx_query_start_loc, kv_seq_lens, idx_row_offsets)
-        il_ones = pl.tile.full([4, ROPE_HEAD_DIM], dtype=pl.FP32, value=1.0)
-        il_lane_ids = pl.cast(pl.tile.arange(0, [1, ROPE_HEAD_DIM], dtype=pl.INT32), target_type=pl.FP32)
-        il_col = pl.col_expand_mul(il_ones, il_lane_ids)
-        il_dup_f = pl.cast(pl.cast(pl.mul(il_col, 0.5), target_type=pl.INT32, mode="trunc"), target_type=pl.FP32)
-        il_lane = pl.sub(il_col, pl.mul(il_dup_f, 2.0))
-        il_sign = pl.sub(pl.mul(il_lane, 2.0), 1.0)
-        for rope_t0 in pl.range(0, t_dim, 4):
-            rope_rows = pl.min(4, t_dim - rope_t0)
-            rope_sin_rows = pl.load(freqs_sin, [rope_t0, 0], [4, ROPE_HEAD_DIM],
+
+    # 向上取整分块并保留 valid_shape：t_dim = batch*6 不保证是 4 的倍数，
+    # 上游 csa_rope_interleave 用的 t_dim // 4 会丢掉尾行（batch=1 时 t_dim=6 只覆盖 0~3）。
+    rope_sign_blocks = (t_dim + CSA_ROPE_SIGN_T_TILE - 1) // CSA_ROPE_SIGN_T_TILE
+    with pl.spmd(pl.min(rope_sign_blocks, CSA_ROPE_WORKERS), name_hint="csa_rope_sign",
+                 deps=[offsets_tid]) as rope_tid:
+        for rope_rb in pl.range(pl.tile.get_block_idx(), rope_sign_blocks,
+                                pl.min(rope_sign_blocks, CSA_ROPE_WORKERS)):
+            rope_t0 = rope_rb * CSA_ROPE_SIGN_T_TILE
+            rope_rows = pl.min(CSA_ROPE_SIGN_T_TILE, t_dim - rope_t0)
+            # 符号表按块重算：SPMD 下每个 worker 要有自己的一份。
+            il_ones = pl.tile.full([CSA_ROPE_SIGN_T_TILE, ROPE_HEAD_DIM], dtype=pl.FP32, value=1.0)
+            il_lane_ids = pl.cast(pl.tile.arange(0, [1, ROPE_HEAD_DIM], dtype=pl.INT32), target_type=pl.FP32)
+            il_col = pl.col_expand_mul(il_ones, il_lane_ids)
+            il_dup_f = pl.cast(pl.cast(pl.mul(il_col, 0.5), target_type=pl.INT32, mode="trunc"), target_type=pl.FP32)
+            il_lane = pl.sub(il_col, pl.mul(il_dup_f, 2.0))
+            il_sign = pl.sub(pl.mul(il_lane, 2.0), 1.0)
+            rope_sin_rows = pl.load(freqs_sin, [rope_t0, 0], [CSA_ROPE_SIGN_T_TILE, ROPE_HEAD_DIM],
                                     valid_shape=[rope_rows, ROPE_HEAD_DIM])
             rope_sign_rows = pl.set_validshape(il_sign, rope_rows, ROPE_HEAD_DIM)
             pl.store(pl.mul(rope_sin_rows, rope_sign_rows), [rope_t0, 0], idx_sin_signed)

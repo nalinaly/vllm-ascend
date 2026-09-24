@@ -117,7 +117,10 @@ ATTENTION_WINDOW_ROWS = LOCAL_O_GROUPS * GROUP_T_PAD
 
 PUBLISH_GROUPS = H_TILE // HEADS_PER_GROUP
 
-ROPE_CS_T_TILE = 8
+# 每块正好一个请求：上游 e68e091 把 RoPE 行块绑定到 S，S=6 时 t_dim=batch*S 整除，
+# 不再有尾块。原值 8 与 S 无关，batch*6 常不是 8 的倍数，每轮都要处理残块。
+ROPE_CS_T_TILE = S
+ROPE_CS_WORKERS = 16
 
 TOPK = WIN + CMP_TOPK
 
@@ -419,7 +422,10 @@ def sparse_attn_csa(
     rope_sin_signed = pl.create_tensor([T_PAD, ROPE_DIM], dtype=pl.FP32)
     # Inverse-RoPE lane-swap index.
     rope_swap_idx = pl.create_tensor([H_TILE, ROPE_DIM], dtype=pl.INT32)
-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="rope_cs", allow_early_resolve=True) as rope_tid:
+    # 换算索引与逐块 RoPE 拆成两个任务：前者是与 t_dim 无关的一次性小表，后者逐块可并行。
+    # 合在一个 CORE_GROUP 任务里时整段串行，泳道实测 rope_cs count=1、Exec 9.24us 却占满
+    # 一个串行窗口。拆开后 rope_cs 走 SPMD，通过 deps 保证换算表先建好。
+    with pl.at(level=pl.Level.CORE_GROUP, name_hint="rope_swap") as swap_tid:
         sw_ones = pl.full([H_TILE, ROPE_DIM], dtype=pl.FP32, value=1.0)
         sw_idx_f = pl.cast(pl.arange(0, [1, ROPE_DIM], dtype=pl.INT32), target_type=pl.FP32)
         sw_col = pl.col_expand_mul(sw_ones, sw_idx_f)
@@ -429,18 +435,23 @@ def sparse_attn_csa(
         sw_swap_f = pl.sub(pl.add(sw_col, 1.0), pl.mul(sw_lane, 2.0))
         rope_swap_idx[0:H_TILE, 0:ROPE_DIM] = pl.cast(sw_swap_f, target_type=pl.INT32)
 
-        cs_ones = pl.tile.full([ROPE_CS_T_TILE, ROPE_DIM], dtype=pl.FP32, value=1.0)
-        cs_idx_f = pl.cast(pl.tile.arange(0, [1, ROPE_DIM], dtype=pl.INT32), target_type=pl.FP32)
-        cs_col = pl.col_expand_mul(cs_ones, cs_idx_f)
-        cs_dup_i32 = pl.cast(pl.mul(cs_col, 0.5), target_type=pl.INT32, mode="trunc")
-        cs_dup_f = pl.cast(cs_dup_i32, target_type=pl.FP32)
-        cs_lane = pl.sub(cs_col, pl.mul(cs_dup_f, 2.0))
-        cs_sign = pl.neg(pl.sub(pl.mul(cs_lane, 2.0), 1.0))
-        for cs_rb in pl.range(rope_cs_blocks):
+    with pl.spmd(pl.min(rope_cs_blocks, ROPE_CS_WORKERS), name_hint="rope_cs",
+                 deps=[swap_tid], allow_early_resolve=True) as rope_tid:
+        for cs_rb in pl.range(pl.tile.get_block_idx(), rope_cs_blocks,
+                              pl.min(rope_cs_blocks, ROPE_CS_WORKERS)):
             cs_t0 = cs_rb * ROPE_CS_T_TILE
             cs_rows = pl.min(ROPE_CS_T_TILE, t_dim - cs_t0)
+            # 符号表按块重算：SPMD 下每个 worker 要有自己的一份，不能在区外共享。
+            cs_ones = pl.tile.full([ROPE_CS_T_TILE, ROPE_DIM], dtype=pl.FP32, value=1.0)
+            cs_idx_f = pl.cast(pl.tile.arange(0, [1, ROPE_DIM], dtype=pl.INT32), target_type=pl.FP32)
+            cs_col = pl.col_expand_mul(cs_ones, cs_idx_f)
+            cs_dup_i32 = pl.cast(pl.mul(cs_col, 0.5), target_type=pl.INT32, mode="trunc")
+            cs_dup_f = pl.cast(cs_dup_i32, target_type=pl.FP32)
+            cs_lane = pl.sub(cs_col, pl.mul(cs_dup_f, 2.0))
+            cs_sign = pl.neg(pl.sub(pl.mul(cs_lane, 2.0), 1.0))
             cs_sin = pl.load(freqs_sin, [cs_t0, 0], [ROPE_CS_T_TILE, ROPE_DIM],
                              valid_shape=[cs_rows, ROPE_DIM])
+            # tile 绑定到 S 后 cs_rows 恒等于 ROPE_CS_T_TILE，保留 valid_shape 只作兜底。
             cs_sign_rows = pl.set_validshape(cs_sign, cs_rows, ROPE_DIM)
             pl.store(pl.mul(cs_sin, cs_sign_rows), [cs_t0, 0], rope_sin_signed)
 
