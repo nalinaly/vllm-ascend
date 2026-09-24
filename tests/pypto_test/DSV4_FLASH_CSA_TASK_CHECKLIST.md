@@ -467,6 +467,20 @@ python tests/pypto_test/offline_pd/run.py profile \
 | T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | 自然接受长度、实际有效推进、输出数、各 rank 负载落盘；Native/PTO 同场景对齐 | T2.3 | 16 | 未开始 |
 | T2.5 | 决定 PyPTO `_resolve_compiled` 重复遍历 AST 的处置 | 该路径在 PyPTO 内，按约束不自行修改。需用户决定走上游还是本地方案；在此之前只记录，不改 | T2.1 | 否 | **待用户决定** |
 
+### 多批循环任务会死在批次边界，一批一个任务
+
+T3.2 连续三次报 `exit=130`（SIGINT），起初误判为"本地前台 python 干扰"——那个假设已被推翻：
+第三次中断时没有跑任何导入 vllm／torch_npu 的本地命令。
+
+真因：**一批 16 个 rank 进程拆解时有 SIGINT 传播到整个进程组，把外层 bash 循环一并带走**。
+证据是 `v2_b16` 的 16 份 rank json 齐全（B=16 实际跑完了），任务日志里
+`===== SWEEP B=16 =====` 之后直接是 `[npu-lock] 已释放设备`，下一批的标记从未打印，
+而各 rank 日志尾部是 vLLM 关停期的 `ConnectionRefusedError`。对照组是单命令任务
+（泳道、单个 decode）全部 `exit=0`，只有多批循环任务死，且每次都死在批次边界。
+
+处置：**不要在一个 task 里用 shell 循环串多批模型运行**，每批单独提交一个 task。
+三次浪费的排队时间都来自这一点。
+
 `tests/pypto_test/offline_pd/run.py` 已有 `profile`／`profile-export`／`profile-compare`／
 `swimlane`／`swimlane-export` 命令，命令行见[离线 P/D 方案](DSV4_FLASH_CSA_OFFLINE_PD.md)。
 
@@ -523,7 +537,7 @@ PTO kernel 内部各流水线（MTE／Vector／Cube／Scalar）的占用，属�
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | T3.1 | 扩展离线 P 长场景（原 A3） | **已完成**：五档全部生成并通过 audit，每档四种输入。H4095 710M（1761 处非致命报告项）、H32767 3.4G（零）、H131071 13G（零）、H131072 13G（零，2¹⁷ 边界）、H131073 13G（零）。几何／布局／覆盖／history 校验全过，可交给 D 使用。四档对照坐实"只有 H4095 有跨副本差异"，成因见上方确定性一节 | — | 16 | **已完成** |
-| T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32，GBS=16×B。**B=40 已按用户 2026-09-24 的决定去掉**——上线口径 `--max-num-seqs 32`（`dsv4_perf_accuracy_20260827/runtime/decode/run_dp_template.sh`），40 超出口径。先 B1/B8 确认新路径再按资源扩展；记录真实 batch、各层 PTO 命中与 Native 回退，不只记名义 BS | T1.9 | 16 | 未开始 |
+| T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32，GBS=16×B。**B=40 已去掉**（上线口径 `--max-num-seqs 32`）。**进行中**：v2 轮（捕获期计数已修）B=1/8/16 已出，16 个 rank 齐全，21 个目标层全部命中 PTO、无静默回退，捕获期 PTO 命中随 batch 线性增长（42/294/546，Native 固定 63 即三档 `native_tokens1/6/256`）；B=24/32 排队中 | T1.9 | 16 | **进行中** |
 
 ### T3.1 现状：H4095 bank 已生成，但 audit FAIL（成因已查清，待用户定处置）
 
