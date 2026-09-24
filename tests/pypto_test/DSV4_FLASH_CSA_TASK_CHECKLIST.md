@@ -391,6 +391,33 @@ slot 指向 0 号 null block → 无害"。
 
 ## 2. T2　性能对照
 
+### 主要性能指标（2026-09-24 用户定）
+
+后续性能数据**以这一组配置为主**：
+
+| 项 | 值 | 说明 |
+| --- | --- | --- |
+| TP | 1 | 驱动 D 侧硬性 `tp=1`；`service_config.py` 也要求 TP=1 |
+| DP | 16 | 16 卡各一个 rank |
+| EP | 16 | `enable_expert_parallel=True`，EP world size = TP×DP |
+| S | 6 | `DECODE_SEQ = 1 + DSPARK_SPEC_TOKENS`，恒定 |
+| **B** | **16** | 每卡 16，GBS = 16×16 = 256 |
+| **seqlen** | **8192** | `h8192_bank`，四种输入 |
+
+命令形态：
+
+```
+python tests/pypto_test/offline_pd/run.py profile \
+  --bank .../h8192_bank --graph-mode full_decode_only \
+  --batch 16 --backend {native,pto}
+```
+
+档位说明：`max_num_seqs=16` 时对齐后的档位为
+`[6,12,18,24,36,42,48,60,66,72,84,90,96]`，16 条请求 = 96 token **精确命中 96 档**，
+不产生档位补齐；补位只来自 DP。这与"主要指标"的定位自洽。
+
+
+
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | 两侧同配置、同 bank 初态；给出每步耗时与设备占用对照；明确标注这是图模式结果 | T1.9 | 16 | 未开始 |
