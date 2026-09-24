@@ -58,9 +58,30 @@
 | T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数与 slot 探针 | **基本完成，余一条路径未覆盖**。空转已证实：rank0 比 rank1 多 7 次 dummy（26 vs 19），与提前 48 token≈8 步吻合，是直接计数而非耗时推断。无越界读 ✅；输出无非有限值 ✅（rank1 与基线逐 token 相同，空 rank 不影响其余 rank）；**主 slot 路径不写 cache ✅ 实测**（`accept_t16_slots_v2`：六个 cache group 的 slot mapping 全为 -1）。**未覆盖**：compact slot mapping 由算子在图内现算，不受那次 fill 影响，需读图内产出的 compact slot 张量才能验 | T1.4 | 16 | **基本完成** |
 | T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
-| T1.9 | 拿掉 DP 图模式闸门 | `service_config.py:69` | T1.8 通过后删除该 `raise`；删除前后各跑一次同配置，确认行为符合预期 | T1.8 | 16 | 未开始 |
+| T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已执行（`05ba642`），顺序按用户 2026-09-24 的决定提前**：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，之前只是算子 padding 没完善，既然基本处理了就应该放开闸门遇到问题解决具体问题"。删除后 `_sync_metadata_across_dp` 会真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景 | — | 16 | **已执行，待 D01～D05 验证** |
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
+
+### 验收口径与 DP 补齐的定位（2026-09-24 用户定）
+
+**一、验收一律用生产口径 `max_num_seqs=40`，不用小 batch 图快。**
+小 batch 会掩盖问题：`max_num_seqs=5` 时对齐后的档位 `[6,12,18,24,30]` 是稠密的，
+每个 batch 精确命中、档位补齐根本不发生——本轮那条"档位对齐消除了补位"的错误
+结论就是这么来的。生产的 40 对应 `[6,12,18,24,36,42,...,240]`，稀疏，
+9/40 的 batch 需要补位。
+
+**二、DP 该补齐的就补齐，否则性能 GAP 全落在 MoE 的集合通信上。**
+这条纠正了"补位是额外开销、能省则省"的直觉：各 rank token 数不齐时 MC2 没法按
+统一形状走，代价转嫁到 MoE 的集合通信，反而更贵。**跳过 DP 同步不是优化**，
+补齐才是生产该走的路。据此 T1.9 的闸门已提前移除（见上表）。
+
+**三、eager／非 aclgraph 路径也要补用例验证。**
+本轮的改动——kernel 的 `seq_lens` 守卫、compact 行号兜底、三道 host 闸门放开、
+档位对齐——同样会走到 eager 路径，不能只验图模式。eager 下
+`allow_dp_padding` 因 `cudagraph_mode == NONE` 而为假，也不注册捕获档位，
+**结构上不产生任何补位**，所以要验的是回归：补位守卫在无补位时是否彻底 no-op、
+输出有无变化。已排 `task_20260924_115638_182880813886`：eager 下 PTO、Native
+基线、以及 PTO 不均衡负载三组，均用 `--batch 40`。
 
 ### 档位为什么必须是 6 的倍数（2026-09-24 定论）
 
