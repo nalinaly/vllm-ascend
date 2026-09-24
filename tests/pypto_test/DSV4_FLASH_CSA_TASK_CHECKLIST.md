@@ -463,8 +463,8 @@ python tests/pypto_test/offline_pd/run.py profile \
 | --- | --- | --- | --- | --- | --- |
 | T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | `results/release_csa_perf_8k_20260924/` | **已完成**，按主要指标（b16/s6/TP1/EP-DP16/8k）在图模式下采完整 PyTorch profiling（CPU+NPU、Level1、带 device kernel、`with_stack=False`）。两侧采样窗口完全对齐（第 8/9/10 步，均 96 token / 16 请求），**输出逐 token 相同**。设备侧总耗时 Native 240,013µs vs PTO 347,302µs（**PTO 慢 45%**），kernel 记录数 7,520 vs 5,378。按引擎：AI_CPU 1,270 → **81,318**（主因）、MIX_AIC 91,468 → 141,966；AI_CORE、AI_VECTOR_CORE、MIX_AIV 三项 PTO 均更低。详见下方归因 | T1.9 | 16 | **已完成** |
 | T2.2 | 标注 eager 期结论的适用范围 | 已完成：验证日志新增第 98 节。第 95～97 节三轮全是 eager（当时图模式起不来），`_resolve_compiled` 按调用次数计费是 eager 特有现象，图模式下只在预热与捕获时走一遍。同时标注了两个未决前提：PTO 的 kernel 下发是否可被图捕获尚在 T1.4 验证中；本机关闭 `fuse_norm_quant` 偏离上线口径 | 无（不依赖 T2.1 数据） | 否 | **已完成** |
-| T2.3 | 稳态性能测量（原 A1） | **Native 侧已出**（`results/release_csa_steady_8k_20260924/native`）：16 rank、每 rank 62～63 个采样步、`sufficient=True`。中位：单步 p50 **55.77ms**、p95 **57.10ms**、每 rank **1635.07 token/s**、峰值显存 **50.93GiB**。口径：窗口内不加额外同步，单步耗时可能含等待上一步设备任务的时间，总和与吞吐可用、单步 p50/p95 为近似。PTO 侧重跑中 | T2.1 | 16 | **进行中** |
-| T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | **取数已接上并出首批数据**：走 `llm.get_metrics()` 公开出口（`SpecDecodingStats` 由 scheduler 聚合，与 worker 不同进程，`collective_rpc` 够不着）。Native 稳态轮实测 `num_drafts=1310`、`num_draft_tokens=6550`、`num_accepted_tokens=6400` → **自然接受长度 4.885**、**每步实际推进 5.885 token**、接受率 **97.7%**。按 T4.4 要求不注入假定值，取不到计数时记 `sufficient=false`。待 PTO 侧同场景数据做对齐 | T2.3 | 16 | **进行中** |
+| T2.3 | 稳态性能测量（原 A1） | **已完成**（`results/release_csa_steady_8k_20260924/`）。两侧各 16 rank、每 rank 62～63 个采样步、`sufficient=True`。中位对照：单步 p50 **55.77ms → 66.69ms（1.20×）**、p95 57.10 → 67.59ms（1.18×）、每 rank **1635.07 → 1382.10 token/s（0.85×）**、峰值显存 50.93 → 49.81GiB。即 **PTO 端到端慢 20%、吞吐为 Native 的 85%**，比按设备侧 kernel 算的差距小，因为端到端含 MoE 与通信等两侧共有部分。口径：窗口内不加额外同步，总和与吞吐可用、单步分位数为近似 | T2.1 | 16 | **已完成** |
+| T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | **已完成**。走 `llm.get_metrics()` 公开出口。Native 与 PTO 同场景**逐个计数完全相同**：`num_drafts=1310`、`num_draft_tokens=6550`、`num_accepted_tokens=6400` → 自然接受长度 **4.885**、每步实际推进 **5.885 token**、接受率 **97.7%**。这比输出逐 token 相同更强——连 DSpark 每步接受几个草稿都一致。按 T4.4 要求不注入任何假定值 | T2.3 | 16 | **已完成** |
 | T2.5 | 决定 PyPTO `_resolve_compiled` 重复遍历 AST 的处置 | 该路径在 PyPTO 内，按约束不自行修改。需用户决定走上游还是本地方案；在此之前只记录，不改 | T2.1 | 否 | **待用户决定** |
 
 ### T3.2 已出三点的完整分析（B=1／8／16）
@@ -638,7 +638,7 @@ PTO kernel 内部各流水线（MTE／Vector／Cube／Scalar）的占用，属�
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | T3.1 | 扩展离线 P 长场景（原 A3） | **已完成**：五档全部生成并通过 audit，每档四种输入。H4095 710M（1761 处非致命报告项）、H32767 3.4G（零）、H131071 13G（零）、H131072 13G（零，2¹⁷ 边界）、H131073 13G（零）。几何／布局／覆盖／history 校验全过，可交给 D 使用。四档对照坐实"只有 H4095 有跨副本差异"，成因见上方确定性一节 | — | 16 | **已完成** |
-| T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32，GBS=16×B。**B=40 已去掉**（上线口径 `--max-num-seqs 32`）。**进行中**：v2 轮（捕获期计数已修）B=1/8/16 已出，16 个 rank 齐全，21 个目标层全部命中 PTO、无静默回退，捕获期 PTO 命中随 batch 线性增长（42/294/546，Native 固定 63 即三档 `native_tokens1/6/256`）；B=24/32 排队中 | T1.9 | 16 | **进行中** |
+| T3.2 | 扩展 D batch（原 A4） | **已完成**：B=1／8／16／24／32 五档全出，每档 16 rank、21 个目标层、输出组恒为 4。PTO 捕获档位随 batch 增长——B=16 十三档、B=24 十九档、B=32 **二十五档（6…192）**，全部是 6 的倍数；Native 只出现在 `tokens1`／该 batch 最大值／`tokens256` 三个非 decode 形状上，不构成 decode 路径回退。**B=40 按用户 2026-09-24 的追加要求另测功能**（超出 `--max-num-seqs 32` 的上线口径，只验功能是否正常） | T1.9 | 16 | **已完成** |
 
 ### T3.1 现状：H4095 bank 已生成，但 audit FAIL（成因已查清，待用户定处置）
 
