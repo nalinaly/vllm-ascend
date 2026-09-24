@@ -492,6 +492,50 @@ Native 侧只在 `tokens1`、`tokens256` 和该 batch 的最大 token 数上各�
 
 B=24／32 因上述 `exit=130` 未出，T3.2 保持"进行中"。
 
+### 与上游 pypto-lib 的性能对照：92% 的差距在精度锁定代码里
+
+用户 2026-09-24 提供了上游参考实现在**同配置**（b=16、S=6、TP1、8k）下的泳道
+`results/release_csa_perf_8k_20260924/shangyou-merged_swimlane_20260924_005402.json`，
+可与我们的逐任务对照。核数分配两边一致（48 AIV／24 AIC／16／8），负载形状可比。
+
+| | 上游 | 我们（移植后） |
+| --- | --- | --- |
+| 窗口跨度 | 728.0µs | 1178.7µs |
+| kernel 合计 | 26,821.8µs | 45,496.5µs |
+
+总差距 18,674.7µs，其中**精度锁定任务占 17,123.2µs（92%）**，其余仅 1,551.5µs（8%）。
+
+所谓"精度锁定"指该实现是为对齐 Native 的数值行为而刻意写成现在这样，代码里有
+明确注释或 `NATIVE_*` 常量为证，改动即改变数值：
+
+| 任务 | 上游 | 我们 | 差 | 锁定依据 |
+| --- | --- | --- | --- | --- |
+| `indexer_score_topk_leaf_aiv` | 3,077 | 8,304 | 5,227 | `NATIVE_QLI_QK_SCALE=1/1024`、FP16 QK tile + Cube 规约；上游用 Vector `col_sum` |
+| `qk_pv_aiv` | 6,731 | 11,892 | 5,160 | 跨 Native 512 候选块保持单个 FP32 PV 累加器；概率用 CAST_ROUND；每 512 候选后舍入 |
+| `indexer_score_topk_leaf_aic` | 1,512 | 4,151 | 2,639 | 同上 |
+| `qk_pv_aic` | 3,310 | 5,903 | 2,594 | 同上 |
+| `qr_proj_matmul` | 322 | 1,144 | 822 | `QR_NATIVE_SHIFT_*` 重排 K 累加序 |
+| `weights_proj` | 85.5 | 523 | 438 | 针对 CANN9.0 A3 MatMulV2 遍历序的 `k_order` 重排，FP32 累加 |
+
+**结论：PTO 与 Native 输出逐 token 相同这件事，当前代价是约 1.6 倍的 kernel 时间。**
+用户 2026-09-24 定"影响精度的先不动"，因此这些项一律不改；要继续压性能，必须先
+由用户决定是否放开某一项的精度锁定（`qk_pv` 单项就值 7,754µs）。
+
+上游的 `indexer_score_topk_buffered` 分支**不适用**：它要求 `b_dim >= 64` 且
+history >= 32768，我们是 b=16／8k，两条都不满足。
+
+### 性能移植四批的实测效果
+
+| 批 | 改动 | 是否在关键路径 | 实测 |
+| --- | --- | --- | --- |
+| 1 | `rope_cs` 拆 `rope_swap` + SPMD、`ROPE_CS_T_TILE` 8→S；`csa_rope_sign` 拆 `csa_row_offsets` + SPMD | 否 | 间接使 `merge_norm` 由 1,404.9 降到 927.4（0.66×） |
+| 2 | `oproj_token_scale` → 按 token 块 SPMD | 是（第 4 位） | 窗口 1229.9→1178.7 |
+| 3 | `idx_qr_proj_matmul` 复用整条 K 权重块 | 是（第 10 位） | 659.8→462.4（0.70×），**追平上游 1.0×** |
+| 4 | `qproj_matmul` 的 `QPROJ_MM_N_TILE` 512→256 | 是 | 待验证 |
+
+第 1 批当时是照函数表的 Exec% 挑的，没先算关键路径，**选点方法有误**；改动本身仍有价值
+（修了 `ROPE_CS_T_TILE` 与 S 不匹配），且间接解开了 `merge_norm`。
+
 ### 排队任务期间不要改 kernel 源文件
 
 `@pl.jit` 在编译时会**重新读源文件**定位函数定义。若在任务加载模型的过程中改动该文件，
