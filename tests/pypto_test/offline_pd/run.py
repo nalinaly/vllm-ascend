@@ -672,6 +672,12 @@ def launch(args):
             raise ValueError("P cache bank must pass audit before D loads it")
     if args.command == "swimlane" and args.backend != "pto":
         raise ValueError("Swimlane capture requires --backend pto")
+    if args.command == "swimlane" and args.graph_mode != "eager":
+        # 泳道窗口挂在 CSAServiceRuntime.__call__ 上，而 ACL Graph 下 decode 步是图回放，
+        # 不再执行 Python forward，包装函数一次都进不去（实测 captured=0）。芯片泳道记录的是
+        # kernel 内部各流水线的占用，属于 kernel 自身性质，与它由图回放还是 eager 下发无关，
+        # 所以泳道一律用 eager 采，不跟随 decode 性能的 FULL_DECODE_ONLY 口径。
+        raise ValueError("Swimlane capture requires --graph-mode eager")
     if args.command == "padding-capture" and args.graph_mode == "eager":
         # 补位只来自图模式：eager 下 cudagraph_mode 为 NONE，allow_dp_padding 随之为 False，
         # 也不注册捕获档位，结构上不产生补位请求（首轮 eager 采集 32 步 0 命中已证实）。

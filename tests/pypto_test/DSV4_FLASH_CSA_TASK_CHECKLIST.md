@@ -470,6 +470,23 @@ python tests/pypto_test/offline_pd/run.py profile \
 `tests/pypto_test/offline_pd/run.py` 已有 `profile`／`profile-export`／`profile-compare`／
 `swimlane`／`swimlane-export` 命令，命令行见[离线 P/D 方案](DSV4_FLASH_CSA_OFFLINE_PD.md)。
 
+### 泳道图必须在 eager 下采
+
+首轮泳道采集（`results/release_csa_perf_8k_20260924/swimlane/`）跟着 decode 的上线口径
+用了 `FULL_DECODE_ONLY`，任务队列报 exit=0，但进程内抛了
+`RuntimeError: Expected exactly one DFX window, captured 0`——**一个采集窗口都没开成**。
+
+成因是采集窗口挂在 Python 层：`offline_begin_swimlane` 把 `CSAServiceRuntime.__call__`
+换成在真实 CSA 调用前后执行 `pypto.torch.begin_dfx()`／`end_dfx()` 的包装。ACL Graph 下
+decode 步是图回放，不再执行 Python forward，包装函数一次都进不去。这与本项目里
+forward hook 在图回放期间不触发是同一件事。
+
+用户 2026-09-24 明确：**泳道图需要在 eager 模式下采**。这在方法上也成立——芯片泳道记录的是
+PTO kernel 内部各流水线（MTE／Vector／Cube／Scalar）的占用，属于 kernel 自身性质，
+与它由图回放还是 eager 下发无关，变的只是主机侧下发路径。因此泳道**不跟随** decode
+性能测量的 FULL_DECODE_ONLY 口径。`run.py` 已加守卫：`swimlane` 命令要求
+`--graph-mode eager`，否则直接报错，与 `padding-capture` 拒绝 eager 相对称。
+
 ## 3. T3　场景扩展
 
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
