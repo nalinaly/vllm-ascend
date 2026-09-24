@@ -5,7 +5,7 @@
 不写"验证一下""确认无误"这类无法判定的措辞。
 
 状态口径：`未开始` / `进行中` / `已完成` / `暂停`（暂停项不得自行恢复）。
-截至 2026-09-24，已完成 T1.1～T1.4、T2.2、T3.1 与 T5.1～T5.4（共 11 项）；T1.5／T1.6／T2.5 待用户拍板，T1.7 之后的链路随之待启。
+截至 2026-09-24，已完成 T1.1～T1.4、T1.7～T1.9、T2.2、T3.1 与 T5.1～T5.4（共 15 项）；T1.6 基本完成（compact slot 一条待定）、T1.10 低优先级；T1.5 落点与 T2.5 待用户拍板。
 
 相关文档：[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)、
 [跨会话交接](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)、
@@ -56,9 +56,9 @@
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已通过**：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同（`accept_t14_pto_v5`）；补位档位全部进入图重放（`accept_t13_padded`：`replay_padded=62`、`allowed=62`、`rejected=0`），不再静默回退 Native | T1.3 | 16 | **已完成** |
 | T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
 | T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数与 slot 探针 | **基本完成，余一条路径未覆盖**。空转已证实：rank0 比 rank1 多 7 次 dummy（26 vs 19），与提前 48 token≈8 步吻合，是直接计数而非耗时推断。无越界读 ✅；输出无非有限值 ✅（rank1 与基线逐 token 相同，空 rank 不影响其余 rank）；**主 slot 路径不写 cache ✅ 实测**（`accept_t16_slots_v2`：六个 cache group 的 slot mapping 全为 -1）。**未覆盖**：compact slot mapping 由算子在图内现算，不受那次 fill 影响，需读图内产出的 compact slot 张量才能验 | T1.4 | 16 | **基本完成** |
-| T1.7 | D01～D05 的 DP 验证 | `offline_pd/run.py` 的 `--rank-batches` | **D01／D02 已通过**（`d01_b32`／`d02_b32`，上线口径 batch 32、闸门已移除）：D01 rank0 submitted=4、`padded_builds` 208/256，D02 换成 rank1 补 208 次，补位量随负载对称反转，无"rank0 特殊"假设；`replay_padded=26`、`allowed=26`、**`rejected=0`**，补位档位全部进入图重放。低负载 rank 的补位占比 87.5%，陈旧 positions 行数比此前验过的大一个量级，T1.3 的判据兜住了。**输出正确性已闭环**：D01／D02／eager 不均衡三组与 Native 同配置对照，16 个 rank 全部逐 token 完全相同（`d01_b32_native`／`d02_b32_native`／`eager_imb_native`）。**D03～D05 的行为也已通过**（`d03a_b32`／`d03b_b32`／`d04_b32`／`d05_b32`）：D03a (8,24)、D03b (16,32) 两组 rank0 补位均为 208/256、rank1 均为 104/256——补位量由"补到全局最大值"决定，与自己提交多少无关；D04 用 `--rank-decode-tokens 16 64` 造出真实空转，rank0 `dummy_runs=26` 而 rank1 仅 5 次，多出的 21 次正是空转期的 dummy batch，是直接计数而非耗时推断；D05 用 `--stagger` 使两 rank 跨越的档位序列不同（补位 96 vs 80、`replay_padded` 13 vs 20），**同一张捕获图在不同补位量下反复重放**，四组 `rejected` 全为 0。输出正确性已排 `task_20260924_135839_89401032544` 对照 | T1.9 | 16 | **进行中** |
-| T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
-| T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已执行（`05ba642`），顺序按用户 2026-09-24 的决定提前**：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，之前只是算子 padding 没完善，既然基本处理了就应该放开闸门遇到问题解决具体问题"。删除后 `_sync_metadata_across_dp` 会真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景 | — | 16 | **已执行，待 D01～D05 验证** |
+| T1.7 | D01～D05 的 DP 验证 | `offline_pd/run.py` 的 `--rank-batches`／`--rank-decode-tokens`／`--stagger` | **已完成**。六组按上线口径（batch 32、`HCCL_BUFFSIZE=1800`、DP 闸门已移除）全部通过，`rejected` 无一例外为 0，且**输出与 Native 逐 token 完全相同，16 个 rank 无一例外**。D01 (4,32)／D02 (32,4) 补位量随负载对称反转；D03a (8,24) 与 D03b (16,32) 补位量完全相同（208/104），说明补的是到全局最大值的差额、与自己提交多少无关；D04 用 `--rank-decode-tokens 16 64` 造真实空转，rank0 `dummy_runs=26` vs rank1 的 5，是直接计数而非耗时推断；D05 用 `--stagger` 让两 rank 跨越不同档位序列（补位 96 vs 80、重放 13 vs 20），同一张捕获图在不同补位量下反复重放无串数据、无重新编译 | T1.9 | 16 | **已完成** |
+| T1.8 | DP16 完整验证 | 离线 P/D 入口 | **已完成**：本轮 D01～D05 即在 DP16／EP16 下跑的（驱动硬性 `tp=1, dp=16`），见 T1.7。通信选择记录：档位按 `uniform_decode_query_len` 对齐后 `mc2_tokens_capacity` 与 `potential_max_tokens` 相等，A3 选中 MC2 | T1.7 | 16 | **已完成** |
+| T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已完成**（`05ba642`）。顺序按用户 2026-09-24 的决定提前：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，放开后遇到问题解决具体问题"。移除后 `_sync_metadata_across_dp` 真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景并全部通过 | — | 16 | **已完成** |
 | T1.10 | eager + embedding_tp 的 DP 补齐 | `finegrained_tp_config.embedding_tensor_parallel_size` + eager 用例 | 开启 embedding TP 后在 eager 下跑通：DP 补齐正确产生、PTO 输出与 Native 一致、`_forward_embed_tp` 的静态缓冲容量不被超出。**低优先级**（用户 2026-09-24 定），排在 D01～D05 之后 | T1.9 | 16 | 未开始（低优先级） |
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
@@ -107,8 +107,7 @@ NEEDED = ((maxBs*8704*16*16) + (maxBs*8192*6)) * 2 = 1043MB, HCCL_BUFFSIZE = 102
 maxBs=192、需求约 834MB < 1800MB，**上线配置自洽**。驱动已改为 prefill 1024、
 decode 1800，与上线一致。
 
-**待确认**：清单 T3.2 的档位表含 B=40，但上线只到 32。40 用 1800MB 能跑
-（需求 1043MB）但超出上线口径，是否保留为压力档待用户定。
+**已定**：用户 2026-09-24 定「以 32 为主验收」，T3.2 的档位表去掉 B=40。
 
 ### 验收口径与 DP 补齐的定位（2026-09-24 用户定）
 
@@ -415,7 +414,7 @@ slot 指向 0 号 null block → 无害"。
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | T3.1 | 扩展离线 P 长场景（原 A3） | **已完成**：五档全部生成并通过 audit，每档四种输入。H4095 710M（1761 处非致命报告项）、H32767 3.4G（零）、H131071 13G（零）、H131072 13G（零，2¹⁷ 边界）、H131073 13G（零）。几何／布局／覆盖／history 校验全过，可交给 D 使用。四档对照坐实"只有 H4095 有跨副本差异"，成因见上方确定性一节 | — | 16 | **已完成** |
-| T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32/40，GBS=16×B；先 B1/B8 确认新路径再按资源扩展；记录真实 batch、各层 PTO 命中与 Native 回退，不只记名义 BS | T1.9 | 16 | 未开始 |
+| T3.2 | 扩展 D batch（原 A4） | 每卡 B=1/4/8/16/24/32，GBS=16×B。**B=40 已按用户 2026-09-24 的决定去掉**——上线口径 `--max-num-seqs 32`（`dsv4_perf_accuracy_20260827/runtime/decode/run_dp_template.sh`），40 超出口径。先 B1/B8 确认新路径再按资源扩展；记录真实 batch、各层 PTO 命中与 Native 回退，不只记名义 BS | T1.9 | 16 | 未开始 |
 
 ### T3.1 现状：H4095 bank 已生成，但 audit FAIL（成因已查清，待用户定处置）
 
