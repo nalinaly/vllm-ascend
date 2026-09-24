@@ -387,13 +387,28 @@ class OfflineCSAObserver:
             record = {"dummy_index": state["dummy_runs"], "num_tokens": int(num_tokens),
                       "groups": {}}
             for gid in range(len(runner.kv_cache_config.kv_cache_groups)):
-                slots = runner.input_batch.block_table[gid].slot_mapping.gpu
-                flat = slots.reshape(-1)
-                record["groups"][str(gid)] = {
+                table = runner.input_batch.block_table[gid]
+                flat = table.slot_mapping.gpu.reshape(-1)
+                entry = {
                     "count": int(flat.numel()),
                     "non_negative": int((flat >= 0).sum().item()),
                     "max": int(flat.max().item()),
                 }
+                # compact slot mapping 由算子在图内从 start_pos 与 block_table 现算，
+                # 不来自上面那个被 fill 成 -1 的缓冲。但它的**输入**同样是常驻的，
+                # 这里一并读：若 block_table 全为 0，算出的 compact slot 必然指向
+                # 0 号页，而 0 号页是 vLLM 保留的 null block（永不分配给任何请求），
+                # 那条写入路径就是无害的。
+                blocks = getattr(table, "block_table", None)
+                gpu = getattr(blocks, "gpu", blocks)
+                if gpu is not None and hasattr(gpu, "reshape"):
+                    bt = gpu.reshape(-1)
+                    entry["block_table"] = {
+                        "count": int(bt.numel()),
+                        "non_zero": int((bt != 0).sum().item()),
+                        "max": int(bt.max().item()),
+                    }
+                record["groups"][str(gid)] = entry
             state["slot_samples"] += 1
             state["slot_probe_results"].append(record)
         except Exception as error:
