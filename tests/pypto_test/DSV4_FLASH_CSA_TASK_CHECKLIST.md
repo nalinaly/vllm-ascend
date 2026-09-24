@@ -467,19 +467,32 @@ python tests/pypto_test/offline_pd/run.py profile \
 | T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | 自然接受长度、实际有效推进、输出数、各 rank 负载落盘；Native/PTO 同场景对齐 | T2.3 | 16 | 未开始 |
 | T2.5 | 决定 PyPTO `_resolve_compiled` 重复遍历 AST 的处置 | 该路径在 PyPTO 内，按约束不自行修改。需用户决定走上游还是本地方案；在此之前只记录，不改 | T2.1 | 否 | **待用户决定** |
 
-### 多批循环任务会死在批次边界，一批一个任务
+### 排队任务期间不要改 kernel 源文件
 
-T3.2 连续三次报 `exit=130`（SIGINT），起初误判为"本地前台 python 干扰"——那个假设已被推翻：
-第三次中断时没有跑任何导入 vllm／torch_npu 的本地命令。
+`@pl.jit` 在编译时会**重新读源文件**定位函数定义。若在任务加载模型的过程中改动该文件，
+JIT 读到的已是新内容，直接报
+`OSError: @pl.jit could not locate function definition '<name>' in its own source file`。
 
-真因：**一批 16 个 rank 进程拆解时有 SIGINT 传播到整个进程组，把外层 bash 循环一并带走**。
-证据是 `v2_b16` 的 16 份 rank json 齐全（B=16 实际跑完了），任务日志里
-`===== SWEEP B=16 =====` 之后直接是 `[npu-lock] 已释放设备`，下一批的标记从未打印，
-而各 rank 日志尾部是 vLLM 关停期的 `ConnectionRefusedError`。对照组是单命令任务
-（泳道、单个 decode）全部 `exit=0`，只有多批循环任务死，且每次都死在批次边界。
+实测：PTO steady 任务 17:50:53 启动、17:53:04 报该错，而 `decode_indexer.py` 的
+mtime 是 17:51:53，正落在窗口内。这不是代码缺陷，是操作失误，重跑即可。
 
-处置：**不要在一个 task 里用 shell 循环串多批模型运行**，每批单独提交一个 task。
-三次浪费的排队时间都来自这一点。
+**规则：有任务在队列里排着或正在跑时，不要编辑它会加载的 kernel 源文件。**
+改动要么等任务落地，要么先把任务取消。
+
+### exit=130 的成因尚未查清，不要再给结论
+
+T3.2 的多轮任务反复报 `exit=130`（SIGINT）。期间我给过两个归因，**都已被证伪**：
+
+1. "本地前台 python 导入 vllm 干扰队列任务"——第三次中断时没有跑任何此类命令。
+2. "多批 shell 循环死在批次边界"——B=24／B=32 改成单命令任务后一样 `exit=130`。
+
+现有事实，不做进一步推断：
+
+- 父进程**零输出**被 SIGINT 带走（`launch()` 把 SIGINT 转成 `SystemExit(130)`，不打印）
+- 16 个 rank 全部停在 **ACL 图捕获 17/19**，日志为 `Parent process exited, terminating worker queues`
+- B=1／8／16 全部成功，B=24／32 全部失败
+- 时长 5m7s 与 10m16s，而同期 13m38s 的 steady 任务正常结束，**不是超时**
+- 队列日志除设备锁的获取与释放外没有任何其他信息
 
 `tests/pypto_test/offline_pd/run.py` 已有 `profile`／`profile-export`／`profile-compare`／
 `swimlane`／`swimlane-export` 命令，命令行见[离线 P/D 方案](DSV4_FLASH_CSA_OFFLINE_PD.md)。
