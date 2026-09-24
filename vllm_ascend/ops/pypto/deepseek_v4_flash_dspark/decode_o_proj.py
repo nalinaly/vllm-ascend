@@ -86,6 +86,7 @@ PROJ_B_MM_N_TILE = 256
 PROJ_B_ACT_N_TILE = 512
 
 QUANT_TOKEN_TILE = 8
+QUANT_TASK_T_TILE = 32  # 每个量化任务负责的 token 跨度，沿用上游 e68e091 的调优值
 
 PROJ_B_D_TILE = 512  # proj_b_mm D chunk per task; coarser starves the 24 AIC cores
 
@@ -220,13 +221,23 @@ def decode_o_proj_tp1(
 
             proj_a_tids[g] = pa_tid
 
-    with pl.at(
-        level=pl.Level.CORE_GROUP,
+    # 逐 token 块的标度彼此独立，原先整段在一个 CORE_GROUP 任务里串行遍历全部 token，
+    # 泳道实测 count=1、Exec 82.50us、Tail OH 50.56us。改成按 token 块分的 SPMD。
+    #
+    # 注意这里只改调度，不合并进 quant。上游 e68e091 把标度算进了 quant 并按 group
+    # 各算各的 amax（act_scale_dq[g:g+1]），而我们的契约是每 token 跨全部 O_GROUPS
+    # 取 amax（act_scale_dq[0:1]）并多做一次 BF16 round-trip，那是为了对齐 Native A3
+    # 的 dynamic_quant。照搬上游会改变量化语义，破坏与 Native 的逐 token 一致。
+    scale_blocks = (t_dim + QUANT_TASK_T_TILE - 1) // QUANT_TASK_T_TILE
+    with pl.spmd(
+        scale_blocks,
         name_hint="oproj_token_scale",
         deps=[proj_a_tids[i] for i in range(O_GROUPS)],
         allow_early_resolve=True,
     ) as scale_tid:
-        for qt in pl.pipeline(0, t_dim, QUANT_TOKEN_TILE, stage=2):
+        scale_start = pl.tile.get_block_idx() * QUANT_TASK_T_TILE
+        for qt in pl.pipeline(scale_start, pl.min(scale_start + QUANT_TASK_T_TILE, t_dim),
+                              QUANT_TOKEN_TILE, stage=2):
             token_amax = pl.full([1, QUANT_TOKEN_TILE], dtype=pl.FP32, value=INT8_AMAX_EPS)
             for scale_group in pl.range(O_GROUPS):
                 scale_col = scale_group * O_LORA
