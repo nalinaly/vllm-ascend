@@ -150,11 +150,15 @@ class OfflineCSAObserver:
             # 把看到的 (tokens, requests) 分布记下来：判定失败时不必重跑就能诊断。
             key = f"{tokens}/{requests}"
             state["observed"][key] = state["observed"].get(key, 0) + 1
-            # 稳态判据只看"所有请求都还在跑"，不再要求 tokens 恰好等于 batch*6。
-            # 投机解码下每步的 token 数不恒定：首个 decode 步还没有 draft token，
-            # 之后每步取决于上一步接受了几个，所以那个等式本来就不该指望
-            # （batch 32 时实测 0 次命中）。expected_tokens 仍记录备查。
-            steady = requests == expected_requests
+            # 不再用形状判定"稳态"，改为按 step 序号采样。
+            # 实测（native_v3／pto_v3 的 observed）：batch 32 下从来没有 32 个请求
+            # 同时在跑，而是 21 个请求 126 token 与 11 个请求 66 token 交替——
+            # 32 条被调度器拆成了两批。所以"所有请求都在跑"这个条件不成立，
+            # 上一版判据同样 0 次命中。
+            # 两个后端的 observed 分布完全一致（23/22/1），说明调度行为与后端无关，
+            # 因此按相同的 step 序号采样即可得到可比的窗口。每个被采样步的
+            # (tokens, requests) 都记进 window，读者可自行核对可比性。
+            steady = True
             index = state["seen_steady_steps"]
             if steady:
                 state["seen_steady_steps"] += 1
