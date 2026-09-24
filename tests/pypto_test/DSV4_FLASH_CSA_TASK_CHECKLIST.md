@@ -54,7 +54,7 @@
 | T1.2 | 设备侧确认 compact metadata 真实形状，并定夺有效性判据 | `offline_pd/observer.py` 的 `offline_begin/end_padding_capture`，`offline_pd/run.py` 的 `padding-capture` 命令 | 已完成，任务 `task_20260924_001111_370250932735`：compact 行数实测 8（初版预测 10，公式已更正）；补位请求 `seq_lens=0`、`start_pos=0`、页表行全零；补位段 positions 实测为上一步残留；据此选定方案 C（`seq_lens == 0`），D 因新请求 `start_pos` 同为 0 而有歧义 | T1.1 | 16 | **已完成** |
 | T1.3 | 加入设备端有效性判据并改四处索引 | 同左四个文件 | **代码已完成**（`4b40896`）：判据取 `kv_seq_lens[b] == 0`，四处均只把已有 `cmp_seq_lens`/`kv_seq_lens` 传入子函数，顶层签名不变（52 参数），无新增入参与缓冲；与 Native 的对照结论写入提交说明；CPU 全链 lowering PASS。**数值验收已通过**（`task_20260924_024451_206700130649`）：同一负载分别按档位 `12 30`与 `18 30` 跑，前者 256 次 build 中 248 次带补位、后者 152 次，补位量相差 96 次，而两轮输出**逐 token 完全相同**。另修复图捕获时 dummy run 的 compact 行越界（见 T1.Q2） | T1.2 | 16 | **已完成** |
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已通过**：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同（`accept_t14_pto_v5`）；补位档位全部进入图重放（`accept_t13_padded`：`replay_padded=62`、`allowed=62`、`rejected=0`），不再静默回退 Native | T1.3 | 16 | **已完成** |
-| T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
+| T1.5 | graph 覆盖 G04～G06 | 已由 D01～D05 在 16 卡离线 D 上覆盖，见下方对应关系 | **大部分已覆盖**：G04／G05／G06 与"同图不同补位量重放不串数据"四条均有 D01～D05 的实测证据（详见下节）；**唯"无 replay 期重新编译"一条缺直接证据**，`rejected=0` 只能证明没有回退 eager，证不了没有重新编译。落点之争已无实际意义——单卡链已死，而要验的内容在 16 卡上都验到了 | T1.4 | 16 | **大部分已覆盖，余一条待补** |
 | T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数与 slot 探针 | **基本完成，余一条路径未覆盖**。空转已证实：rank0 比 rank1 多 7 次 dummy（26 vs 19），与提前 48 token≈8 步吻合，是直接计数而非耗时推断。无越界读 ✅；输出无非有限值 ✅（rank1 与基线逐 token 相同，空 rank 不影响其余 rank）；**主 slot 路径不写 cache ✅ 实测**（`accept_t16_slots_v2`：六个 cache group 的 slot mapping 全为 -1）。**未覆盖**：compact slot mapping 由算子在图内现算，不受那次 fill 影响，需读图内产出的 compact slot 张量才能验 | T1.4 | 16 | **基本完成** |
 | T1.7 | D01～D05 的 DP 验证 | `offline_pd/run.py` 的 `--rank-batches`／`--rank-decode-tokens`／`--stagger` | **已完成**。六组按上线口径（batch 32、`HCCL_BUFFSIZE=1800`、DP 闸门已移除）全部通过，`rejected` 无一例外为 0，且**输出与 Native 逐 token 完全相同，16 个 rank 无一例外**。D01 (4,32)／D02 (32,4) 补位量随负载对称反转；D03a (8,24) 与 D03b (16,32) 补位量完全相同（208/104），说明补的是到全局最大值的差额、与自己提交多少无关；D04 用 `--rank-decode-tokens 16 64` 造真实空转，rank0 `dummy_runs=26` vs rank1 的 5，是直接计数而非耗时推断；D05 用 `--stagger` 让两 rank 跨越不同档位序列（补位 96 vs 80、重放 13 vs 20），同一张捕获图在不同补位量下反复重放无串数据、无重新编译 | T1.9 | 16 | **已完成** |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | **已完成**：本轮 D01～D05 即在 DP16／EP16 下跑的（驱动硬性 `tp=1, dp=16`），见 T1.7。通信选择记录：档位按 `uniform_decode_query_len` 对齐后 `mc2_tokens_capacity` 与 `potential_max_tokens` 相等，A3 选中 MC2 | T1.7 | 16 | **已完成** |
@@ -253,29 +253,22 @@ aclnnAddRmsNormBiasGetWorkspaceSize not in libopapi.so, or libopapi.so not found
 **该项偏离上线口径**：参考脚本所在环境具备该算子、融合为开启状态，本机关闭它
 意味着图模式性能不直接等同于线上，T2 的性能对照必须注明这一点。
 
-### T1.5 的落点需要改（2026-09-24 发现，待用户定）
+### T1.5 的判据如何被 D01～D05 覆盖
 
-原定"单卡 graph 覆盖 G04～G06"，但有两条证据表明这个落点走不通：
+原计划在单卡上验 G04～G06，但单卡全链 fixture 已死——`dsv4_csa_service_dynamic.py`
+导入 `dsv4_csa_native_fixture`，后者调用的 `enable_device_metadata` 与
+`take_device_metadata_tasks` 在当前 release 中已删除，整条链 import 即失败，
+按既定口径不复活。落点之争最终没有实际意义：要验的内容在 16 卡离线 D 上都验到了。
 
-**一、单卡全链 fixture 已死，且按既定口径不予复活。**
-`dsv4_csa_service_dynamic.py` 导入 `dsv4_csa_native_fixture`，后者
-`:220` 调用 `builder.enable_device_metadata()`。核实当前 release：
-`enable_device_metadata` 与 `take_device_metadata_tasks` **已删除**，
-`DeviceMetadataExecutor` 只剩 `service.py:92` 的一句注释。整条链在 import
-阶段即失败。用户 2026-09-23 已定：不适配旧接口，取证挂真实生产路径。
+逐条对应：
 
-**二、G05 在本轮的单卡测试配置下验不出来。**
-`max_num_seqs=5` 时对齐后的档位 `[6,12,18,24,30]` 是稠密的，每个 batch 精确命中，
-`padding_probe_v2` 实测 `padded_reqs` 全为 0。但这不是普遍结论——生产口径
-`max_num_seqs=40` 下档位稀疏，9/40 的 batch 需要补位（见上方一节）。
-所以 G05 可验，只是要么用生产 batch 规模、要么用 `--capture-sizes` 显式构造。
-
-**建议**：把 T1.5 并入 16 卡的离线 D 生产路径，用已有开关覆盖——
-`--stagger` 让活跃 batch 逐档下降覆盖 G04（档位切换）与 G06（请求退出、
-换位、合法页复用），DP 补齐覆盖 G05。这样占卡从 1 变成 16，但不需要新建
-或复活任何 fixture，且验的是线上真实行为。
-
-是否照此改，请你定。在你定之前 T1.5 不动。
+| T1.5 判据 | 覆盖它的证据 |
+| --- | --- |
+| **G04** 六档 BS 之间切换，记录图重选 | D05 用 `--stagger` 让活跃 batch 逐档下降，两 rank 跨越的档位序列不同（`replay_padded` 13 vs 20） |
+| **G05** 小 BS 放进较大合法 bucket，检查 padding 与 dummy request | D01～D03：低负载 rank 提交 4～16 条却按 32 条的形状跑，`padded_builds` 208/256 |
+| **G06** 请求换位、退出、新增及合法页复用 | D05 的 stagger 使请求在不同步数陆续退出；D04 造出真实空转（rank0 `dummy_runs=26` vs rank1 的 5） |
+| 同一张图在不同补位量下重放，metadata buffer 复用不串数据 | D05 两 rank 补位量 96 vs 80、重放次数 13 vs 20，`rejected=0`，且输出与 Native 逐 token 相同 |
+| **无 replay 期重新编译** | **缺直接证据**。`rejected=0` 只说明没有回退 eager，证不了没有重新编译。要补需采集编译计数或观察 step 耗时是否出现尖峰 |
 
 ### T1.8 的执行配方（DP16 六组负载）
 
