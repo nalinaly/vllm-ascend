@@ -6,6 +6,26 @@ import time
 from collections import Counter
 
 
+def _monotonic_ulp(actual, expected, torch, floor=0.0):
+    """BF16 的 ULP 距离，按单调序计算；floor 用于排除近零元素。
+
+    位模式直接作有符号整数相减是错的：负数的位模式高位为 1，跨零比较会得到约
+    32768 的假差值。标准做法是把负数映射成 0x8000 - bits，使整个编码在数轴上单调。
+    """
+    if actual.dtype is not torch.bfloat16:
+        return None
+    a = actual.view(torch.int16).to(torch.int32) & 0xFFFF
+    b = expected.view(torch.int16).to(torch.int32) & 0xFFFF
+    mono = lambda v: torch.where(v & 0x8000 != 0, 0x8000 - v, v)
+    distance = (mono(a) - mono(b)).abs()
+    if floor > 0.0:
+        keep = (actual.float().abs() >= floor) & (expected.float().abs() >= floor)
+        distance = distance[keep]
+        if distance.numel() == 0:
+            return None
+    return int(distance.max())
+
+
 def _enable_swimlane_init():
     """按环境变量给本进程的 pypto.torch.init 补上 DFX 泳道参数。
 
@@ -242,6 +262,94 @@ class OfflineCSAObserver:
         # 拿不到"实际每步调度了多少 token"，只能另想办法查。这里如实记进报告，
         # 由调用方按 profiled_steps 判断是否可用。
         state["sufficient"] = state["profiled_steps"] == state["requested_steps"]
+        return state
+
+    def offline_begin_bitcompare(self, layer_index, expected_tokens, max_samples):
+        """在真实生产路径上逐 bit 比对 PTO 与 Native 的 CSA 层输出张量。
+
+        挂点选 CSAServiceRuntime.__call__ 而不是离线 fixture：那套 fixture
+        （dsv4_csa_native_forward.py）依赖当前 release 已删除的
+        DeviceMetadataExecutor，重建它等于复活旧接口；而这里比的是线上真实张量，
+        权重、缓存、metadata 全都一致，不存在人造输入的偏差。
+
+        同一步里先跑 PTO 再跑 Native，两者都写同一批 cache 槽位。这是安全的：
+        compress_state 等状态是按计算出的行列直接赋值而非累加，重复写幂等；
+        Native 在读之前先写当前 token 的槽位，所以它的结果不受 PTO 先写的影响。
+        比完把 output 留成 Native 的值，让本轮继续沿参考轨迹走，避免差异累积。
+        """
+        import torch
+
+        from vllm_ascend.ops.dsa import dsa_forward
+        from vllm_ascend.ops.pypto.variant import variant_package
+
+        CSAServiceRuntime = __import__(
+            f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
+
+        if getattr(self, "_offline_bitcompare", None) is not None:
+            raise RuntimeError("Bit comparison is already active")
+        rank = self.vllm_config.parallel_config.data_parallel_rank
+        attention = self.model_runner.get_model().model.layers[layer_index].self_attn
+        wanted = getattr(attention.dsa_attn, "_pto_csa_runtime", None)
+        if wanted is None:
+            raise ValueError(f"Layer {layer_index} has no PTO CSA runtime")
+        # Native 回退用的是生产入口那个 prefix（pypto_deepseek_v4.csa_attention_forward
+        # 传的就是它），不是 runtime.layer_name——后者解析到的是另一个对象，
+        # 直接用会在 dsa_forward 里报 'DSAAttention' object has no attribute 'prefix'。
+        native_prefix = attention.dsa_attn.prefix
+        original = CSAServiceRuntime.__call__
+        state = {"dp_rank": rank, "layer_index": layer_index, "layer_name": wanted.layer_name,
+                 "native_prefix": native_prefix,
+                 "expected_tokens": expected_tokens, "max_samples": max_samples,
+                 "samples": [], "seen": 0}
+
+        def compared(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs):
+            if runtime is not wanted or hidden.shape[0] != expected_tokens:
+                return original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
+            state["seen"] += 1
+            if len(state["samples"]) >= max_samples:
+                return original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
+            result = original(runtime, context, hidden, positions, output, kv_cache, *args, **kwargs)
+            pto = output.detach().clone()
+            dsa_forward(hidden, context.flash_comm_v1_enabled, output, native_prefix)
+            native = output.detach().clone()
+            equal = bool(torch.equal(pto, native))
+            record = {"step": state["seen"], "shape": list(pto.shape), "dtype": str(pto.dtype),
+                      "bit_equal": equal}
+            if not equal:
+                diff = (pto.float() - native.float()).abs()
+                mismatch = pto.ne(native)
+                scale = float(native.float().abs().max())
+                record.update({
+                    "mismatches": int(mismatch.sum()), "elements": int(pto.numel()),
+                    "max_abs": float(diff.max()), "mean_abs": float(diff.mean()),
+                    # 量级上下文：光有绝对差看不出相对多大。
+                    "native_max_abs": scale,
+                    "max_abs_over_scale": float(diff.max()) / scale if scale else None,
+                    # ULP 必须在单调序下算：BF16 位模式按有符号整数直接相减时，
+                    # 正负跨零的两个数会得到约 32768 的巨大差值，那是假象不是差距
+                    # （上一版就因此报出 max_ulp=32307）。近零值上 ULP 本身也不可靠，
+                    # 所以同时给出只在"两侧同号且绝对值不低于 scale 的千分之一"的
+                    # 元素上统计的 ULP，那部分才有解释力。
+                    "max_ulp_monotonic": _monotonic_ulp(pto, native, torch),
+                    "max_ulp_significant": _monotonic_ulp(pto, native, torch, floor=scale / 1000.0),
+                    "first_mismatch": mismatch.nonzero()[:4].tolist(),
+                })
+            state["samples"].append(record)
+            return result
+
+        CSAServiceRuntime.__call__ = compared
+        self._offline_bitcompare = (state, original, CSAServiceRuntime)
+        return {"dp_rank": rank, "layer_index": layer_index}
+
+    def offline_end_bitcompare(self):
+        state, original, runtime_cls = self._offline_bitcompare
+        runtime_cls.__call__ = original
+        self._offline_bitcompare = None
+        samples = state["samples"]
+        state["compared"] = len(samples)
+        state["all_bit_equal"] = bool(samples) and all(s["bit_equal"] for s in samples)
+        # 样本为 0 要如实记录，不能让空集合的 all() 为真而误判通过。
+        state["sufficient"] = bool(samples)
         return state
 
     def offline_begin_steady(self, warmup_steps):
