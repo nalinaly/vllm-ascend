@@ -275,8 +275,25 @@ DP16 同样适用，不能用 DP2 的结论替代。
    跑一次内部 dummy 前向，所有层都写，于是全部视图一起显形。
 
 **结论：在这套存储布局下，用"视图是否变化"去归因写入根本不可能成立。**
-要验"dummy 有没有写压缩器状态"，只能比较**非重叠区间**，或者直接按 slot 级
-地址去看，不能整份视图对比。本节的数字一律不要引用。
+本节的页数、页号一律不要引用。
+
+### 换成测 slot mapping 之后的结果（有效测量）
+
+改测**输入**而非输出——若 slot mapping 全为 -1，kernel 的 `page >= 0` 守卫
+必然挡住，与存储布局无关。中间还绕过一个坑：hook `CSAServiceRuntime.__call__`
+在 dummy 步上一次都不触发（实测 `dummy_runs=26` 而 `slot_samples=0`），
+因为 6 token 的 dummy 被派发到 12 档做**图重放**，而图重放不跑 Python 前向闸门。
+改为在 dummy 之后直接读常驻缓冲——图重放读的就是这些固定地址。
+
+**实测（`accept_t16_slots_v2`）：六个 cache group 的 slot mapping 全部为 -1**
+（每组 266 个元素、非负 0 个、max 为 -1）。所以 `model_runner_v1.py` 那句
+`slot_mapping.gpu.fill_(-1)` 确实生效，**主 slot 这条写入路径在 dummy 步上
+写不进去，已实测确认**。
+
+**仍未覆盖的一条**：compact slot mapping（`cmp_slot_mapping`、
+`idx_slot_mapping`）由 `compressor_metadata` 算子在图内从 `start_pos` 与
+`block_table` 现算，不来自这些缓冲，那次 fill 影响不到它们。要覆盖这条，
+需要读图内产出的 compact slot 张量本身。
 
 ### T1 的待确认问题
 
