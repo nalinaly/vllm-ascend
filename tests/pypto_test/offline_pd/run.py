@@ -333,6 +333,18 @@ def diagnose(args, llm, cases):
             "output_token_ids": measured["output_token_ids"],
             "scope": "cProfile放大Python调用开销，只用于主机侧相对归因，不与设备耗时相加",
         })
+    elif args.command == "steady":
+        started = llm.collective_rpc("offline_begin_steady", args=(args.warmup_steps,))
+        measured = generate_round(llm, args, case, args.decode_tokens)
+        window = llm.collective_rpc("offline_end_steady")
+        common.update({
+            "decode_tokens": args.decode_tokens, "warmup_steps": args.warmup_steps,
+            "started": started, "window": window,
+            "measured_elapsed_seconds": measured["elapsed_seconds"],
+            "output_token_ids": measured["output_token_ids"],
+            "scope": "窗口内不加额外同步，单步耗时可能含等待上一步设备任务的时间，"
+                     "总和与吞吐可用，单步p50/p95为近似",
+        })
     elif args.command == "padding-capture":
         # 补位只在收尾阶段自然出现，所以按完整 decode_tokens 跑，让尾部请求陆续结束。
         started = llm.collective_rpc("offline_begin_padding_capture", args=(
@@ -613,7 +625,7 @@ def worker(args):
                    llm.collective_rpc("offline_cache_layout"))
         llm.llm_engine.engine_core.shutdown()
         return
-    if args.command in ("profile", "hostprofile", "swimlane", "padding-capture"):
+    if args.command in ("profile", "hostprofile", "swimlane", "padding-capture", "steady"):
         diagnose(args, llm, cases)
         llm.llm_engine.engine_core.shutdown()
         return
@@ -666,7 +678,7 @@ def launch(args):
     devices = os.environ.get("TASK_DEVICE", "").split(",")
     if len(devices) != 16 or any(not d.isdigit() for d in devices) or len(set(devices)) != 16:
         raise RuntimeError("Run through task-submit --device auto --device-num 16")
-    if args.command in ("decode", "profile", "hostprofile", "swimlane", "padding-capture"):
+    if args.command in ("decode", "profile", "hostprofile", "swimlane", "padding-capture", "steady"):
         report = json.loads((args.bank / "audit.json").read_text())
         if report["status"] != "PASS":
             raise ValueError("P cache bank must pass audit before D loads it")
@@ -748,6 +760,7 @@ def launch(args):
                    "--warmup-tokens", str(args.warmup_tokens),
                    "--profile-start-step", str(args.profile_start_step),
                    "--profile-steps", str(args.profile_steps),
+                   "--warmup-steps", str(args.warmup_steps),
                    "--swimlane-layer", str(args.swimlane_layer),
                    "--graph-mode", args.graph_mode]
             if args.recompute_scheduler:
@@ -793,7 +806,7 @@ def main():
     parser.add_argument("command", choices=["plan", "audit", "prefill", "decode", "profile", "hostprofile",
                                             "profile-export", "profile-compare",
                                             "swimlane", "swimlane-export",
-                                            "padding-capture"])
+                                            "padding-capture", "steady"])
     parser.add_argument("--bank", type=Path, required=True)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--histories", default="255,4095,32767,131071,131072,131073")
@@ -807,6 +820,8 @@ def main():
     parser.add_argument("--layout-only", action="store_true", help="加载D模型后仅采集缓存描述符")
     parser.add_argument("--warmup-rounds", type=int, default=1, help="诊断前的预热轮数，排除首次编译与缓存冷读")
     parser.add_argument("--warmup-tokens", type=int, default=96, help="每个预热轮的生成token数")
+    parser.add_argument("--warmup-steps", type=int, default=8,
+                        help="steady命令丢弃的前N个decode step，用于排除首次编译与首个恢复步骤")
     parser.add_argument("--profile-start-step", type=int, default=8, help="从第几个稳态decode step开始采集")
     parser.add_argument("--profile-steps", type=int, default=3, help="采集的完整decode step数")
     parser.add_argument("--swimlane-rank", type=int, default=0, help="采集PTO DFX泳道的DP rank")

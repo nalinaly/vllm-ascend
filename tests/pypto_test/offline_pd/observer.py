@@ -2,6 +2,7 @@
 """Control-only worker extension for D integration evidence, not timing."""
 
 import os
+import time
 from collections import Counter
 
 
@@ -238,6 +239,70 @@ class OfflineCSAObserver:
         # 拿不到"实际每步调度了多少 token"，只能另想办法查。这里如实记进报告，
         # 由调用方按 profiled_steps 判断是否可用。
         state["sufficient"] = state["profiled_steps"] == state["requested_steps"]
+        return state
+
+    def offline_begin_steady(self, warmup_steps):
+        """测稳态每步耗时与峰值显存，不加任何额外同步，避免测量本身改变被测对象。
+
+        与 profile 窗口的区别：profile 为了让设备任务完整落在窗口内，两端各做一次
+        synchronize，那对结构对照没问题，但会把同步开销算进耗时，不能用来报稳态性能。
+        这里只在 execute_model 两侧取 perf_counter，前 warmup_steps 步丢弃，用来排除
+        加载、首次编译与首个恢复步骤。
+
+        口径限制要随数据一起报：不加同步意味着某一步的耗时里可能含等待上一步设备任务
+        完成的时间。稳态下主机本就被设备拖住，总和与吞吐是准的，单步 p50/p95 只是近似。
+        """
+        import torch
+
+        if getattr(self, "_offline_steady", None) is not None:
+            raise RuntimeError("Steady measurement is already active")
+        rank = self.vllm_config.parallel_config.data_parallel_rank
+        runner = self.model_runner
+        original = runner.execute_model
+        state = {"dp_rank": rank, "warmup_steps": warmup_steps, "seen_steps": 0,
+                 "step_seconds": [], "step_tokens": [], "step_requests": []}
+        # 峰值统计从窗口开始处重新计数，否则读到的是加载与预热留下的高水位。
+        torch.npu.reset_peak_memory_stats()
+
+        def timed(scheduler_output, *args, **kwargs):
+            index = state["seen_steps"]
+            state["seen_steps"] += 1
+            if index < warmup_steps:
+                return original(scheduler_output, *args, **kwargs)
+            start = time.perf_counter()
+            try:
+                return original(scheduler_output, *args, **kwargs)
+            finally:
+                state["step_seconds"].append(time.perf_counter() - start)
+                state["step_tokens"].append(scheduler_output.total_num_scheduled_tokens)
+                state["step_requests"].append(len(scheduler_output.num_scheduled_tokens))
+
+        runner.execute_model = timed
+        self._offline_steady = (state, original)
+        return {"dp_rank": rank, "warmup_steps": warmup_steps}
+
+    def offline_end_steady(self):
+        import torch
+
+        state, original = self._offline_steady
+        self.model_runner.execute_model = original
+        self._offline_steady = None
+        samples = state["step_seconds"]
+        state["measured_steps"] = len(samples)
+        state["peak_allocated_bytes"] = int(torch.npu.max_memory_allocated())
+        state["peak_reserved_bytes"] = int(torch.npu.max_memory_reserved())
+        if samples:
+            ordered = sorted(samples)
+            def at(q):
+                # 取最近秩次，样本少时不做插值，免得报出没测到的数。
+                return ordered[min(len(ordered) - 1, max(0, round(q * (len(ordered) - 1))))]
+            state["p50_seconds"], state["p95_seconds"] = at(0.50), at(0.95)
+            state["mean_seconds"] = sum(samples) / len(samples)
+            state["total_seconds"] = sum(samples)
+            state["total_tokens"] = sum(state["step_tokens"])
+            state["tokens_per_second"] = state["total_tokens"] / state["total_seconds"]
+        # 样本不足如实记录，由调用方判断可用性，不在 worker 里抛异常丢掉整份报告。
+        state["sufficient"] = state["measured_steps"] >= 20
         return state
 
     def offline_begin_host_profile(self, directory, start_step, steps, expected_tokens, expected_requests):
