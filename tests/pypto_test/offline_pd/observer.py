@@ -274,12 +274,14 @@ class OfflineCSAObserver:
                  "dummy_runs": 0, "dummy_tokens": [],
                  "step_probes": 0, "step_probe_results": [],
                  "in_dummy": False, "slot_samples": 0, "slot_probe_results": [],
+                 "recaptures": 0,
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
         self._offline_replay_probe(state)
         self._offline_dummy_probe(state)
         self._offline_slot_probe(state)
+        self._offline_recapture_probe(state)
 
         def probed(builder, common_prefix_len, common_attn_metadata, fast_build=False, **kwargs):
             result = original(builder, common_prefix_len, common_attn_metadata, fast_build, **kwargs)
@@ -328,6 +330,29 @@ class OfflineCSAObserver:
 
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
+
+    def _offline_recapture_probe(self, state):
+        """统计采集窗口内新建了多少个 NPUGraph，用来判定有没有 replay 期重新捕获。
+
+        `ACLGraphWrapper.__call__` 里 `entry.aclgraph is None` 走捕获分支、
+        否则重放，捕获时会 `torch.npu.NPUGraph()`。采集窗口开在预热与捕获之后，
+        窗口内再出现新的 NPUGraph 就意味着重新捕获——这正是 T1.5 那条
+        "无 replay 期重新编译"要排除的情形。计数为 0 即判定通过。
+        """
+        try:
+            import torch
+
+            origin = torch.npu.NPUGraph
+        except Exception as error:
+            state["recapture_probe"] = f"unavailable: {error!r}"
+            return
+
+        def counted(*args, **kwargs):
+            state["recaptures"] += 1
+            return origin(*args, **kwargs)
+
+        torch.npu.NPUGraph = counted
+        self._offline_recapture_origin = origin
 
     def _offline_slot_probe(self, state):
         """记录 dummy 步里 PTO 实际拿到的 slot mapping。
@@ -503,6 +528,11 @@ class OfflineCSAObserver:
             from vllm_ascend.worker import model_runner_v1
             model_runner_v1.can_replay_csa_graph = origin
             self._offline_replay_origin = None
+        recapture_origin = getattr(self, "_offline_recapture_origin", None)
+        if recapture_origin is not None:
+            import torch
+            torch.npu.NPUGraph = recapture_origin
+            self._offline_recapture_origin = None
         slot_origin = getattr(self, "_offline_slot_origin", None)
         if slot_origin is not None:
             from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
