@@ -290,10 +290,22 @@ DP16 同样适用，不能用 DP2 的结论替代。
 `slot_mapping.gpu.fill_(-1)` 确实生效，**主 slot 这条写入路径在 dummy 步上
 写不进去，已实测确认**。
 
-**仍未覆盖的一条**：compact slot mapping（`cmp_slot_mapping`、
-`idx_slot_mapping`）由 `compressor_metadata` 算子在图内从 `start_pos` 与
-`block_table` 现算，不来自这些缓冲，那次 fill 影响不到它们。要覆盖这条，
-需要读图内产出的 compact slot 张量本身。
+**仍未覆盖的一条，且捷径已被否掉**：compact slot mapping
+（`cmp_slot_mapping`、`idx_slot_mapping`）由 `compressor_metadata` 算子在图内从
+`start_pos` 与 `block_table` 现算，不来自被 fill 成 -1 的缓冲。图内产出的张量
+Python 侧读不到，于是改读它的**输入** `block_table`，本想论证"全零 → compact
+slot 指向 0 号 null block → 无害"。
+
+**实测否掉了这条推理**（`accept_t16_blocktable`）：dummy 步的 `block_table`
+**不是全零**，保留着已结束请求的真实页号——六个 group 的非零项分别为
+3/15、1/5、7/55、7/55、52/880、28/220，最大页号 115～144。主 slot 仍全为 -1
+（那条结论稳），但 compact slot 完全可能算出真实页。
+
+所以这条路径**既没被证明无害、也没被证明有害**。要判真假，只剩两条路：
+读图内产出的 compact slot 张量本身，或者比较非重叠的存储区间。
+
+一条未验证的旁证：Native 的 `compressor` 算子同样吃 `state_block_table` 与
+`start_pos`，输入一致，行为多半相同——但这是推断，不是测量，不能当结论。
 
 ### T1 的待确认问题
 
