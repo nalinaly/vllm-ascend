@@ -59,7 +59,7 @@
 | T1.7 | D01～D05 的 DP 验证 | `offline_pd/run.py` 的 `--rank-batches`／`--rank-decode-tokens`／`--stagger` | **已完成**。六组按上线口径（batch 32、`HCCL_BUFFSIZE=1800`、DP 闸门已移除）全部通过，`rejected` 无一例外为 0，且**输出与 Native 逐 token 完全相同，16 个 rank 无一例外**。D01 (4,32)／D02 (32,4) 补位量随负载对称反转；D03a (8,24) 与 D03b (16,32) 补位量完全相同（208/104），说明补的是到全局最大值的差额、与自己提交多少无关；D04 用 `--rank-decode-tokens 16 64` 造真实空转，rank0 `dummy_runs=26` vs rank1 的 5，是直接计数而非耗时推断；D05 用 `--stagger` 让两 rank 跨越不同档位序列（补位 96 vs 80、重放 13 vs 20），同一张捕获图在不同补位量下反复重放无串数据、无重新编译 | T1.9 | 16 | **已完成** |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | **已完成**：本轮 D01～D05 即在 DP16／EP16 下跑的（驱动硬性 `tp=1, dp=16`），见 T1.7。通信选择记录：档位按 `uniform_decode_query_len` 对齐后 `mc2_tokens_capacity` 与 `potential_max_tokens` 相等，A3 选中 MC2 | T1.7 | 16 | **已完成** |
 | T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已完成**（`05ba642`）。顺序按用户 2026-09-24 的决定提前：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，放开后遇到问题解决具体问题"。移除后 `_sync_metadata_across_dp` 真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景并全部通过 | — | 16 | **已完成** |
-| T1.10 | eager + embedding_tp 的 DP 补齐 | `finegrained_tp_config.embedding_tensor_parallel_size` + eager 用例 | 开启 embedding TP 后在 eager 下跑通：DP 补齐正确产生、PTO 输出与 Native 一致、`_forward_embed_tp` 的静态缓冲容量不被超出。**低优先级**（用户 2026-09-24 定），排在 D01～D05 之后 | T1.9 | 16 | 未开始（低优先级） |
+| T1.10 | eager + embedding_tp 的 DP 补齐 | **已验证，结论是跑不起来**（非集成缺陷，见下方专节）。判据中「`_forward_embed_tp` 的静态缓冲容量不被超出」一条的答案是**会被超出**：`ValueError: embedding_tp static capacity 192 < num_tokens 256`。**PTO 与 Native 两侧同样失败**，与 CSA 用哪套算子无关。另确认 `embedding_tensor_parallel_size` 在框架层面强制要求 `recompute_scheduler_enable=true`，校验信息写明「跨 DP 的 HCCL 集合通信需要各 rank token 数一致」，这从侧面印证了该项「embedding TP 会引出 DP 补齐」的前提 | T1.9 | 16 | **已验证（阻塞于容量口径）** |
 
 用户已指定：**T1.7 的 DP2 必须先跑完再上 T1.8 的 DP16。**
 
@@ -780,6 +780,33 @@ H255 直接复用 `smoke_bank`，不必为矩阵重新生成。
 | T4.5 | F06 稳定性与性能 | **稳态延迟／吞吐／显存已由 T2.3 给出**（p50 55.77→66.69ms、吞吐 0.85×、峰值显存 50.93→49.81GiB）。**剩余的长时间稳定性与异常／超时统计属用户 2026-09-24 定的「长稳先不管」**，恢复需重新指派 | T2.3 | 16 | **部分完成，其余已暂停** |
 
 F03 的在线传输与网络故障恢复不是本轮前置条件——用户当前选择离线方式。
+
+### T1.10：eager + embedding_tp 的容量口径缺口
+
+实测两侧（PTO 与 Native）同样失败于：
+
+```
+ValueError: embedding_tp static capacity 192 < num_tokens 256;
+increase max_cudagraph_capture_size or max_num_batched_tokens.
+```
+
+数字来源：
+
+| 量 | 值 | 来源 |
+| --- | --- | --- |
+| `capacity` | 192 | `get_potential_max_tokens()` = `max_num_seqs(32) × QUERY_TOKENS(6)` |
+| 实际 `num_tokens` | 256 | prefill 阶段的 `max_num_batched_tokens`（run.py 取 `max(256, batch*6)`） |
+
+即 **`get_potential_max_tokens()` 只按 decode 的 `max_num_seqs × query_len` 计算，
+没有覆盖 `max_num_batched_tokens`**，而 embedding 层是 prefill 与 decode 共用的，
+`_forward_embed_tp` 的静态缓冲因此在 prefill 上不够用。
+
+注意错误信息给的第二条出路是**反的**：`num_tokens` 正来自 `max_num_batched_tokens`，
+调大它只会超得更多。
+
+**不自行绕过。** 最直接的绕法是把 `max_num_batched_tokens` 压到 192，但那会改变 prefill
+的分块行为，属于为了让测试通过而改被测配置；改 `get_potential_max_tokens()` 则是动 release
+生产代码，且「embedding TP 的容量该按哪个口径算」属于设计决策。两者都需用户裁定。
 
 ### T4.2 六档捕获期命中（B=1～40）
 

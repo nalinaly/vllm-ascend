@@ -677,6 +677,13 @@ def worker(args):
                                      else {"align_decode_capture_sizes": False})}}),
                            **({} if not args.recompute_scheduler
                               else {"recompute_scheduler_enable": True}),
+                           # T1.10：embedding TP 走组内 all_gather，要求各 rank 贡献的 token
+                           # 数一致，因此即便 eager 也会引出 DP 补齐。_forward_embed_tp 的
+                           # 静态缓冲按 get_potential_max_tokens() 预分配，超了直接 ValueError，
+                           # 所以补齐后的 token 数是否仍在容量内是这项的关键判据。
+                           **({} if not args.embedding_tp
+                              else {"finegrained_tp_config": {
+                                  "embedding_tensor_parallel_size": args.embedding_tp}}),
                            # T4.3：enable_expert_parallel 不等于 EPLB，动态重平衡要显式开。
                            # algorithm_execution_interval 默认 50 步才执行一次算法，而一轮
                            # decode 只有约 21 步（128 token / 每步 6 个），不调小就永远
@@ -852,6 +859,8 @@ def launch(args):
                    "--graph-mode", args.graph_mode]
             if args.recompute_scheduler:
                 cmd.append("--recompute-scheduler")
+            if args.embedding_tp:
+                cmd += ["--embedding-tp", str(args.embedding_tp)]
             if args.deterministic:
                 cmd.append("--deterministic")
             if args.eplb:
@@ -907,6 +916,8 @@ def main():
     parser.add_argument("--layout-only", action="store_true", help="加载D模型后仅采集缓存描述符")
     parser.add_argument("--warmup-rounds", type=int, default=1, help="诊断前的预热轮数，排除首次编译与缓存冷读")
     parser.add_argument("--warmup-tokens", type=int, default=96, help="每个预热轮的生成token数")
+    parser.add_argument("--embedding-tp", type=int, default=0,
+                        help="开启 embedding TP 并指定组大小；0 为关闭（T1.10）")
     parser.add_argument("--compare-mode", choices=["native", "self"], default="native",
                         help="native=与Native对比；self=PTO自比对，用于确认PTO自身是否可复现")
     parser.add_argument("--compare-samples", type=int, default=3,
