@@ -594,7 +594,15 @@ def worker(args):
                                   **({} if not args.capture_sizes
                                      else {"align_decode_capture_sizes": False})}}),
                            **({} if not args.recompute_scheduler
-                              else {"recompute_scheduler_enable": True})},
+                              else {"recompute_scheduler_enable": True}),
+                           # T4.3：enable_expert_parallel 不等于 EPLB，动态重平衡要显式开。
+                           # algorithm_execution_interval 默认 50 步才执行一次算法，而一轮
+                           # decode 只有约 21 步（128 token / 每步 6 个），不调小就永远
+                           # 触发不到"运行中重平衡"。
+                           **({} if not args.eplb
+                              else {"eplb_config": {"dynamic_eplb": True,
+                                                    "algorithm_execution_interval": args.eplb_interval,
+                                                    "expert_heat_collection_interval": args.eplb_interval}})},
         model_loader_extra_config={"enable_multithread_load": True, "num_threads": 16},
         kv_transfer_config=connector, disable_log_stats=False,
         **({} if prefill else {"worker_extension_cls": "offline_pd.observer.OfflineCSAObserver"}),
@@ -725,6 +733,8 @@ def launch(args):
                 cmd.append("--recompute-scheduler")
             if args.deterministic:
                 cmd.append("--deterministic")
+            if args.eplb:
+                cmd += ["--eplb", "--eplb-interval", str(args.eplb_interval)]
             if args.stagger:
                 cmd.append("--stagger")
             if args.capture_sizes:
@@ -801,6 +811,11 @@ def main():
                         help="让各请求在不同步数结束，使活跃batch逐档下降，"
                              "覆盖G04档位切换与G06请求退出；默认所有请求同时结束，"
                              "活跃batch几乎不变，只有收尾几步才产生补位")
+    parser.add_argument("--eplb", action="store_true",
+                        help="显式开启动态EPLB（dynamic_eplb）。注意enable_expert_parallel不等于EPLB，\n"
+                             "默认dynamic_eplb为False，不开就只有EP没有重平衡")
+    parser.add_argument("--eplb-interval", type=int, default=5,
+                        help="EPLB算法执行与热度采集的步数间隔。默认50对一轮decode（约21步）太大，永远触发不到重平衡")
     parser.add_argument("--deterministic", action="store_true",
                         help="开启算子级确定性(set_deterministic_level(1))与HCCL_DETERMINISTIC=true；"
                              "用于排查同一DP组内四个TP副本的缓存差异，保留AIV展开模式不变")
