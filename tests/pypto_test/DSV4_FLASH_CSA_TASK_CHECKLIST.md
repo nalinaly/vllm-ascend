@@ -5,7 +5,7 @@
 不写"验证一下""确认无误"这类无法判定的措辞。
 
 状态口径：`未开始` / `进行中` / `已完成` / `暂停`（暂停项不得自行恢复）。
-截至 2026-09-24，已完成 T1.1～T1.9、T2.2、T3.1 与 T5.1～T5.4（共 17 项）；T1.10 低优先级、T2.5 待用户拍板。**T1 的 padding 主线至此全部走通。**
+截至 2026-09-24，已完成 T1.1～T1.9、T2.1、T2.2、T3.1 与 T5.1～T5.4（共 18 项）；T1.10 低优先级、T2.5 待用户拍板。**T1 的 padding 主线至此全部走通。**
 
 相关文档：[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)、
 [跨会话交接](DSV4_FLASH_CSA_NEXT_SESSION_HANDOFF.md)、
@@ -392,6 +392,46 @@ slot 指向 0 号 null block → 无害"。
 
 ## 2. T2　性能对照
 
+### T2.1 的结果与归因（2026-09-24）
+
+配置：b=16 / s=6 / TP1 / EP-DP16 / seqlen 8k，3 个稳态 decode step。
+b=16 在 KV 并发上限 22.8 之内，所以是干净的满批稳态（96 token/16 请求出现 21 次），
+不像 batch 32 那轮被调度器拆成 21+11。
+
+| | Native | PTO | 差异 |
+| --- | --- | --- | --- |
+| 设备侧总耗时 | 240,013 µs | 347,302 µs | **PTO 慢 45%** |
+| kernel 记录数 | 7,520 | 5,378 | PTO 少 28% |
+
+按引擎（µs）：
+
+| 引擎 | Native | PTO | 差异 |
+| --- | --- | --- | --- |
+| **AI_CPU** | 1,270 | **81,318** | **+80,049** |
+| MIX_AIC | 91,468 | 141,966 | +50,498 |
+| AI_CORE | 33,407 | 22,929 | −10,477 |
+| AI_VECTOR_CORE | 48,768 | 37,601 | −11,166 |
+| MIX_AIV | 65,101 | 63,487 | −1,614 |
+
+**PTO 替换掉的 Native 算子确实消失了**：`Compressor_*`（8,104µs）、
+`SparseAttnSharedkv_*`（6,685µs）、`VllmQuantLightningIndexer`（3,837µs）
+在 PTO 侧均为 0，合计约 18.6ms；矩阵乘类也更快
+（`QuantBatchMatmulV3` −10,305µs、`TransposeBatchMatMul` −6,079µs）。
+
+**代价是两个 Native 完全没有的条目**：
+
+| kernel | 次数 | PTO 耗时 |
+| --- | --- | --- |
+| `simpler_aicpu_kernel_exec_*` | 63 | 79,825 µs |
+| `aicore_kernel_mode_0_mix_aic` | 63 | 78,582 µs |
+
+63 = 21 层 × 3 步，**每层每步各一次**。前者跑在 AI_CPU 上，正是 AI_CPU 从 1.3ms
+暴增到 81.3ms 的来源——这是 PTO/Simpler 运行时的 kernel 下发路径，不是计算本身。
+
+**两点限定**：窗口含 EP 等待、采集与同步开销，是结构对照而非稳态吞吐结论（那是 T2.3）；
+`MoeDistributeDispatchV2` 两侧都有且 PTO 高 6,488µs，但 MoE 不在 PTO 替换范围内，
+这部分差异更可能来自各 rank 进入集合通信的时刻不同，不宜直接归因给 PTO。
+
 ### 主要性能指标（2026-09-24 用户定）
 
 后续性能数据**以这一组配置为主**：
@@ -421,7 +461,7 @@ python tests/pypto_test/offline_pd/run.py profile \
 
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | 两侧同配置、同 bank 初态；给出每步耗时与设备占用对照；明确标注这是图模式结果 | T1.9 | 16 | 未开始 |
+| T2.1 | FULL_DECODE_ONLY 下重跑 Native/PTO 对照 | `results/release_csa_perf_8k_20260924/` | **已完成**，按主要指标（b16/s6/TP1/EP-DP16/8k）在图模式下采完整 PyTorch profiling（CPU+NPU、Level1、带 device kernel、`with_stack=False`）。两侧采样窗口完全对齐（第 8/9/10 步，均 96 token / 16 请求），**输出逐 token 相同**。设备侧总耗时 Native 240,013µs vs PTO 347,302µs（**PTO 慢 45%**），kernel 记录数 7,520 vs 5,378。按引擎：AI_CPU 1,270 → **81,318**（主因）、MIX_AIC 91,468 → 141,966；AI_CORE、AI_VECTOR_CORE、MIX_AIV 三项 PTO 均更低。详见下方归因 | T1.9 | 16 | **已完成** |
 | T2.2 | 标注 eager 期结论的适用范围 | 已完成：验证日志新增第 98 节。第 95～97 节三轮全是 eager（当时图模式起不来），`_resolve_compiled` 按调用次数计费是 eager 特有现象，图模式下只在预热与捕获时走一遍。同时标注了两个未决前提：PTO 的 kernel 下发是否可被图捕获尚在 T1.4 验证中；本机关闭 `fuse_norm_quant` 偏离上线口径 | 无（不依赖 T2.1 数据） | 否 | **已完成** |
 | T2.3 | 稳态性能测量（原 A1） | 预热后从相同 bank 初态出发，排除加载、首次编译、首个恢复步骤与观察 hook；记录实际 step 数、p50/p95、输出 token/s、峰值显存；样本不足须如实报告，不按名义参数宣布采满 | T2.1 | 16 | 未开始 |
 | T2.4 | 汇总真实 DSpark 与 EP 执行（原 A5） | 自然接受长度、实际有效推进、输出数、各 rank 负载落盘；Native/PTO 同场景对齐 | T2.3 | 16 | 未开始 |
