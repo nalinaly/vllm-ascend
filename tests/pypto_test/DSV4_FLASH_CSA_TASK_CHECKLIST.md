@@ -487,6 +487,37 @@ PTO kernel 内部各流水线（MTE／Vector／Cube／Scalar）的占用，属�
 性能测量的 FULL_DECODE_ONLY 口径。`run.py` 已加守卫：`swimlane` 命令要求
 `--graph-mode eager`，否则直接报错，与 `padding-capture` 拒绝 eager 相对称。
 
+### 泳道采集结果（`results/release_csa_perf_8k_20260924/swimlane_eager/`）
+
+重采成功：`captured=1`、`run_boundaries=1`、`dropped_run_boundaries=0`、915 个 AICore task、
+1849 条设备切片、46 个具名 callable，kernel 取自本轮实际 JIT 产物
+`_jit__decode_csa_tp1_attention_5_79_0r8`。口径：eager、b=16、layer 2
+（`model.layers.2.self_attn.attn`）、8k bank、一次 96 token 的 CSA 调用。芯片 72 核（48 aiv + 24 aic）。
+
+泳道图在 `swimlane/merged_swimlane.json`，用 https://ui.perfetto.dev/ 打开。该文件 2.7M 且可由
+`chip_swimlane_records.json` + `name_map.json` 经 `swimlane-export` 秒级重生成，故只留本地不入库；
+入库的是原始 `chip_swimlane_records.json`、`deps.json`、`converter_output.txt` 与 `swimlane_report.json`。
+
+窗口总跨度 1213.58µs，**Exec/Latency 仅 55.97%**（逐任务均值：Exec 49.99µs，dispatch→finish 89.32µs），
+即近一半时间不在算。按函数分成两类：
+
+- **流水打满的大核**：`qk_pv_aic` 240.08µs / `qk_pv_aiv` 241.62µs（Exec% 98.2%／98.5%）、
+  `indexer_score_topk_leaf_aic` 169.49µs / `_aiv` 169.45µs（97.7%／97.4%）。这四个是主要耗时来源，
+  但本身效率没有问题。
+- **被下发开销压住的核**：`merge_norm` Exec 29.27µs 而 Latency 275.97µs（**Exec% 10.6%**，
+  head OH 244.61µs 中 NoC 传播占 234.25µs）、`indexer_topk_single_leaf_publish` 14.88／184.82µs（8.0%，
+  传播 157.79µs）、`qr_rms_norm_quant` 7.96／90.54µs（8.8%，但开销在 Local 即 dcci+ack 73.66µs 而非传播）、
+  `quant` 9.78／95.78µs（10.2%，Tail OH 83.09µs）、`oproj_token_scale` 82.50／135.06µs（61.1%，
+  Tail OH 50.56µs）。
+
+结论方向与 T2.1 一致：**PTO 的计算核效率没问题，损耗集中在任务下发与同步**，
+对应 T2.1 里 AI_CPU 从 1,270µs 涨到 81,318µs 的观测。
+
+两条限定必须随数据一起说明：其一，DFX 窗口自带边界同步开销，这些绝对耗时不能当稳态性能；
+其二，本轮在 eager 下采集，主机下发路径与图模式不同，head／tail OH 的**绝对值**偏大，
+核内 Exec 与各核相对关系仍可用。要把调度开销继续拆细，可拿本轮 `deps.json` 单独跑
+`sched_overhead_analysis`。
+
 ## 3. T3　场景扩展
 
 | ID | 目标 | 完成判据 | 依赖 | 占卡 | 状态 |
