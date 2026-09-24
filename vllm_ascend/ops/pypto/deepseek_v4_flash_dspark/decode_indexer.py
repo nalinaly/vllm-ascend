@@ -92,6 +92,13 @@ Q_TILE = 256
 Q_OUT_TILE = 1024  # Query-projection output tile
 
 T_PAD = ((T + 16 - 1) // 16) * 16
+# query 投影专用的分块：上游 e68e091 "Reuse full-K indexer query weights across row
+# tiles"。原来按（行块 × 输出块）循环、每个行块都把整条 K 的权重重载一遍，decode 下
+# 行数少而 K 大，权重重载就是主要开销。改成按输出列循环、整条 K 的权重只加载一次，
+# 再在其上遍历行块。weights 投影仍用 MM_ROW_TILE，两者分开，故另起名字。
+QR_MM_ROW_TILE = 64
+QR_MM_N_TILE = 256
+QR_MM_T_PAD = ((T + QR_MM_ROW_TILE - 1) // QR_MM_ROW_TILE) * QR_MM_ROW_TILE
 
 MM_ROW_TILE = 16
 
@@ -611,28 +618,25 @@ def indexer_qr_rope(
     """Indexer query projection, dequant and RoPE -- everything before the hadamard."""
 
     bs = pl.tensor.dim(x, 0)
-    row_blocks = (bs + MM_ROW_TILE - 1) // MM_ROW_TILE
-    qr_acc_pad = pl.create_tensor([T_PAD, IDX_N_HEADS * IDX_HEAD_DIM], dtype=pl.INT32)
+    row_blocks = (bs + QR_MM_ROW_TILE - 1) // QR_MM_ROW_TILE
+    # QR_MM_T_PAD >= T_PAD，缓冲只会变大不会变小；读者只读到 bs 为止。
+    qr_acc_pad = pl.create_tensor([QR_MM_T_PAD, IDX_N_HEADS * IDX_HEAD_DIM], dtype=pl.INT32)
     with pl.spmd(
         QR_PROJ_WORKERS,
         name_hint="idx_qr_proj_matmul",
         allow_early_resolve=True,
     ) as idx_qr_mm_tid:
         qr_proj_worker = pl.tile.get_block_idx()
-        for qr_unit in pl.range(qr_proj_worker, IDX_N_HEADS * IDX_HEAD_DIM // Q_OUT_TILE * row_blocks, QR_PROJ_WORKERS):
-            qr_rb = qr_unit // (IDX_N_HEADS * IDX_HEAD_DIM // Q_OUT_TILE)
-            ot = qr_unit - qr_rb * (IDX_N_HEADS * IDX_HEAD_DIM // Q_OUT_TILE)
-            qr_r0 = qr_rb * MM_ROW_TILE
-            qr_rows = pl.min(MM_ROW_TILE, bs - qr_r0)
-            o_base = ot * Q_OUT_TILE
-            for ns in pl.range(0, Q_OUT_TILE, MM_N_TILE):
-                qr_acc = pl.create_tensor([MM_ROW_TILE, MM_N_TILE], dtype=pl.INT32)
-                for kb in pl.pipeline(0, Q_LORA // Q_TILE, stage=2):
-                    q0 = kb * Q_TILE
-                    qr_tile = pl.slice(qr, [MM_ROW_TILE, Q_TILE], [qr_r0, q0], valid_shape=[qr_rows, Q_TILE])
-                    wq_tile = wq_b[q0 : q0 + Q_TILE, o_base + ns : o_base + ns + MM_N_TILE]
-                    qr_acc = pl.matmul_acc(qr_acc, qr_tile, wq_tile, init_cond=(q0 == 0))
-                qr_acc_pad[qr_r0 : qr_r0 + MM_ROW_TILE, o_base + ns : o_base + ns + MM_N_TILE] = qr_acc
+        for qr_col in pl.range(qr_proj_worker, IDX_N_HEADS * IDX_HEAD_DIM // QR_MM_N_TILE, QR_PROJ_WORKERS):
+            o_base = qr_col * QR_MM_N_TILE
+            # 整条 K 的权重块只取一次，供下面所有行块复用。
+            wq_tile = wq_b[0:Q_LORA, o_base : o_base + QR_MM_N_TILE]
+            for qr_rb in pl.range(row_blocks):
+                qr_r0 = qr_rb * QR_MM_ROW_TILE
+                qr_rows = pl.min(QR_MM_ROW_TILE, bs - qr_r0)
+                qr_tile = pl.slice(qr, [QR_MM_ROW_TILE, Q_LORA], [qr_r0, 0], valid_shape=[qr_rows, Q_LORA])
+                qr_acc = pl.matmul(qr_tile, wq_tile, out_dtype=pl.INT32)
+                qr_acc_pad[qr_r0 : qr_r0 + QR_MM_ROW_TILE, o_base : o_base + QR_MM_N_TILE] = qr_acc
     # Fused dequant + RoPE: one unit is DEQUANT_T_TILE tokens x DQ_ROPE_H_TILE heads.
     qr_bf16_2d = pl.reshape(qr_bf16, [T_PAD, IDX_N_HEADS * IDX_HEAD_DIM])
     dq_rope_units = ((bs + DEQUANT_T_TILE - 1) // DEQUANT_T_TILE) * (IDX_N_HEADS // DQ_ROPE_H_TILE)
