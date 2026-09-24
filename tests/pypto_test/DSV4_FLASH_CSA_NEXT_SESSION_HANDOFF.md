@@ -1,29 +1,67 @@
 # DSV4 Flash CSA：后续 session 交接与待办
 
-更新日期：2026-09-23。本文以官方 v0.25.1rc1 迁移后的实际结果为准。
-已完成工作提交：`f9bdbb5`，已推送到 `nalinaly/vllm-ascend` 的
-`dsv4-flash-pto-v0.25.1rc1` 分支；上一笔生产修正为 `8a4c4e6`。
+更新日期：2026-09-24。本文以官方 v0.25.1rc1 迁移后的实际结果为准。
+最新提交 `7d7ec0d`，已推送到 `nalinaly/vllm-ascend` 的
+`dsv4-flash-pto-v0.25.1rc1` 分支。
 
-**当前主线：继续离线 P TP4×DP4/EP16 → D TP1×DP16/EP16 的 CSA 接入与性能对照。**
-环境、Native 算子包、H255 离线缓存、Native D16 和 PTO D16 均已跑通，
+**当前主线：离线 P TP4×DP4/EP16 → D TP1×DP16/EP16 的 CSA padding 支持。**
+环境、Native 算子包、离线缓存、Native D16 与 PTO D16 均已跑通，
 不要从安装环境、查找 HcPre 或恢复旧仓库重新开始。
 
-**下一项建议先做：在 tests 下补齐排除编译、缓存 IO、预热和观察 hook 的稳态计时，
-以已有 H255/B4 bank 建立 Native/PTO 对照。** 然后扩展 P 历史长度与 D batch。
-A2 的 Native/PTO profiling 与 PTO 泳道图已于 2026-09-23 采完（详见第 2 节与日志第 95～96 节），
-采集工具已在 `offline_pd/run.py`；A1 稳态计时仍未开展，不要因为有了 profile 就当作性能结论。
-**已定位到主要瓶颈在主机侧，并查到具体函数**：每次 CSA 调用
-`dsv4_csa::_pypto_attention_mutate` 约 94.9 毫秒，其中 AscendCL 调用只占 0.1%，同期设备空闲；
-设备 kernel 约 657 微秒。每步 21 次调用合计约 1993 毫秒，可解释 PTO 与 Native 每步
-2343 毫秒差值的约 85%。主机侧采样显示开销的 99.8% 在 PyPTO `jit/decorator.py` 的
-`_resolve_compiled`：它每次调用都重新遍历各子函数 AST（`_get_source_hash` →
-`_constant_dependency_names`，以及 `_resolve_constexpr_bindings` →
-`_expand_constexpr_variants` → `_dep_call_nodes`），`ast.walk` 占整次调用的 79%。
-两处输入都只有运行期不变的函数对象，属缓存键的重复推导。该路径在 PyPTO 内，
-按用户约束未自行修改、也未验证任何修复方案，需要用户决定是走上游还是本地方案。
-其他 P3/P4 场景及剩余数值差异排查仍处于用户要求的暂停状态，本次交接不代表恢复这些工作。
-**DP 同步 padding / full graph 已于 2026-09-23 由用户明确要求恢复**，实施方案见
-[padding 开发计划](DSV4_FLASH_CSA_PADDING_PLAN.md)。
+## 2026-09-24 这一轮的结果
+
+**图模式已经能跑了**，这是本轮最重要的变化——此前本工作区没有任何图模式成功记录。
+阻塞是 `aclnnAddRmsNormBias` 在基础 CANN 9.0.0 与 CSA 算子包里都不存在，而
+PyTorch 的 pattern matcher 以 `tracing_mode="real"` 追踪融合 pattern 等于真的执行
+一次。修法是配置开关 `ascend_compilation_config: {fuse_norm_quant: False}`，
+不改生产代码。**注意这偏离上线口径**，参考环境有该算子、融合是开启的，
+T2 的性能数字必须随之注明。
+
+**padding 主线 T1.1～T1.4 全部验收通过。** PTO 在图模式下完整跑通、输出与 Native
+逐 token 相同；补位档位全部进入图重放且零回退。沿途修了两个真 bug：
+
+- **图捕获时的 MTE 越界**：`_dummy_run` 把所有 position 填成 127，
+  `(127+1)%4==0` 成立而 `seq_lens` 非零，推出的 compact 行号 32 去读只有 12 行的表。
+  按 compact 表的真实行数在三处兜住即可，不新增入参或缓冲。这同时关闭了 T1.Q2。
+- **ACL Graph 档位未按 `uniform_decode_query_len` 对齐**：默认档位是纯 token 计数的
+  通用列表，与 DSpark 的 6 无关。不对齐会同时引出形状还原不了、以及
+  `mc2_tokens_capacity` 小于 `potential_max_tokens` 使 MoE 退到 ALLTOALL 两个问题。
+  已在 `platform.py` 按序列并行那段的既有写法修好。
+
+**T3.1 五档长场景 bank 全部生成并通过 audit**：H4095 710M、H32767 3.4G、
+H131071／131072／131073 各 13G，每档四种输入。
+
+**跨 TP 副本差异的成因已定性**：只有 H4095 这一档有差异（1761／1773 个张量），
+H32767／H131071／H131072／H131073 全为 0。开
+`torch_npu.npu.set_deterministic_level(1)` + `HCCL_DETERMINISTIC=true`（保留 AIV）
+后 H4095 降到 0，所以成因是归约顺序不确定。**但为什么只有 H4095 受影响仍无解释，
+确定性开关的性能代价也没测**，两者都不要当成已知。
+
+**第 95～97 节的 eager 期结论已在日志第 98 节标注适用范围**：
+`_resolve_compiled` 按调用次数计费是 eager 特有现象，图模式下只在预热与捕获时走
+一遍，那条归因不适用于生产路径。T2.5 仍待用户决定走上游还是本地方案。
+
+### 本轮的失败与更正，不要重走
+
+- **整份缓存视图对比这条路是死的**：`decode_cache_layout_v1` 实测 `cmp_kv` 与
+  `compress_state` 共用同一块 678MB 分配、重叠 676MB，写一处会让多个视图一起
+  "变化"。据此得出的"四处视图被写""`compress_state` 只有 PTO 写"等结论**全部已撤回**。
+- **hook `CSAServiceRuntime.__call__` 在 dummy 步上一次都不触发**，因为图重放不跑
+  Python 前向闸门。要看 dummy 的输入只能读常驻缓冲。
+- **`block_table` 在 dummy 步不是全零**，保留着已结束请求的真实页号，所以
+  "compact slot 必落在 0 号 null block 因而无害"这条推理不成立。
+- 队列使用：**对排队中的任务用 `task-submit --wait` 会在超时后把它取消**，
+  轮询一律用 `--status`。
+
+## 三个卡住整条链的待定决策
+
+T1.7→T1.8→T1.9 链式依赖前两项，T1.9 之后才是 T2 与 T4 的大头，共 15 项待启。
+
+| 项 | 需要的决定 |
+| --- | --- |
+| **T1.5** | 落点是否改为 16 卡离线 D。单卡 fixture 链已死（`enable_device_metadata` 等已从 release 删除，按既定口径不复活），且档位对齐后 G05 单卡验不出来 |
+| **T1.6** | 判据"不写任何 cache／state"在共用存储布局下本身不可测，且对 Native 自己也不成立，是否改写成 slot 级表述。主 slot 路径已按该形式实测通过（全 -1）；compact slot 路径未定 |
+| **T2.5** | PyPTO `_resolve_compiled` 走上游还是本地方案 |
 
 全部待做事项的逐项执行清单见 [执行清单](DSV4_FLASH_CSA_TASK_CHECKLIST.md)，
 其中含完成判据、依赖、占卡数与仍须保持暂停的项目。
