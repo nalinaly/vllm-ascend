@@ -140,14 +140,21 @@ class OfflineCSAObserver:
         state = {"dp_rank": rank, "trace_dir": target, "start_step": start_step,
                  "requested_steps": steps, "expected_tokens": expected_tokens,
                  "expected_requests": expected_requests, "seen_steady_steps": 0,
-                 "profiled_steps": 0, "closed": False, "window": []}
+                 "profiled_steps": 0, "closed": False, "window": [], "observed": {}}
 
         def profiled(scheduler_output, *args, **kwargs):
             import torch
 
             tokens = scheduler_output.total_num_scheduled_tokens
             requests = len(scheduler_output.num_scheduled_tokens)
-            steady = tokens == expected_tokens and requests == expected_requests
+            # 把看到的 (tokens, requests) 分布记下来：判定失败时不必重跑就能诊断。
+            key = f"{tokens}/{requests}"
+            state["observed"][key] = state["observed"].get(key, 0) + 1
+            # 稳态判据只看"所有请求都还在跑"，不再要求 tokens 恰好等于 batch*6。
+            # 投机解码下每步的 token 数不恒定：首个 decode 步还没有 draft token，
+            # 之后每步取决于上一步接受了几个，所以那个等式本来就不该指望
+            # （batch 32 时实测 0 次命中）。expected_tokens 仍记录备查。
+            steady = requests == expected_requests
             index = state["seen_steady_steps"]
             if steady:
                 state["seen_steady_steps"] += 1
