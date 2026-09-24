@@ -641,10 +641,18 @@ def worker(args):
         write_json(args.output / f"rank{args.rank}.json", {"role": args.command, "backend": args.backend,
                    "rank": args.rank, "batch": args.batch, "cases": outputs})
         if observation is not None and args.backend == "pto":
+            # 改读捕获期的 capture_time_selection：图重放不触发 forward hook，
+            # 原先那版遍历 forward_hook_counts，而各层全是空字典时 any(...) 为假、
+            # 校验反而通过，等于形同虚设（b1/b4/b8 三组即因此没报错）。
             for rank_stats in observation:
-                if any(not any(k.startswith("pto_") and v for k, v in counts.items())
-                       for counts in rank_stats.values()):
-                    raise RuntimeError("At least one target CSA layer never used PTO; see csa_observation")
+                selection = (rank_stats or {}).get("capture_time_selection")
+                if not selection:
+                    raise RuntimeError("No capture-time CSA selection recorded; see csa_observation")
+                dead = [layer for layer, counts in selection.items()
+                        if not any(k.startswith("pto_") and v for k, v in counts.items())]
+                if dead:
+                    raise RuntimeError(f"These target CSA layers never selected PTO: {dead[:5]}; "
+                                       "see csa_observation")
     # Engine shutdown tears down its owned workers; launcher checks all ranks.
     llm.llm_engine.engine_core.shutdown()
 

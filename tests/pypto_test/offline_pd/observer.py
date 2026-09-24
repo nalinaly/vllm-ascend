@@ -28,6 +28,41 @@ def _enable_swimlane_init():
 _enable_swimlane_init()
 
 
+# 捕获期 PTO/Native 选择计数。图模式下这个选择由 eligible() 在**捕获时**定下，
+# 之后每次重放都沿用；而 forward hook 在图重放时根本不触发——
+# offline_begin_observation 用 register_forward_hook 采到的 21 个层全是空字典
+# （release_csa_batch_sweep_20260924 的 b1/b4/b8 即如此），且它静默返回空，
+# 看起来像有数据，比没有更糟。
+_CSA_SELECTION = {}
+
+
+def _enable_selection_counter():
+    """在模型加载前给 CSAServiceRuntime.eligible 打补丁，统计其判定结果。
+
+    worker extension 在 load_model 之前就被解析导入，所以只有在模块导入时打补丁
+    才覆盖得到捕获期。Native 后端没有这个模块，import 失败即跳过。
+    """
+    try:
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
+    except Exception:
+        return
+
+    origin = CSAServiceRuntime.eligible
+
+    def counted(runtime, context, hidden, positions):
+        verdict = origin(runtime, context, hidden, positions)
+        layer = getattr(runtime, "layer_name", "?")
+        key = f"{'pto' if verdict else 'native'}_tokens{int(hidden.shape[0])}"
+        bucket = _CSA_SELECTION.setdefault(layer, {})
+        bucket[key] = bucket.get(key, 0) + 1
+        return verdict
+
+    CSAServiceRuntime.eligible = counted
+
+
+_enable_selection_counter()
+
+
 class OfflineCSAObserver:
     # CSA 的五个 cache group：swa、compressed、state、indexer、indexer_state。
     _OFFLINE_PADDING_GROUPS = 5
@@ -112,7 +147,13 @@ class OfflineCSAObserver:
         for handle in self._offline_csa_handles:
             handle.remove()
         self._offline_csa_handles = []
-        return {layer: dict(counts) for layer, counts in self._offline_csa_counts.items()}
+        # forward hook 在图重放下不触发，窗口内的计数通常全是空的；
+        # per-layer 命中以捕获期的 capture_time_selection 为准。
+        return {"forward_hook_counts": {layer: dict(counts)
+                                        for layer, counts in self._offline_csa_counts.items()},
+                "capture_time_selection": {layer: dict(counts)
+                                           for layer, counts in _CSA_SELECTION.items()},
+                "note": "图重放不触发 forward hook，per-layer 命中看 capture_time_selection"}
 
     def offline_begin_profile(self, directory, start_step, steps, expected_tokens, expected_requests):
         """从指定 step 起采集整步 CPU+NPU 数据：Level1、带 device kernel、不采 Python stack。
