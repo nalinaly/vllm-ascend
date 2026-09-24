@@ -33,6 +33,8 @@ class OfflineCSAObserver:
     _OFFLINE_PADDING_GROUPS = 5
     # dummy 步里取几次 slot mapping 样本。
     _OFFLINE_SLOT_SAMPLES = 4
+    # dummy 步里复算几次 compact slot mapping。
+    _OFFLINE_COMPACT_SAMPLES = 3
 
     def offline_cache_layout(self):
         """只记录真实缓存描述符，用于定位共享存储边界，不读取设备数据。"""
@@ -275,6 +277,7 @@ class OfflineCSAObserver:
                  "step_probes": 0, "step_probe_results": [],
                  "in_dummy": False, "slot_samples": 0, "slot_probe_results": [],
                  "recaptures": 0,
+                 "compact_samples": 0, "compact_probe_results": [],
                  "replay_calls": 0, "replay_padded": 0,
                  "replay_padded_allowed": 0, "replay_rejected": 0,
                  "records": [], "directory": str(directory)}
@@ -291,6 +294,13 @@ class OfflineCSAObserver:
             if not padded:
                 return result
             state["padded_builds"] += 1
+            # dummy 步里把 decode metadata 暂存，供跑完之后复算 compact slot。
+            # 不在这里算：算子调用虽然只产出 metadata、不碰 KV cache，
+            # 但放在 build 内仍有扰动本步的风险，等 dummy 返回后再算更稳。
+            if state["in_dummy"] and state["compact_samples"] < self._OFFLINE_COMPACT_SAMPLES:
+                ratio = int(getattr(builder, "compressor_ratio", 0))
+                if ratio == 4 and getattr(result, "decode", None) is not None:
+                    state["pending_compact"] = (ratio, result.decode)
             # 一步里每个 cache group 各 build 一次，采满一轮即停，不逐步累积。
             if state["captured"] < self._OFFLINE_PADDING_GROUPS:
                 record = self._offline_padding_record(builder, common_attn_metadata, actual, result)
@@ -330,6 +340,50 @@ class OfflineCSAObserver:
 
         model_runner_v1.can_replay_csa_graph = counted
         self._offline_replay_origin = origin
+
+    def _offline_compact_sample(self, state, runner, num_tokens):
+        """复算 dummy 步的 compact slot mapping，判断它会不会写进 cache。
+
+        compact slot（cmp_slot_mapping／idx_slot_mapping）由 compressor_metadata
+        算子在图内从 start_pos 与 block_table 现算，**不来自**被 fill 成 -1 的那个
+        slot_mapping 缓冲，所以主 slot 那轮测量覆盖不到它。图内产出的张量 Python
+        侧读不到，但算子是纯 metadata 生产者（只产出 cos/sin/slots，不碰 KV cache），
+        用同一份 metadata 复算一次即可得到与图内一致的结果。
+
+        必须取**同一层**的 impl：compress_ratio 不匹配会直接报错
+        （task_20260924_000518 即因此失败）。这里按 builder 的 compressor_ratio
+        找到对应层。
+        """
+        pending = state.pop("pending_compact", None)
+        if pending is None or state["compact_samples"] >= self._OFFLINE_COMPACT_SAMPLES:
+            return
+        ratio, decode = pending
+        try:
+            import torch
+
+            impl = None
+            for layer in runner.get_model().model.layers:
+                attention = layer.self_attn
+                if getattr(attention, "compress_ratio", 0) == ratio:
+                    impl = attention.dsa_attn.dsa_attn.impl
+                    break
+            if impl is None:
+                state.setdefault("compact_probe_error", f"no layer with compress_ratio={ratio}")
+                return
+            torch.npu.synchronize()
+            _cos, _sin, slots = impl._compute_compressor_metadata(decode)
+            flat = slots.reshape(-1, slots.shape[-1]) if slots.dim() > 1 else slots.reshape(-1, 1)
+            pages = flat[:, 0]
+            state["compact_samples"] += 1
+            state["compact_probe_results"].append({
+                "num_tokens": int(num_tokens),
+                "rows": int(flat.shape[0]),
+                "non_negative_pages": int((pages >= 0).sum().item()),
+                "max_page": int(pages.max().item()),
+                "min_page": int(pages.min().item()),
+            })
+        except Exception as error:
+            state.setdefault("compact_probe_error", repr(error))
 
     def _offline_recapture_probe(self, state):
         """统计采集窗口内新建了多少个 NPUGraph，用来判定有没有 replay 期重新捕获。
@@ -403,6 +457,7 @@ class OfflineCSAObserver:
         若确为全 -1，kernel 的 `page >= 0` 守卫必然挡住主 slot 那条写入路径。
         """
         result = origin(runner, num_tokens, *args, **kwargs)
+        self._offline_compact_sample(state, runner, num_tokens)
         if state["slot_samples"] >= self._OFFLINE_SLOT_SAMPLES:
             return result
         try:
