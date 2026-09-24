@@ -56,7 +56,7 @@
 | T1.4 | 放开三道 host 闸门 | `native_adapter.py`、`service.py`、`service_config.py`、`platform.py` | **代码完成，验收进行中**（`1815fac`、`3dfb547`）。三道闸门已放开；另发现并修复第四个阻塞——ACL Graph 档位未按 `uniform_decode_query_len` 对齐，导致 MoE 退到 ALLTOALL 使 `should_skip_allreduce_across_dp_group` 为假、触发 DP 闸门。判据：小 BS 放进较大合法 bucket、不再静默回退 Native。**已通过**：PTO 在图模式下完整跑通、输出与 Native 逐 token 相同（`accept_t14_pto_v5`）；补位档位全部进入图重放（`accept_t13_padded`：`replay_padded=62`、`allowed=62`、`rejected=0`），不再静默回退 Native | T1.3 | 16 | **已完成** |
 | T1.5 | graph 覆盖 G04～G06 | 见下方"T1.5 的落点需要改" | 三个用例各自通过；同一张图在不同补位量下重放，metadata buffer 复用不串数据；无 replay 期重新编译 | T1.4 | 16（原定 1，见下） | **待用户定落点** |
 | T1.6 | 空 rank 整批 dummy | `offline_pd/run.py` 的 `--rank-decode-tokens`、`observer.py` 的 dummy 计数与 slot 探针 | **基本完成，余一条路径未覆盖**。空转已证实：rank0 比 rank1 多 7 次 dummy（26 vs 19），与提前 48 token≈8 步吻合，是直接计数而非耗时推断。无越界读 ✅；输出无非有限值 ✅（rank1 与基线逐 token 相同，空 rank 不影响其余 rank）；**主 slot 路径不写 cache ✅ 实测**（`accept_t16_slots_v2`：六个 cache group 的 slot mapping 全为 -1）。**未覆盖**：compact slot mapping 由算子在图内现算，不受那次 fill 影响，需读图内产出的 compact slot 张量才能验 | T1.4 | 16 | **基本完成** |
-| T1.7 | DP2 跑通 D01～D05 | `tests/pypto_test/dsv4_csa_dp_metadata.py` 扩展到完整 CSA | 六组负载 `(4,40)`、`(40,4)`、`(8,24)`、`(16,32)`、`(0,4)`、`(0,40)` 及连续切换全部通过；两 rank 数据不串用；先记录 `should_skip_allreduce_across_dp_group` 实际返回值、通信方法与图模式，再判定预期 padding 量 | T1.5、T1.6 | 2 | 未开始 |
+| T1.7 | D01～D05 的 DP 验证 | `offline_pd/run.py` 的 `--rank-batches` | **D01／D02 已通过**（`d01_b32`／`d02_b32`，上线口径 batch 32、闸门已移除）：D01 rank0 submitted=4、`padded_builds` 208/256，D02 换成 rank1 补 208 次，补位量随负载对称反转，无"rank0 特殊"假设；`replay_padded=26`、`allowed=26`、**`rejected=0`**，补位档位全部进入图重放。低负载 rank 的补位占比 87.5%，陈旧 positions 行数比此前验过的大一个量级，T1.3 的判据兜住了。**输出正确性待与 Native 同配置对照**（已排 `task_20260924_132021_503799357`）。D03～D05 未开始 | T1.9 | 16 | **进行中** |
 | T1.8 | DP16 完整验证 | 离线 P/D 入口 | D01～D05 在 DP16／EP16 下通过；DP2 与 DP16 的通信选择分别记录，不互相替代 | T1.7 | 16 | 未开始 |
 | T1.9 | 拿掉 DP 图模式闸门 | `service_config.py` | **已执行（`05ba642`），顺序按用户 2026-09-24 的决定提前**：原计划 T1.8 通过后再删，用户明确"目标肯定是支持 DP 补齐场景的 aclgraph，之前只是算子 padding 没完善，既然基本处理了就应该放开闸门遇到问题解决具体问题"。删除后 `_sync_metadata_across_dp` 会真的 all_reduce，DP 补齐随之产生，D01～D05 才验得到真实场景 | — | 16 | **已执行，待 D01～D05 验证** |
 | T1.10 | eager + embedding_tp 的 DP 补齐 | `finegrained_tp_config.embedding_tensor_parallel_size` + eager 用例 | 开启 embedding TP 后在 eager 下跑通：DP 补齐正确产生、PTO 输出与 Native 一致、`_forward_embed_tp` 的静态缓冲容量不被超出。**低优先级**（用户 2026-09-24 定），排在 D01～D05 之后 | T1.9 | 16 | 未开始（低优先级） |
@@ -87,6 +87,28 @@ DP rank。而 `_forward_embed_tp` 在组内做 **all_gather + reduce_scatter**�
 若开 embedding TP 而档位配置不当，会直接在这里报错。
 
 当前 `embedding_tensor_parallel_size` 为 0（未开），所以这条路径现在遇不到。
+
+### 生产口径暴露的第一条真实约束：HCCL 缓冲
+
+换成 `--batch 40` 后第一轮直接失败在 MoE 的 MC2 派发算子上，**不是 CSA 的问题**：
+
+```
+npu_moe_distribute_dispatch_v2 -> aclnnMoeDistributeDispatchV4，错误码 561002
+HCCL_BUFFSIZE_EP is too SMALL, maxBs = 240, h = 4096, epWorldSize = 16,
+localMoeExpertNum = 16, k = 6
+NEEDED = ((maxBs*8704*16*16) + (maxBs*8192*6)) * 2 = 1043MB, HCCL_BUFFSIZE = 1024MB
+```
+
+`maxBs = max_num_seqs * 6`。此前一直用 `--batch 5`（maxBs=30），需求约 130MB，
+远在限内，所以从没碰到——**小 batch 把这条真实约束整个绕开了**。
+
+查上线参考（`dsv4_perf_accuracy_20260827/runtime`）：decode 侧
+`HCCL_BUFFSIZE=1800`、`--max-num-seqs 32`；prefill 侧 1024。按 32 反推
+maxBs=192、需求约 834MB < 1800MB，**上线配置自洽**。驱动已改为 prefill 1024、
+decode 1800，与上线一致。
+
+**待确认**：清单 T3.2 的档位表含 B=40，但上线只到 32。40 用 1800MB 能跑
+（需求 1043MB）但超出上线口径，是否保留为压力档待用户定。
 
 ### 验收口径与 DP 补齐的定位（2026-09-24 用户定）
 
