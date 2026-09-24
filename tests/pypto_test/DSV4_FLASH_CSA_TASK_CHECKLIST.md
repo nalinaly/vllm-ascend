@@ -737,7 +737,7 @@ H255 直接复用 `smoke_bank`，不必为矩阵重新生成。
 | --- | --- | --- | --- | --- |
 | T4.1 | F01 全模型接入 | 其他上下文长度／BS 与必要层级数值验收 | T3.1、T3.2 | 未开始 |
 | T4.2 | F02 实际 BS/GBS 与 graph | **进行中**：四项里三项已有实测证据，图容量本轮补齐（见下）。仍缺 B=24/32 两档（受 `exit=130` 阻塞） | T1.9 | **进行中** |
-| T4.3 | F04 EP/EPLB | 显式开启 EPLB、运行中重平衡及与图／生命周期联动；`enable_expert_parallel` 不等于 EPLB | T1.8 | 未开始 |
+| T4.3 | F04 EP/EPLB | **已停止（用户 2026-09-24 定）**，恢复需重新指派。停止原因是环境层面的算子缺失，不是集成代码问题：EPLB 本身能起来（`Dynamic EPLB is True`、`Policy: SwiftBalanceEplb (type=2)`、子进程拉起、warm-up 完成耗时 11s），但在重排后的第一次 MoE 前向报 `RuntimeError: aclnnGroupedMatmulSwigluQuantWeightNzTensorList ... not in libopapi.so`，调用栈为 `no_shared_forward_impl` → `_quant_method.fused_experts`。算子名中的 `WeightNz` 表明 **EPLB 让 MoE 选择了 NZ 布局的融合 grouped matmul**，而本机 CANN 9.0.0 的 `libopapi.so` 没有该算子。这与我们「NZ 一定不能开」的配置不矛盾——`weight_nz_mode=0`、`VLLM_ASCEND_ENABLE_NZ=0` 都已设，是 EPLB 路径自行选了 NZ 版本。同类限制此前还有 `fuse_norm_quant` 因缺 `aclnnAddRmsNormBias` 而关闭 | T1.8 | 16 | **已停止** |
 | T4.4 | F05 真实 DSpark | 多场景结构化接受统计与输出验收；不强制注入平均 3.8 | T2.4 | 未开始 |
 | T4.5 | F06 稳定性与性能 | 稳态延迟／吞吐、显存、长时间稳定性及必要异常／超时统计 | T2.3 | 未开始 |
 
@@ -785,6 +785,7 @@ F03 的在线传输与网络故障恢复不是本轮前置条件——用户当�
 
 | 项目 | 未完成范围 |
 | --- | --- |
+| T4.3 EPLB | 用户 2026-09-24 明确停止。卡点是本机 CANN 9.0.0 缺 `aclnnGroupedMatmulSwigluQuantWeightNzTensorList`，EPLB 的 MoE 路径要求 NZ 布局融合算子。两次任务（PTO 与 Native 后端）均在 EPLB warm-up 完成后的首次 MoE 前向失败，说明与 CSA 用哪套算子无关。注意失败进程会挂死不退，需要 `task-submit --kill` 收回卡 |
 | 剩余精度差异 | 旧基线正式权重 B40 step46 在冻结容差内仍有 attention BF16 末位差异。旧报告的 35 个 attention BF16 差异不是新 release 已复现的问题 |
 | 正式 P0/P2 | 旧基线正式矩阵仅 B4/B40、H131071 通过，旧剩余 16 组；迁移后不能简单宣布只剩 16 组 |
 | P3 连续轨迹 | 最新正式完整 100 步验收尚未完成；旧参考 100 步或旧基线 47 步不能替代新 release |
