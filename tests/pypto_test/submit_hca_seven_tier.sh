@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 把七个单卡档位（128K×B4/B8/B16、8K×B16/B24/B32/B40）各提交一张卡，成批并行。
+# 把七个单卡档位（128K×B4/B8/B16/B24、8K×B24/B32/B40）各提交一张卡，成批并行。
+# 档位表于 2026-09-29 调整：新增 128K/B24，去除 8K/B16。
 # 每档跑 run_hca_reference_pair.sh：先基线、再候选，候选对基线快照做逐 bit 门禁并计时。
 # 本机 task-submit 只接受“一整条命令字符串”，不能按 argv 传，否则参数会被它当成自己的选项。
 # 用法：submit_hca_seven_tier.sh <结果目录> <基线源码> <候选源码>
@@ -13,7 +14,7 @@ mkdir -p "$output"
 tasks="$output/tasks.json"
 printf '[\n' >"$tasks"
 first=1
-for tier in 131072:4 131072:8 131072:16 8192:16 8192:24 8192:32 8192:40; do
+for tier in 131072:4 131072:8 131072:16 131072:24 8192:24 8192:32 8192:40; do
   history="${tier%%:*}"
   batch="${tier##*:}"
   target="$output/h${history}_b${batch}"

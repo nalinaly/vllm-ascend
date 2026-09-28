@@ -185,5 +185,8 @@ def compressor_ratio128(
                         cache_row = pl.cast(page, pl.INDEX) * CMP_BLOCK + offset
                         cache_flat[cache_row:cache_row + 1, :] = pl.cast(output, pl.BF16, mode="rint")
 
-    ready_tid = pl.system.task_dummy(deps=[state_tid, cache_tid])
-    return ready_tid
+    # 原先用 task_dummy 汇聚 state 与 cache 两个任务。唯一的消费者是 attention 的
+    # hca_cmp_work_gather，它只读 cmp_cache、并不读压缩器 state；所以那个 dummy 既多一跳
+    # AICPU 调度，又把 hca_state_commit 变成了 attention 的假依赖。这里直接交出写
+    # cmp_cache 的任务 id。state 写的是 InOut 张量，整层结束前必然完成，不会被丢掉。
+    return cache_tid

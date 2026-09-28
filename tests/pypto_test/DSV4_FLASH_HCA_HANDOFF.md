@@ -214,6 +214,53 @@ DSpark 统计也一致，无缺失结果。8 个 rank 各有 44 次真实 B16 �
    长上下文与其余 batch 的整模型 token 覆盖仍需补齐。
 2. 固定归约下的连续 decode 状态轨迹，B1～B64 的动态 BS 切换、整个算子的 padding/dummy、
    请求生命周期与 prefix 共享。当前 dummy 证据仅覆盖 compressor 子链。
+
+   **2026-09-29 查清了这一项的现状与做法**：CSA 侧早已有完整的 padding 图检查
+   `dsv4_csa_single_layer.py: check_padding_graph()`，由 CSA 脚本的 `--padding-graph`
+   调用；它捕获满档图后，按 `active` = 满档 → 满档−1 → 1 → 满档 逐次用 Native builder
+   在**图外原地**更新输入（`seq_lens[active:]` 归零、`slot_mapping[active*6:]` 填 −1、
+   `block_table[active:]` 归零，并以 `num_reqs_actual=active` 重建 metadata），
+   再重放同一张图，要求有效请求的输出与**满档 eager 结果的前 active*6 行逐 bit 相同**、
+   补位 cache/state 保持初态、写保护只落在有效 slot 内。这同时覆盖了动态 BS 切换与
+   padding/dummy 两项。
+
+   **HCA 没有接这个检查**：`dsv4_hca_single_layer.py` 只 import 了
+   `guard_checks / make_fixture / make_layer / restore`。所需构件都已具备——HCA 脚本
+   自己捕获 NPUGraph，`NativeHCACall` 已接 `compact_metadata`，oracle 用的
+   `_compute_compressor_metadata` 就在 Native 的 `dsa_v1.py` 上（HCA 与 CSA 同一个类）。
+
+   **唯一的设计决定**：compact metadata 的生产者放在图内还是图外。CSA 的 `run()` 把
+   `_compute_compressor_metadata` 一并捕获进图，所以重放时它会按更新后的 metadata 重算；
+   而 HCA 的单层脚本目前在图外算一次 `fixture["compact"]["compressed"]` 再传给
+   `NativeHCACall`，重放时会是旧值。要让 padding 测试成立，必须改成与 CSA 同构
+   （把 compact 生产者纳入捕获区），或在重放前原地更新那几个 compact 张量。
+   落地时请按 HCA 的组（swa / compressed / state，无 indexer）与单一输出 `x_out` 改写，
+   不要直接复用 CSA 的函数体。
+
+   **2026-09-29 已完成动态 BS 切换与整算子 padding/dummy 两条**：新增
+   `dsv4_hca_padding.py`，HCA 单层脚本加 `--padding-graph`（要求 batch ≥ 2，
+   且必须与计时/泳道分开进程）。判据比 CSA 版更直接，用字节级掩码构造期望值：
+   期望的整份 cache/state = 初态，只在有效 slot 覆盖的字节上换成满档结果，
+   因此一次比对同时表达"补位请求一个字节都不许写"和"有效请求写出的内容必须与满档逐 bit 一致"；
+   输出侧要求有效请求的行与满档 eager 结果的前 `active*6` 行逐 bit 相同。
+
+   实测（CANN 9.2，nz_mode=2，deterministic 0，生产算子 v17+v21+v22）：
+
+   | 档位 | 满档 | active 序列 | 结果 |
+   | --- | ---: | --- | --- |
+   | h124 / B4 | 4 | 4 → 3 → 1 → 4 | 输出、三份 allocation、compact metadata、写保护全 PASS |
+   | h8190 / B8 | 8 | 8 → 7 → 1 → 8 | 同上 |
+
+   证据：`results/hca_padding_20260929/h124_b4_v2/`、`h8190_b8_v2/`。
+   设计决定已验证：**compact metadata 的生产者放在捕获区内可行**，重放时会按更新后的
+   metadata 重算，不需要改成图外原地更新。
+   踩过的坑：`make_call` 里不能调 `prepare_weights()`——它内部 `scale()` 做
+   `bool(count_nonzero(offset).cpu())` 是同步 D2H，捕获期间会被拒
+   （`error 107030` / `Not_Supported(EE1016): Stream during the capture stage is not supported`）。
+   权重准备必须提到捕获之前做一次并闭包引用。
+
+   **仍未覆盖**：固定归约下的连续 decode 状态轨迹（需要多步真实轨迹，而非同一初态重放）、
+   请求生命周期与 prefix 共享。
 3. 单层独立的 metadata A→B→A 地址固定重放**已完成**（2026-09-28 23:0x，CANN 9.2.0-beta.2）：
    `results/hca_optimization_20260928/metadata_replay_cann92/`。B4、history A=124 / B=8190、
    统一页表宽度、B 的页表行反序；54 个 metadata 张量叶子中 23 个在 A/B 间指针与内容都不同。

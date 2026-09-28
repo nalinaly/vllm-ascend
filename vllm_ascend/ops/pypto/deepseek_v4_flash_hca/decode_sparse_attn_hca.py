@@ -80,6 +80,7 @@ QK_PV_READY_EVENT = 2
 CMP_ATTN_K_TILE = 128 if TP == 1 else 32
 CMP_PAGES_PER_WORK = CMP_ATTN_K_TILE // CMP_STORAGE_BLOCK_SIZE
 CMP_GATHER_WORK_TILE = max(1, 8 // CMP_PAGES_PER_WORK)
+CMP_GATHER_AIV_WAVE = 48  # 一个 AIV 波的块数；长档 gather 的块数按它反推
 ROPE_TILE = 16
 ROPE_INTERLEAVE_TILE = 2 * ROPE_TILE
 ROPE_CS_T_TILE = S
@@ -171,7 +172,7 @@ def sparse_attn_hca(
         raw_kv = pl.create_tensor([request_count * REQUEST_KV_ROWS, HEAD_DIM], dtype=pl.BF16)
         raw_valid = pl.create_tensor([t_dim, WIN], dtype=pl.FP32)
         # 按 Native 原始 KV 页表聚合一个请求的 128+5 行；不创建外部窗口索引。
-        with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", deps=[ori_cache_ready_dep]) as raw_gather_tid:
+        with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", allow_early_resolve=True, deps=[ori_cache_ready_dep]) as raw_gather_tid:
             g_req = pl.tile.get_block_idx()
             g_t0 = g_req * S
             g_base = g_req * REQUEST_KV_ROWS
@@ -314,7 +315,7 @@ def sparse_attn_hca(
         cmp_gather_blocks = cmp_gather_count
         if cmp_table_blocks >= 8:
             cmp_gather_blocks = (cmp_gather_count + CMP_GATHER_WORK_TILE - 1) // CMP_GATHER_WORK_TILE
-        with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
+        with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
             gather_block = pl.tile.get_block_idx()
             gather_begin = gather_block
             gather_end = gather_block + 1
@@ -675,7 +676,7 @@ def _legacy_sparse_attn_hca_tp1(
     attn_sink_col = pl.reshape(attn_sink, [H, 1])
 
     with pl.spmd(
-        MERGE_WORKERS, name_hint="hca_stream_merge_pack", deps=[raw_tid, cmp_tid, rope_tid],
+        MERGE_WORKERS, name_hint="hca_stream_merge_pack", allow_early_resolve=True, deps=[raw_tid, cmp_tid, rope_tid],
     ) as heads_tid:
         worker = pl.tile.get_block_idx()
         stream_swap_one = pl.tile.full([1, ROPE_DIM], dtype=pl.FP32, value=1.0)
@@ -782,7 +783,7 @@ def _short_sparse_attn_hca_tp1(
     raw_kv = pl.create_tensor([request_count * REQUEST_KV_ROWS, HEAD_DIM], dtype=pl.BF16)
     raw_valid = pl.create_tensor([t_dim, WIN], dtype=pl.FP32)
     # 按 Native 原始 KV 页表聚合一个请求的 128+5 行；不创建外部窗口索引。
-    with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", deps=[ori_cache_ready_dep]) as raw_gather_tid:
+    with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", allow_early_resolve=True, deps=[ori_cache_ready_dep]) as raw_gather_tid:
         g_req = pl.tile.get_block_idx()
         g_t0 = g_req * S
         g_base = g_req * REQUEST_KV_ROWS
@@ -843,7 +844,7 @@ def _short_sparse_attn_hca_tp1(
     cmp_gather_blocks = cmp_gather_count
     if cmp_table_blocks >= 8:
         cmp_gather_blocks = (cmp_gather_count + CMP_GATHER_WORK_TILE - 1) // CMP_GATHER_WORK_TILE
-    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
+    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
         gather_block = pl.tile.get_block_idx()
         gather_begin = gather_block
         gather_end = gather_block + 1
@@ -1053,7 +1054,7 @@ def _long_sparse_attn_hca_tp1(
     raw_kv = pl.create_tensor([request_count * REQUEST_KV_ROWS, HEAD_DIM], dtype=pl.BF16)
     raw_valid = pl.create_tensor([t_dim, WIN], dtype=pl.FP32)
     # 按 Native 原始 KV 页表聚合一个请求的 128+5 行；不创建外部窗口索引。
-    with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", deps=[ori_cache_ready_dep]) as raw_gather_tid:
+    with pl.spmd(raw_gather_count, name_hint="hca_gather_kv", allow_early_resolve=True, deps=[ori_cache_ready_dep]) as raw_gather_tid:
         g_req = pl.tile.get_block_idx()
         g_t0 = g_req * S
         g_base = g_req * REQUEST_KV_ROWS
@@ -1111,16 +1112,16 @@ def _long_sparse_attn_hca_tp1(
     cmp_work_kv = pl.create_tensor([cmp_gather_count * CMP_ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16)
 
     cmp_work_valid = pl.create_tensor([cmp_gather_count, CMP_ATTN_K_TILE], dtype=pl.FP32)
-    cmp_gather_blocks = cmp_gather_count
-    if cmp_table_blocks >= 8:
-        cmp_gather_blocks = (cmp_gather_count + CMP_GATHER_WORK_TILE - 1) // CMP_GATHER_WORK_TILE
-    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
+    # 每块承担的搬运项数按实际项数反推，使块数不超过一个 AIV 波（48 块）。
+    # 原先固定 CMP_GATHER_WORK_TILE 在 128K/B16 下算出约 64 块，是 1.5 波、白扔半波；
+    # 实测该任务跨度 51.1 μs，而核时间只有 900 μs（48 核下限 18.8 μs）。
+    # 划分只决定哪个块搬哪几项，搬运内容与顺序不变。
+    gather_work_tile = (cmp_gather_count + CMP_GATHER_AIV_WAVE - 1) // CMP_GATHER_AIV_WAVE
+    cmp_gather_blocks = (cmp_gather_count + gather_work_tile - 1) // gather_work_tile
+    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
         gather_block = pl.tile.get_block_idx()
-        gather_begin = gather_block
-        gather_end = gather_block + 1
-        if cmp_table_blocks >= 8:
-            gather_begin = gather_block * CMP_GATHER_WORK_TILE
-            gather_end = pl.min(gather_begin + CMP_GATHER_WORK_TILE, cmp_gather_count)
+        gather_begin = gather_block * gather_work_tile
+        gather_end = pl.min(gather_begin + gather_work_tile, cmp_gather_count)
         for gather_item in pl.range(gather_begin, gather_end):
             gather_request = gather_item // cmp_work_count
             gather_work = gather_item - gather_request * cmp_work_count

@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--history", type=int, default=124)
     parser.add_argument("--device", type=int, choices=[0], default=0, help="可见设备中的逻辑卡号")
     parser.add_argument("--service-graph", action="store_true", help="额外验证服务 custom op 与一次图重放")
+    parser.add_argument("--padding-graph", action="store_true",
+                        help="同一张图跑 满档→满档−1→1→满档，验证动态 BS 切换与 padding/dummy")
     parser.add_argument("--poison-unused-compressed", action="store_true",
                         help="将本步不可见的压缩 KV 行填为 NaN，验证 attention 不消费未初始化数据")
     parser.add_argument("--timing-iters", type=int, default=0, help="每侧图重放计时次数；0 不计时")
@@ -40,6 +42,10 @@ def main():
         parser.error("profile 需要 timing-iters")
     if args.swimlane and args.timing_iters:
         parser.error("泳道采集必须与无 profiler 计时分开进程")
+    if args.padding_graph and (args.timing_iters or args.swimlane):
+        parser.error("补位图检查必须与计时/泳道分开进程")
+    if args.padding_graph and args.batch < 2:
+        parser.error("补位图检查需要 batch >= 2，否则没有可补位的请求")
     if not os.environ.get("TASK_DEVICE"):
         raise RuntimeError("NPU 验证必须通过 task-submit 提交")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -82,11 +88,42 @@ def main():
         config = EngineArgs(
             model=str(args.checkpoint), tokenizer_mode="deepseek_v4", trust_remote_code=True,
             tensor_parallel_size=1, dtype="bfloat16", quantization="ascend", hf_overrides={"sliding_window": 128},
-            max_model_len=max(16384, args.history + 128), max_num_seqs=40, max_num_batched_tokens=256,
-            enable_prefix_caching=False, enforce_eager=True, block_size=32,
+            max_model_len=max(16384, args.history + 128), max_num_seqs=max(40, args.batch),
+            max_num_batched_tokens=400,
+            enable_prefix_caching=True, block_size=32,
+            # 不能用 enforce_eager：它让 cudagraph_mode 变成 NONE，而 platform.py 在该分支下
+            # 会显式把 enable_npugraph_ex 与 enable_static_kernel 置 False（并改写
+            # additional_config 里的值），导致上线口径的这两个开关被静默关掉。
+            # 按上线模板给 FULL_DECODE_ONLY；本 bench 仍自己捕获 NPUGraph 做单层计时。
+            compilation_config={"cudagraph_mode": "FULL_DECODE_ONLY"},
             speculative_config={"method": "dspark", "num_speculative_tokens": 5, "enforce_eager": True},
-            additional_config={"weight_nz_mode": args.weight_nz_mode, "enable_kv_nz": False, "enable_dsa_cp": False},
+            # 与上线 decode 口径对齐：
+            # vllm-ascend-main/tests/dsv4_perf_accuracy_20260827/runtime/decode/run_dp_template.sh
+            # 的 --additional-config。Native 与 PTO 共用同一个 config 对象，两侧必然同配。
+            # multistream_overlap_shared_expert 在单层里没有 MoE 可重叠，仍按模板给上，
+            # 避免两套配置在别处产生隐性差异。
+            additional_config={
+                "weight_nz_mode": args.weight_nz_mode, "enable_kv_nz": False, "enable_dsa_cp": False,
+                "ascend_compilation_config": {"enable_npugraph_ex": True, "enable_static_kernel": True},
+                "enable_cpu_binding": True,
+                "multistream_overlap_shared_expert": True,
+                "recompute_scheduler_enable": False,
+            },
         ).create_engine_config()
+        # 把平台最终生效的编译开关回显到报告里：platform.py 会在 cudagraph_mode 为 NONE 时
+        # 把它们强制置 False，只看自己传进去的值会误判。
+        try:
+            from vllm_ascend.ascend_config import get_ascend_config
+
+            compile_config = get_ascend_config().ascend_compilation_config
+            report["effective_compilation"] = {
+                "cudagraph_mode": str(config.compilation_config.cudagraph_mode),
+                "enable_npugraph_ex": bool(compile_config.enable_npugraph_ex),
+                "enable_static_kernel": bool(compile_config.enable_static_kernel),
+                "fuse_norm_quant": bool(getattr(compile_config, "fuse_norm_quant", False)),
+            }
+        except Exception as exc:  # noqa: BLE001 - 回显失败不该影响计时
+            report["effective_compilation"] = {"error": repr(exc)}
         with native_session(config, 0), torch.inference_mode():
             device = torch.device("npu:0")
             layer, details = make_layer(config, args.checkpoint, device, layer_index=3)
@@ -151,6 +188,26 @@ def main():
             report["pto_output_nonfinite"] = int((~torch.isfinite(pto["output"])).sum())
             report["pto_guards"] = guard_checks(fixture)
             report["pto_native"] = {name: compare_tensor(value, native[name], 0, 0) for name, value in pto.items()}
+            if args.padding_graph:
+                from dsv4_hca_padding import check_padding_graph
+
+                # 权重准备必须在图捕获之前做完：prepare_weights 内部的 scale() 会做
+                # bool(count_nonzero(offset).cpu())，那是同步 D2H 拷贝，捕获期间会被
+                # rtStreamSynchronize 拒绝（error 107030 / EE1016）。
+                padding_weights = prepare_weights(layer.self_attn, layer)
+
+                def make_call(compact):
+                    return NativeHCACall(
+                        operators, padding_weights, fixture["hidden"],
+                        fixture["positions"], groups,
+                        layer_name=layer.self_attn.dsa_attn.dsa_attn.layer_name,
+                        compact_metadata=compact, output=output,
+                    )
+
+                check_padding_graph(
+                    fixture, output, pto, make_call,
+                    layer.self_attn.dsa_attn.dsa_attn.impl, report,
+                )
             if args.reference_state:
                 import json
 
