@@ -41,13 +41,30 @@ class PyptoHCADeepseekV4ForCausalLM(AscendDeepseekV4ForCausalLM):
             install_hca_forward(layer)
 
     def process_weights_after_loading(self):
+        import inspect
+
         import pypto.torch
         from vllm.config import get_current_vllm_config
 
         from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import HCAOperators
         from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service import HCAServiceRuntime
+        from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
 
-        pypto.torch.init(device=torch.npu.current_device(), platform="a2a3", runtime="tensormap_and_ringbuffer")
+        # PyPTO 运行时 arena 的尺寸只能在 init 时给（之后 prepare_callable / launch
+        # 都不再携带 CallConfig），默认那 4x256 MiB heap + 16384 深 task window 合计
+        # 占 1.343 GiB 设备显存。取值来自 additional_config["pto_csa_ring_config"]，
+        # 也可用 PTO_CSA_RING_* 环境变量临时覆盖；不设则沿用 Simpler 的编译期默认。
+        ring_kwargs = ring_sizing_kwargs(get_current_vllm_config().additional_config)
+        if ring_kwargs and "ring_heap" not in inspect.signature(pypto.torch.init).parameters:
+            # 这条接口是 hw-native-sys/pypto#2940 才加的。没有它时静默忽略会让人以为
+            # 显存已经省下来了，所以宁可在这里直接报错。
+            raise ValueError(
+                "当前 PyPTO 的 pypto.torch.init 不接受 ring 尺寸参数；"
+                "请升级到含 kernel 模式 ring sizing 的版本，或去掉 pto_csa_ring_config "
+                "与 PTO_CSA_RING_* 设置"
+            )
+        pypto.torch.init(device=torch.npu.current_device(), platform="a2a3",
+                         runtime="tensormap_and_ringbuffer", **ring_kwargs)
         operators = HCAOperators.register()
         capacity = get_current_vllm_config().scheduler_config.max_num_seqs
         count = 0
