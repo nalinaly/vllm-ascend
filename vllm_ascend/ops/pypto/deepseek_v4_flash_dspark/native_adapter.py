@@ -123,8 +123,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
     """Prepare the TP1 ABI from already-loaded Native parameters exactly once."""
     import torch_npu
 
-    if attention.compress_ratio != 4 or attention.n_local_heads != 64 or attention.n_local_groups != 8:
-        raise ValueError("CSA specialization requires C4 and TP1 with 64 heads / 8 output groups")
+    if attention.compress_ratio not in (4, 128) or attention.n_local_heads != 64 or attention.n_local_groups != 8:
+        raise ValueError("PTO attention 要求 C4/C128、TP1、64 个 head 和 8 个输出组")
 
     layouts = root_weight_layouts(root_function)
 
@@ -160,8 +160,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
         return result.float().contiguous()
 
     bf16, int8 = torch.bfloat16, torch.int8
-    main, indexer = attention.compressor, attention.indexer
-    inner = indexer.compressor
+    main = attention.compressor
+    compressor_width = 1024 if attention.compress_ratio == 4 else 512
     # mHC 的门控权重与 attention 的 input_layernorm 挂在 DeepseekV4DecoderLayer 上。
     hc = {}
     if layer is not None:
@@ -179,24 +179,30 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
         "wkv": weight(attention.wkv, (512, 4096), bf16, True),
         "gamma_cq": weight(attention.q_norm, (1024,), bf16),
         "gamma_ckv": weight(attention.kv_norm, (512,), bf16),
-        "cmp_wkv": weight(main.wkv, (1024, 4096), bf16),
-        "cmp_wgate": weight(main.wgate, (1024, 4096), bf16),
+        "cmp_wkv": weight(main.wkv, (compressor_width, 4096), bf16),
+        "cmp_wgate": weight(main.wgate, (compressor_width, 4096), bf16),
         "cmp_ape": main.ape.detach().float().contiguous(),
         # Match Native A3 storage; the RMS task widens loaded BF16 tiles.
         "cmp_norm_w": weight(main.norm, (512,), bf16),
-        "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
-        "idx_wq_b_scale": scale(indexer.wq_b, 8192),
-        "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
-        **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
-        "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
-        "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
-        "inner_ape": inner.ape.detach().float().contiguous(),
-        "inner_norm_w": weight(inner.norm, (128,), bf16),
         "attn_sink": attention.attn_sink.detach().contiguous(),
         "wo_a": root_weight("wo_a", (8, 4096, 1024), bf16),
         "wo_b": root_weight("wo_b", (8192, 4096), int8),
         "wo_b_scale": scale(attention.wo_b, 4096),
     }
+    # HCA 不含 Indexer，公共权重准备只在 C4 分支绑定这些参数。
+    if attention.compress_ratio == 4:
+        indexer = attention.indexer
+        inner = indexer.compressor
+        weights.update({
+            "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
+            "idx_wq_b_scale": scale(indexer.wq_b, 8192),
+            "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
+            **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
+            "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
+            "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
+            "inner_ape": inner.ape.detach().float().contiguous(),
+            "inner_norm_w": weight(inner.norm, (128,), bf16),
+        })
     return weights
 
 

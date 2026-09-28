@@ -1,0 +1,119 @@
+{
+  "scope": "同卡 A→B→B→A，保留全部正式样本",
+  "runs": [
+    {
+      "run": "0_baseline",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_optimization_20260928/source_pv128_pair",
+      "native": {
+        "us_mean": 710.6606036424637,
+        "us_p50": 703.2099962234497,
+        "us_p95": 740.8400177955627,
+        "us_min": 665.5600070953369,
+        "us_max": 807.2400093078613
+      },
+      "pto": {
+        "us_mean": 746.1426001787186,
+        "us_p50": 729.9100160598755,
+        "us_p95": 814.4800066947937,
+        "us_min": 697.2799897193909,
+        "us_max": 858.0399751663208
+      }
+    },
+    {
+      "run": "1_candidate",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_optimization_20260928/source_opost16",
+      "native": {
+        "us_mean": 680.76799929142,
+        "us_p50": 684.3199729919434,
+        "us_p95": 694.4199800491333,
+        "us_min": 660.7599854469299,
+        "us_max": 702.2200226783752
+      },
+      "pto": {
+        "us_mean": 723.7301993370056,
+        "us_p50": 704.8600018024445,
+        "us_p95": 788.5000109672546,
+        "us_min": 683.9200258255005,
+        "us_max": 797.6999878883362
+      }
+    },
+    {
+      "run": "2_candidate",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_optimization_20260928/source_opost16",
+      "native": {
+        "us_mean": 684.6042001247406,
+        "us_p50": 692.8599774837494,
+        "us_p95": 705.51997423172,
+        "us_min": 649.9000191688538,
+        "us_max": 710.3800177574158
+      },
+      "pto": {
+        "us_mean": 702.9504024982452,
+        "us_p50": 684.2299997806549,
+        "us_p95": 763.5400295257568,
+        "us_min": 661.4000201225281,
+        "us_max": 768.280029296875
+      }
+    },
+    {
+      "run": "3_baseline",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_optimization_20260928/source_pv128_pair",
+      "native": {
+        "us_mean": 673.1093990802765,
+        "us_p50": 679.6300113201141,
+        "us_p95": 712.3600244522095,
+        "us_min": 637.2799873352051,
+        "us_max": 780.8799743652344
+      },
+      "pto": {
+        "us_mean": 739.2899996042252,
+        "us_p50": 709.5099985599518,
+        "us_p95": 797.760009765625,
+        "us_min": 680.899977684021,
+        "us_max": 1712.9600048065186
+      }
+    }
+  ],
+  "pooled": {
+    "baseline": {
+      "native": {
+        "n": 200,
+        "us_p50": 692.7900016307831,
+        "us_mean": 691.8850013613701,
+        "us_p95": 737.5400066375732,
+        "us_min": 637.2799873352051,
+        "us_max": 807.2400093078613
+      },
+      "pto": {
+        "n": 200,
+        "us_p50": 721.2199866771698,
+        "us_mean": 742.7162998914719,
+        "us_p95": 812.0800256729126,
+        "us_min": 680.899977684021,
+        "us_max": 1712.9600048065186
+      }
+    },
+    "candidate": {
+      "native": {
+        "n": 200,
+        "us_p50": 685.5500042438507,
+        "us_mean": 682.6860997080803,
+        "us_p95": 704.4600248336792,
+        "us_min": 649.9000191688538,
+        "us_max": 710.3800177574158
+      },
+      "pto": {
+        "n": 200,
+        "us_p50": 699.150025844574,
+        "us_mean": 713.3403009176254,
+        "us_p95": 782.5000286102295,
+        "us_min": 661.4000201225281,
+        "us_max": 797.6999878883362
+      }
+    }
+  },
+  "change_pct": {
+    "native": -1.0450493468280309,
+    "pto": -3.0600872466495788
+  }
+}

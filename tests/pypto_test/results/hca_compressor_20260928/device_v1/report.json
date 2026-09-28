@@ -1,0 +1,48 @@
+{
+  "scope": "C128 压缩子链；正式权重、合成输入与历史，不代表 HCA 整层通过",
+  "status": "FAIL",
+  "weights": [
+    {
+      "name": "layers.3.attn.compressor.wkv.weight",
+      "shape": [
+        512,
+        4096
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00021-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.wgate.weight",
+      "shape": [
+        512,
+        4096
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00039-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.ape",
+      "shape": [
+        128,
+        512
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.float32",
+      "shard": "quant_model_weights-00030-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.norm.weight",
+      "shape": [
+        512
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00011-of-00075.safetensors"
+    }
+  ],
+  "native_extension": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/vllm_ascend/vllm_ascend_C.cpython-310-aarch64-linux-gnu.so",
+  "cases": [],
+  "error": "PartialCodegenError('2 function(s) failed to compile:\\n\\n  Function             | Error\\n  ---------------------+--------------------------------------------------------------\\n  hca_norm_rope_write  | ptoas compilation failed:\\n                       | loc(\"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-\\n                       | dsv4-hca-pto-\\n                       | 0251rc1/vllm_ascend/ops/pypto/deepseek_v4_flash_hca/decode_c\\n                       | ompressor_ratio128.py\":166:25): error: \\'pto.alloc_tile\\' op\\n                       | expects result col-major none_box tile column byte size\\n                       | (rows * sizeof(dtype)) to be 32-byte aligned, but got 4\\n                       | bytes\\n  ---------------------+--------------------------------------------------------------\\n  hca_compressor_test  | Misplaced builtin op \\'system.task_dummy\\' in Orchestration\\n                       | function (should be inside InCore block)\\n                       | [/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-p\\n                       | to-\\n                       | 0251rc1/vllm_ascend/ops/pypto/deepseek_v4_flash_hca/decode_c\\n                       | ompressor_ratio128.py:182:5]\\n  ---------------------+--------------------------------------------------------------\\n\\n  Full details: build_output/_jit_hca_compressor_test_he7ep_91/report/codegen_errors.txt')"
+}

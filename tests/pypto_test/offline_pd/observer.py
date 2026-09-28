@@ -67,20 +67,22 @@ def _enable_selection_counter():
         from vllm_ascend.ops.pypto.variant import variant_package
         CSAServiceRuntime = __import__(
             f"{variant_package()}.service", fromlist=["CSAServiceRuntime"]).CSAServiceRuntime
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service import HCAServiceRuntime
     except Exception:
         return
 
-    origin = CSAServiceRuntime.eligible
+    # 先取出继承前的函数，避免 HCA 继承 CSA 时重复套上计数器。
+    originals = [(cls, cls.eligible) for cls in (CSAServiceRuntime, HCAServiceRuntime)]
+    for cls, origin in originals:
+        def counted(runtime, context, hidden, positions, _origin=origin):
+            verdict = _origin(runtime, context, hidden, positions)
+            layer = getattr(runtime, "layer_name", "?")
+            key = f"{'pto' if verdict else 'native'}_tokens{int(hidden.shape[0])}"
+            bucket = _CSA_SELECTION.setdefault(layer, {})
+            bucket[key] = bucket.get(key, 0) + 1
+            return verdict
 
-    def counted(runtime, context, hidden, positions):
-        verdict = origin(runtime, context, hidden, positions)
-        layer = getattr(runtime, "layer_name", "?")
-        key = f"{'pto' if verdict else 'native'}_tokens{int(hidden.shape[0])}"
-        bucket = _CSA_SELECTION.setdefault(layer, {})
-        bucket[key] = bucket.get(key, 0) + 1
-        return verdict
-
-    CSAServiceRuntime.eligible = counted
+        cls.eligible = counted
 
 
 _enable_selection_counter()
@@ -144,25 +146,47 @@ class OfflineCSAObserver:
             raise RuntimeError("CSA observation is already active")
         self._offline_csa_counts = {}
         self._offline_csa_handles = []
+        self._offline_csa_layer_names = []
+        attention_kind = self.vllm_config.additional_config.get("offline_pto_attention", "csa")
+        ratio = 128 if attention_kind == "hca" else 4
+        runtime_attribute = f"_pto_{attention_kind}_runtime"
         model = self.model_runner.get_model()
         for index, layer in enumerate(model.model.layers):
             attention = layer.self_attn
-            if attention.compress_ratio != 4:
+            if attention.compress_ratio != ratio:
                 continue
             counts = Counter()
             self._offline_csa_counts[str(index)] = counts
+            self._offline_csa_layer_names.append(attention.dsa_attn.dsa_attn.layer_name)
 
             def completed(module, args, kwargs, output, counts=counts):
                 hidden = kwargs["hidden_states"]
                 positions = kwargs["positions"]
                 context = get_forward_context()
-                runtime = getattr(module.dsa_attn, "_pto_csa_runtime", None)
+                runtime = getattr(module.dsa_attn, runtime_attribute, None)
                 selected = runtime is not None and runtime.eligible(context, hidden, positions)
                 counts[f"{'pto' if selected else 'native'}_tokens{hidden.shape[0]}"] += 1
 
             self._offline_csa_handles.append(attention.register_forward_hook(completed, with_kwargs=True))
-        if len(self._offline_csa_counts) != 21:
-            raise RuntimeError(f"Expected 21 target CSA layers, got {len(self._offline_csa_counts)}")
+        expected = 20 if attention_kind == "hca" else 21
+        if len(self._offline_csa_counts) != expected:
+            raise RuntimeError(f"预期 {expected} 个 {attention_kind} 层，实际 {len(self._offline_csa_counts)}")
+        self._offline_hca_forwards = Counter()
+        self._offline_hca_forward_origin = None
+        if attention_kind == "hca":
+            # 只统计生成窗口内真实调用的档位，不读取设备数据，也不额外计时。
+            origin = self.model_runner._model_forward
+
+            def observed_forward(num_tokens_padded, *args, **kwargs):
+                context = get_forward_context()
+                output = origin(num_tokens_padded, *args, **kwargs)
+                if not context.capturing:
+                    key = f"{context.cudagraph_runtime_mode.name}_tokens{num_tokens_padded}"
+                    self._offline_hca_forwards[key] += 1
+                return output
+
+            self._offline_hca_forward_origin = origin
+            self.model_runner._model_forward = observed_forward
         return {"target_csa_layers": list(self._offline_csa_counts),
                 "dp_rank": self.vllm_config.parallel_config.data_parallel_rank}
 
@@ -170,10 +194,15 @@ class OfflineCSAObserver:
         for handle in self._offline_csa_handles:
             handle.remove()
         self._offline_csa_handles = []
+        if self._offline_hca_forward_origin is not None:
+            self.model_runner._model_forward = self._offline_hca_forward_origin
+            self._offline_hca_forward_origin = None
         # forward hook 在图重放下不触发，窗口内的计数通常全是空的；
         # per-layer 命中以捕获期的 capture_time_selection 为准。
         return {"forward_hook_counts": {layer: dict(counts)
                                         for layer, counts in self._offline_csa_counts.items()},
+                "target_layer_names": self._offline_csa_layer_names,
+                "model_forward_counts": dict(self._offline_hca_forwards),
                 "capture_time_selection": {layer: dict(counts)
                                            for layer, counts in _CSA_SELECTION.items()},
                 "note": "图重放不触发 forward hook，per-layer 命中看 capture_time_selection"}

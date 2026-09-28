@@ -352,19 +352,16 @@ proj_b_mm = _proj_b_mm_nz if QUANT_WEIGHT_NZ else _proj_b_mm_nd
 
 
 @pl.jit.inline
-def _decode_o_proj_tp1_tiled(
+def _decode_o_proj_tp1_parts(
     o_packed: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
     wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, BF16_WEIGHT_LAYOUT],
     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
-    wo_b_scale: pl.Tensor[[D], pl.FP32],
-    attn_out: pl.Tensor[[T_DYN, D], pl.BF16],
+    t_dim: pl.Scalar[pl.INDEX],
     heads_dep: pl.Scalar[pl.TASK_ID],
     ROW_TILE: pl.constexpr,
     A_COL_TILE: pl.constexpr,
 ):
-    """Project local-token, full-group attention heads into BF16 hidden rows."""
-    t_dim = pl.tensor.dim(attn_out, 0)
-    act_t_blks = (t_dim + PROJ_B_ACT_TASK_T_TILE - 1) // PROJ_B_ACT_TASK_T_TILE
+    """公共 O 投影主体；返回分组整数累加和量化尺度，供不同收尾复用。"""
     proj_a_rows = (t_dim + PROJ_A_ROW_TILE - 1) // PROJ_A_ROW_TILE
     proj_b_t_rows = (t_dim + ROW_TILE - 1) // ROW_TILE
     proj_b_padded_rows = proj_b_t_rows * ROW_TILE
@@ -431,11 +428,33 @@ def _decode_o_proj_tp1_tiled(
             )
             proj_b_tids[g] = pb_tid
 
+    parts_ready = pl.system.task_dummy(deps=[proj_b_tids[i] for i in range(O_GROUPS)])
+    return partials, act_scale_dq, parts_ready
+
+
+@pl.jit.inline
+def _decode_o_proj_tp1_tiled(
+    o_packed: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
+    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, BF16_WEIGHT_LAYOUT],
+    wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
+    wo_b_scale: pl.Tensor[[D], pl.FP32],
+    attn_out: pl.Tensor[[T_DYN, D], pl.BF16],
+    heads_dep: pl.Scalar[pl.TASK_ID],
+    ROW_TILE: pl.constexpr,
+    A_COL_TILE: pl.constexpr,
+):
+    """将分组累加反量化为 BF16 attention 输出。"""
+    t_dim = pl.tensor.dim(attn_out, 0)
+    act_t_blks = (t_dim + PROJ_B_ACT_TASK_T_TILE - 1) // PROJ_B_ACT_TASK_T_TILE
+    partials, act_scale_dq, parts_ready = _decode_o_proj_tp1_parts(
+        o_packed, wo_a, wo_b, t_dim, heads_dep, ROW_TILE, A_COL_TILE,
+    )
+
     # Dequantize each group with its own scale, then sum in FP32.
     with pl.spmd(
         act_t_blks * (D // PROJ_B_ACT_N_TILE),
         name_hint="proj_b_act",
-        deps=[proj_b_tids[i] for i in range(O_GROUPS)],
+        deps=[parts_ready],
         allow_early_resolve=True,
     ) as _act_tid:
         act_idx = pl.tile.get_block_idx()

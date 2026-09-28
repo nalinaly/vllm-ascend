@@ -3,6 +3,10 @@ from vllm import ModelRegistry
 
 def register_model():
     ModelRegistry.register_model(
+        "PyptoHCADeepseekV4ForCausalLM",
+        "vllm_ascend.models.pypto_deepseek_v4_hca:PyptoHCADeepseekV4ForCausalLM",
+    )
+    ModelRegistry.register_model(
         "PyptoCSADeepseekV4ForCausalLM",
         "vllm_ascend.models.pypto_deepseek_v4:PyptoCSADeepseekV4ForCausalLM",
     )

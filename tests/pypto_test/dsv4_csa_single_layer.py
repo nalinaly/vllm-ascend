@@ -106,6 +106,8 @@ def make_fixture(config, attention, batch, history, seed, device):
         columns = (history + 6 + spec.block_size * ratio - 1) // (spec.block_size * ratio) + 1
         # 非压缩历史仅需保留滑窗/近期 state；页表保留完整逻辑列并循环映射独占物理页。
         per_request = columns if name in ("compressed", "indexer") else 9
+        if name == "state" and attention.compress_ratio == 128:
+            per_request = 18
         pages = batch * per_request + 1
         group["layout"] = allocate_native_cache(group, pages, device)
         for i, view in enumerate(group["views"]):
@@ -153,6 +155,7 @@ def make_fixture(config, attention, batch, history, seed, device):
     compact = {
         name: attention.dsa_attn.dsa_attn.impl._compute_compressor_metadata(metadata[groups[name]["prefix"]].decode)
         for name in ("compressed", "indexer")
+        if name in groups
     }
     for name, group in groups.items():
         slots = compact[name][2] if name in compact else metadata[group["prefix"]].decode.slot_mapping

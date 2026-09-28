@@ -54,7 +54,7 @@ def _load_rank(directory, backend, rank, keys, batch, tokens, num_spec_tokens):
     return cases
 
 
-def compare_decode(native, pto, plan, batch, tokens, ranks=16):
+def compare_decode(native, pto, plan, batch, tokens, ranks=16, *, require_spec_equal=True):
     """按显式声明的 rank/请求/token 数比较，不能由已有文件反推预期覆盖。"""
     if min(batch, tokens, ranks) <= 0:
         raise ValueError("预期 rank、batch 和 token 数必须为正")
@@ -62,8 +62,11 @@ def compare_decode(native, pto, plan, batch, tokens, ranks=16):
         "status": "FAIL",
         "scope": "已保存 decode 结果的逐 token 与 DSpark 计数对照；不含层误差、保护区或性能验收",
         "expected": {"ranks": ranks, "batch_per_rank": batch, "decode_tokens": tokens},
+        "inputs": {"native": str(native.resolve()), "pto": str(pto.resolve())},
         "errors": [], "cases": [], "token_mismatches": 0, "spec_decode_mismatched_cases": 0,
         "compared_ranks": 0, "compared_tokens": 0,
+        "criterion": "tokens_and_dspark" if require_spec_equal else "tokens",
+        "token_status": "FAIL",
     }
     num_spec_tokens = plan["decode"]["speculative_tokens"]
     p_dp = plan["prefill"]["dp"]
@@ -100,9 +103,10 @@ def compare_decode(native, pto, plan, batch, tokens, ranks=16):
             report["compared_tokens"] += batch * tokens
             report["token_mismatches"] += mismatches
             report["spec_decode_mismatched_cases"] += bool(changed)
-    if (not report["errors"] and not report["token_mismatches"]
-            and not report["spec_decode_mismatched_cases"] and report["compared_ranks"] == ranks):
-        report["status"] = "PASS"
+    if not report["errors"] and not report["token_mismatches"] and report["compared_ranks"] == ranks:
+        report["token_status"] = "PASS"
+        if not require_spec_equal or not report["spec_decode_mismatched_cases"]:
+            report["status"] = "PASS"
     return report
 
 
@@ -115,9 +119,11 @@ def main():
     parser.add_argument("--decode-tokens", type=int, required=True)
     parser.add_argument("--ranks", type=int, default=16)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--token-only", action="store_true", help="以输出 token 一致验收，DSpark 计数差异单独记录")
     args = parser.parse_args()
     plan = json.loads((args.bank / "plan.json").read_text())
-    report = compare_decode(args.native, args.pto, plan, args.batch, args.decode_tokens, args.ranks)
+    report = compare_decode(args.native, args.pto, plan, args.batch, args.decode_tokens, args.ranks,
+                            require_spec_equal=not args.token_only)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(f"{report['status']}: ranks={report['compared_ranks']}/{args.ranks}, "

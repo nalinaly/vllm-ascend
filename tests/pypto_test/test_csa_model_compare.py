@@ -64,3 +64,28 @@ def test_empty_or_partial_metrics_never_pass(tmp_path):
     report = result(tmp_path, plan)
     assert report["status"] == "FAIL" and report["compared_ranks"] == 0
     assert "DSpark" in report["errors"][0]
+
+
+def test_token_only_reports_spec_difference_but_rejects_changed_or_missing_tokens(tmp_path):
+    plan = make_results(tmp_path)
+    path = tmp_path / "pto/rank0.json"
+    data = json.loads(path.read_text())
+    data["cases"][0]["spec_decode"]["num_accepted_tokens_per_pos"] = [1, 1]
+    path.write_text(json.dumps(data))
+
+    def check(ranks=1):
+        return compare_decode(tmp_path / "native", tmp_path / "pto", plan, 1, 3, ranks,
+                              require_spec_equal=False)
+
+    report = check()
+    assert report["status"] == report["token_status"] == "PASS"
+    assert report["criterion"] == "tokens" and report["spec_decode_mismatched_cases"] == 1
+    assert check(ranks=2)["status"] == "FAIL"
+    data["cases"][0]["output_token_ids"][0][1] = 99
+    path.write_text(json.dumps(data))
+    report = check()
+    assert report["status"] == "FAIL" and report["token_mismatches"] == 1
+    assert report["cases"][0]["first_mismatches"][0]["position"] == 1
+    data["cases"][0]["output_token_ids"][0].pop()
+    path.write_text(json.dumps(data))
+    assert check()["status"] == "FAIL"
