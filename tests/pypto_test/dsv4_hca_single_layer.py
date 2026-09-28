@@ -20,6 +20,8 @@ def main():
                         help="同一张图跑 满档→满档−1→1→满档，验证动态 BS 切换与 padding/dummy")
     parser.add_argument("--trajectory-steps", type=int, default=0,
                         help="连续 decode 轨迹步数；两侧同输入各跑这么多步，比较状态偏差走势")
+    parser.add_argument("--lifecycle", action="store_true",
+                        help="请求生命周期（页复用，NaN 污染作 oracle）与 prefix 共享（共享页输出须逐 bit 相同）")
     parser.add_argument("--poison-unused-compressed", action="store_true",
                         help="将本步不可见的压缩 KV 行填为 NaN，验证 attention 不消费未初始化数据")
     parser.add_argument("--timing-iters", type=int, default=0, help="每侧图重放计时次数；0 不计时")
@@ -52,6 +54,10 @@ def main():
         parser.error("轨迹检查必须单独一个进程")
     if args.trajectory_steps < 0:
         parser.error("trajectory-steps 不得为负")
+    if args.lifecycle and (args.timing_iters or args.swimlane or args.padding_graph or args.trajectory_steps):
+        parser.error("生命周期检查必须单独一个进程")
+    if args.lifecycle and args.batch < 2:
+        parser.error("生命周期与 prefix 共享检查需要 batch >= 2")
     if not os.environ.get("TASK_DEVICE"):
         raise RuntimeError("NPU 验证必须通过 task-submit 提交")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -220,6 +226,28 @@ def main():
                     fixture, output, pto, make_call,
                     layer.self_attn.dsa_attn.dsa_attn.impl, report,
                 )
+            if args.lifecycle:
+                from dsv4_hca_lifecycle import check_lifecycle
+
+                lifecycle_weights = prepare_weights(layer.self_attn, layer)
+
+                def lifecycle_call():
+                    compact = layer.self_attn.dsa_attn.dsa_attn.impl._compute_compressor_metadata(
+                        fixture["metadata"][fixture["groups"]["compressed"]["prefix"]].decode)
+                    NativeHCACall(
+                        operators, lifecycle_weights, fixture["hidden"], fixture["positions"], groups,
+                        layer_name=layer.self_attn.dsa_attn.dsa_attn.layer_name,
+                        compact_metadata=compact, output=output,
+                    )()
+
+                def lifecycle_native():
+                    with set_ascend_forward_context(fixture["metadata"], config, num_tokens=fixture["tokens"],
+                                                    num_actual_tokens=fixture["tokens"]):
+                        _native_attention_half(layer.self_attn.dsa_attn, fixture["hidden"],
+                                               fixture["positions"], output)
+
+                check_lifecycle(fixture, output, lifecycle_call, lifecycle_native,
+                                layer.self_attn.dsa_attn.dsa_attn.impl, report)
             if args.trajectory_steps:
                 from dsv4_hca_trajectory import check_trajectory
 
