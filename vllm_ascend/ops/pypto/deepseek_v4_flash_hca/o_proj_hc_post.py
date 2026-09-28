@@ -8,7 +8,7 @@ from ..deepseek_v4_flash_dspark_perf.decode_o_proj import (
     PROJ_A_LARGE_N_TILE, PROJ_A_MM_N_TILE, PROJ_B_SMALL_T_TILE,
     PROJ_B_MEDIUM_T_TILE, PROJ_B_MM_T_TILE,
 )
-from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT
+from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
 
 T_DYN = pl.dynamic("HCA_O_POST_TOKENS")
 HC_MULT = 4
@@ -22,7 +22,7 @@ COL_TILE = 512
 @pl.jit.inline
 def _o_proj_hc_post_tiled(
     packed: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
-    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, BF16_WEIGHT_LAYOUT],
+    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, WO_A_WEIGHT_LAYOUT],
     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
     wo_scale: pl.Tensor[[D], pl.FP32],
     residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
@@ -87,7 +87,7 @@ def _o_proj_hc_post_tiled(
 @pl.jit.inline
 def o_proj_hc_post(
     packed: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
-    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, BF16_WEIGHT_LAYOUT],
+    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, WO_A_WEIGHT_LAYOUT],
     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
     wo_scale: pl.Tensor[[D], pl.FP32],
     residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],

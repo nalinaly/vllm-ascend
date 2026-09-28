@@ -1,5 +1,9 @@
 # HCA layer PyPTO 接入记录
 
+> **性能优化的调测信息记录在 [DSV4_FLASH_HCA_OPTIMIZATION_LOG.md](DSV4_FLASH_HCA_OPTIMIZATION_LOG.md)**
+> （与 CSA 侧的 `DSV4_FLASH_CSA_VALIDATION_LOG.md` 对等）。本文件只保留接入合同、
+> 验收状态与剩余事项；逐轮的实测数据、口径纠正与候选取舍以该 LOG 为准。
+
 ## 目标与分支
 
 - 分支：`dsv4-flash-hca-pto-v0.25.1rc1`。
@@ -210,7 +214,13 @@ DSpark 统计也一致，无缺失结果。8 个 rank 各有 44 次真实 B16 �
    长上下文与其余 batch 的整模型 token 覆盖仍需补齐。
 2. 固定归约下的连续 decode 状态轨迹，B1～B64 的动态 BS 切换、整个算子的 padding/dummy、
    请求生命周期与 prefix 共享。当前 dummy 证据仅覆盖 compressor 子链。
-3. 单层独立的 metadata A→B→A 地址固定重放仍未完成；已有整模型 EP8 连续生成/图调用证据。
+3. 单层独立的 metadata A→B→A 地址固定重放**已完成**（2026-09-28 23:0x，CANN 9.2.0-beta.2）：
+   `results/hca_optimization_20260928/metadata_replay_cann92/`。B4、history A=124 / B=8190、
+   统一页表宽度、B 的页表行反序；54 个 metadata 张量叶子中 23 个在 A/B 间指针与内容都不同。
+   A→B→A 三步每步图重放与 eager 逐 bit 相同、写保护按目标状态自身 slot 计算且 PASS、
+   输出无非有限值；B 另与在其自身张量上的直接调用逐 bit 相同，第二次 A 与第一次 A 逐 bit 相同。
+   脚本 `dsv4_hca_metadata_replay.py` + `run_hca_metadata_replay.sh`。
+   每步都从同一初态开始，因此它不覆盖连续多步 decode 轨迹（仍属第 2 项）。
 4. 用户随后要求开始性能优化，目标七档全面超越 Native 20%，并明确先单卡再整机。
    已冻结含 KV 精度修正的基线，首项候选将 raw KV 逐行读取改为页内连续搬运；CPU 编译通过。
    单卡长短 B16 的计时/泳道已排队，未预记收益；单卡通过之前不提交优化版整机任务。
@@ -354,3 +364,159 @@ raw KV 页内连续搬运、PV N128 双累加和 O 反量化与 mHC post 融合�
 
 正式权重仍使用 `/data/model/DeepSeek-V4-Flash-0731-w8a8`，不进入 Git。
 恢复实验时使用优化记录中的已有任务句柄与源码路径，仍按先单卡、再整机的顺序推进。
+
+
+## 2026-09-28 21:55：wo_a 改 ND、冷 L2 归因与 kernel 模式开销
+
+**口径与范围更新**
+
+- 分支已摘入 CSA 的 `1f7bad79`（wo_a 恒为 ND）与 `715e504d`（ring arena 可配置）。
+  mode=2 下 Native 的三维 wo_a 仍是 ND，HCA 此前按 NZ 声明会另存每层 64 MiB 私有副本，
+  且违反 CSA §144 的同口径要求。HCA 自有 `decode_hca.py`、`o_proj_hc_post.py` 已改为
+  `WO_A_WEIGHT_LAYOUT`（工作区未提交）。新的公平基线为 `source_prod_woa`，旧 NZ wo_a 的
+  七档数字仅作历史参考。
+- 用户明确：HCA 范围内的调度与 incore task 都在优化范围内；本仓 `pypto/`、`simpler/`
+  代码也在范围内（取代本文开头"不修改依赖仓库"的旧约束）。NZ 权重相关做法先对照
+  `DSV4_FLASH_CSA_VALIDATION_LOG.md` 中 CSA 已有结论；DLPack 别名方案暂不做。
+
+**已完成的单卡结论**（全部对旧 PTO 快照逐 bit 一致，详见优化记录 21:00～21:25 各节）
+
+- 短档组合七档（NZ wo_a 口径）与 Native 大致持平；长档统一流水修正版精确通过。
+- 冷 L2 泳道（`--swimlane-cold-l2`）与"Native 之后"泳道（`--swimlane-after-native`）
+  已加入测试入口；正式交替计时处于两者之间。
+- 候选取舍：Q_B N128 流水、proj_b/proj_a 加深流水、proj_a N256、wo_a Vector 预热均无收益或
+  退化，不合入；widen+RMS 合并（CSA d1f170ff）、QR 输入/gamma UB 复用（CSA 56186de9）、
+  KV/compressor ND 权重预热组成 `source_combo_v8`，同卡 ABBA 相对 v4 扣除 Native 漂移约
+  −1.5%～−2.5%，仍未达到 20% 目标。
+
+**kernel 模式固定开销探针**（`dsv4_pto_launch_floor.py`，同一 custom op + NPUGraph + 图外 Event）
+
+| 形态 | P50 μs |
+| --- | ---: |
+| 1 任务 × 1 块 | 79.7 |
+| 32 串联单块任务 | 151.6 |
+| 8 任务 × 48 块、无依赖 | 171.9 |
+| 75 任务 × 8 块、无依赖 / 串联 | 476.2 / 473.2 |
+
+ring task window 1024～16384、heap 64～256 MiB 均不改变约 80 μs 的单次固定开销。
+HCA 整层约 76 次提交、50 个 worker 任务、650 个块，与探针同一量级；8K/B16 的约 576 μs
+可近似拆为固定约 80、启动约 17、关键链阶段边界约 85、核内工作约 394 μs。
+固定开销的具体归属（AICPU init/握手/收尾或 AICore 侧）尚未实测拆分，已向用户确认方向，
+不据此修改运行时。下一步先在 HCA 算子侧减少任务数与关键链阶段边界。
+
+恢复时：候选源码与结果均在 `results/hca_optimization_20260928/`（`source_combo_v1`～`v9`、
+`abba_*`、`launch_floor/`）；统一入口 `run_hca_candidate_case.sh`（精确门禁+计时、冷泳道、
+Native 后泳道）与 `run_hca_abba.sh`。七档单卡及优化版整机仍未验收，20% 目标未达到。
+
+
+## 2026-09-28 23:00：工具链切到 CANN 9.2.0-beta.2，验收分母需重取
+
+另一个会话在 **21:59:13** 把公共入口 `env-dsv4-0251rc1.sh` 改为 source
+`cann-9.2.0-beta.2/set_env.sh`（原 `/usr/local/Ascend/cann-9.0.0`），并清理了旧
+CANN 路径混用、修复 profiler 属主检查；Native 自定义算子包仍是当前 release 版本。
+`run_hca_single_layer.sh` 会 source 这个入口，因此**任务按启动时刻继承版本**：
+21:59 之前的取证（七档基线、`source_prod_woa` 对照、v1–v9 候选、`incore_v8_*`、
+kernel 模式 launch floor 探针、已交付的 `hca_h131072_b16_profiles/`）都是 9.0.0；
+之后排队的都是 9.2.0-beta.2。核对方式是看结果目录 `build_output`／日志里的 CANN 路径，
+不能看当前 shell 的 `ASCEND_HOME_PATH`——已在运行的 shell 仍是旧值。
+
+同一份 v8 代码换版本后：8K Native/PTO 551.6/597.5 → 558.3/597.5，
+128K 684.7/685.8 → 703.4/708.4 μs。两侧都略慢，PTO/Native 比值几乎不动
+（8K 1.083→1.070，128K 1.002→1.007），**七档 ≤0.8×Native 的目标在 9.2 上一样远**。
+
+对验收的影响，按"同一次对照内部版本是共同项"划分：
+
+- 保留：每个 ABBA 的相对结论。v10（Q_B 按 K256 双缓冲、M128 覆盖有效行）与
+  v11（把 `hca_raw_valid`、`hca_inverse_rope_sign` 推迟到 Q_B 窗口，KV 预热 24→8 块）
+  各自逐 bit 相同且都有收益，已合成 `source_combo_v12`（两者改动文件不相交，逐文件校验来源）。
+- 重取：**七档同卡 Native P50 是验收分母，必须在 9.2 上重测**；incore 逐功能对照表
+  是"哪个 task 落后 Native"的判据，9.2 可能改了 MatMul/TransposeBatchMatMul 实现，
+  Q_B 与 O_A 这两个落后项要在 9.2 上复核后再继续投入。
+
+本轮在 9.2 上排队的 12 个任务：v12 长短 ABBA
+（`task_20260928_225814_24993186253`、`_249937130041`）、
+七档 `source_prod_woa` vs v12（`seven_cann92_v12/tasks.json` 记 7 个句柄）、
+v12 长短 incore 取证（`task_20260928_225859_25295299731`、`_252961228505`）、
+metadata A→B→A 重放（`task_20260928_225934_25611505991`，对应剩余事项第 3 项）。
+
+新增 `submit_hca_seven_tier.sh`：七档各占一张卡并行提交。注意本机 `task-submit`
+只接受一整条命令字符串，按 argv 传会被当成自身选项，任务立刻 `exit=2`、
+日志里命令显示为 `bash --device N`（v12 首次提交踩到，已重投）。
+
+
+## 2026-09-28 23:30：O 投影瓶颈定位与计时口径纠正
+
+用户要求参考 CSA 算子按 shape／档位分别选核内 tiling。查证后确认 CSA 验证日志第 175 节
+v3 的 O projection 自适应分档（O-A N128/N256、O-B M32/M96/M128、大档位 O-B 权重完整 K
+常驻、不重排 Native 权重）在 HCA 侧已经是 `decode_o_proj_tp1` 的逐字拷贝，CSA 唯一没有
+覆盖的维度是 proj_a 的行块 M。
+
+按此排的两个单变量候选：v13（proj_a 行块按档位贴合）**无效，已丢弃**——PyPTO 的 cube
+本来就按 `valid_shape` 只算有效行；v14（proj_a 列块 N128→N256）跨度没变，但 incore 证实
+核时间从 2624 降到 2048 μs，折算 24 个 AIC 为 85.3 μs，已追平 Native 的 86～87 μs，
+只是块数 64→32 使填充率 89%→67%，把收益吃掉。瓶颈因此定位为 **ND 的 wo_a 按列切片时的
+跨步读**：N128 每次仅 256 字节连续、跨步 2048 字节，达成约 519 GB/s；N256 为 778 GB/s。
+后续 v15/v16 用 N256 + 3 行块凑满 96 块 / 4 波，并把 wo_a 的 `CachePolicy.BYPASS` 改回
+默认以承接行块间的重复读（v16 保留 BYPASS 作对照）。
+
+**计时口径纠正，影响此前所有"基线→候选"差值的读法：**
+`run_hca_reference_pair.sh`（七档使用）先跑基线、后跑候选两个独立进程，候选总在更热的卡上
+测量，因此该差值系统性偏向候选，不能当作收益；两次七档之间也不可比（同一份 Native 代码
+在 8K/B16 上一次 583.9、一次 544.8，差 39 μs）。七档里可信的只有同一轮内测出的
+PTO/Native 比值。只有 ABBA 的 A→B→B→A 能抵消单向漂移，并且要再扣掉 Native 在基线轮与
+候选轮之间的漂移量（Native 四轮代码相同，其变化量就是漂移）。按这个口径，v12 相对 v8 的
+净收益是 8K −12.2 μs、128K −16.1 μs（约 2%），此前只给比值的说法偏乐观。
+
+当前最佳仍是 `source_combo_v12`（= v8 + v10 Q_B 分块 + v11 准备任务延后），七档逐 bit
+门禁全 PASS，同轮 PTO/Native 比值 0.941～1.072、均值约 1.008，距 0.80× 仍差 83～190 μs。
+即使把 kernel 模式约 80 μs 的公共启动开销整个减掉也只到 0.80～0.93×，缺口主要在串行关键
+链本身：O 投影 156、attention 141、Q_B 54 μs 三项占一半以上。
+
+
+## 2026-09-28 23:45：wo_a 布局必须跟随 Native；新增 128K/B24 档位
+
+用户要求**性能测试优先 vllm_ascend 的 nz_mode=2**，并询问是否可以开启 128K/B24。
+两件事汇到同一个根因上。
+
+**根因。** 候选快照用 `--operator-source` 重指 `vllm_ascend.ops.pypto.__path__`，连带冻结了
+共享的 `deepseek_v4_flash_dspark/nz_mode.py`，里面是 `WO_A_WEIGHT_LAYOUT = None`（写死 ND）。
+`wo_a` 是三维分组权重，Native 侧存 ND 还是 NZ 取决于当前 CANN 的 `npu_format_cast`
+支不支持三维 BF16：9.0.0 不支持（ND），9.2.0 支持（NZ）。在 9.2 上写死 ND 会让
+`native_adapter.root_weight` cast 出私有副本，每层 78.18 MiB、21 层合计 **1.603 GiB**。
+生产版已改为 `_native_keeps_3d_bf16_as_nz()` 导入期探测，并在不匹配时打
+`PTO_CSA_WEIGHT_RECAST` 告警（此前完全静默）。
+
+**影响一：128K/B24 的决定性前提。** PTO 此前在 128K/B24 上差 Native 1.63 GiB，
+与这 1.603 GiB 几乎完全吻合。所以布局修正不是优化项，是该档位能不能跑的前提。
+
+**影响二：作废了本会话两轮 proj_a 结论。** 我在 9.2 上量到的 proj_a 一直是 recast 副本，
+"ND 列切片跨步读 519 GB/s"对副本成立，但生产路径上 NZ 列切片本身连续。据此排的
+v13（行块贴合）、v14（列块 N256）、v15/v16（N256+3 行块±L2）全部否掉，v15/v16 反而差
+39～52 μs。**教训与既有约束"对照 Native 路径、不要自己发明判据"一致：布局不是可选常量。**
+
+**v17 = v12 + 生产版共享文件**（只刷新 1f7bad79 / 715e504d / 1a88c7b4 动过的 `ops/pypto`
+文件），唯一实质变量是 wo_a 布局跟随探测。ABBA 净收益：8K/B16 −6.98、128K/B16 −41.07、
+128K/B24 −15.26 μs。proj_a 核时间从 2624 降到 1408 μs（−46%），整个 O 投影组由落后
++23.5 μs 转为 8K −1.9、128K −18.0（领先 Native）。整层 DFX 跨度 8K 563.1→498.6 μs。
+所有 v17 运行的 `PTO_CSA_WEIGHT_RECAST` 告警为 0。
+
+**八档验收表（CANN 9.2，逐 bit 门禁全 PASS）**：128K B4/B8/B16/B24 = 0.993 / 0.930 /
+0.946 / 0.943；8K B16/B24/B32/B40 = 0.983 / 0.961 / 0.965 / 1.000。比值均值 0.965
+（v12 时 1.008），八档全部 ≤1.0，距 0.80× 仍差 70～165 μs。
+**128K/B24 单卡已跑通并纳入验收表**；按用户要求，整机验证通过后再去掉 8K/B16 的 case。
+
+### 下一步（整机 128K/B24 的前置条件）
+
+1. 按 **HCA 自己的形状**取一遍 ring 下限：`additional_config={"pto_csa_ring_config":
+   {"heap_mb": [...], "task_window": ...}}` 可配 arena 尺寸（默认 4×256 MiB heap +
+   16384 深 task window = 1.343 GiB）。**不要照抄 CSA 的 `[256,128,256,32]` + 4096**，
+   那是 CSA 形状上实测的；给小了不是变慢，是 dispatch 期 Task Allocator Deadlock
+   整进程退出。做法：故意把某条 ring 调小，读
+   `<output>/ascend/debug/device-N/device-*.log` 里的
+   `Heap ring N: used=… / Requested: … bytes`，加余量后使用。
+   HCA 分支有两个 `pypto.torch.init` 调用点（`prepare_csa_model` 与
+   `PyptoHCADeepseekV4ForCausalLM.process_weights_after_loading`），两处都已接上。
+2. 16 卡 128K/B24 整机 token 验证，用 HCA 自己的 ring 配置 + `gpu_memory_utilization=0.97`
+   （CSA 侧在 9.2 上连跑三次 24/24 并发、0 抢占）。
+3. **9.2 口径的 Native B24 基线尚不存在**（现有 22.90 GiB / 88 727 us 是 9.0 的），
+   整机档期要同时跑 Native 才能给出可比对照。

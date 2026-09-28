@@ -11,6 +11,9 @@ history="${2:-8192}"
 batch="${3:-16}"
 decode_dp="${4:-16}"
 native_reference="${5:-}"
+# 第 6 个参数可覆盖显存利用率：128K/B24 这类大档位在默认 0.9 下 KV 额度不够，
+# 两侧必须用同一个值，否则不是同配置对比。
+utilization_override="${6:-}"
 backends=(pto native)
 if [[ -n "$native_reference" ]]; then
     native_reference="$(realpath -e "$native_reference")"
@@ -21,6 +24,9 @@ memory_utilization=0.9
 if (( decode_dp == 8 )); then
     port=30562
     memory_utilization=0.95
+fi
+if [[ -n "$utilization_override" ]]; then
+    memory_utilization="$utilization_override"
 fi
 bank="$source_repo/tests/pypto_test/results/release_offline_pd_20260923/h${history}_bank"
 capture_sizes=()

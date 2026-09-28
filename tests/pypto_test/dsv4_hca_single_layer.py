@@ -22,6 +22,10 @@ def main():
     parser.add_argument("--timing-warmup", type=int, default=5)
     parser.add_argument("--profile", action="store_true", help="计时结束后分别采集 Native/PTO 图重放 profiler")
     parser.add_argument("--swimlane", action="store_true", help="独立采集两次 PTO 图重放泳道，不与正式计时混用")
+    parser.add_argument("--swimlane-cold-l2", action="store_true",
+                        help="泳道每个窗口前冲刷 L2，使权重读取与正式交替计时一样为冷数据")
+    parser.add_argument("--swimlane-after-native", action="store_true",
+                        help="泳道每个窗口前先跑一次 Native，复现正式交替计时中 PTO 所见的 L2 状态")
     parser.add_argument("--operator-source", type=Path, help="只供对照测试：指定已冻结的 ops/pypto 源码目录")
     parser.add_argument("--reference-state", type=Path, help="纯调度或搬运优化：要求 PTO 输出与旧快照逐 bit 相同")
     parser.add_argument("--weight-nz-mode", type=int, choices=[1, 2], default=1)
@@ -217,7 +221,9 @@ def main():
             if args.swimlane:
                 from dsv4_hca_performance import capture_swimlane
 
-                report["swimlane_windows"] = capture_swimlane(fixture, call, args.output / "dfx")
+                report["swimlane_windows"] = capture_swimlane(fixture, call, args.output / "dfx",
+                                                          cold_l2=args.swimlane_cold_l2,
+                                                          before=native_call if args.swimlane_after_native else None)
             # 把四份结果留在本地，后续定位沿用这一轮数据，不反复重跑 Native。
             torch.save({"native": native, "pto": pto}, args.output / "states.pt")
             report["local_snapshot"] = "states.pt（本地保留，不入 Git）"

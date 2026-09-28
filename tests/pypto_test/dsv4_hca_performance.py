@@ -108,8 +108,14 @@ def measure_graph_pair(fixture, output, runs, references, collect, *, iters, war
     return result
 
 
-def capture_swimlane(fixture, call, directory):
-    """每窗口一次真实根调用，采图重放核内信息；不作为正式性能数据。"""
+def capture_swimlane(fixture, call, directory, cold_l2=False, before=None):
+    """每窗口一次真实根调用，采图重放核内信息；不作为正式性能数据。
+
+    cold_l2 为真时，每个窗口前写一块 512 MiB 缓冲冲刷 L2，模拟正式计时里
+    Native/PTO 交替重放造成的权重冷读取；缓冲与被测张量无关，不改变数值。
+    before 不为空时，每个窗口前先执行一次 Native（其后恢复初态），复现正式计时里
+    “Native 刚跑完再跑 PTO”的 L2 状态。
+    """
     import pypto.torch
     import torch
     from dsv4_csa_single_card_bench import _export_swimlane
@@ -124,9 +130,15 @@ def capture_swimlane(fixture, call, directory):
         restore(fixture)
         graph.replay()
     torch.npu.synchronize()
+    flush = torch.empty(128 * 1024 * 1024, dtype=torch.float32, device="npu") if cold_l2 else None
     windows = []
     for window in range(2):
+        if before is not None:
+            restore(fixture)
+            before()
         restore(fixture)
+        if flush is not None:
+            flush.fill_(float(window))
         torch.npu.synchronize()
         pypto.torch.begin_dfx()
         try:
@@ -137,5 +149,6 @@ def capture_swimlane(fixture, call, directory):
         exported = _export_swimlane(target, kernel_pattern="_jit__decode_hca_tp1_layer_*/kernel_config.py")
         if not exported["exported"]:
             raise RuntimeError(f"HCA 泳道导出失败：{exported}")
-        windows.append({**exported, "window": window, "scope": "单卡 HCA 整层根图重放；复用 compact metadata"})
+        windows.append({**exported, "window": window, "cold_l2": cold_l2, "after_native": before is not None,
+                        "scope": "单卡 HCA 整层根图重放；复用 compact metadata"})
     return windows

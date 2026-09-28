@@ -10,8 +10,8 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark_perf.hc_pre import hc_pre_norm
-from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT
+from .hc_pre_fused import NORM_EPS, hc_pre_norm
+from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
 from ..deepseek_v4_flash_dspark_perf.qkv_proj_rope import qkv_proj_rope
 from .decode_compressor_ratio128 import (
     B_DYN, BOUNDS_DYN, CMP_PAGES_DYN, COMPACT_ROWS_DYN, STATE_COLUMNS_DYN,
@@ -21,6 +21,7 @@ from .decode_sparse_attn_hca import (
     ORI_BLOCK_NUM_DYN, ORI_TABLE_COLUMNS_DYN, CMP_TABLE_BLOCKS_DYN, T_PAD, sparse_attn_hca_tp1,
 )
 from .o_proj_hc_post import o_proj_hc_post
+from .weight_warm import SINK_BF16, WARM_WORKERS, warm_kv_weights
 
 D = 4096
 H = 64
@@ -34,7 +35,7 @@ O_GROUPS = 8
 O_GROUP_IN = 4096
 O_LORA = 1024
 WIDEN_ROWS = 8
-WIDEN_COLS = 1024
+RMS_COLS = 512
 WIDEN_WORKERS = 48
 CACHE_WORKERS = 8
 
@@ -72,7 +73,7 @@ def _decode_hca_tp1_layer(
     ori_table: pl.Tensor[[B_DYN, ORI_TABLE_COLUMNS_DYN], pl.INT32],
     ori_slots: pl.Tensor[[T_DYN, 2], pl.INT32],
     attn_sink: pl.Tensor[[H], pl.FP32],
-    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, BF16_WEIGHT_LAYOUT],
+    wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, WO_A_WEIGHT_LAYOUT],
     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
     wo_b_scale: pl.Tensor[[D], pl.FP32],
     x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16]],
@@ -108,22 +109,40 @@ def _decode_hca_tp1_layer(
     x_flat = pl.reshape(x_hc, [tokens, HC_DIM])
     x32_flat = pl.reshape(x32, [tokens, HC_DIM])
     widen_blocks = (tokens + WIDEN_ROWS - 1) // WIDEN_ROWS
+    hc_padded_rows = ((tokens + 16 - 1) // 16) * 16
+    inv_rms = pl.create_tensor([hc_padded_rows, 1], dtype=pl.FP32)
     tail = pl.create_tensor([WIDEN_ROWS, HC_DIM], dtype=pl.FP32)
-    with pl.spmd(pl.min(widen_blocks, WIDEN_WORKERS), name_hint="hca_hc_widen"):
+    # 参考 CSA d1f170ff：加宽时按原 RMS 的 512 列次序顺手求平方和，删除 RMS 对 FP32
+    # 中间缓冲的再次读取；归约次序、高精度 rsqrt 不变，结果与独立 RMS 任务逐 bit 相同。
+    with pl.spmd(pl.min(widen_blocks, WIDEN_WORKERS), name_hint="hca_hc_widen_rms") as widen_tid:
         for block in pl.range(pl.tile.get_block_idx(), widen_blocks, pl.min(widen_blocks, WIDEN_WORKERS)):
             row = block * WIDEN_ROWS
             count = pl.min(WIDEN_ROWS, tokens - row)
-            for col in pl.range(0, HC_DIM, WIDEN_COLS):
-                source = pl.slice(x_flat, [WIDEN_ROWS, WIDEN_COLS], [row, col], valid_shape=[count, WIDEN_COLS])
+            sq_sum = pl.full([1, WIDEN_ROWS], dtype=pl.FP32, value=0.0)
+            for col_block in pl.pipeline(HC_DIM // RMS_COLS, stage=4):
+                col = col_block * RMS_COLS
+                source = pl.slice(x_flat, [WIDEN_ROWS, RMS_COLS], [row, col], valid_shape=[count, RMS_COLS])
                 value = pl.cast(source, pl.FP32)
                 if count == WIDEN_ROWS:
-                    x32_flat[row:row + WIDEN_ROWS, col:col + WIDEN_COLS] = value
+                    x32_flat[row:row + WIDEN_ROWS, col:col + RMS_COLS] = value
+                    squared = pl.mul(value, value)
+                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared), [1, WIDEN_ROWS]))
                 else:
-                    tail[:, col:col + WIDEN_COLS] = value
-                    valid = pl.load(tail, [0, col], [WIDEN_ROWS, WIDEN_COLS], valid_shape=[count, WIDEN_COLS])
+                    # cast 可能丢失 valid_shape，显式恢复并清零无效行后才参与归约。
+                    clean = pl.fillpad(pl.set_validshape(value, count, RMS_COLS), pad_value=pl.PadValue.zero)
+                    squared_tail = pl.mul(clean, clean)
+                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared_tail), [1, WIDEN_ROWS]))
+                    tail[:, col:col + RMS_COLS] = value
+                    valid = pl.load(tail, [0, col], [WIDEN_ROWS, RMS_COLS], valid_shape=[count, RMS_COLS],
+                                    target_memory=pl.MemorySpace.Vec)
                     pl.store(valid, [row, col], x32_flat)
+            mean = pl.add(pl.mul(sq_sum, 1.0 / HC_DIM), NORM_EPS)
+            inv_rms[row:row + WIDEN_ROWS, 0:1] = pl.reshape(pl.rsqrt(mean, high_precision=True), [WIDEN_ROWS, 1])
+    # 冷 L2 下投影读权重受单核带宽限制；mHC pre 期间 Vector 核大多空闲，先预热 KV/compressor 权重。
+    warm_sink = pl.create_tensor([WARM_WORKERS, SINK_BF16], dtype=pl.BF16)
+    warm_kv_weights(wkv, cmp_wkv, cmp_wgate, warm_sink, widen_tid)
     with pl.scope():
-        hc_pre_norm(x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False)
+        hc_pre_norm(x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms)
 
     q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16)
     kv = pl.create_tensor([tokens, HEAD_DIM], dtype=pl.BF16)
