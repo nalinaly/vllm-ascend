@@ -18,6 +18,8 @@ def main():
     parser.add_argument("--service-graph", action="store_true", help="额外验证服务 custom op 与一次图重放")
     parser.add_argument("--padding-graph", action="store_true",
                         help="同一张图跑 满档→满档−1→1→满档，验证动态 BS 切换与 padding/dummy")
+    parser.add_argument("--trajectory-steps", type=int, default=0,
+                        help="连续 decode 轨迹步数；两侧同输入各跑这么多步，比较状态偏差走势")
     parser.add_argument("--poison-unused-compressed", action="store_true",
                         help="将本步不可见的压缩 KV 行填为 NaN，验证 attention 不消费未初始化数据")
     parser.add_argument("--timing-iters", type=int, default=0, help="每侧图重放计时次数；0 不计时")
@@ -46,6 +48,10 @@ def main():
         parser.error("补位图检查必须与计时/泳道分开进程")
     if args.padding_graph and args.batch < 2:
         parser.error("补位图检查需要 batch >= 2，否则没有可补位的请求")
+    if args.trajectory_steps and (args.timing_iters or args.swimlane or args.padding_graph):
+        parser.error("轨迹检查必须单独一个进程")
+    if args.trajectory_steps < 0:
+        parser.error("trajectory-steps 不得为负")
     if not os.environ.get("TASK_DEVICE"):
         raise RuntimeError("NPU 验证必须通过 task-submit 提交")
     args.output.mkdir(parents=True, exist_ok=True)
@@ -128,7 +134,13 @@ def main():
             device = torch.device("npu:0")
             layer, details = make_layer(config, args.checkpoint, device, layer_index=3)
             report.update(details, batch=args.batch, history=args.history)
-            fixture = make_fixture(config, layer.self_attn, args.batch, args.history, 20260928, device)
+            # 轨迹测试会把 positions 推进 6*steps，页表宽度必须按轨迹终点定，
+            # 否则 pos//block_size 会越过 make_fixture 按 history 算出的列数，
+            # 读到错误物理页而表现为"发散"（实测 48 步时输出 max_abs 涨到 1.41）。
+            fixture = make_fixture(
+                config, layer.self_attn, args.batch, args.history, 20260928, device,
+                table_history=(args.history + 6 * args.trajectory_steps) if args.trajectory_steps else None,
+            )
             if args.poison_unused_compressed:
                 group = fixture["groups"]["compressed"]
                 cache = group["views"][0]
@@ -207,6 +219,30 @@ def main():
                 check_padding_graph(
                     fixture, output, pto, make_call,
                     layer.self_attn.dsa_attn.dsa_attn.impl, report,
+                )
+            if args.trajectory_steps:
+                from dsv4_hca_trajectory import check_trajectory
+
+                def native_step():
+                    with set_ascend_forward_context(fixture["metadata"], config, num_tokens=fixture["tokens"],
+                                                    num_actual_tokens=fixture["tokens"]):
+                        _native_attention_half(layer.self_attn.dsa_attn, fixture["hidden"],
+                                               fixture["positions"], output)
+
+                def pto_step():
+                    # compact metadata 每步都要按推进后的 metadata 重算，否则消费的是首步的行。
+                    compact = layer.self_attn.dsa_attn.dsa_attn.impl._compute_compressor_metadata(
+                        fixture["metadata"][fixture["groups"]["compressed"]["prefix"]].decode)
+                    NativeHCACall(
+                        operators, trajectory_weights, fixture["hidden"], fixture["positions"], groups,
+                        layer_name=layer.self_attn.dsa_attn.dsa_attn.layer_name,
+                        compact_metadata=compact, output=output,
+                    )()
+
+                trajectory_weights = prepare_weights(layer.self_attn, layer)
+                check_trajectory(
+                    fixture, output, native_step, pto_step,
+                    layer.self_attn.dsa_attn.dsa_attn.impl, args.trajectory_steps, 20260929, report,
                 )
             if args.reference_state:
                 import json

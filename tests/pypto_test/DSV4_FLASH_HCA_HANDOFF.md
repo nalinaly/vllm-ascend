@@ -259,8 +259,41 @@ DSpark 统计也一致，无缺失结果。8 个 rank 各有 44 次真实 B16 �
    （`error 107030` / `Not_Supported(EE1016): Stream during the capture stage is not supported`）。
    权重准备必须提到捕获之前做一次并闭包引用。
 
-   **仍未覆盖**：固定归约下的连续 decode 状态轨迹（需要多步真实轨迹，而非同一初态重放）、
-   请求生命周期与 prefix 共享。
+   **2026-09-29 连续 decode 状态轨迹已通过**：新增 `dsv4_hca_trajectory.py` 与
+   `--trajectory-steps N`。每步 `positions += 6`、`seq_lens += 6`，用 fixture 保存的
+   `BlockTable` 重算 `slot_mapping`，再用 Native builder 原地重建 metadata 并校验地址不变；
+   两侧从同一初态出发、每步看到完全相同的输入（同 seed 生成的 hidden + 同一套推进后的
+   metadata），各自在自己的 cache 上累积。
+
+   **范围**：这是同输入下的 cache/state 轨迹一致性，**不是 token 轨迹验收**——真实轨迹
+   第 k 步的输入取决于第 k−1 步的输出，那需要整模型（剩余事项第 1 项）。
+
+   | 档位 | 步数 | 输出 max_abs | growth_ratio | 输出 RMSE 首→末 | 压缩 cache 累积误配 |
+   | --- | ---: | --- | ---: | --- | --- |
+   | h124 / B4 | 48 | 0.0156～0.0313 | 2.0 | 0.0020152 → 0.0022025 | 11 → 459 |
+   | h8190 / B4 | 24 | 0.0156～0.0313 | 1.0 | 0.0018963 → 0.0020428 | 7 → 215 |
+
+   判定依据：输出 max_abs 全程钉在 BF16 的一到两个 ULP，48 步不增长（`growth_ratio = 2.0`
+   只是一个指数档）；RMSE 48 步只涨 9.3%，不是指数累积；压缩 cache 的累积误配随压缩事件
+   线性增长（每次事件约 +200，48 步跨 3 次事件到 459），无跳变；每步写保护 PASS、
+   无非有限值；滑窗与滚动 state 页在 48 步内已多次回绕。
+   证据：`results/hca_trajectory_20260929/h124_b4_s48_wide/`、`h8190_b4_s24_wide/`。
+
+   **必读的 harness 前提（踩过三次，都是搬用既有构造时没核对它的前提）**：
+
+   1. **页表宽度必须按轨迹终点定**。`make_fixture` 按 `history` 算列数，SWA 在
+      history=124 下只有 6 列、覆盖 position ≤ 191；轨迹推进会让 `pos // block_size`
+      越界读到错误物理页，表现为"发散"——越界版 48 步的输出 max_abs 涨到 **1.414**、
+      `growth_ratio` 90.5，压缩 cache 误配出现 11→1091→3079 的阶跃，
+      极易被误读成压缩器的数值累积。修法是传
+      `table_history = history + 6 * steps`（该参数本是为 metadata A→B→A 加的）。
+   2. `make_call` 内不能调 `prepare_weights()`：内部 `scale()` 做
+      `bool(count_nonzero(offset).cpu())` 是同步 D2H，图捕获期间会被拒
+      （`error 107030` / `Not_Supported(EE1016)`）。权重准备要提到捕获之前。
+   3. 轨迹每步推进后必须重取 `fixture["readonly"]` 快照：只读检查要验证的是
+      "本步内算子没有改动 metadata"，而不是"metadata 等于第 0 步"。
+
+   **仍未覆盖**：请求生命周期与 prefix 共享。
 3. 单层独立的 metadata A→B→A 地址固定重放**已完成**（2026-09-28 23:0x，CANN 9.2.0-beta.2）：
    `results/hca_optimization_20260928/metadata_replay_cann92/`。B4、history A=124 / B=8190、
    统一页表宽度、B 的页表行反序；54 个 metadata 张量叶子中 23 个在 A/B 间指针与内容都不同。
