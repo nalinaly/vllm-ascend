@@ -5488,3 +5488,72 @@ Native 把 L1 用到 87.5% 并做到 7 级流水；我们用 75% 只做到 3 级
 ⚠ 这一节只是把差距归到了 codegen，尚未取证具体是哪些标量指令冗余。
 下一步应当用 `compare-codegen` 技能 dump 出这个 kernel 的 `.pto`／汇编，
 数出每 tick 的标量指令条数，再与 Native 的 AscendC 汇编对照。
+
+## 91. ★★★★★ scalar 的真正来源：每 tick 82 个流水同步原语（2026-09-29）
+
+90.12 把差距归到"codegen 的标量冗余"但没取证。取证方法：PTO 的编译产物里
+**有生成的 AscendC 源码**，不必重新编译。位置：
+
+```
+results/hca_swimlane_v2_20260929/h131072_b16/build_output/
+  _jit__decode_hca_tp1_layer_<hash>/kernels/aic/hca_unified_attention_aic.cpp
+```
+
+（同目录下 43 个 `.cpp` + 42 个 `.pto`，`kernels/aic/` 与 `kernels/aiv/` 分开。）
+
+### 91.1 数据
+
+`hca_unified_attention_aic.cpp`（3213 行）：
+
+| 原语 | 全文件 | 最内层 tick 循环体内 |
+| --- | --- | --- |
+| `wait_flag` | 86 | — |
+| `set_flag` | 83 | — |
+| `pipe_barrier` | 79 | — |
+| **同步合计** | **248** | **82** |
+| `TASSIGN` | 198 | — |
+| `TEXTRACT` | 10 | — |
+
+**每 tick 82 个同步原语。** × 36 tick × 每 worker 4 token ≈ **11 800 次/worker**。
+生成代码的实际形态（最内层）：
+
+```cpp
+uint64_t v173 = (uint64_t) v29;
+TASSIGN(v172, v173);
+wait_flag(PIPE_M, PIPE_MTE1, EVENT_ID1);
+pipe_barrier(PIPE_MTE1);
+uint16_t v174 = static_cast<uint16_t>(v41);
+uint16_t v175 = static_cast<uint16_t>(v171);
+TEXTRACT(v172, v132, v174, v175);
+```
+
+### 91.2 这解释了前面所有的否决
+
+`wait_flag` 每次停等数十到数百周期，`pipe_barrier` 是全流水屏障。
+**387 μs 的 AIC scalar 主体是同步等待，不是指令执行**——于是：
+
+| 此前的否决 | 为什么必然否 |
+| --- | --- |
+| 提并行度（`gather_full`、v35a、qt8/16） | 不减少每 tick 的同步数 |
+| 软流水（`gather_pipe`） | 反而**增加** stage 间同步 |
+| NZ 布局（三张权重） | 只改搬运路径，同步数不变 |
+| 取模改位运算（90.7） | 只占 0.5% |
+| 增大 tile（90.6） | 被 L1 堵死，且不减同步密度 |
+
+也解释了 90.2 的 mac/scalar 差（Native 0.45 / PTO 0.25）：Native 是手写
+AscendC，同步点由人按数据流合并；PyPTO 为每个 tile 操作保守地插一对 flag。
+
+### 91.3 下一步：减少同步密度
+
+两个层次，都需要先量化"82 个里哪些是冗余的"：
+
+1. **算子侧**：减少 tick 循环体内的 tile 操作数量（每个操作都会引入同步）。
+   循环体 134 行里有 2 次 `gather_row`、2 次 `tile.extract`、1 次 `matmul`、
+   7 次 `cast`——`TASSIGN` 全文件 198 次说明临时 tile 赋值很多。
+2. **PyPTO 侧**：同步插入策略。`pipe_barrier` 79 次（全流水屏障）里，
+   若能替换成针对具体 pipe 的 `set_flag`/`wait_flag` 对，或合并相邻屏障，
+   代价会显著下降。这属于 codegen，按约定要先商量。
+
+⚠ 尚未量化冗余比例。可行的取证：对照 `kernels/aiv/hca_unified_attention_aiv.cpp`
+的同步密度，以及用 `compare-codegen` 比较不同写法下的同步数变化——
+**这是第一次有了可以直接计数的指标，不必再靠 ABBA 的 10 μs 分辨力去猜。**
