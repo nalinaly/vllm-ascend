@@ -110,6 +110,13 @@ def check_padding_graph(fixture, output, eager, make_call, impl, report):
             for name, values in oracle.items():
                 valid = (values[2].cpu() >= 0).all(dim=1)
                 rows = valid.nonzero().flatten()
+                if rows.numel() == 0:
+                    # 本步可以没有新压缩 token；cos/sin 没有被消费的行。
+                    # 比较完整 slot 缓冲，确保捕获图也没有产生有效写入，
+                    # 不把 compare_tensor 对空张量的拒绝当作算子错误。
+                    compact_checks[f"{name}.slots"] = compare_tensor(
+                        captured[name][2].cpu(), values[2].cpu(), 0, 0)
+                    continue
                 for field, value, reference in zip(("cos", "sin", "slots"), captured[name], values):
                     compact_checks[f"{name}.{field}"] = compare_tensor(
                         value.cpu()[rows], reference.cpu()[rows], 0, 0)

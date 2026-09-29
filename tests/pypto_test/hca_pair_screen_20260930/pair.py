@@ -53,9 +53,13 @@ def main():
     parser.add_argument("--device", type=int, default=int(os.environ.get("TASK_DEVICE", "-1")))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--padding-graph", action="store_true", help="候选同址图检查满档→补位→满档，不计入性能")
+    parser.add_argument("--padding-variant", choices=("base", "candidate"), default="candidate")
     args = parser.parse_args()
     if args.cycles < 1:
         parser.error("cycles必须为正数")
+    if args.padding_graph and args.batch < 2:
+        parser.error("padding-graph需要batch至少为2")
     args.output.mkdir(parents=True, exist_ok=True)
     import pypto.torch
     import torch
@@ -260,6 +264,40 @@ def main():
         report["guards"] = {k: v["status"] for k, v in guard_checks(fixture).items()}
         assert all(all(values.values()) for values in report["state_exact"].values())
         assert all(value == "PASS" for value in report["guards"].values())
+        if args.padding_graph:
+            from dsv4_hca_padding import check_padding_graph
+
+            padding_side = args.padding_variant
+            _, adapter = modules[padding_side]
+            weights = adapter.prepare_weights(layer.self_attn, layer)
+            output = outputs[padding_side]
+
+            def make_padding_call(compact):
+                return adapter.NativeHCACall(
+                    adapter.HCAOperators(operators[padding_side]),
+                    weights,
+                    fixture["hidden"],
+                    fixture["positions"],
+                    groups,
+                    layer_name=layer.self_attn.dsa_attn.dsa_attn.layer_name,
+                    compact_metadata=compact,
+                    output=output,
+                )
+
+            restore(fixture)
+            make_padding_call(fixture["compact"]["compressed"])()
+            torch.npu.synchronize()
+            eager = {"output": output.cpu()}
+            eager.update({name: group["allocation"].cpu() for name, group in fixture["groups"].items()})
+            report["padding_variant"] = padding_side
+            try:
+                check_padding_graph(
+                    fixture, output, eager, make_padding_call, layer.self_attn.dsa_attn.dsa_attn.impl, report
+                )
+            except Exception:
+                report["status"] = "PADDING_FAILED"
+                (args.output / "failure.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+                raise
         report["status"] = "MEASURED"
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"status": report["status"], "summary": report["summary"]}), flush=True)

@@ -39,3 +39,11 @@ task-submit --device auto --max-time 900 --timeout 45 --run \
 
 算子包必须在执行前冻结，运行中不编辑源码。默认5个ABBA周期，首次筛选不扩大采样。
 有明确收益后再用既有服务入口脚本对照，并核对相关任务的泳道。
+
+需要核对流水边界时，可加`--padding-graph`：完成计时后单独检查满档→补位→满档，
+不把metadata更新和状态检查计入性能。默认检查candidate；`--padding-variant base`
+用于分清旧基线问题与新候选问题。失败时保存`failure.json`中的逐项诊断。
+
+16384/B2本步没有新压缩token，原padding检查将空cos/sin切片判成FAIL，旧基线也能复现。
+现在比较完整的负slot缓冲，保护区和状态检查继续执行；没有有效slot时不比较未消费的cos/sin。
+回归用例和两侧结果见[跨query实验](../hca_query_stream_20260930/README.md)。
