@@ -80,7 +80,7 @@ def compressor_ratio128(
 
     with pl.spmd(
         ((tokens + MM_ROWS - 1) // MM_ROWS) * (HEAD_DIM // MM_COLS),
-        name_hint="hca_kv_score_proj", deps=[late_dep],
+        name_hint="hca_kv_score_proj", allow_early_resolve=True, deps=[late_dep],
     ) as projection_tid:
         block = pl.tile.get_block_idx()
         row = block // (HEAD_DIM // MM_COLS) * MM_ROWS
@@ -97,7 +97,7 @@ def compressor_ratio128(
         kv_proj[row:row + MM_ROWS, col:col + MM_COLS] = kv_acc
         score_proj[row:row + MM_ROWS, col:col + MM_COLS] = score_acc
 
-    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_softmax_pool", deps=[projection_tid]) as pool_tid:
+    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_softmax_pool", allow_early_resolve=True, deps=[projection_tid]) as pool_tid:
         for request in pl.range(pl.tile.get_block_idx(), requests, pl.min(requests, WORKERS)):
             length = pl.read(seq_lens, [request])
             first = pl.read(positions, [request * DECODE_SEQ])
@@ -134,7 +134,7 @@ def compressor_ratio128(
     cache_rows = pl.tensor.dim(cmp_cache, 0) * CMP_BLOCK
     cache_flat = pl.reshape(cmp_cache, [cache_rows, HEAD_DIM])
     gamma = pl.reshape(norm_w, [1, HEAD_DIM])
-    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_state_commit", deps=[pool_tid]) as state_tid:
+    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_state_commit", allow_early_resolve=True, deps=[pool_tid]) as state_tid:
         for request in pl.range(pl.tile.get_block_idx(), requests, pl.min(requests, WORKERS)):
             if pl.read(seq_lens, [request]) > 0:
                 for step in pl.range(DECODE_SEQ):
@@ -151,7 +151,7 @@ def compressor_ratio128(
                         )
                         pl.store(score, [page, column + HEAD_DIM], state)
 
-    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_norm_rope_write", deps=[pool_tid]) as cache_tid:
+    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_norm_rope_write", allow_early_resolve=True, deps=[pool_tid]) as cache_tid:
         for request in pl.range(pl.tile.get_block_idx(), requests, pl.min(requests, WORKERS)):
             length = pl.read(seq_lens, [request])
             first = pl.read(positions, [request * DECODE_SEQ])

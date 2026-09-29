@@ -40,7 +40,7 @@ def warm_kv_weights(
     after_widen: pl.Scalar[pl.TASK_ID],
 ) -> pl.Scalar[pl.TASK_ID]:
     # 层入口的 widen 读取残差流；预热在其后启动，避免与之争抢带宽。
-    with pl.spmd(WARM_WORKERS, name_hint="hca_warm_kv_weights", deps=[after_widen]) as warm_tid:
+    with pl.spmd(WARM_WORKERS, name_hint="hca_warm_kv_weights", allow_early_resolve=True, deps=[after_widen]) as warm_tid:
         worker = pl.tile.get_block_idx()
         for item in pl.pipeline(worker, WKV_TILES, WARM_WORKERS, stage=2):
             r0 = item // WKV_COL_TILES * BF16_ROWS
@@ -68,7 +68,7 @@ def warm_wo_a(
 ) -> pl.Scalar[pl.TASK_ID]:
     # wo_a 与 Native 同为 ND；Q_A 之后 Vector 核在 Q_B 期间空闲，提前把它带进 L2。
     wo_a_rows = pl.reshape(wo_a, [O_GROUPS * O_GROUP_IN, O_LORA])
-    with pl.spmd(WARM_WORKERS, name_hint="hca_warm_wo_a", deps=[after_q_a]) as warm_tid:
+    with pl.spmd(WARM_WORKERS, name_hint="hca_warm_wo_a", allow_early_resolve=True, deps=[after_q_a]) as warm_tid:
         worker = pl.tile.get_block_idx()
         for item in pl.pipeline(worker, WO_A_TILES, WARM_WORKERS, stage=2):
             r0 = item // WO_A_COL_TILES * BF16_ROWS

@@ -3817,3 +3817,143 @@ Native 的 187.7），或者做更深的重构。**7 档全部达到 0.80 目前
   T=96 的半点是 48，两侧对齐。
 
 这是 B 路线在**不放大权重流量**的那个窗口上的最小实现。
+
+### 70.5 ★★ 获胜组合 `early + qw20`：−34.75 μs（128K/B16，nz2，6 样本）
+
+| 组合 | Δ |
+|---|---:|
+| **`early_qw20`** | **−34.75** |
+| `early_qw20_dq40` | −27.12 |
+| `early_dq40` | +0.50 |
+
+`dq40`（`Q_DEQUANT_WORKERS` 48→40）单独测是 −14.12（1.5σ），
+但与 `early` 叠加后变成 +0.50，加进三项组合也把 −34.75 拉回 −27.12。
+**`dq40` 否决**——它单独那点收益是噪声，或者与 `early` 争同一份空隙。
+
+`early` + `qw20` 基本可加（−20.00 + −16.50 = −36.5，实测 −34.75）。
+128K/B16：597.5 − 34.75 = 562.75，比值 562.75/545.00 = **1.033**（原 1.096）。
+
+### 70.6 ✗ 切分变体第一版编译失败：`@pl.jit` 不支持三元表达式
+
+`attn2` 报 `ParserSyntaxError: Expression must be ScalarExpr or Var with ScalarType,
+got MakeTuple with type TupleType`，`attn2_dq2` 报
+`UnsupportedFeatureError: Unsupported expression type: IfExp`。
+
+根因是我用了 `t_dim if _ah == ATTN_SPLITS - 1 else (_ah + 1) * _attn_half` 这种
+三元表达式。**`@pl.jit` 解析的是源文件 AST，所以源文本里出现三元表达式就会报错，
+哪怕条件是 trace 期的 Python 常量。** 同理，Python 级的 `1 if c else 0`
+也不能用来做 trace 期选择。
+
+改法：全部换成纯算术 + `pl.min`。段长向上取整再按 `ATTN_SPLIT_ALIGN=8`
+（必须等于 `Q_ROPE_T_TILE`）对齐，段上界用 `pl.min((i + 1) * half, t_dim)`，
+这样各段既不重叠又覆盖全部 token，且两侧行区间逐段对齐。
+新版变体 `attn2b` / `attn2_dq2b`。
+
+---
+
+## 71. B 路线窄形式的完整实现：dequant/attention 按 token 切段 + 显式边（2026-09-29）
+
+### 71.1 为什么必须用显式边，而不能靠自动依赖
+
+`pypto/docs/zh/user/performance/03-dependencies.md` 写明：
+**"生产者查找是对 buffer 地址做重叠判定；一个它无法证明不相交的区域，会被当作重叠"**，
+并且 **"`pl.parallel` 是断言而不是请求 —— 它不会移除那些边"**。
+
+所以指望 OverlapMap 自动看出 `q[0:48]` 与 `q[48:96]` 不相交是不可靠的
+（§70.1 里我据 `simpler/docs/buffer-abi.md` 的行区间分析做的推断过于乐观：
+那段描述的是它**能**处理的情形，而"证明不了就当重叠"是兜底行为）。
+正确做法是把编译器证明不了的事情**显式说出来**：
+
+- `q` 用 `pl.create_tensor(..., manual_dep=True)` 关掉整个生命期的自动追踪；
+- dequant 每段返回自己的 TaskId；
+- attention 第 i 段挂 `deps=[..., dq_tids[i]]`。
+
+`q` 的依赖闭环是干净的：**写者只有 `q_proj_q_dequant`
+（`qkv_proj_rope.py` 的 577/586/669/682 四处），读者只有 `sparse_attn_hca_tp1`**，
+所以关掉自动追踪后只要补这两类边就完整。
+
+### 71.2 改动清单（变体 `variants_split_20260929/split_explicit`）
+
+`deepseek_v4_flash_dspark_perf/qkv_proj_rope.py`：
+
+1. 新增 `DEQUANT_SPLITS = 2`。
+2. `q_proj_q_dequant` 加 `row_lo` / `row_hi` 两个 token 行区间参数
+   （`tile_rows` 仍是整个 tile 的行数，尾块判定不变）。
+3. 它的 `for dq_worker in pl.spmd(...)` 改成 `with pl.spmd(...) as _dq_tid:`
+   + `dq_worker = pl.tile.get_block_idx()`，以便取到 TaskId
+   （顺带避开 for 形式给出 IterArg 导致的非负不可证问题，与 qr_proj 的既有注释一致）。
+4. `dq_work` 的枚举范围按行区间换算（`dq_work` 以 (token 块, head 组) 枚举、
+   token 块在外层，所以只要换 start/stop，`tg` 的算法一字不动）。
+5. 调用点用 `for _ds in pl.parallel(DEQUANT_SPLITS)` 拆段，
+   段长 = `ceil(tile_rows/SPLITS)` 再按 `Q_ROPE_T_TILE` 对齐，
+   上界用 `pl.min((_ds+1)*half, tile_rows)`。
+6. `dq_tids` 一路返回到 `qkv_proj_rope` 的出口
+   （`q_proj_q` → `q_proj_rope` → `qkv_proj_rope`）。
+
+`deepseek_v4_flash_hca/decode_sparse_attn_hca.py`：
+
+7. 新增 `ATTN_SPLITS = 2`、`ATTN_SPLIT_ALIGN = 8`（必须等于 `Q_ROPE_T_TILE`）。
+8. `sparse_attn_hca_tp1` / `_short_...` / `_long_...` 三个函数加 `dq_tids` 参数。
+9. long 路径的 attention spmd 包进 `for _ah in pl.parallel(ATTN_SPLITS)`，
+   deps 加 `dq_tids[_ah]`，token 循环改成 `pl.range(_tok_lo + worker, _tok_hi, ...)`，
+   末尾 `pl.system.task_dummy(deps=[_attn_tids[i] for i in range(ATTN_SPLITS)])` 汇合。
+10. **交接缓冲 `scores`/`probs`/`values`/`maxima`/`totals`/`ffts` 挪进段内各自分配。**
+    它们按 worker 索引，两段并发时 worker 号会重叠——这是切段时最容易漏的一处真实竞争。
+11. short 路径不切段，但 `q` 已关自动追踪，所以把 `dq_tids[0]`、`dq_tids[1]` 都挂上。
+
+`deepseek_v4_flash_hca/decode_hca.py`：
+
+12. `q` 加 `manual_dep=True`；接收并转发 `dq_tids`。
+
+### 71.3 踩到的两个坑
+
+- **`@pl.jit` 不支持三元表达式**（§70.6）。段边界只能用 `pl.min` 之类的纯算术表达。
+- **TaskId 数组必须用 `pl.array.create(N, pl.TASK_ID)`**，不能用 Python 的
+  `[None] * N`——后者会被解析成 `MakeTuple`，报
+  `Expression must be ScalarExpr or Var with ScalarType, got MakeTuple with type TupleType`。
+  这是 `attn2` / `attn2b` 两版失败的真正原因（一开始误判成三元表达式）。
+- 批量改签名时按"签名尾部"匹配会误伤同形的函数：
+  `_cmp_query_kv` 的尾部与三个 attention 函数完全一样，被一起加了参数，已撤销。
+
+---
+
+## 72. ★★★★ 落地：`allow_early_resolve` ×16 + `QPROJ_WORKERS` 24→20，七档加权 1.157 → 1.117（2026-09-29）
+
+### 72.1 七档验收（nz2，Native/PTO 同卡 ABBA，每侧 4 样本）
+
+| 档位 | 卡 | Native sk=1 | PTO | 比值 | 基线比值 | Δ |
+|---|---:|---:|---:|---:|---:|---:|
+| 128K/B4 | 2 | 287.00 | 355.25 | 1.238 | 1.257 | −0.019 |
+| 128K/B8 | 4 | 401.75 | 429.88 | 1.070 | 1.130 | −0.060 |
+| 128K/B16 | 6 | 538.75 | 569.62 | **1.057** | 1.096 | −0.039 |
+| 128K/B24 | 7 | 725.88 | 789.50 | 1.088 | 1.118 | −0.030 |
+| 8K/B16 | 9 | 414.38 | 448.50 | 1.082 | 1.153 | −0.071 |
+| 8K/B24 | 11 | 522.00 | 613.38 | 1.175 | 1.198 | −0.023 |
+| 8K/B32 | 13 | 607.62 | 691.50 | 1.138 | 1.201 | −0.063 |
+
+**128K 均值 1.113，8K 均值 1.132，8:2 加权 1.117**（基线 1.157）。
+**七档全部改善**，逐 bit 对照全 PASS。
+
+### 72.2 落地的两处改动
+
+1. **16 处 `pl.spmd` 补 `allow_early_resolve=True`**：
+   `hca_kv_score_proj`、`hca_softmax_pool`、`hca_state_commit`、`hca_norm_rope_write`
+   （`decode_compressor_ratio128.py` ×4）；`hca_hc_widen_rms`、`hca_raw_cache_write`
+   （`decode_hca.py` ×2）；三条路径的 `hca_raw_valid` 与 `hca_inverse_rope_sign`
+   （`decode_sparse_attn_hca.py` ×6）；`hca_warm_kv_weights`、`hca_warm_wo_a`
+   （`weight_warm.py` ×2）；`kv_proj_matmul`、`kv_rms_norm_rope`
+   （`qkv_proj_rope.py` ×2）。纯调度标记，不动数值。
+2. **`QPROJ_WORKERS` 24 → 20**（`deepseek_v4_flash_dspark/q_projection.py`）：
+   `QPROJ_N_BLOCKS = 128`，24 个 worker 只比 AIC 核数少一点，派发时若有核还被占着
+   （实测 `hca_kv_score_proj` 会占掉 4 个）就要付两波的钱、wall 翻倍。
+   20 块换成 7 轮但恒为一波。
+
+两项单独实测 −20.00 / −16.50，合计 −34.75（基本可加）。
+
+### 72.3 距目标还差多少
+
+0.80× 的目标下，七档加权 1.117 还差 **0.317**。逐档看，最紧的是
+128K/B4（1.238）与 8K/B24（1.175）。而 §69.2 的静态 CPM 下限（nz2）是
+128K/B4 1.158、128K/B16 1.026、8K/B32 1.039 ——
+**128K/B4 现在已经贴到它自己的 CPM 下限（1.238 vs 1.158，只剩 0.08）**，
+也就是说那一档几乎没有调度空间了，必须缩短链本身。

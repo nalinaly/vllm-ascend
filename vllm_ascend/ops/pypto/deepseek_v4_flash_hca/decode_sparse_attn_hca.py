@@ -201,7 +201,7 @@ def sparse_attn_hca(
                             pl.store(g_chunk, [g_base + g_row, 0], raw_kv)
 
         # B*6 不一定是 8 的倍数，尾块逐实际 token 写入；seq_lens=0 排除 dummy。
-        with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid") as raw_valid_tid:
+        with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid", allow_early_resolve=True) as raw_valid_tid:
             valid_t0 = pl.tile.get_block_idx() * VALID_TOKEN_TILE
             valid_col = pl.cast(pl.tile.arange(0, [1, WIN], dtype=pl.INT32), pl.FP32)
             for valid_dt in pl.range(pl.min(VALID_TOKEN_TILE, t_dim - valid_t0)):
@@ -214,7 +214,7 @@ def sparse_attn_hca(
                 pl.store(valid_mask, [valid_token, 0], raw_valid)
 
         # Native 已提供交错的 FP32 频率；inverse RoPE 仅在消费者内折叠符号。
-        with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign") as rope_cs_tid:
+        with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign", allow_early_resolve=True) as rope_cs_tid:
             cs_t0 = pl.tile.get_block_idx() * ROPE_CS_T_TILE
             cs_index = pl.cast(pl.arange(0, [1, ROPE_DIM], dtype=pl.INT32), pl.FP32)
             cs_pair = pl.cast(pl.cast(pl.mul(cs_index, 0.5), pl.INT32, mode="trunc"), pl.FP32)
@@ -812,7 +812,7 @@ def _short_sparse_attn_hca_tp1(
                         pl.store(g_chunk, [g_base + g_row, 0], raw_kv)
 
     # B*6 不一定是 8 的倍数，尾块逐实际 token 写入；seq_lens=0 排除 dummy。
-    with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid",
+    with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid", allow_early_resolve=True,
                  deps=[ori_cache_ready_dep]) as raw_valid_tid:
         valid_t0 = pl.tile.get_block_idx() * VALID_TOKEN_TILE
         valid_col = pl.cast(pl.tile.arange(0, [1, WIN], dtype=pl.INT32), pl.FP32)
@@ -826,7 +826,7 @@ def _short_sparse_attn_hca_tp1(
             pl.store(valid_mask, [valid_token, 0], raw_valid)
 
     # Native 已提供交错的 FP32 频率；inverse RoPE 仅在消费者内折叠符号。
-    with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign", deps=[ori_cache_ready_dep]) as rope_cs_tid:
+    with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign", allow_early_resolve=True, deps=[ori_cache_ready_dep]) as rope_cs_tid:
         cs_t0 = pl.tile.get_block_idx() * ROPE_CS_T_TILE
         cs_index = pl.cast(pl.arange(0, [1, ROPE_DIM], dtype=pl.INT32), pl.FP32)
         cs_pair = pl.cast(pl.cast(pl.mul(cs_index, 0.5), pl.INT32, mode="trunc"), pl.FP32)
@@ -1083,7 +1083,7 @@ def _long_sparse_attn_hca_tp1(
                         pl.store(g_chunk, [g_base + g_row, 0], raw_kv)
 
     # B*6 不一定是 8 的倍数，尾块逐实际 token 写入；seq_lens=0 排除 dummy。
-    with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid",
+    with pl.spmd((t_dim + VALID_TOKEN_TILE - 1) // VALID_TOKEN_TILE, name_hint="hca_raw_valid", allow_early_resolve=True,
                  deps=[ori_cache_ready_dep]) as raw_valid_tid:
         valid_t0 = pl.tile.get_block_idx() * VALID_TOKEN_TILE
         valid_col = pl.cast(pl.tile.arange(0, [1, WIN], dtype=pl.INT32), pl.FP32)
@@ -1097,7 +1097,7 @@ def _long_sparse_attn_hca_tp1(
             pl.store(valid_mask, [valid_token, 0], raw_valid)
 
     # Native 已提供交错的 FP32 频率；inverse RoPE 仅在消费者内折叠符号。
-    with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign", deps=[ori_cache_ready_dep]) as rope_cs_tid:
+    with pl.spmd(rope_cs_blocks, name_hint="hca_inverse_rope_sign", allow_early_resolve=True, deps=[ori_cache_ready_dep]) as rope_cs_tid:
         cs_t0 = pl.tile.get_block_idx() * ROPE_CS_T_TILE
         cs_index = pl.cast(pl.arange(0, [1, ROPE_DIM], dtype=pl.INT32), pl.FP32)
         cs_pair = pl.cast(pl.cast(pl.mul(cs_index, 0.5), pl.INT32, mode="trunc"), pl.FP32)

@@ -27,7 +27,9 @@ Q_PROJ_TILE = 128
 QPROJ_MM_N_TILE = 256 if QUANT_WEIGHT_NZ else 512
 MATMUL_T_TILE = 16
 QPROJ_M_TILE = 64
-QPROJ_WORKERS = 24
+QPROJ_WORKERS = 20  # 留余量：QPROJ_N_BLOCKS=128 时 24 个 worker 只比核数少一点，派发时若有核
+# 还被占着（实测 hca_kv_score_proj 会占掉 4 个 AIC 核）就要付两波的钱，wall 翻倍。20 块
+# 换成 7 轮但恒为一波。2026-09-29 同卡六样本实测 −16.5 μs，与 allow_early_resolve 合计 −34.75。
 QPROJ_TAIL_M_TILE = QPROJ_M_TILE if QUANT_WEIGHT_NZ else MATMUL_T_TILE
 QPROJ_T_PAD = ((PREFILL_DENSE_TILE + QPROJ_TAIL_M_TILE - 1) // QPROJ_TAIL_M_TILE) * QPROJ_TAIL_M_TILE
 QPROJ_N_BLOCKS = H * HEAD_DIM // QPROJ_MM_N_TILE

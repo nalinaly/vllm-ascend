@@ -114,7 +114,7 @@ def _decode_hca_tp1_layer(
     tail = pl.create_tensor([WIDEN_ROWS, HC_DIM], dtype=pl.FP32)
     # 参考 CSA d1f170ff：加宽时按原 RMS 的 512 列次序顺手求平方和，删除 RMS 对 FP32
     # 中间缓冲的再次读取；归约次序、高精度 rsqrt 不变，结果与独立 RMS 任务逐 bit 相同。
-    with pl.spmd(pl.min(widen_blocks, WIDEN_WORKERS), name_hint="hca_hc_widen_rms") as widen_tid:
+    with pl.spmd(pl.min(widen_blocks, WIDEN_WORKERS), name_hint="hca_hc_widen_rms", allow_early_resolve=True) as widen_tid:
         for block in pl.range(pl.tile.get_block_idx(), widen_blocks, pl.min(widen_blocks, WIDEN_WORKERS)):
             row = block * WIDEN_ROWS
             count = pl.min(WIDEN_ROWS, tokens - row)
@@ -156,7 +156,7 @@ def _decode_hca_tp1_layer(
         )
         cache_rows = pl.tensor.dim(ori_cache, 0) * 32
         cache_flat = pl.reshape(ori_cache, [cache_rows, HEAD_DIM])
-        with pl.spmd(CACHE_WORKERS, name_hint="hca_raw_cache_write") as raw_tid:
+        with pl.spmd(CACHE_WORKERS, name_hint="hca_raw_cache_write", allow_early_resolve=True) as raw_tid:
             for token in pl.range(pl.tile.get_block_idx(), tokens, CACHE_WORKERS):
                 page = pl.read(ori_slots, [token, 0])
                 offset = pl.read(ori_slots, [token, 1])

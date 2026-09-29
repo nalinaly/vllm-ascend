@@ -782,7 +782,7 @@ def _kv_project(
     kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))
     with pl.spmd(
         (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
-        name_hint="kv_proj_matmul",
+        name_hint="kv_proj_matmul", allow_early_resolve=True,
         deps=[late_dep],
     ) as _kv_tid:
         pl.set_cache_policy(wkv, pl.CachePolicy.BYPASS)
@@ -869,7 +869,7 @@ def kv_proj_rope(
             kv_token_tiles = (tile_rows + KV_RMS_T_TILE - 1) // KV_RMS_T_TILE
             for tg_idx in pl.spmd(
                 kv_token_tiles,
-                name_hint="kv_rms_norm_rope",
+                name_hint="kv_rms_norm_rope", allow_early_resolve=True,
                 sync_start=True,
             ):
                 tg = tg_idx * KV_RMS_T_TILE
