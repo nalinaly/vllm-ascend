@@ -4038,3 +4038,35 @@ got MakeTuple with type TupleType`，`attn2_dq2` 报
 实现代码保留在 `tests/pypto_test/variants_split_20260929/split_v2`、`split_v3`，
 其中"`q` 关自动追踪 + 按段挂显式边"这套依赖重写是正确且可复用的，
 将来若 PTO 支持弹性核分配可以直接用。
+
+---
+
+## 74. ✗ `hca_hc_widen_rms` 的 12 块经三次尝试确认无法放开（2026-09-29）
+
+§60.5 判定 `hca_hc_widen_rms` 的行块被 `inv_rms[row:row+8, 0:1]` 的 32 B 对齐钉死。
+后来想到一个绕法：**把 `inv_rms` 从 `[N,1]` 补宽成 `[N,8]`，让每行自带 32 B，
+相邻行的 4 B 不再共线，行块就能减小**。`inv_rms` 完全是 HCA kernel 内部量
+（`decode_hca.py:113` 创建、`hc_pre_fused.py:128/291` 读），接口上可以改。
+
+三次尝试全部被编译器挡回，三个不同的约束：
+
+1. **读侧改 `pl.tile.slice(load([T,8]), [T,1], [0,0])`** →
+   `'pto.alloc_tile' op expects result row-major none_box tile row byte size
+   (cols * sizeof(dtype)) to be 32-byte aligned, but got 4 bytes`。
+   `[T,1]` FP32 的 tile 行只有 4 B，`alloc_tile` 不接受。
+2. **写侧改成 `row_expand_mul(pl.tile.full(...), ...)` 广播满行** →
+   `pl.col_expand_mul: cannot mix Tensor and Tile arguments`
+   （`mean` 是 Tensor 级、`pl.tile.full` 是 Tile 级）；换成 `pl.full` +
+   `row_expand_mul` 后又回到第 1 条的 4 B 行问题
+   （`[WIDEN_ROWS,1]` 作为算子操作数要被 materialize 成 tile）。
+3. **只补宽 tensor、读写写法都不动** →
+   `static assertion failed: TLOAD(VecTile, GlobalTensor) only support
+   ND2ND/DN2DN/NZ2NZ`。从 `[N,8]` 读 `[T,1]` 是按列跨步，loader 不支持。
+
+三条合起来说明一件事：**要 materialize 一个 `[T,1]` FP32 的 tile，只能从
+`[*,1]` 形状的 tensor 直接 load（编译器对这条路径有特判），
+而那种 tensor 的行就是 4 B、相邻行必然落在同一条 32 B 线上**，
+于是"一个块负责 8 行"是唯一安全的写法。
+
+**`hca_hc_widen_rms`（27.2 μs，链上第 6 大项）确认不可优化。** 同理
+`qr_rms_norm_quant` 的 `qr_scale_view`（`[T,1]` FP32，而且是对外接口）也一样。
