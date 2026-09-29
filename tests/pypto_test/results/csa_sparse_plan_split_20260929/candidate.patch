@@ -1,0 +1,123 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_sparse_plan_split_7b296153/decode_sparse_attn_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_sparse_plan_split_7b296153/decode_sparse_attn_csa.py
+@@ -204,56 +204,12 @@
+     valid_block_mask = pl.create_tensor([t_dim, VALID_BLOCK_MASK_COLS], dtype=pl.INT32)
+     # Read Native positions/page tables at the consumer. No expanded SWA index
+     # matrix or intermediate INT32 position buffer is needed.
+-    with pl.spmd(CSA_PLAN_WORKERS, name_hint="csa_slots_build_valid_qk_plan", allow_early_resolve=True) as qk_plan_tid:
++    # SWA positions/page tables are independent of the Indexer's Top-K.
++    with pl.spmd(CSA_PLAN_WORKERS, name_hint="csa_slots_window_plan",
++                 allow_early_resolve=True) as window_plan_tid:
+         plan_worker = pl.tile.get_block_idx()
+         for bias_t0 in pl.range(plan_worker * BIAS_T_TILE, t_dim, CSA_PLAN_WORKERS * BIAS_T_TILE):
+             bias_rows = pl.min(BIAS_T_TILE, t_dim - bias_t0)
+-            # 压缩索引这段按整个 BIAS_T_TILE 一次算完（上游写法）。原先逐 token 做
+-            # [1, IDX_TOPK]，向量操作条数是现在的 BIAS_T_TILE 倍、每条只有 1/8 宽，
+-            # 实测该任务 2.53x 上游。SWA 那段仍需逐 token，因为它要按 token 读
+-            # position_ids 与页表；这里只把能向量化的部分提出来。
+-            # runtime token 数不保证整除 8（如 B1/S6）。切片不会自动截断，
+-            # 显式限制读写行数，避免尾块覆盖相邻 scratch。
+-            c_raw_tile = pl.cast(
+-                pl.slice(idx_topk, [BIAS_T_TILE, IDX_TOPK], [bias_t0, 0],
+-                         valid_shape=[bias_rows, IDX_TOPK], clamp=True), target_type=pl.FP32
+-            )
+-            c_pos = pl.cast(
+-                pl.slice(position_ids, [BIAS_T_TILE, 1], [bias_t0, 0],
+-                         valid_shape=[bias_rows, 1], clamp=True),
+-                target_type=pl.FP32,
+-            )
+-            c_pos_q = pl.cast(
+-                pl.cast(pl.mul(pl.add(c_pos, 1.0), COMPRESS_RATIO_INV), target_type=pl.INT32, mode="trunc"),
+-                target_type=pl.FP32,
+-            )
+-            c_upper_b = pl.row_expand_mul(
+-                pl.full([BIAS_T_TILE, IDX_TOPK], dtype=pl.FP32, value=1.0), c_pos_q
+-            )
+-            c_ge_tile = pl.minimum(pl.maximum(pl.add(c_raw_tile, CSA_CMP_GE_BIAS), 0.0), 1.0)
+-            c_lt_tile = pl.minimum(pl.maximum(pl.sub(c_upper_b, c_raw_tile), 0.0), 1.0)
+-            c_mask_tile = pl.mul(c_ge_tile, c_lt_tile)
+-            c_out_tile = pl.sub(pl.mul(c_mask_tile, pl.add(c_raw_tile, 1.0)), 1.0)
+-            cmp_sparse_indices = pl.assemble(
+-                cmp_sparse_indices,
+-                pl.set_validshape(pl.cast(c_out_tile, target_type=pl.INT32), bias_rows, IDX_TOPK),
+-                [bias_t0, 0],
+-            )
+-            sparse_bias = pl.assemble(
+-                sparse_bias,
+-                pl.set_validshape(pl.mul(pl.minimum(c_out_tile, 0.0), -NEG_INF), bias_rows, CMP_TOPK),
+-                [bias_t0, ATTN_K_TILE],
+-            )
+-            # 每块的有效位直接由 c_mask_tile 归约得到，不再回读 cmp_sparse_indices。
+-            for c_sb in pl.range(1, SPARSE_BLOCKS):
+-                c_s0 = (c_sb - 1) * ATTN_K_TILE
+-                c_blk_valid = pl.row_max(pl.slice(
+-                    c_mask_tile, [BIAS_T_TILE, ATTN_K_TILE], [0, c_s0],
+-                    valid_shape=[bias_rows, ATTN_K_TILE],
+-                ))
+-                for c_dt in pl.range(bias_rows):
+-                    c_valid = pl.cast(pl.read(c_blk_valid, [c_dt, 0]), pl.INT32)
+-                    pl.write(valid_block_mask, [bias_t0 + c_dt, c_sb], c_valid)
+             # ---- 滑窗有效位：常见路径整块算 -------------------------------
+             # 每 token 的窗口长度 v_length = min(position+1, WIN)，补位请求压到 0。
+             # 有效位的主体就是 j < v_length[t]，与页表无关，可以一次算出
+@@ -342,6 +298,60 @@
+                                 )
+                                 v_valid = pl.add(v_valid, pl.mul(v_ge, v_lt))
+                     sparse_bias[bias_t : bias_t + 1, 0:WIN] = pl.mul(pl.sub(v_valid, 1.0), -NEG_INF)
++
++    # Both phases use scalar stores to different columns of the same DDR
++    # cache line. Explicitly finish SWA before compressed validity writes.
++    with pl.spmd(CSA_PLAN_WORKERS, name_hint="csa_slots_compressed_plan",
++                 deps=[window_plan_tid], allow_early_resolve=True) as qk_plan_tid:
++        plan_worker = pl.tile.get_block_idx()
++        for bias_t0 in pl.range(plan_worker * BIAS_T_TILE, t_dim, CSA_PLAN_WORKERS * BIAS_T_TILE):
++            bias_rows = pl.min(BIAS_T_TILE, t_dim - bias_t0)
++            # 压缩索引这段按整个 BIAS_T_TILE 一次算完（上游写法）。原先逐 token 做
++            # [1, IDX_TOPK]，向量操作条数是现在的 BIAS_T_TILE 倍、每条只有 1/8 宽，
++            # 实测该任务 2.53x 上游。SWA 那段仍需逐 token，因为它要按 token 读
++            # position_ids 与页表；这里只把能向量化的部分提出来。
++            # runtime token 数不保证整除 8（如 B1/S6）。切片不会自动截断，
++            # 显式限制读写行数，避免尾块覆盖相邻 scratch。
++            c_raw_tile = pl.cast(
++                pl.slice(idx_topk, [BIAS_T_TILE, IDX_TOPK], [bias_t0, 0],
++                         valid_shape=[bias_rows, IDX_TOPK], clamp=True), target_type=pl.FP32
++            )
++            c_pos = pl.cast(
++                pl.slice(position_ids, [BIAS_T_TILE, 1], [bias_t0, 0],
++                         valid_shape=[bias_rows, 1], clamp=True),
++                target_type=pl.FP32,
++            )
++            c_pos_q = pl.cast(
++                pl.cast(pl.mul(pl.add(c_pos, 1.0), COMPRESS_RATIO_INV), target_type=pl.INT32, mode="trunc"),
++                target_type=pl.FP32,
++            )
++            c_upper_b = pl.row_expand_mul(
++                pl.full([BIAS_T_TILE, IDX_TOPK], dtype=pl.FP32, value=1.0), c_pos_q
++            )
++            c_ge_tile = pl.minimum(pl.maximum(pl.add(c_raw_tile, CSA_CMP_GE_BIAS), 0.0), 1.0)
++            c_lt_tile = pl.minimum(pl.maximum(pl.sub(c_upper_b, c_raw_tile), 0.0), 1.0)
++            c_mask_tile = pl.mul(c_ge_tile, c_lt_tile)
++            c_out_tile = pl.sub(pl.mul(c_mask_tile, pl.add(c_raw_tile, 1.0)), 1.0)
++            cmp_sparse_indices = pl.assemble(
++                cmp_sparse_indices,
++                pl.set_validshape(pl.cast(c_out_tile, target_type=pl.INT32), bias_rows, IDX_TOPK),
++                [bias_t0, 0],
++            )
++            sparse_bias = pl.assemble(
++                sparse_bias,
++                pl.set_validshape(pl.mul(pl.minimum(c_out_tile, 0.0), -NEG_INF), bias_rows, CMP_TOPK),
++                [bias_t0, ATTN_K_TILE],
++            )
++            # 每块的有效位直接由 c_mask_tile 归约得到，不再回读 cmp_sparse_indices。
++            for c_sb in pl.range(1, SPARSE_BLOCKS):
++                c_s0 = (c_sb - 1) * ATTN_K_TILE
++                c_blk_valid = pl.row_max(pl.slice(
++                    c_mask_tile, [BIAS_T_TILE, ATTN_K_TILE], [0, c_s0],
++                    valid_shape=[bias_rows, ATTN_K_TILE],
++                ))
++                for c_dt in pl.range(bias_rows):
++                    c_valid = pl.cast(pl.read(c_blk_valid, [c_dt, 0]), pl.INT32)
++                    pl.write(valid_block_mask, [bias_t0 + c_dt, c_sb], c_valid)
+ 
+     # Native cosine rows already have the consumer's interleaved layout.
+     rope_sin_signed = pl.create_tensor([T_PAD, ROPE_DIM], dtype=pl.FP32)

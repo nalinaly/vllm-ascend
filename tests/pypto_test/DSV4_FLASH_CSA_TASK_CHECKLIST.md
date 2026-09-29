@@ -110,6 +110,12 @@ T4/N4096、内部T1，零行广播/转置/UB复制，BF16边界保留；Vec为12
 已移入性能版O投影/CSA调用与共享HC三个文件，生产两版两入口依赖解析通过。
 未把该两档收益加入已发布七档；下步依据新任务图复核Indexer归并→Sparse的数据交接与调度。
 
+后续[滑窗计划提前候选](results/csa_sparse_plan_split_20260929/README.md)只改私有Sparse文件：
+现有两档Merge FIN→Sparse首start均值17.755/17.095μs，包含计划核时和结束确认；Sparse ready后不足1μs。
+将不依赖Top-K的SWA页表/窗口计算独立提前，压缩计划仍显式等SWA以保护同一64字节有效位行。
+额外16份AIV任务的成本必须计入。CPU完整编译通过，14:44正常auto提交task_20260929_144431_322320312386；
+长B16/短B24、四窗、八类状态及8:2/P95判断，尚无收益结论，不改生产。
+
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |
 | 1 | Native新标准七档已完成 | dynamic=False/inplace=True/static+superkernel、显式named backend自管图；[七档实测](results/csa_native_inplace_seven_20260929/NATIVE_RESULTS.md)与八类同图状态通过，PTO配套采集不阻塞发布，不再试开关 |

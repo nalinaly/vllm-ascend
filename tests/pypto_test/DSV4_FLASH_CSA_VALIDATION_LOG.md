@@ -11791,3 +11791,29 @@ Native/cache/工具链不改。§437的长短8:2核内−10.504%、CSA−0.951%�
 下一步先看Indexer归并→Sparse计划交接在新图中的实际关键链，再选核内或调度候选。
 [完整边界与共享HC](results/csa_ob_hc_scalar_fused_20260929/boundary/summary.json)、
 [生产入口解析](results/csa_ob_hc_scalar_fused_20260929/production_parse.json)。
+
+## 439. 复核Indexer→Sparse串行计划，冻结滑窗部分提前的单文件对照（2026-09-29）
+
+基于已采用的7b296153收尾融合对应两档四窗，复用原始泳道，不新测或推算Native。
+Merge FIN→Sparse首start长B16四窗20.26/12.88/19.78/18.10μs，短B24为16.46/15.70/17.56/18.66，
+均值17.755/17.095。Sparse在最后前置FIN后0.54–0.86μs启动；关键前置是合并计划，
+计划worker首start→末end长8.26–9.26、短11.52–13.30μs，末end→FIN另有2.86–10.48/2.12–4.44。
+不把整段叫纯算术，也不继续盲调Sparse的early或把结束确认成本藏掉。
+
+原计划将SWA窗口/页表处理和压缩索引合法性处理放一起，前者无Top-K数据依赖却一起等待。
+新私有整包只改Sparse文件，SWA独立提前，压缩计划仍等Indexer和SWA，Sparse依赖压缩计划。
+valid_block_mask每token独占64字节，但两阶段写该行不同列，不能并发标量写，
+因此显式增加window_plan_tid前置；压缩和SWA的计算、索引保护、空洞与padding规则保持。
+这是增加16份AIV任务的调度实验，完整CSA/P95必须抵扣任务开销；不冒称核内总工作减少。
+
+参照最新AscendC A3 SCFA的原始窗口/压缩段分流与压缩索引consumer校验；不照搬其整套流水。
+pypto-lib 2164563计划直接读预展开window_swa_indices，本仓则在PTO中直接消费Native位置/页表，
+有额外页边界/空洞工作；此次保留工作但提前，没有外层复制或Native cache改造。
+
+baseline/candidate两入口依赖解析通过，candidate完整PTOAS/CCE/link/load通过。
+生成调度代码确认SWA无Top-K输入，压缩input含Top-K且显式依赖SWA，两共享缓冲为inout。
+Ruff/shell通过、两份Python源只读。14:44正常auto提交task_20260929_144431_322320312386，
+确认设备1上running。长B16/短B24同卡反序，5预热20次计时、四窗DFX、八类状态零容差；
+报告计划总核时、完整CSA/P95、实际依赖和等待是否转移。有收益再补边界，目前无设备结论。
+生产保持7b296153，不重测Native或扩大七档/模型。
+[现有时戳、私有差异和CPU证据](results/csa_sparse_plan_split_20260929/README.md)。

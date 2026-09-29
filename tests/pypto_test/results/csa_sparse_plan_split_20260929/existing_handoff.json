@@ -1,0 +1,385 @@
+{
+  "source": "7b296153对应的冻结已测candidate；复用既有泳道，不新占卡",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "windows": [
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/merged_swimlane.json",
+          "joined_rows": 953,
+          "worker_span_us": 914.44,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 613.88,
+                "start_us": 614.92,
+                "end_us": 628.0600000000001,
+                "finish_us": 632.62,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 5.4799999999999045
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 621.2,
+                "start_us": 633.36,
+                "end_us": 641.62,
+                "finish_us": 652.1,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.7400000000000091
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 634.34,
+                "start_us": 652.88,
+                "end_us": 811.44,
+                "finish_us": 815.9200000000001,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.7799999999999727
+              }
+            },
+            "merge_finish_to_sparse_start_us": 20.25999999999999,
+            "plan_kernel_work_us": 94.12000000000012
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+          "joined_rows": 953,
+          "worker_span_us": 916.46,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 590.58,
+                "start_us": 591.44,
+                "end_us": 603.9,
+                "finish_us": 608.84,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 5.860000000000014
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 598.32,
+                "start_us": 609.62,
+                "end_us": 618.08,
+                "finish_us": 620.94,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.7799999999999727
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 610.98,
+                "start_us": 621.72,
+                "end_us": 779.1800000000001,
+                "finish_us": 784.3000000000001,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.7799999999999727
+              }
+            },
+            "merge_finish_to_sparse_start_us": 12.879999999999995,
+            "plan_kernel_work_us": 95.78000000000043
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+          "joined_rows": 953,
+          "worker_span_us": 915.4200000000001,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 581.58,
+                "start_us": 582.46,
+                "end_us": 595.26,
+                "finish_us": 599.0600000000001,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 5.399999999999977
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 585.84,
+                "start_us": 599.88,
+                "end_us": 609.14,
+                "finish_us": 617.98,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.8199999999999363
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 601.2,
+                "start_us": 618.84,
+                "end_us": 784.04,
+                "finish_us": 790.16,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.8600000000000136
+              }
+            },
+            "merge_finish_to_sparse_start_us": 19.779999999999973,
+            "plan_kernel_work_us": 108.12000000000035
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+          "joined_rows": 953,
+          "worker_span_us": 907.0600000000001,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 580.82,
+                "start_us": 581.64,
+                "end_us": 595.02,
+                "finish_us": 599.0,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 5.740000000000009
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 588.1,
+                "start_us": 599.6800000000001,
+                "end_us": 608.12,
+                "finish_us": 616.28,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.6800000000000637
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 600.94,
+                "start_us": 617.1,
+                "end_us": 776.4200000000001,
+                "finish_us": 781.5,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.82000000000005
+              }
+            },
+            "merge_finish_to_sparse_start_us": 18.100000000000023,
+            "plan_kernel_work_us": 105.3399999999998
+          }
+        }
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "windows": [
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/merged_swimlane.json",
+          "joined_rows": 1061,
+          "worker_span_us": 888.1600000000001,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 427.04,
+                "start_us": 475.78000000000003,
+                "end_us": 488.7,
+                "finish_us": 492.0,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 0.6400000000000432
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 478.7,
+                "start_us": 492.7,
+                "end_us": 505.64,
+                "finish_us": 507.76,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.6999999999999886
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 493.94,
+                "start_us": 508.46000000000004,
+                "end_us": 702.98,
+                "finish_us": 707.36,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.7000000000000455
+              }
+            },
+            "merge_finish_to_sparse_start_us": 16.460000000000036,
+            "plan_kernel_work_us": 132.75999999999993
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+          "joined_rows": 1061,
+          "worker_span_us": 878.86,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 410.5,
+                "start_us": 461.7,
+                "end_us": 474.8,
+                "finish_us": 478.96000000000004,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 0.6200000000000045
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 463.74,
+                "start_us": 479.72,
+                "end_us": 491.24,
+                "finish_us": 493.98,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.7599999999999909
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 481.06,
+                "start_us": 494.66,
+                "end_us": 689.12,
+                "finish_us": 693.3000000000001,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.6800000000000068
+              }
+            },
+            "merge_finish_to_sparse_start_us": 15.699999999999989,
+            "plan_kernel_work_us": 139.81999999999988
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+          "joined_rows": 1061,
+          "worker_span_us": 878.44,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 417.64,
+                "start_us": 467.86,
+                "end_us": 480.44,
+                "finish_us": 483.94,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 0.6000000000000227
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 471.14,
+                "start_us": 484.72,
+                "end_us": 496.52000000000004,
+                "finish_us": 500.96000000000004,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.7800000000000296
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 486.02,
+                "start_us": 501.5,
+                "end_us": 690.94,
+                "finish_us": 694.64,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.5399999999999636
+              }
+            },
+            "merge_finish_to_sparse_start_us": 17.560000000000002,
+            "plan_kernel_work_us": 132.18000000000012
+          }
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+          "joined_rows": 1061,
+          "worker_span_us": 849.46,
+          "handoff": {
+            "split": false,
+            "timing": {
+              "indexer_topk_query_merge": {
+                "dispatch_us": 387.98,
+                "start_us": 444.32,
+                "end_us": 456.8,
+                "finish_us": 460.42,
+                "producers": [
+                  "indexer_score_topk_native_pair_aic"
+                ],
+                "last_finish_to_start_us": 0.5799999999999841
+              },
+              "csa_slots_build_valid_qk_plan": {
+                "dispatch_us": 446.98,
+                "start_us": 461.08,
+                "end_us": 474.38,
+                "finish_us": 478.44,
+                "producers": [
+                  "indexer_topk_query_merge"
+                ],
+                "last_finish_to_start_us": 0.6599999999999682
+              },
+              "qk_pv_aic": {
+                "dispatch_us": 462.14,
+                "start_us": 479.08,
+                "end_us": 664.3000000000001,
+                "finish_us": 667.76,
+                "producers": [
+                  "rmsnorm_rope_cache_write",
+                  "kv_touch",
+                  "rope_cs",
+                  "csa_slots_build_valid_qk_plan",
+                  "qproj_dequant_rms_nope_rope"
+                ],
+                "last_finish_to_start_us": 0.6399999999999864
+              }
+            },
+            "merge_finish_to_sparse_start_us": 18.659999999999968,
+            "plan_kernel_work_us": 130.58000000000004
+          }
+        }
+      ]
+    }
+  ]
+}
