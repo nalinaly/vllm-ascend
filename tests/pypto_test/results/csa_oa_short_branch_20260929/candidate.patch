@@ -1,0 +1,214 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_o_proj.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_o_proj.py
+@@ -79,6 +79,7 @@
+ O_WINDOW_ROWS = TP_SIZE * LOCAL_T_PAD
+ 
+ A_K_TILE = 256
++PROJ_A_NZ_SMALL_K_TILE = 512
+ 
+ PROJ_A_MM_N_TILE = 128
+ PROJ_A_LARGE_N_TILE = 256
+@@ -183,8 +184,9 @@
+     proj_a_rows: pl.Scalar[pl.INDEX],
+     heads_dep: pl.Scalar[pl.TASK_ID],
+     A_COL_TILE: pl.constexpr,
+-):
+-    """Parallelize row and column tiles as upstream; retain Native NZ weights."""
++    A_PREFETCH_K: pl.constexpr,
++):
++    """Use larger NZ L1 K panels when N128 leaves capacity; preserve K order."""
+     with pl.spmd(
+         proj_a_rows * (O_LORA // A_COL_TILE),
+         name_hint="proj_a_mm",
+@@ -201,16 +203,16 @@
+         # The block index remainder is nonnegative; make the NZ bound explicit.
+         n0 = pl.max(nf, 0) * A_COL_TILE
+         xa_first = pl.slice(
+-            o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, 0], valid_shape=[pa_rows, A_K_TILE]
++            o_packed, [PROJ_A_ROW_TILE, A_PREFETCH_K], [pa_src0, 0], valid_shape=[pa_rows, A_PREFETCH_K]
+         )
+-        wa_first = wo_a[g : g + 1, 0:A_K_TILE, n0 : n0 + A_COL_TILE]
++        wa_first = wo_a[g : g + 1, 0:A_PREFETCH_K, n0 : n0 + A_COL_TILE]
+         acc_a = pl.matmul(xa_first, wa_first, out_dtype=pl.FP32)
+-        for kb in pl.pipeline(1, O_GROUP_IN // A_K_TILE, stage=2):
+-            k0 = kb * A_K_TILE
++        for kb in pl.pipeline(1, O_GROUP_IN // A_PREFETCH_K, stage=2):
++            k0 = kb * A_PREFETCH_K
+             xa_k_chunk = pl.slice(
+-                o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, k0], valid_shape=[pa_rows, A_K_TILE]
+-            )
+-            wa_k_chunk = wo_a[g : g + 1, k0 : k0 + A_K_TILE, n0 : n0 + A_COL_TILE]
++                o_packed, [PROJ_A_ROW_TILE, A_PREFETCH_K], [pa_src0, k0], valid_shape=[pa_rows, A_PREFETCH_K]
++            )
++            wa_k_chunk = wo_a[g : g + 1, k0 : k0 + A_PREFETCH_K, n0 : n0 + A_COL_TILE]
+             acc_a = pl.matmul_acc(acc_a, xa_k_chunk, wa_k_chunk)
+         # acc_a is 3D (wo_a keeps its group axis), which subscript-write cannot express.
+         o_r_pad = pl.assemble(o_r_pad, acc_a, [pa_r0, out_col_g + n0])
+@@ -229,6 +231,7 @@
+     proj_a_rows: pl.Scalar[pl.INDEX],
+     heads_dep: pl.Scalar[pl.TASK_ID],
+     A_COL_TILE: pl.constexpr,
++    A_PREFETCH_K: pl.constexpr,
+ ):
+     """ND 版：与上游 _decode_o_proj 同形，(行块 x N 块) 二维展开、行块最外。"""
+     with pl.spmd(
+@@ -384,6 +387,7 @@
+     heads_dep: pl.Scalar[pl.TASK_ID],
+     ROW_TILE: pl.constexpr,
+     A_COL_TILE: pl.constexpr,
++    A_PREFETCH_K: pl.constexpr,
+ ):
+     """Project local-token, full-group attention heads into BF16 hidden rows."""
+     t_dim = pl.tensor.dim(x_out, 0)
+@@ -409,7 +413,7 @@
+ 
+             o_r_pad, pa_tid = proj_a_mm(
+                 o_packed, wo_a, o_r_pad, g, row_base_o, out_col_g,
+-                t_dim, proj_a_rows, heads_dep, A_COL_TILE,
++                t_dim, proj_a_rows, heads_dep, A_COL_TILE, A_PREFETCH_K,
+             )
+ 
+             col_g = g * O_LORA
+@@ -502,22 +506,35 @@
+     comb: pl.Tensor[[T_DYN, HC_MULT * HC_MULT], pl.FP32],
+     x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16]],
+     heads_dep: pl.Scalar[pl.TASK_ID],
++    short_history: pl.Scalar[pl.INT32],
+ ):
+     """Use upstream row/column tiles while retaining Native weight storage."""
+     t_dim = pl.tensor.dim(x_out, 0)
+     if t_dim <= PROJ_B_SMALL_T_TILE:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_SMALL_T_TILE, PROJ_A_MM_N_TILE,
++            PROJ_B_SMALL_T_TILE, PROJ_A_MM_N_TILE, A_K_TILE,
+         )
+-    elif t_dim <= PROJ_B_MEDIUM_T_TILE:
++    elif t_dim == PROJ_B_MEDIUM_T_TILE:
++        # 同为T96，设备四窗显示长档K512回退、短档获益；复用Indexer的实际长度判据。
++        if short_history == 1:
++            x_out = _decode_o_proj_tp1_tiled(
++                o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
++                PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE, PROJ_A_NZ_SMALL_K_TILE,
++            )
++        else:
++            x_out = _decode_o_proj_tp1_tiled(
++                o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
++                PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE, A_K_TILE,
++            )
++    elif t_dim < PROJ_B_MEDIUM_T_TILE:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE,
++            PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE, A_K_TILE,
+         )
+     else:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_MM_T_TILE, PROJ_A_LARGE_N_TILE,
++            PROJ_B_MM_T_TILE, PROJ_A_LARGE_N_TILE, A_K_TILE,
+         )
+     return x_out
+--- a/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_indexer.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_indexer.py
+@@ -1356,6 +1356,7 @@
+     idx_block_table: pl.Tensor[[B_DYN, INDEXER_TABLE_COLUMNS_DYN], pl.INT32],
+     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+     kv_seq_lens: pl.Tensor[[B_DYN], pl.INT32],
++    max_topk_cache_len: pl.Scalar[pl.INDEX],
+     topk_scores: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.FP32]],
+     topk_idxs: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32]],
+     qh_quant_tid: pl.Scalar[pl.TASK_ID],
+@@ -1377,9 +1378,6 @@
+     # The whole batch uses query rows for one leaf, or private lane rows for multiple leaves.
+     score_arena = pl.create_tensor([SCORE_ARENA_ROWS, TOPK_CANDIDATES_PER_LEAF], dtype=pl.FP32)
+     # 8K及长上下文统一尝试片上FP16/Cube规约；更短历史保留Vector路径。
+-    max_topk_cache_len = 0
+-    for topk_batch in pl.range(b_dim):
+-        max_topk_cache_len = pl.max(max_topk_cache_len, pl.read(kv_seq_lens, [topk_batch]) // COMPRESS_RATIO)
+     if max_topk_cache_len >= INDEXER_NATIVE_CUBE_MIN_ROWS:
+         # 长历史的完整leaf每半区4096候选：512一轮，11轮降至8轮。
+         # 短历史保留384半区，避免扩大最后一轮的padding计算。
+@@ -1621,10 +1619,6 @@
+ 
+         score_tid = direct_leaf_tid
+ 
+-    max_topk_cache_len = 0
+-    for topk_batch in pl.range(b_dim):
+-        topk_cache_len = pl.read(kv_seq_lens, [topk_batch]) // COMPRESS_RATIO
+-        max_topk_cache_len = pl.max(max_topk_cache_len, topk_cache_len)
+     with pl.scope():
+         if max_topk_cache_len < INDEXER_NATIVE_CUBE_MIN_ROWS:
+             with pl.spmd(
+@@ -1916,6 +1910,7 @@
+     topk_idxs: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32]],
+     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+     kv_seq_lens: pl.Tensor[[B_DYN], pl.INT32],
++    max_topk_cache_len: pl.Scalar[pl.INDEX],
+     cache_write_dep: pl.Scalar[pl.TASK_ID],
+     weights_gate_dep: pl.Scalar[pl.TASK_ID],
+     qh_quant_tid: pl.Scalar[pl.TASK_ID],
+@@ -1932,6 +1927,7 @@
+         idx_block_table,
+         position_ids,
+         kv_seq_lens,
++        max_topk_cache_len,
+         topk_scores,
+         topk_idxs,
+         qh_quant_tid,
+@@ -1958,6 +1954,7 @@
+     topk_idxs: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32]],
+     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+     kv_seq_lens: pl.Tensor[[B_DYN], pl.INT32],
++    max_topk_cache_len: pl.Scalar[pl.INDEX],
+     late_dep: pl.Scalar[pl.TASK_ID],
+     cache_write_dep: pl.Scalar[pl.TASK_ID],
+ ):
+@@ -1987,6 +1984,7 @@
+         topk_idxs,
+         position_ids,
+         kv_seq_lens,
++        max_topk_cache_len,
+         cache_write_dep,
+         weights_gate_dep,
+         qh_quant_tid,
+--- a/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_oa_short_branch_369ad2c1_v1/decode_csa.py
+@@ -26,7 +26,7 @@
+     TP as TP_SIZE,
+ )
+ from .decode_compressor_ratio4 import compressor_ratio4
+-from .decode_indexer import indexer
++from .decode_indexer import TOPK_CANDIDATES_PER_LEAF, indexer
+ from .decode_indexer_compressor import indexer_compressor
+ from .decode_o_proj import LOCAL_T, LOCAL_T_PAD, decode_o_proj_tp1
+ from .decode_sparse_attn_csa import T_PAD, sparse_attn_csa_tp1
+@@ -417,6 +417,12 @@
+             late_dep,
+             cmp_kv_score_tid,
+         )
++        # Indexer与O-A共用实际最长历史；原Indexer两次相同扫描合为一次。
++        max_indexer_cache_len = 0
++        for length_batch in pl.range(pl.tensor.dim(kv_seq_lens, 0)):
++            max_indexer_cache_len = pl.max(
++                max_indexer_cache_len, pl.read(kv_seq_lens, [length_batch]) // COMPRESS_RATIO,
++            )
+         # Bound indexer scratch to its own runtime scope.
+         with pl.scope():
+             idx_topk_scores, idx_topk = indexer(
+@@ -435,6 +441,7 @@
+                 idx_topk,
+                 position_ids,
+                 kv_seq_lens,
++                max_indexer_cache_len,
+                 late_dep,
+                 idx_cache_write_tid,
+             )
+@@ -459,6 +466,7 @@
+         with pl.scope():
+             x_out = decode_o_proj_tp1(
+                 o_packed_heads, wo_a, wo_b, wo_b_scale, x_hc, post_t, comb_t, x_out, heads_dep,
++                pl.cast(max_indexer_cache_len <= TOPK_CANDIDATES_PER_LEAF, pl.INT32),
+             )
+     return x_out
+ 

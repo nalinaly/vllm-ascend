@@ -114,6 +114,8 @@ Q_B的24份工作与Compressor/Indexer投影争用AIC，不能据此认为20份�
 下一项[NZ O-A按形状扩大L1面板](results/csa_oa_l1k512_20260929/README.md)已冻结并正常auto排队：
 参考最新ops-nn的L1 depth/step选择，仅T≤96/N128改K512，T>96/N256与ND保留K256。
 L0仍K128双缓冲、任务/worker及K顺序保持；CPU完整编译通过，N256规范化IR与基线相同。
-本轮长短各B16覆盖受影响分支，先按8:2、完整状态/目标核/CSA/P95决定，生产尚未改。
+两档已完成：目标核长+6.663%、短−8.638%，四窗范围各自不重叠；8:2核内+3.603%、CSA−0.159%。
+八类状态/16窗通过，不统一采用K512。按用户规则改为仅短历史T96的分支候选，长档/其他形状保持；
+复用现有Indexer最长实际压缩长度，不新增扫描。分支还须验证，生产未改，不推算组合收益。
 
 [有效策略与失败记录](DSV4_FLASH_CSA_VALIDATION_LOG.md)、[AscendC源码参考](DSV4_FLASH_CSA_ASCENDC_REFERENCES.md)。
