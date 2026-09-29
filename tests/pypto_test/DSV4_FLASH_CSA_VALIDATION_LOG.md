@@ -12383,3 +12383,104 @@ pypto-lib2164563仍在独立merge_norm中加载mi/li/oi、执行二维Gather（d
 [取舍](results/csa_sparse_rope_flat_gather_20260929/decision.json)。
 
 本次定向Ruff、shell语法及diff检查通过；统一format.sh ci仍因缺pre-commit未完成，不宣称全仓CI通过。
+
+## 467. Gather组合七档阶段覆盖：复用两档，只补五个缺口（2026-09-29）
+
+当前正式算子632dd00a包含Q与Sparse整块Gather，旧完整七档仅f4861832，不能外推局部收益。
+20:07正常auto提交task_20260929_200739_17098231176，复用冻结Sparse候选两档，
+只补128K B4/B8/B24、8K B16/B32，各5预热20正式事件与四窗DFX；Native沿用最新标准。
+PyPTO88f605986/Simplera54c05095/CANN9.2不变，不重新构造源码或重复编译生产包。
+性能后核对各档八类图重放状态/保护区，跨版本依据仍限定已有两代表档及H127/B3/padding。
+原始window_3七份泳道完成后统一命名汇集，不挑最快窗，也不将不同任务的差值归因单项。
+[来源和执行入口](results/csa_flat_gather_seven_20260929/README.md)。
+
+## 468. Indexer query仍有逐行Gather：独立核内候选已通过CPU检查（2026-09-29）
+
+检查当前Score前置链发现idx_qr_dequant_rope仍沿pypto-lib2164563逐行pl.gather。
+最新本地AscendC整块Gather参考可继续适用，但本核没有Q的RMS：RoPE切片行距仍128，
+不能直接reshape为连续8×64。首份CPU生成码审查已拦截此问题，未让错误草案占卡。
+修正版从连续8×128反量化输入读取，索引为row*128+64+pair_swap，输出1×512恢复8×64；
+保留完整乘法/舍入顺序、逐head四路pipeline、48-worker和尾行分支，不改Hadamard/Score/依赖。
+
+完整CPU编译/PTOAS/CCE/link/load通过；满行两个展开点的逐行TMOV消失，尾行保持。
+静态TLOAD13/TSTORE8/TCVT16/TMUL8/TADD4均未变，索引单位仍元素；不能重复乘4。
+冻结632dd00a私有整包后20:15正常auto提交task_20260929_201500_22994431416，
+只测长B16/短B24，性能后完整八类状态；有收益再补边界，不把七档覆盖任务混入候选。
+生产/精度版/Native/工具链未改。旧KV免清零、成对DMA、累计softmax仍维持否定，未原样重跑。
+[候选、源码依据及CPU证据](results/csa_indexer_rope_flat_gather_20260929/README.md)。
+
+## 469. 632dd00a同源码七档齐全，更新差距表与固定泳道下载（2026-09-29）
+
+补五档task_20260929_200739_17098231176完成退出0。Native与补五档为auto设备0，
+复用两代表档为auto设备1；按用户“PTO用已有结果”规则保留来源，不补测追求同卡标签。
+七档PTO同一冻结632dd00a，CANN9.2/mode2/atomic0/det0，5预热20正式设备事件。
+各档八类完整图重放状态、保护区与28窗官方join覆盖通过；跨版本依据仍限两代表档及H127/B3/padding。
+
+| 档位 | Native μs | PTO μs | 变化 | PTO P95 μs |
+| --- | ---: | ---: | ---: | ---: |
+| 128K/B4 | 748.298 | 642.614 | −14.123% | 652.380 |
+| 128K/B8 | 859.563 | 733.228 | −14.698% | 745.140 |
+| 128K/B16 | 1130.853 | 964.806 | −14.683% | 978.360 |
+| 128K/B24 | 1281.888 | 1230.986 | −3.971% | 1247.340 |
+| 8K/B16 | 757.482 | 744.598 | −1.701% | 753.860 |
+| 8K/B24 | 915.371 | 909.341 | −0.659% | 924.280 |
+| 8K/B32 | 1062.079 | 1038.443 | −2.225% | 1055.960 |
+
+长档−11.869%、短档−1.528%，8:2−9.801%。140次无超过各自P50的105%的尖峰；
+短B24 P95仍高于Native的920.340，单卡B16均值低于750不代表EP16模型区间验收。
+长B24融合Sparse AIC/AIV220.398/223.808已接近Native独立Sparse221.309/223.867；
+短B16/B32及短B32 Score仍有核内参考差距，不把包含逆RoPE/不同分工的差值当纯算术损失。
+
+固定window_3调度表拆end→FIN、FIN→dispatch、dispatch→start，dummy缺时戳的ready保持未知。
+旧727.98μs上游与当前8K/B16的Worker分段：前段66.62→82.04，中段317.14→346.40，
+Sparse含发布184.90→147.12，尾段159.32→165.34，总窗口727.98→740.90。
+仅作组织参考，旧图缺完整版本/输入和Scheduler View，不证明纯AICPU差距。
+
+七份固定窗口原始JSON已统一编号/重命名，来源保留PyTorch profile和原四窗；未挑最快或改事件。
+清单进度区删去重复的已结束实验叙述，把仍有效策略/否定方向和近期待办留下，历史全部留在本日志。
+[完整结果](results/csa_flat_gather_seven_20260929/RESULTS.md)、
+[核内任务](results/csa_flat_gather_seven_20260929/TASKS.md)、
+[调度](results/csa_flat_gather_seven_20260929/SCHEDULING.md)、
+[七份下载](results/csa_flat_gather_seven_20260929/download_pto_swimlanes/README.md)。
+
+## 470. Indexer整块Gather目标核时下降，性能后状态精确；改用真实筛选边界（2026-09-29）
+
+两档task_20260929_201500_22994431416完成退出0。性能后八类完整张量跨版本零差异，
+图重放/Top-K结构/保护区及16窗官方覆盖通过。长短各5预热20次正式事件。
+
+| 档位 | CSA μs | 变化 | P95 μs | 目标AIV核时 μs |
+| --- | ---: | ---: | ---: | ---: |
+| 128K/B16 | 966.592→966.728 | +0.014% | 974.760→977.880 | 14.081→12.062 |
+| 8K/B24 | 911.350→921.795 | +1.146% | 921.520→934.700 | 19.124→15.566 |
+
+8:2核时−15.193%、完整CSA+0.240%。长四窗范围11.828–16.312→10.711–14.204有重叠，
+短17.212–20.595→14.711–16.392完全分离；不宣称全部窗口稳定同比或CSA获益。
+未改qr_hadamard_quant核时长+44.97%、短+15.21%；长query量化末end303.65→309.79，
+短351.30→333.44，不能用目标核的下降推算Score提前或整体变快。
+两档P95分别增加3.120/13.180μs，四组均无超过P50的105%的样本，旧异常尾部不关闭。
+
+用户要求真实核内收益先保留再调度，故进入唯一有效边界；前一NZ阶段的完整CSA门槛不套作所有核内候选门槛。
+H127/B3任务task_20260929_203111_42466917165因全可见路径不能充分暴露query选择错误，主动终止退出130，
+未将其计为通过。改为task_20260929_203245_4337637856，H4095/B3/T18、active-B 3/2/1/3，
+覆盖真实Top-K筛选、两行尾部及padding；算子源码仍使用原冻结副本，生产未变。
+[完整结果](results/csa_indexer_rope_flat_gather_20260929/RESULTS.md)、
+[四窗/query时序与代价](results/csa_indexer_rope_flat_gather_20260929/decision.json)。
+
+## 471. Indexer真实选择边界精确通过，采用核内收益并保留CSA代价（2026-09-29）
+
+task_20260929_203245_4337637856完成退出0，H4095/B3/T18、det1/atomic0/mode2。
+八类完整状态跨版本零差异，同图active-B 3/2/1/3的状态、metadata及保护区全部通过。
+与Native零容差仍有原有差异：x_out max_abs0.0234375、RMSE0.002612776，Top-K集合替换39项，
+全部位置差7699；旧/新PTO对应Native的八类误差指标完全相同。不标Native精度或整模型token/DSpark通过。
+
+按核内有收益先保留的用户规则，采用性能版decode_indexer.py；目标AIV 8:2−15.193%，
+完整CSA+0.240%、两档P95增加3.120/13.180μs仍明确保留。长核时四窗重叠、短范围分离，不夸大稳定性。
+原文件与冻结基线只有两条docstring更新，保留生产说明并仅移入已测满行处理；去docstring后的AST
+与候选相同，生产/测试入口依赖解析通过。没有覆盖其他会话工作，不改精度版/Native/cache或工具链。
+定向Ruff/shell/diff通过，统一format.sh ci仍缺pre-commit，未冒称全仓CI通过。
+
+完整七档表与七份泳道严格对应632dd00a，不将本项两档局部数据拼入新七档。
+下一阶段基于固定window_3前置证据处理query链和O投影组间交接；不重复已否定的准入组合。
+[采用结果](results/csa_indexer_rope_flat_gather_20260929/RESULTS.md)、
+[边界](results/csa_indexer_rope_flat_gather_20260929/boundary_selective/summary.json)、
+[Native残留](results/csa_indexer_rope_flat_gather_20260929/native_reference_residual.json)。

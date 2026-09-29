@@ -1,0 +1,69 @@
+{
+  "status": "CPU_CODEGEN_PASS",
+  "compile": "compile_candidate.json",
+  "baseline_kernel": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_sparse_rope_flat_gather_20260929/compiled/candidate/kernels/aiv/idx_qr_dequant_rope.cpp",
+  "candidate_kernel": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/compiled/candidate/kernels/aiv/idx_qr_dequant_rope.cpp",
+  "gathers": [
+    {
+      "call": "TGATHER(v268, v266, v205, v207);",
+      "types": {
+        "output": "Tile<TileType::Vec, float, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "input": "Tile<TileType::Vec, float, 1, 1024, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "index": "Tile<TileType::Vec, int32_t, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "scratch": "Tile<TileType::Vec, int32_t, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>"
+      }
+    },
+    {
+      "call": "TGATHER(v320, v318, v205, v207);",
+      "types": {
+        "output": "Tile<TileType::Vec, float, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "input": "Tile<TileType::Vec, float, 1, 1024, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "index": "Tile<TileType::Vec, int32_t, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "scratch": "Tile<TileType::Vec, int32_t, 1, 512, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>"
+      }
+    },
+    {
+      "call": "TGATHER(v439, v431, v435, v437);",
+      "types": {
+        "output": "Tile<TileType::Vec, float, 1, 64, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "input": "Tile<TileType::Vec, float, 1, 128, BLayout::RowMajor, 1, 64, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "index": "Tile<TileType::Vec, int32_t, 1, 64, BLayout::RowMajor, 1, 64, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "scratch": "Tile<TileType::Vec, int32_t, 1, 64, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>"
+      }
+    },
+    {
+      "call": "TGATHER(v503, v495, v499, v501);",
+      "types": {
+        "output": "Tile<TileType::Vec, float, 1, 64, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "input": "Tile<TileType::Vec, float, 1, 128, BLayout::RowMajor, 1, 64, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "index": "Tile<TileType::Vec, int32_t, 1, 64, BLayout::RowMajor, 1, 64, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>",
+        "scratch": "Tile<TileType::Vec, int32_t, 1, 64, BLayout::RowMajor, -1, -1, SLayout::NoneBox, 512, PadValue::Null, CompactMode::Null>"
+      }
+    }
+  ],
+  "static_calls": {
+    "baseline": {
+      "TGATHER": 4,
+      "TMOV": 4,
+      "TLOAD": 13,
+      "TSTORE": 8,
+      "TCONCAT": 0,
+      "TCVT": 16,
+      "TMUL": 8,
+      "TADD": 4
+    },
+    "candidate": {
+      "TGATHER": 4,
+      "TMOV": 2,
+      "TLOAD": 13,
+      "TSTORE": 8,
+      "TCONCAT": 0,
+      "TCVT": 16,
+      "TMUL": 8,
+      "TADD": 4
+    }
+  },
+  "scope": "前两个为满行pipeline展开点：1x1024连续输入→1x512输出，无逐行TMOV；后两个为未改尾行。静态调用数不是动态执行次数或设备收益。",
+  "stride_fix": "拒绝直接展平64列/行距128切片；从完整8x128输入读绝对row*128+64+pair_swap索引",
+  "native_index_units": "元素索引，ISA内部转字节；不额外乘4"
+}

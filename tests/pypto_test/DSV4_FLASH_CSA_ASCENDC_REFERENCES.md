@@ -432,3 +432,16 @@ Cube的压缩分支随后从该GM合并区DataCopy到L1。Native并非把所有�
 Mat模式接受GM索引并逐行ND2NZ。不能仅因API名字更高层就断言消除了标量访存或搬运。
 后续若采用，应证明与当前gather_row循环相比减少了真实索引读取/同步，并保持负索引和原页表语义。
 旧的Top-K/页表预读及成对DMA没有稳定收益，未原样重测。本轮不修改ISA/PTOAS/PyPTO，也不变Native缓存布局。
+
+
+## Indexer query整块Gather：同一AscendC策略的关键前置链应用（2026-09-29）
+
+pypto-lib2164563的decode_indexer.py:678/679仍逐行pl.gather，当前PTO基线亦如此。
+参考前述AscendC整块索引/Gather，不改变其query反量化或舍入算术。与Q/Sparse不同，
+本核直接切反量化结果的后64列，实际行距128，不能按连续8×64展平。
+从完整8×128输入按row*128+64+pair_swap的元素索引Gather为1×512，取消满行逐行TMOV，尾行保持。
+
+两代表档目标核时8:2−15.193%，长四窗有重叠、短范围分离；完整CSA+0.240%、P95两档增加单列。
+性能后及H4095/B3真实Top-K筛选、尾行和padding状态精确通过，按核内收益优先规则保留性能版单文件。
+不把这项说成总区间加速，不把H127全可见路径当真实筛选验证；后续转query链及O投影调度。
+[完整证据与既有Native差异](results/csa_indexer_rope_flat_gather_20260929/README.md)。

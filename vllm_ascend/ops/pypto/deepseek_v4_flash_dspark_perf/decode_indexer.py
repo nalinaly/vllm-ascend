@@ -1698,25 +1698,43 @@ def indexer_qr_rope(
             hg = (dq_unit % (IDX_N_HEADS // DQ_ROPE_H_TILE)) * DQ_ROPE_H_TILE
             dq_t0 = (dq_unit // (IDX_N_HEADS // DQ_ROPE_H_TILE)) * DEQUANT_T_TILE
             if dq_t0 + DEQUANT_T_TILE <= bs:
-                qr_scale_tile = qr_scale[dq_t0 : dq_t0 + DEQUANT_T_TILE, :]
-                cos_tile = cos[dq_t0 : dq_t0 + DEQUANT_T_TILE, 0:ROPE_HEAD_DIM]
-                sin_tile = sin[dq_t0 : dq_t0 + DEQUANT_T_TILE, 0:ROPE_HEAD_DIM]
+                qr_scale_tile = pl.load(qr_scale, [dq_t0, 0], [DEQUANT_T_TILE, 1])
+                cos_tile = pl.load(cos, [dq_t0, 0], [DEQUANT_T_TILE, ROPE_HEAD_DIM])
+                sin_tile = pl.load(sin, [dq_t0, 0], [DEQUANT_T_TILE, ROPE_HEAD_DIM])
+                # The RoPE slice has a 128-element row stride. Gather from the
+                # contiguous full head using absolute element indices.
+                flat_i = pl.tile.ci(0, [1, ROPE_HEAD_DIM], dtype=pl.INT32)
+                flat_tmp = pl.create_tile([1, ROPE_HEAD_DIM], dtype=pl.INT32)
+                flat_lane = pl.tile.rems(flat_i, 2, flat_tmp)
+                swap_row = pl.tile.adds(pl.tile.sub(flat_i, pl.tile.muls(flat_lane, 2)), IDX_NOPE_HEAD_DIM + 1)
+                swap_base = pl.create_tile([DEQUANT_T_TILE, ROPE_HEAD_DIM], dtype=pl.INT32)
+                swap_source = pl.col_expand(swap_base, swap_row)
+                row_offsets = pl.tile.muls(pl.tile.ci(0, [1, DEQUANT_T_TILE], dtype=pl.INT32), IDX_HEAD_DIM)
+                flat_swap = pl.reshape(
+                    pl.row_expand_add(swap_source, pl.reshape(row_offsets, [DEQUANT_T_TILE, 1])),
+                    [1, DEQUANT_T_TILE * ROPE_HEAD_DIM],
+                )
+                gather_tmp = pl.create_tile([1, DEQUANT_T_TILE * ROPE_HEAD_DIM], dtype=pl.INT32)
                 for h_inner in pl.pipeline(DQ_ROPE_H_TILE, stage=2):
                     h0 = (hg + h_inner) * IDX_HEAD_DIM
-                    wq_scale = pl.reshape(wq_b_scale[h0 : h0 + IDX_HEAD_DIM], [1, IDX_HEAD_DIM])
+                    wq_scale = pl.reshape(pl.load(wq_b_scale, [h0], [IDX_HEAD_DIM]), [1, IDX_HEAD_DIM])
                     acc_fp32 = pl.cast(
-                        qr_acc_pad[dq_t0 : dq_t0 + DEQUANT_T_TILE, h0 : h0 + IDX_HEAD_DIM],
+                        pl.load(qr_acc_pad, [dq_t0, h0], [DEQUANT_T_TILE, IDX_HEAD_DIM]),
                         target_type=pl.FP32,
                         mode="none",
                     )
                     qr_dequant = pl.col_expand_mul(pl.row_expand_mul(acc_fp32, qr_scale_tile), wq_scale)
                     qr_nope_bf16 = pl.cast(qr_dequant[:, 0:IDX_NOPE_HEAD_DIM], target_type=pl.BF16, mode="rint")
                     qr_rope_slice = qr_dequant[:, IDX_NOPE_HEAD_DIM:IDX_HEAD_DIM]
-                    qr_swapped = pl.gather(qr_rope_slice, dim=-1, index=rope_swap_idx)
+                    qr_swapped_flat = pl.tile.gather(
+                        pl.reshape(qr_dequant, [1, DEQUANT_T_TILE * IDX_HEAD_DIM]),
+                        flat_swap, gather_tmp,
+                    )
+                    qr_swapped = pl.reshape(qr_swapped_flat, [DEQUANT_T_TILE, ROPE_HEAD_DIM])
                     rope_rot = pl.add(pl.mul(qr_rope_slice, cos_tile), pl.mul(qr_swapped, sin_tile))
                     rope_bf16 = pl.cast(rope_rot, target_type=pl.BF16, mode="rint")
-                    qr_bf16_2d[dq_t0 : dq_t0 + DEQUANT_T_TILE, h0 : h0 + IDX_NOPE_HEAD_DIM] = qr_nope_bf16
-                    qr_bf16_2d[dq_t0 : dq_t0 + DEQUANT_T_TILE, h0 + IDX_NOPE_HEAD_DIM : h0 + IDX_HEAD_DIM] = rope_bf16
+                    pl.store(qr_nope_bf16, [dq_t0, h0], qr_bf16_2d)
+                    pl.store(rope_bf16, [dq_t0, h0 + IDX_NOPE_HEAD_DIM], qr_bf16_2d)
             else:
                 # At most seven rows. Keep all broadcast operands at the same
                 # extent; a partial scale tile cannot broadcast into eight rows.

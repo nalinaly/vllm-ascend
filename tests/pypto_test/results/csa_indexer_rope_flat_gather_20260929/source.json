@@ -1,0 +1,20 @@
+{
+  "baseline": "632dd00a",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-sparse-rope-flat-gather-369ad2c1-v1-candidate",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-rope-flat-gather-632dd00a-v1",
+  "variant": "pkg:dsv4_csa_indexer_rope_flat_gather_632dd00a_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "仅Indexer query满行反量化/RoPE的8x64逐行Gather展平1x512；尾行路径保持",
+  "native_reference": "ops-transformer28f40354/posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn_pad.h:261,295",
+  "not_changed": "乘法顺序、BF16舍入、head/worker分工、Hadamard/量化、Score、依赖/early、精度版/工具链",
+  "acceptance": "CPU确认取消满行逐行TMOV后，两代表档核内/CSA/P95；性能后完整八类状态，有收益再H4095/B3真实筛选+尾行/padding"
+}

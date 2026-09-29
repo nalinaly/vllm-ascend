@@ -41,172 +41,59 @@ incore与完整CSA分别报告加权结果，核内收益仍按已有规则保�
 
 **正式七档：128K×B4/B8/B16/B24＋8K×B16/B24/B32，B40退役，长短权重8:2。**
 
-**当前完整实测：PTO f4861832 / CANN9.2，Native最新标准。**
-包含O-B激活L1复用、整行HC收尾融合、七处early生产链；七档同一冻结私有包。
-长B16/短B24复用task_20260929_151902_390858217467，另五档task_20260929_154347_45284811883退出0。
-Native复用task_20260929_095651_194851727802；均为auto设备0，但分属不同采样任务，不能归因单项收益。
-Native显式npugraph_ex、dynamic=False/fullgraph=True/inplace=True、static/SuperKernel开启；
-核内诊断仅关闭SuperKernel，PTO保留自身custom-op图实现。
+**当前完整实测：PTO 632dd00a / CANN9.2，Native最新标准。**
+七档同一冻结私有包，包含此前O-B激活L1复用、融合收尾、七处early及Q/Sparse两项整块Gather。
+两代表档复用task_20260929_193859_406772521712；五档补测task_20260929_200739_17098231176已退出0。
+Native复用task_20260929_095651_194851727802：显式npugraph_ex、dynamic=False/fullgraph=True、
+inplace/static/SuperKernel开启；核内诊断仅关闭SuperKernel。PTO保留自身custom-op图。
+Native和补五档为auto设备0，复用两代表档为auto设备1；采样轮次也不同，按用户要求复用已有结果，
+不将累计变化归因单项优化，不替代模型forward。
 
 | 档位 | Native均值μs | PTO均值μs | PTO变化 | Native/PTO P95μs |
 | --- | ---: | ---: | ---: | ---: |
-| 128K/B4 | 748.298 | 642.806 | -14.098% | 751.100/656.580 |
-| 128K/B8 | 859.563 | 738.032 | -14.139% | 861.620/748.320 |
-| 128K/B16 | 1130.853 | 965.879 | -14.588% | 1135.580/986.840 |
-| 128K/B24 | 1281.888 | 1240.775 | -3.207% | 1289.880/1262.700 |
-| 8K/B16 | 757.482 | 753.921 | -0.470% | 760.120/769.420 |
-| 8K/B24 | 915.371 | 917.581 | +0.241% | 920.340/933.760 |
-| 8K/B32 | 1062.079 | 1064.999 | +0.275% | 1066.220/1088.760 |
+| 128K/B4 | 748.298 | 642.614 | -14.123% | 751.100/652.380 |
+| 128K/B8 | 859.563 | 733.228 | -14.698% | 861.620/745.140 |
+| 128K/B16 | 1130.853 | 964.806 | -14.683% | 1135.580/978.360 |
+| 128K/B24 | 1281.888 | 1230.986 | -3.971% | 1289.880/1247.340 |
+| 8K/B16 | 757.482 | 744.598 | -1.701% | 760.120/753.860 |
+| 8K/B24 | 915.371 | 909.341 | -0.659% | 920.340/924.280 |
+| 8K/B32 | 1062.079 | 1038.443 | -2.225% | 1066.220/1055.960 |
 
-各上下文内batch等权，128K -11.508%、8K +0.015%，8:2 -9.203%。
-PTO P95/P50为1.0154–1.0259，max/P50最高1.0405；累计0/140超过各自P50的105%。
-短档P95仍高于Native；不以这140次无大尖峰关闭历史间歇长尾或EP16问题。
-七档各自图重放八类状态/保护区及28窗官方join通过；跨版本状态依据为两代表档与尾行/padding。
-这些不替代Native/PTO精度、真实模型token/DSpark或EP16 forward验收。
+各上下文内batch等权，128K -11.869%、8K -1.528%，8:2 -9.801%。
+140次PTO正式采样均未超过各档P50的105%；8K/B24 P95仍为924.280，对Native920.340略高。
+8K/B16单层事件均值744.598不等于EP16模型区间750μs验收。历史间歇长尾继续开放。
+七档各自图重放八类完整状态、保护区与28窗官方join通过；跨版本逐元素仅依据两代表档及尾行/padding。
+这些不是新Native/PTO跨实现、整模型token/DSpark或EP16验收。
+Indexer采用后H4095/B3 Native残留max_abs=0.0234375、Top-K集合替换39项，优化前后相同；不将其写成Native PASS。
 
-[完整结果](results/csa_early_chain_seven_20260929/RESULTS.md)、
-[七份泳道与来源](results/csa_early_chain_seven_20260929/download_pto_swimlanes/README.md)、
-[当前核内差距](DSV4_FLASH_CSA_INCORE_NATIVE_GAP.md)。
-已有全部PyTorch profile和固定window_3泳道；下载包PTO_CSA_7cases_f4861832_20260929.zip。
-以下局部优化因果对照保留证据，其收益不能逐项累加为这张七档表。
+[完整CSA与核内表](results/csa_flat_gather_seven_20260929/RESULTS.md)、
+[逐任务明细](results/csa_flat_gather_seven_20260929/TASKS.md)、
+[调度前置与上游参照](results/csa_flat_gather_seven_20260929/SCHEDULING.md)、
+[七份泳道下载](results/csa_flat_gather_seven_20260929/download_pto_swimlanes/README.md)。
+完整包PTO_CSA_7cases_632dd00a_20260929.zip，统一window_3，PyTorch profile和原始四窗来源均保留。
 
-下一项为[NZ O-B小中档激活L1复用](results/csa_ob_activation_l1_20260929/README.md)：
-参考最新ops-nn的AL1-full/N-first策略，只把ROW32/96输入完整K1024驻留并跨两个N256复用，
-权重仍K256双缓冲，ROW128/ND/量化/调度不改；区别于旧整B权重驻留失败版本。
-第一版完整编译通过，但显式Tile连带把L0 K128双缓冲改为K256共用缓冲；
-长B16 O-B核时+15.190%，四窗范围不重叠，虽CSA−0.248%仍不采用。
-长档八类状态、图/保护区和8窗官方覆盖通过；主动停止剩余短档，任务退出130，不伪造完整8:2。
-二版已恢复K128及两份Right缓冲，完整CPU编译/load通过，生成码确认A在N循环外加载且无额外Mat搬运。
-[二版私有实验](results/csa_ob_activation_l1_k128_20260929/README.md)于12:56正常auto提交
-task_20260929_125617_186453621969已退出0：长短B16的CSA分别−1.394%/−0.904%，
-O-B核时−5.720%/+5.852%；长短8:2为CSA−1.296%、核内−3.406%，八类状态和16窗官方覆盖通过。
-短档核内回退保留，P95两档均降低；按用户口径值得保留，未改任务变化与四窗范围另列不抹去。
-13:12提交task_20260929_131204_257112126238，只用H127的B4/B8覆盖ROW32/96尾行及padding；
-任务已退出0，B4/B8八类跨版本状态及4/3/1/4、8/7/1/8固定图padding全部通过，
-已将已测O-B改动移入性能版单个decode_o_proj.py。本轮f4861832七档已覆盖该项，局部收益不外推相加。
-手写K128草案仅CPU容量检查失败，改用现有AutoTileMatmulL0通过，不修改工具链。
-
-收尾数据交接候选已完成CPU编译：[O-B反量化/HC_post融合](results/csa_ob_hc_fused_20260929/README.md)。
-保留组相加和BF16往返，移除attn_out GM中转；T16/N512分工，共享原单行HC算术。
-13:56正常auto提交task_20260929_135654_65664815311；长B16完整采集后已否定并主动停止，退出130。
-八类状态/8窗官方覆盖通过，但总核内工作量+144.494%、CSA+1.173%、P95增加11.740μs。
-没有完整短档和8:2结果，不扩大测试；下一候选改用原HC整行标量分工，不能把不同worker均值直接比较。
-后续[整D单行版本](results/csa_ob_hc_scalar_fused_20260929/README.md)CPU编译/load通过，
-T4/N4096、内部T1，零行广播/转置/UB复制，BF16边界保留；Vec为128KiB。
-两档task_20260929_141413_142108726634已退出0：八类状态零容差与16窗官方覆盖通过；
-长B16/短B24收尾核内−10.970%/−8.642%，完整CSA−1.092%/−0.384%，P95均下降。
-长短8:2核内−10.504%、CSA−0.951%，核时四窗范围完全分离，值得保留。
-14:29提交task_20260929_142920_279636119594，补H127/B3/T18尾行及同图padding，
-另直接覆盖共享HC单行入口；任务已退出0，八类状态、padding、共享HC三种调用及保护区全部通过。
-已移入性能版O投影/CSA调用与共享HC三个文件，生产两版两入口依赖解析通过。
-本轮f4861832七档已重新实测覆盖融合，不以该两档收益推算七档。
-
-后续[滑窗计划提前候选](results/csa_sparse_plan_split_20260929/README.md)只改私有Sparse文件：
-现有两档Merge FIN→Sparse首start均值17.755/17.095μs，包含计划核时和结束确认；Sparse ready后不足1μs。
-将不依赖Top-K的SWA页表/窗口计算独立提前，压缩计划仍显式等SWA以保护同一64字节有效位行。
-额外16份AIV任务的成本必须计入。CPU完整编译通过，14:44正常auto提交task_20260929_144431_322320312386；
-已退出0，八类状态/16窗官方覆盖通过，但两档CSA均慢约1%，8:2 +1.050%，计划总核时+35.175%，不采用。
-下一份[复用RoPE任务的候选](results/csa_sparse_plan_rope_20260929/README.md)保持任务总数，
-同一提前任务执行SWA和RoPE符号计算，压缩计划仍保留共享DDR行的显式前置。
-CPU完整编译通过，15:00正常auto提交task_20260929_150040_348018519899，已完成退出0。
-八类状态/16窗覆盖通过；长B16+0.819%、短B24−1.993%，8:2 +0.257%，长档P95增加11.700μs，
-计划加RoPE总核时8:2 +12.147%，不采用，不扩测；Sparse算术未改，不能把其核时波动当作独立incore收益。
-
-用户指出HCA补齐16处early标志，已完成[源码与现有八窗审查](results/csa_hca_early_review_20260929/README.md)，未新增占卡。
-CSA的Indexer Compressor五处、Attention projection和row offsets形成待验证的七处完整生产链；
-现有消费者确实没有预派发。[独立七处候选](results/csa_indexer_early_chain_20260929/README.md)已冻结、CPU编译/load通过，
-15:19正常auto提交task_20260929_151902_390858217467，已退出0；保留长档Score尾部限制，不叠加Sparse候选。
-长B16/短B24完整CSA−0.728%/−1.872%，8:2−0.957%；八类状态、16窗覆盖及H127/B3/padding通过，
-七处标志已移入性能版三个文件，生产两入口解析和已测候选AST对应通过。长档P95增加1.980μs单列，未复现异常尾部；
-长档DFX Score核时约+4.4%，本项不能宣称incore加速。阶段出口已复用这两档并补齐五档和新版七份泳道。
-HCA约20μs为其单项实测，不能当成CSA收益；Q_B worker 24→20另列候选。
-
-阶段出口[最新同源码七档](results/csa_early_chain_seven_20260929/README.md)已完成并发布；Native直接复用，无重复占卡。
-[Q_B worker 24→20](results/csa_qb_workers20_20260929/README.md)同卡两档已完成退出0，八类状态/16窗通过。
-完整CSA长+2.337%、短+3.465%，8:2 +2.563%，两侧P95升高；Q_B总核时8:2 −0.803%但四窗重叠，
-跨度反增且20份仍多波，尚无稳定核内收益，生产继续24，不扩测该候选。
-[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)已完成退出0，不采用。
-八类状态/16窗通过，但目标核长+12.492%、短+20.088%，8:2 +14.012%；完整CSA 8:2 +1.179%，P95均升。
-保持生产逐head和48-worker，不补失败候选的尾行/七档/模型，不把减少源码循环当成性能收益。
-下一项[满行整块Gather](results/csa_qrope_flat_gather_20260929/README.md)独立使用f4861832基线：
-参考ops-transformer28f40354的RoPE整块索引，8×64展平为1×512执行一次tile.gather再原样reshape。
-不叠加双head或Q_B20；512列逐head规约、高精度rsqrt、BF16 RINT、尾行及调度保持。
-完整CPU编译/load通过，满行取消逐行TMOV，Vec仅增加1088字节；这些不替代设备收益/状态证据。
-task_20260929_163903_24675961128已在设备2完成退出0，两档八类状态/16窗通过。
-目标核长−3.980%、短−1.821%，8:2 −3.548%；四窗范围仍有重叠，不宣称每窗更快。
-完整CSA长−0.724%、短−0.875%，8:2 −0.754%，P95/max均下降。
-16:54补task_20260929_165402_32761723341，H127/B3/T18及同图padding 3/2/1/3全部通过；
-已采用性能版单文件，生产两入口解析通过。最新完整七档仍f4861832，不用局部降幅外推七档或模型。
-
-下一项[NZ O-A按形状扩大L1 K面板](results/csa_oa_l1k512_20260929/README.md)，参考Native DoCommonTiling的depth/step。
-T≤96/N128分支K256→512，T>96/N256和ND保持K256；K顺序及L0 K128双缓冲保持，不引入K轮转。
-完整CPU编译/load通过，N128 Mat达到512KiB；N256规范化IR与基线相同，没有改工具链容量限制。
-本轮短档选择8K/B16，让两档都覆盖受影响分支；生产未改，私有整包17:08正常auto提交
-task_20260929_170813_2046519748已完成退出0，八类状态与16窗通过。
-长B16目标核+6.663%、短B16−8.638%，两侧四窗范围各自不重叠；CSA长+0.089%、短−1.151%。
-8:2目标核+3.603%、CSA−0.159%，不统一采用K512；短max增加7μs、P95/P50升至1.0260单列。
-按用户要求保留[仅短档T96分支候选](results/csa_oa_short_branch_20260929/README.md)：
-复用Indexer已算出的整批实际最长压缩长度，长档及其他形状保持K256，不在入口猜测或切实验包。
-该分支CPU完整编译/load通过：现把原Indexer两次最大长度扫描上提合为一次，避免标量跨scope越域；
-五个O-A核体与已测参考一致。task_20260929_173611_20993369288已在设备0完成退出0：
-八类状态/16窗通过，但短档O-A +6.175%、CSA长+0.508%/短+0.098%，8:2目标核+0.353%、CSA+0.426%，
-两档P95均升；短基线1/20超过P50的105%，候选0/20，不把max下降等同P95改善。
-当前分支没有保住前轮短档收益，不采用、不扩测；生产O-A仍K256。两轮不同卡/编排，不跨轮归因。
-
-另一个独立[NZ KV投影候选](results/csa_kv_native_nz_20260929/README.md)沿Native权重方向：
-性能版wkv改为[512,4096] NZ并b_trans读取，加载期可直接借用原地址；精度版保持旧方向。
-原M组1/2/3显式constexpr化以满足NZ偏移证明，不改工作映射；CPU完整编译通过，L0仍K128。
-两档任务已完成：KV核内加权−47.000%，完整CSA仅−0.080%；八类状态通过但不足以确认区间收益，暂停接入。
-随后[八张静态B的独立NZ对照](results/csa_static_b_nz_20260929/README.md)已完成，按用户最新绝对耗时要求取舍。
-Indexer Q/head及主Compressor wkv、inner wgate均回退；Hadamard出现明显Top-K/输出差异，不接入。
-主wgate与inner wkv单项CSA下降，但组合加权+0.459%；独立反序复核分别+0.120%/+0.322%，均未保住收益。
-两次复核性能后的八类完整状态仍零容差通过；本轮没有新NZ候选接入，不扩测边界/模型或改Native流程。
-NZ阶段结束时仍为369ad2c1算子；随后仅新增下述Sparse整块Gather。完整七档仍f4861832，不替代最新模型验收。
-
-下一项[Sparse最终逆RoPE整块Gather](results/csa_sparse_rope_flat_gather_20260929/README.md)：
-参考AscendC整块索引，当前Sparse已无逐行TMOV，但A3二维TGATHER内部仍循环16次vmuls/barrier/vgather。
-候选仅将16×64索引/输出展平1×1024，输入视图1×8192；绝对索引、算术及任务结构保持。
-完整CPU编译/load通过，生成码没有增加搬运，已正常auto提交task_20260929_193859_406772521712。
-两档八类完整状态/16窗通过，Sparse AIV 8:2−2.472%、完整CSA−0.266%；长CSA+0.168%、P95+6.880μs单列。
-长AIV四窗完全分离，短有重叠；边界task_20260929_195407_4663718485已退出0，H127/B3/padding全部精确通过。
-已采用性能版Sparse单文件，生产两入口依赖解析通过；未改精度版/工具链，不据局部结果推算七档。
-
-| 顺序 | 近期工作 | 完成证据/判据 |
+| 顺序 | 待办 | 当前证据与下一步 |
 | --- | --- | --- |
-| 1 | Native新标准七档已完成 | dynamic=False/inplace=True/static+superkernel、显式named backend自管图；[七档实测](results/csa_native_inplace_seven_20260929/NATIVE_RESULTS.md)与八类同图状态通过，PTO配套采集不阻塞发布，不再试开关 |
-| 2 | 最新AscendC末块发布已保留 | 修复mi/li偏移后，两档完整状态及B3/H127/padding精确通过；CSA 8:2−2.667%、AIV工作量−11.551%、P95下降，移入性能版单文件 |
-| 3 | 保留核内收益并处理CSA关键链 | 首PV特化已否定：两档Sparse AIV+5.075%/+8.726%、CSA/P95回退；[HC_post常驻残差](results/csa_hc_post_resident_20260929/README.md)核内8:2−18.896%、CSA−0.700%，状态/尾块通过，已移入共享实现。有真实核内收益即保留，CSA/P95单列、长短8:2 |
-| 4 | 独立merge、数据交接及调度 | 分开producer end→FIN、FIN→派发、派发→start与必要多波；不重复已否定sync_start/准入组合 |
-| 5 | 七档出口完成，精度版迁移待推进 | [本轮七档](results/csa_early_chain_seven_20260929/README.md)计时/profile/泳道齐全；主性能SuperKernel开、核内诊断关且static保持。HC_post共享更新，其他精度版迁移保持原舍入/规约 |
-| 6 | 最终真实EP16验收 | 逐token、DSpark、稳态10步decode forward及尾部，优先级后置 |
+| 1 | Indexer query整块Gather已保留 | [独立pkg](results/csa_indexer_rope_flat_gather_20260929/README.md)已通过CPU编译并提交task_20260929_201500_22994431416；从连续8×128输入按绝对索引Gather，避免带stride切片直接展平。两档性能后及H4095/B3真实筛选/尾行/padding八类状态精确；目标核时8:2−15.193%、CSA+0.240%单列，已按核内收益规则接入性能版。下一项转调度，完整七档仍632dd00a |
+| 2 | 128K关键链的调度优化 | 固定window_3已拆end→FIN、FIN→dispatch、dispatch→start；保留dummy无时戳的未知项。先解决query前置链和O投影多组交接，不把必要多波当纯调度开销；两档8:2评估 |
+| 3 | 保留核内热点 | 当前长B24融合Sparse核时已接近Native独立Sparse，短B16/B32差距仍在；短B32 Score也是后续分支入口。先查最新AscendC适用策略，失败候选无新依据不重复 |
+| 4 | 精度版迁移 | HC共享优化已迁入；Q/Sparse及其他数值中性优化待迁移，保留精度版累计softmax、舍入、atomic默认和原规约，不能套性能版算术 |
+| 5 | 最终真实EP16验收 | CANN9.2、新B24、逐token/DSpark、10步decode forward和尾部仍未完成，优先级后置 |
 
-新增已保留的核内优化：[HC_post残差常驻UB](results/csa_hc_post_resident_20260929/README.md)，
-参考最新AscendC Permanent-X；生成码每token残差加载/转换16→4，乘加/存储数量不变，
-两代表档及B3/H127同图padding均退出0，八类状态精确一致；两版共用算术中性的HC实现。
-短档CSA+0.859%、P95增加14.140μs单列，不掩盖为噪声；当前七档已经实测包含该项，不推算局部A/B收益。
-未叠加已否定的首PV候选；两版依赖图解析通过不代表精度版整体验收。
+有效策略及其独立证据见[核内差距](DSV4_FLASH_CSA_INCORE_NATIVE_GAP.md)和[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)。
+当前已保留：长S6 Key复用、独立L1预取、单根/均衡leaf/四路Top-K、系数优化、Sparse末块发布、
+HC残差常驻、O-B AL1复用、整行融合收尾、七处early、Q/Sparse/Indexer整块Gather。Native cache布局不改。
 
-已保留长B≥4 S6 Key复用、B<4双query、Key独立L1预取、均衡leaf、尾排序、四路Top-K/UB根、
-HC/QR/KV/Sparse既有核内优化及三项系数优化。Native分配/cache不改，PTO内直接分页读写，无入口复制/外部写回。
-S6代表档与8K/B32双query的跨版本八类状态零容差、图/保护区已有证据；完整七档同源码性能已收齐。
-精度版近期数值中性优化尚未迁移，atomic默认1及原算术保留；不沿用旧PASS覆盖新改动。
-[双query状态](results/csa_coefficient_dual_check_20260929/README.md)、
-[AIV候选](results/csa_score_query_split_20260929/README.md)。
-
-已否定且无新依据不原样重试：Score矩阵scale广播、固定组Query/系数跨leaf驻留、系数直接融合Score、
-缩放Score分段驻留UB、仅按query重排AIV且保留两个half根、纯去4个dummy、无dummy真实任务准入组合，以及旧短Score/Sparse/query整组准入。
-其中Score分段UB首轮约2%没有反向复测支撑，真实准入8:2回退0.240%；不能仅以少GM或少dummy认定获益。
-[验证日志§390起及相关报告](DSV4_FLASH_CSA_VALIDATION_LOG.md)保留实现、失败原因和原始样本。
-
-当前七档28个level-4窗口已核对原始/合并行数和block数量，路径固定window_3；
-没有物理时间戳的dummy前置不作完整ready归因，不将Observed逻辑任务覆盖误称纯算术。
-历史d8627207长B16三次拖尾、系数实验短档尖峰均未证明修复；不删样本，不以20次正常采样结案。
-Native det0编译/eager仍可能有浮点与Top-K差异，保护区通过不是跨实现精度通过。
+近期已否定、不原样重试：Score分段UB、矩阵scale广播、固定query系数驻留、系数融合Score，
+纯去dummy和真实准入组合、旧短Score/Sparse/query sync_start组合、Sparse计划提前/首PV特化、
+Q_B 24→20、Q反量化双head、O-A K512及短档分支、KV清零跳过/成对DMA/累计softmax。
+八张静态B的NZ逐项/组合/反序复核没有确认完整CSA收益，未采用；Hadamard发生精度异常明确拒绝。
+对应源码、失败原因和原始样本均留在验证日志，不把它们重新列成未做任务。
 
 最近完整模型证据仍为554b3bca/CANN9.0旧七档：573440输出token零差异、112组rank DSpark一致，
-forward旧7:3−2.979%、模型profile CSA旧7:3−15.673%；B8均值及部分入场尾部开放。
-它不覆盖新Indexer、arena、WO_A和CANN9.2；模型诊断暂缓，不与当前单卡表拼接。
-[旧模型分项](results/csa_key_l1_seven_20260928/model/MODEL_GAP.md)。
+forward旧7:3−2.979%、模型profile CSA旧7:3−15.673%；不覆盖当前算子、arena、WO_A或CANN9.2。
+B8入场迟到及EP16历史尾部尚未关闭，不用本轮单卡正常样本替代。
+[旧模型范围和限制](results/csa_key_l1_seven_20260928/model/MODEL_GAP.md)。
 
 ## 1. 最终交付与验收合同
 

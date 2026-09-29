@@ -86,7 +86,7 @@ def main():
                           "indexer_score_topk_native_pair_aic": 24,
                           "indexer_score_topk_native_pair_aiv": 48,
                           "indexer_topk_query_merge": 48, "proj_a_mm": 64, "proj_b_mm": 64,
-                          "idx_qr_proj_matmul": 24, "weights_proj": 8,
+                          "idx_qr_proj_matmul": 24, "idx_qr_dequant_rope": 48, "weights_proj": 8,
                           "kv_score_proj": 24, "kv_score_proj_0": 24,
                           "qr_hadamard_matmul": 24, "kv_hadamard": 1,
                           # 当前atomic0 KV：T<128按M32分组，否则M64，最多3组、4个N块。

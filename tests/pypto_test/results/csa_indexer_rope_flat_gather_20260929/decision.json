@@ -1,0 +1,229 @@
+{
+  "decision": "ACCEPTED_INCORE_GAIN",
+  "production_changed": true,
+  "task": "task_20260929_201500_22994431416",
+  "state_status": "PASS",
+  "weighted_8_2_kernel_pct": {
+    "aiv": -15.193126607175314
+  },
+  "weighted_8_2_csa_pct": 0.24047628041640845,
+  "reason": "两档目标核时均值下降，短四窗范围分离；按用户核内收益先保留规则接入。完整CSA 8:2 +0.240%、P95代价保留，性能后及H4095/B3真实选择/尾行/padding均零差异。",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "kernel": {
+        "baseline": {
+          "windows_us": [
+            16.312083333333334,
+            12.046250000000006,
+            11.828333333333333,
+            16.139166666666664
+          ],
+          "min_us": 11.828333333333333,
+          "max_us": 16.312083333333334
+        },
+        "candidate": {
+          "windows_us": [
+            12.05958333333333,
+            10.710833333333333,
+            11.273749999999996,
+            14.204166666666666
+          ],
+          "min_us": 10.710833333333333,
+          "max_us": 14.204166666666666
+        }
+      },
+      "query_chain": {
+        "idx_qr_proj_matmul": {
+          "baseline": {
+            "first_start_us": 147.185,
+            "last_end_us": 220.24,
+            "kernel_mean_us": 14.871041666666667
+          },
+          "candidate": {
+            "first_start_us": 143.16,
+            "last_end_us": 216.935,
+            "kernel_mean_us": 15.936666666666667
+          }
+        },
+        "idx_qr_dequant_rope": {
+          "baseline": {
+            "first_start_us": 231.315,
+            "last_end_us": 259.595,
+            "kernel_mean_us": 14.081458333333334
+          },
+          "candidate": {
+            "first_start_us": 230.25,
+            "last_end_us": 262.57,
+            "kernel_mean_us": 12.062083333333332
+          }
+        },
+        "qr_hadamard_matmul": {
+          "baseline": {
+            "first_start_us": 266.42,
+            "last_end_us": 276.865,
+            "kernel_mean_us": 6.1135416666666655
+          },
+          "candidate": {
+            "first_start_us": 268.945,
+            "last_end_us": 278.975,
+            "kernel_mean_us": 4.706041666666665
+          }
+        },
+        "qr_hadamard_quant": {
+          "baseline": {
+            "first_start_us": 285.45500000000004,
+            "last_end_us": 303.64500000000004,
+            "kernel_mean_us": 9.812604166666668
+          },
+          "candidate": {
+            "first_start_us": 290.865,
+            "last_end_us": 309.785,
+            "kernel_mean_us": 14.225000000000001
+          }
+        },
+        "indexer_head_coefficients": {
+          "baseline": {
+            "first_start_us": 310.13000000000005,
+            "last_end_us": 314.39500000000004,
+            "kernel_mean_us": 2.264374999999996
+          },
+          "candidate": {
+            "first_start_us": 314.44,
+            "last_end_us": 317.94,
+            "kernel_mean_us": 2.380937499999999
+          }
+        },
+        "indexer_score_topk_native_pair_aic": {
+          "baseline": {
+            "first_start_us": 327.995,
+            "last_end_us": 560.385,
+            "kernel_mean_us": 228.28645833333334
+          },
+          "candidate": {
+            "first_start_us": 332.21000000000004,
+            "last_end_us": 556.86,
+            "kernel_mean_us": 221.76645833333333
+          }
+        }
+      },
+      "csa_pct": 0.014069735470845224,
+      "p95_change_us": 3.1200051307678223
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "kernel": {
+        "baseline": {
+          "windows_us": [
+            18.5,
+            17.211666666666673,
+            20.595416666666665,
+            20.188333333333333
+          ],
+          "min_us": 17.211666666666673,
+          "max_us": 20.595416666666665
+        },
+        "candidate": {
+          "windows_us": [
+            14.710833333333332,
+            15.085000000000004,
+            16.391666666666673,
+            16.0775
+          ],
+          "min_us": 14.710833333333332,
+          "max_us": 16.391666666666673
+        }
+      },
+      "query_chain": {
+        "idx_qr_proj_matmul": {
+          "baseline": {
+            "first_start_us": 163.925,
+            "last_end_us": 229.36,
+            "kernel_mean_us": 18.293958333333332
+          },
+          "candidate": {
+            "first_start_us": 181.1,
+            "last_end_us": 225.755,
+            "kernel_mean_us": 17.911875
+          }
+        },
+        "idx_qr_dequant_rope": {
+          "baseline": {
+            "first_start_us": 242.345,
+            "last_end_us": 287.65,
+            "kernel_mean_us": 19.123854166666668
+          },
+          "candidate": {
+            "first_start_us": 246.055,
+            "last_end_us": 285.315,
+            "kernel_mean_us": 15.566250000000002
+          }
+        },
+        "qr_hadamard_matmul": {
+          "baseline": {
+            "first_start_us": 295.21000000000004,
+            "last_end_us": 315.14,
+            "kernel_mean_us": 5.381250000000001
+          },
+          "candidate": {
+            "first_start_us": 291.885,
+            "last_end_us": 309.91999999999996,
+            "kernel_mean_us": 5.095000000000001
+          }
+        },
+        "qr_hadamard_quant": {
+          "baseline": {
+            "first_start_us": 323.99,
+            "last_end_us": 351.295,
+            "kernel_mean_us": 13.576770833333336
+          },
+          "candidate": {
+            "first_start_us": 312.265,
+            "last_end_us": 333.44,
+            "kernel_mean_us": 15.642291666666665
+          }
+        },
+        "indexer_head_coefficients": {
+          "baseline": {
+            "first_start_us": 367.33500000000004,
+            "last_end_us": 375.275,
+            "kernel_mean_us": 2.1943749999999995
+          },
+          "candidate": {
+            "first_start_us": 351.87,
+            "last_end_us": 366.85,
+            "kernel_mean_us": 1.936041666666668
+          }
+        },
+        "indexer_score_topk_native_pair_aic": {
+          "baseline": {
+            "first_start_us": 382.46500000000003,
+            "last_end_us": 425.72,
+            "kernel_mean_us": 31.07166666666667
+          },
+          "candidate": {
+            "first_start_us": 373.52500000000003,
+            "last_end_us": 421.58500000000004,
+            "kernel_mean_us": 31.00979166666666
+          }
+        }
+      },
+      "csa_pct": 1.1461024601986614,
+      "p95_change_us": 13.180017471313477
+    }
+  ],
+  "boundary_task": "task_20260929_203245_4337637856",
+  "boundary_history": 4095,
+  "discarded_boundary": {
+    "task": "task_20260929_203111_42466917165",
+    "status": "completed (exit=130)",
+    "history": 127,
+    "reason": "全可见路径不能充分检验query对真实Top-K筛选的影响，主动终止后换H4095；不计为PASS"
+  },
+  "boundary_status": "PASS",
+  "production_file": "vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_indexer.py",
+  "native_reference": "native_reference_residual.json",
+  "production_parse": "production_parse.json"
+}
