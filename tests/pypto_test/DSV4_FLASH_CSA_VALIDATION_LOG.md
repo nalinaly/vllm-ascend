@@ -13537,3 +13537,71 @@ B4/B8/B16 的小幅正值抵掉。**不落地**——0.0008 不足以支撑一�
   加名字即可。
 - 需要先确认 `wkv` 是否在某处被读入 Vec（那会触发
   `NZ layout currently supports only matmul operand loads`）。
+
+## 497. 压缩器 KV 权重转 NZ 与根 `wkv` 的可证性边界（2026-09-30）
+
+### 497.1 `nzcmpkv` / `nzcmp4`：仍是"B24 得利、B16 受损"
+
+在第 496 节的骨架上把范围扩到 `cmp_wkv` / `inner_wkv`：
+
+| 档位 | 漂移 | 基线均 | `nzcmpkv`（+cmp/inner_wkv） | Δ | `nzcmp4`（再+两张 gate） | Δ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 128K/B24 | 3.55 | 1233.62 | **1222.04** | **−11.58** ✓ | 1232.87 | −0.76 |
+| 128K/B16 | 0.34 | 957.38 | 964.04 | **+6.65** | 964.44 | **+7.06** |
+| 8K/B16 | **95.09** | 784.59 | 755.88 | −28.71 | 727.29 | −57.31 |
+| 8K/B32 | 9.04 | 1058.53 | 1050.60 | −7.93 ✓ | 1062.47 | +3.95 |
+
+⚠ 8K/B16 本轮前后基线差 **95.09 μs**，该档数据整体作废。
+
+与第 496 节的 `nzgate` 完全同一个模式：**压缩器侧转 NZ 在 128K/B24 上稳定有收益
+（两次独立测得 −15.22 与 −11.58，各自都是该档漂移的 3~6 倍），
+在 128K/B16 上稳定小幅回退（漂移仅 0.34，+6.65/+7.06 是真的）。**
+`nzcmp4` 比 `nzcmpkv` 在 B24 上反而更差（−0.76 vs −11.58），
+说明 kv 与 gate 两组 NZ 之间也不可加——与第 494 节的"局部收益不可加"一致。
+
+按 8:2 加权都在 ±0.001 内，**都不落地**。
+
+### 497.2 根 `wkv` 转 NZ 被偏移可证性挡住
+
+根参数 `wkv` [D, HEAD_DIM] 是所有 BF16 B 操作数里最大的一张
+（`kv_proj_matmul` + `kv_score_proj`），但转 NZ 编译失败：
+
+```
+ValueError: NZ layout requires the slice offset on shape[-1] to be non-negative,
+and this one cannot be proven to be. ... Provable forms are a non-negative constant,
+the SPMD block index, a loop variable whose start and step are both non-negative,
+and any sum or product built from those — note that a difference never qualifies.
+  qkv_proj_rope.py:823
+```
+
+那一行是 `dense_w = wkv[dense_d0 : ..., kv_col0 : kv_col0 + KV_N_TILE]`，而
+
+```python
+kv_col0 = (kbg // (KV_OK * kv_m_groups)) * KV_N_TILE
+```
+
+**是整除**——可证形式里没有除法，也没有取模。试过用 `pl.max(expr, 0)` 包一层
+（本仓在别处用过这个写法），**不管用**：`pl.max` 同样不在清单里。
+性能版另有第二处 `KV_NATIVE` 切片（`qkv_proj_rope.py:733`）同样不可证。
+
+**要让根 `wkv` 走 NZ，必须把 N 维从"块索引整除"改成显式循环变量**，
+即改变 `kv_proj_matmul` 的块分解方式——属于 kernel 结构改动，本轮未做。
+精度版还多一条 `KV_NATIVE` 路径，改动面更大。
+
+### 497.3 NZ 这条轴的小结
+
+| 候选 | 范围 | 128K/B24 | 128K/B16 | 加权 |
+| --- | --- | ---: | ---: | ---: |
+| `nzgate` | cmp_wgate + inner_wgate | **−15.22** ✓ | +2.24 | −0.0008 |
+| `nzcmpkv` | cmp_wkv + inner_wkv | **−11.58** ✓ | +6.65 | ≈0 |
+| `nzcmp4` | 上面四张 | −0.76 | +7.06 | ≈0 |
+| `nzkv` / `nzall` | 再加根 `wkv` | 编译失败（偏移不可证） | | |
+
+三个能编译的候选都是同一形状：**只有 128K/B24 得利**。B24 是 T=144、
+其余 128K 档是 T≤96——两者在压缩器里走的分块不同（第 487/488 节记过
+T144 与 T96 的分支差异）。**布局标注是模块加载期的全局常量，做不成按档分支**，
+所以即便 B24 的收益是实的，也无法只给它用。
+
+若要利用这一项，需要的是**按 T 分支的 kernel 函数**（像 `decode_o_proj`
+按 `PROJ_B_SMALL/MEDIUM_T_TILE` 选 `MM_ROWS` 那样），让 T144 走 NZ 压缩器、
+其余走 ND——用户已授权按长短档分别写算子，这是一条可行但需要重写签名的路。
