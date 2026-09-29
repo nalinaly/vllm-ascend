@@ -11985,3 +11985,42 @@ worker份数改变，按全部Q_B总核时、跨度、query→Score链与完整C
 共享旧入口不变、生产仍f4861832；不叠加KV链early，不重新测Native/七档/整模型。
 私有源码只读，CPU Ruff/shell/diff通过；统一format.sh ci仍因缺pre-commit未运行。尚无设备收益结论。
 [候选与复现入口](results/csa_qb_workers20_20260929/README.md)。
+
+## 449. HCA Q_B20在CSA未获益：两档CSA/P95均回退，维持24（2026-09-29）
+
+task_20260929_160457_135068517850已完成退出0，auto设备0、CANN9.2/mode2/atomic0/det0。
+长B16 CSA 962.154→984.641μs（+2.337%），P95 973.900→997.680、max 977.520→998.700；
+短B24 907.279→938.714（+3.465%），P95 925.280→955.260、max 932.600→970.600，8:2 +2.563%。
+八类跨版本状态零容差、图重放/保护区及16窗官方覆盖通过，四组均0/20超过各自P50的105%。
+
+Q_B总核时长983.075→965.210（−1.817%），短1135.030→1171.955（+3.253%），8:2 −0.803%；
+两档四窗均有重叠，不隐去小均值改善，但尚不足认定稳定核内收益。
+Q_B首末跨度长97.605→100.900（+3.376%），短101.435→120.035（+18.337%），
+20份工作仍落16–19个物理AIC；每份工作增大，多波并未消失，不能外推HCA固定四核占用的场景。
+短档DFX Q_B结束晚21.460μs，反量化FIN晚30.750，Indexer Score首start晚15.825；
+这些重叠链路现象不相加成正式CSA差值，也不将Q_B视为系数的直接生产者。
+
+默认不采用，不继续扫worker/扩测七档/模型；生产Q_B保持24，精度版与工具链未改。
+此前七处early已采用的结论保持。下一项转向Q反量化真实核内合批，任务数/worker保持。
+[完整对照](results/csa_qb_workers20_20260929/RESULTS.md)、
+[核时/跨度/物理占核](results/csa_qb_workers20_20260929/qb.json)、
+[取舍](results/csa_qb_workers20_20260929/decision.json)。
+
+## 450. 参考AscendC多行RMS，Q反量化双head候选完成编译并排队（2026-09-29）
+
+从f4861832已验证包独立复制，仅改性能版qkv_proj_rope.py满8行分支，Q_B仍24。
+参考ops-nn19614968 WholeReduceSum的多行载入/批量Vector，PTO将相邻两head按8×1024读入反量化，
+无搬运reshape为16×512后逐head归约；FP32乘法顺序、512列RMS、高精度rsqrt、BF16 RINT保持。
+48-worker、每份工作的token/head集合、任务依赖/early和不足8行路径均不改。
+当前pypto-lib2164563仍逐head；这是核内合批候选，不是旧24-worker或整组准入重跑。
+
+首版CPU编译通过，但A3输出TCONCAT每双head会有32次逐行UB复制，未占卡。
+二版改原布局四路strided store，取消内层TCONCAT；外层cos/sin/index仍有3处小拼接，
+gather逐行TMOV保持，不能声称全部指令数减半。Vec末端105504→148000字节，容量通过。
+基线两入口解析及候选完整PTOAS/CCE/link/load通过，实验脚本定向Ruff/shell/diff通过；统一format仍缺pre-commit。
+公共PyPTO88f60598、Simplera54c05095未变，工具链无修改。
+
+16:22正常auto提交task_20260929_162257_18683029171，确认设备0上running，max-time7200。
+私有源码只读；只做长B16/短B24反序同卡5预热20次正式事件、四窗DFX及八类完整状态。
+保持生产不动，有真实核内收益再补受影响尾行/padding；不额外采Native/七档/模型。
+[来源、补丁和CPU证据](results/csa_qdequant_pair_20260929/README.md)。

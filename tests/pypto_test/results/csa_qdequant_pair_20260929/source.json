@@ -1,0 +1,20 @@
+{
+  "baseline": "f4861832",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-qdequant-pair-f4861832-v2",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-early-chain-7b296153-candidate",
+  "variant": "pkg:dsv4_csa_qdequant_pair_f4861832_v2",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "Q反量化满8行按相邻2head合批；RMS列维512不变，尾行及48-worker保持",
+  "reference": "ops-nn19614968/rms_norm_whole_reduce_sum.h:SubProcess910/ComputeRstd",
+  "not_changed": "Q_B24、任务依赖/early、量化顺序、rsqrt精度与BF16舍入、精度版及工具链",
+  "scope": "先查UB容量/reshape搬运及向量指令，再独立两档；不叠加在跑Q_B20候选"
+}

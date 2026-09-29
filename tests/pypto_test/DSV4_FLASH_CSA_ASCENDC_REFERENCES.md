@@ -341,3 +341,22 @@ release Native的HcPostDSplit同样先整组读取。PTO此前沿pypto-lib216456
 八类完整状态零容差及T18尾块/同图padding通过，按核内收益规则保留共享实现；
 性能版继续reexport，两版依赖图通过。完整精度版/Native逐token及EP16验收仍后置。
 [测量、边界和采用证据](results/csa_hc_post_resident_20260929/README.md)。
+
+## 5. Q反量化/RMS/RoPE：多行Vector合批候选（2026-09-29）
+
+参考本地ops-nn19614968的`norm/rms_norm/op_kernel/rms_norm_whole_reduce_sum.h`：
+`SubProcess910`将多行输入一并载入，`ComputeRstd`的平方等向量操作按整批执行，再逐行归约。
+`rms_norm.cpp`注册该模板，README列出A3支持；这证明可参考的A3实现能力，
+不表示当前Native的具体形状一定选择该模板，也不照搬其规约/rsqrt精度策略。
+
+PTO与当前pypto-lib2164563均逐head处理8×512 INT32输出，反量化、RMS、RoPE每head执行一套。
+候选将相邻两head的[8,1024]反量化合批，随后reshape成16×512；归约列数及逐元素顺序不变。
+worker仍48、分工集合/依赖/early不变、不足8行路径保持。相较上游新增跨head批处理，
+原因是Q反量化仍有向量小块开销；不是重试旧48→24 workers或sync_start候选。
+
+v1输出TCONCAT在当前A3 ISA中每双head有32次逐行UB复制，CPU审查后未占卡。
+v2改为原布局四路strided store；输入cos/sin/index仅外层复制，reshape通过地址别名实现。
+Vec最大末端105504→148000字节，完整CPU编译/load通过；gather的逐行TMOV仍存在，
+不能把合批数2直接宣称动态指令全部减半。正常auto只排长B16/短B24，核内/CSA/P95与状态另验。
+与HCA的Q_B20-worker候选独立；后者CSA 8:2 +2.563%，已经维持24，不叠加。
+[实现差异、CPU证据与单卡入口](results/csa_qdequant_pair_20260929/README.md)。

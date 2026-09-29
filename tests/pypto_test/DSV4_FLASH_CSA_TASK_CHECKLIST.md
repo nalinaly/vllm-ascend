@@ -119,10 +119,13 @@ CSA的Indexer Compressor五处、Attention projection和row offsets形成待验�
 HCA约20μs为其单项实测，不能当成CSA收益；Q_B worker 24→20另列候选。
 
 阶段出口[最新同源码七档](results/csa_early_chain_seven_20260929/README.md)已完成并发布；Native直接复用，无重复占卡。
-下一独立候选为[Q_B worker 24→20](results/csa_qb_workers20_20260929/README.md)，性能入口显式传20，
-共享旧五参数入口继续传24；ND/NZ默认入口CPU编译与完整性能候选编译/load通过。
-16:04正常auto提交task_20260929_160457_135068517850；只跑长B16/短B24的独立对照，生产尚未改动。
-比较Q_B整组核时/跨度、query→Score链与完整CSA/P95；不同worker数不能直接比较单worker均值。
+[Q_B worker 24→20](results/csa_qb_workers20_20260929/README.md)同卡两档已完成退出0，八类状态/16窗通过。
+完整CSA长+2.337%、短+3.465%，8:2 +2.563%，两侧P95升高；Q_B总核时8:2 −0.803%但四窗重叠，
+跨度反增且20份仍多波，尚无稳定核内收益，生产继续24，不扩测该候选。
+下一项为[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)，参考AscendC多行Vector处理。
+保持48-worker、512列逐head规约、舍入和尾行，先反量化[8,1024]再reshape为[16,512]，不合并head的归约。
+去除内层输出TCONCAT后CPU完整编译/load通过；私有包16:22正常auto提交task_20260929_162257_18683029171。
+只测长B16/短B24，Q_B仍24；按目标核四窗真实收益、完整状态与CSA/P95决定，不叠加worker候选。
 
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |

@@ -92,4 +92,4 @@ KV 链和 Q_B worker 数分别对照，不与这项或当前 Sparse 计划候选
 长B16/短B24完整CSA−0.728%/−1.872%，8:2−0.957%；长档P95+1.980μs单列。
 [独立A/B及边界](../csa_indexer_early_chain_20260929/README.md)、
 [包含后续已采用策略的七档实测](../csa_early_chain_seven_20260929/RESULTS.md)。
-Q_B 24→20为[另一个独立候选](../csa_qb_workers20_20260929/README.md)，尚无设备收益结论。
+Q_B 24→20为[另一个独立候选](../csa_qb_workers20_20260929/README.md)，已完成：完整CSA 8:2回退2.563%，默认不采用，生产保持24；七处early的采用结论不受影响。

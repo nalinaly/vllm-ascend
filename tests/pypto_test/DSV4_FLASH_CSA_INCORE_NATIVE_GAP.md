@@ -94,9 +94,12 @@ Q_B的24份工作与Compressor/Indexer投影争用AIC，不能据此认为20份�
 3. [HCA early借鉴](results/csa_indexer_early_chain_20260929/README.md)：七处标志纯调度，
    CSA长B16−0.728%、短B24−1.872%，8:2−0.957%；长档P95+1.980μs，Score DFX核时约+4.4%单列。
    cache提交提前约39.5μs而Score首start几乎不变，剩余关键前置指向query链。
-4. [Q_B 24→20候选](results/csa_qb_workers20_20260929/README.md)已独立冻结并排队，生产仍24。
-   共享旧入口保持24，性能候选显式20；看整组总核时、跨度、query链、完整CSA和P95。
-   HCA占核与CSA不同，ops-nn大K特定tiling也不适用K1024，不能直接外推。
+4. [Q_B 24→20候选](results/csa_qb_workers20_20260929/README.md)已完成，默认不采用：
+   CSA长+2.337%、短+3.465%，8:2 +2.563%，P95均升。Q_B总核时8:2 −0.803%但四窗重叠，
+   长短跨度+3.376%/+18.337%，20份仍落16–19个物理核，未形成HCA那样的收益。
+   下一项[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)保持48-worker，
+   按AscendC多行处理思路减少小向量操作，逐head512列归约与算术保持；CPU编译通过、双档正在排队。
+   原gather仍逐行处理；输出采用原布局strided store，避免A3 TCONCAT逐行UB复制。
 5. 保留长小batch Score、长B24与短档Sparse的核内入口；128K优先、长短8:2，真实核内收益保留，
    明显场景分化在同一算子内部按输入选择。两版Sparse计划提前已否定，不能只凭少GM/少dummy推断收益。
 6. [上游725μs泳道](results/csa_scheduling_20260927/upstream_725/README.md)缺完整版本/Scheduler View且输入FP32，
