@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "9c2ede34",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/base",
+    "m4_k512": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-widen-box-9c2ede34-20260930/m4_k512",
+    "m4_k1024": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-widen-box-9c2ede34-20260930/m4_k1024",
+    "m4_k512_linked": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-widen-box-9c2ede34-20260930/m4_k512_linked"
+  },
+  "change": "widen physical M8/active M4; K512 stage4 versus K1024 stage2 with ordered K512 sums",
+  "invariants": "BF16-to-FP32 widening, RMS K512 order, high-precision rsqrt, downstream tensor layout and task deps",
+  "native_reference": "ops-transformer28f40354 MhcPreSinkhornPremixStage1: vector cast plus ordered chunk statistics",
+  "linked_change": "在m4_k512之上增加mix与Sinkhorn sync_start，显式评估组合效应"
+}

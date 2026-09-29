@@ -35,6 +35,9 @@ O_GROUPS = 8
 O_GROUP_IN = 4096
 O_LORA = 1024
 WIDEN_ROWS = 8
+WIDEN_ACTIVE_ROWS = 4
+WIDEN_LOAD_COLS = 512
+WIDEN_PIPE_STAGE = 4
 RMS_COLS = 512
 WIDEN_WORKERS = 48
 CACHE_WORKERS = 8
@@ -108,36 +111,33 @@ def _decode_hca_tp1_layer(
     x32 = pl.create_tensor([tokens, HC_MULT, D], dtype=pl.FP32)
     x_flat = pl.reshape(x_hc, [tokens, HC_DIM])
     x32_flat = pl.reshape(x32, [tokens, HC_DIM])
-    widen_blocks = (tokens + WIDEN_ROWS - 1) // WIDEN_ROWS
+    widen_blocks = (tokens + WIDEN_ACTIVE_ROWS - 1) // WIDEN_ACTIVE_ROWS
     hc_padded_rows = ((tokens + 16 - 1) // 16) * 16
     inv_rms = pl.create_tensor([hc_padded_rows, 1], dtype=pl.FP32)
-    tail = pl.create_tensor([WIDEN_ROWS, HC_DIM], dtype=pl.FP32)
     # 参考 CSA d1f170ff：加宽时按原 RMS 的 512 列次序顺手求平方和，删除 RMS 对 FP32
     # 中间缓冲的再次读取；归约次序、高精度 rsqrt 不变，结果与独立 RMS 任务逐 bit 相同。
     with pl.spmd(pl.min(widen_blocks, WIDEN_WORKERS), name_hint="hca_hc_widen_rms", allow_early_resolve=True) as widen_tid:
         for block in pl.range(pl.tile.get_block_idx(), widen_blocks, pl.min(widen_blocks, WIDEN_WORKERS)):
-            row = block * WIDEN_ROWS
-            count = pl.min(WIDEN_ROWS, tokens - row)
-            sq_sum = pl.full([1, WIDEN_ROWS], dtype=pl.FP32, value=0.0)
-            for col_block in pl.pipeline(HC_DIM // RMS_COLS, stage=4):
-                col = col_block * RMS_COLS
-                source = pl.slice(x_flat, [WIDEN_ROWS, RMS_COLS], [row, col], valid_shape=[count, RMS_COLS])
+            row = block * WIDEN_ACTIVE_ROWS
+            count = pl.min(WIDEN_ACTIVE_ROWS, tokens - row)
+            sq_sum = pl.tile.full([1, WIDEN_ROWS], dtype=pl.FP32, value=0.0)
+            for col_block in pl.pipeline(HC_DIM // WIDEN_LOAD_COLS, stage=WIDEN_PIPE_STAGE):
+                col = col_block * WIDEN_LOAD_COLS
+                source = pl.load(x_flat, [row, col], [WIDEN_ROWS, WIDEN_LOAD_COLS],
+                                 valid_shape=[count, WIDEN_LOAD_COLS])
                 value = pl.cast(source, pl.FP32)
-                if count == WIDEN_ROWS:
-                    x32_flat[row:row + WIDEN_ROWS, col:col + RMS_COLS] = value
-                    squared = pl.mul(value, value)
-                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared), [1, WIDEN_ROWS]))
-                else:
-                    # cast 可能丢失 valid_shape，显式恢复并清零无效行后才参与归约。
-                    clean = pl.fillpad(pl.set_validshape(value, count, RMS_COLS), pad_value=pl.PadValue.zero)
-                    squared_tail = pl.mul(clean, clean)
-                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared_tail), [1, WIDEN_ROWS]))
-                    tail[:, col:col + RMS_COLS] = value
-                    valid = pl.load(tail, [0, col], [WIDEN_ROWS, RMS_COLS], valid_shape=[count, RMS_COLS],
-                                    target_memory=pl.MemorySpace.Vec)
-                    pl.store(valid, [row, col], x32_flat)
+                # 只写本worker有效行，不能让两个4行worker的8行物理盒互相覆盖。
+                valid_value = pl.set_validshape(value, count, WIDEN_LOAD_COLS)
+                pl.store(valid_value, [row, col], x32_flat)
+                clean = pl.fillpad(valid_value, pad_value=pl.PadValue.zero)
+                squared = pl.mul(clean, clean)
+                sum_tmp = pl.create_tile([WIDEN_ROWS, RMS_COLS], dtype=pl.FP32)
+                chunk_sum = pl.row_sum(squared, sum_tmp)
+                sq_sum = pl.add(sq_sum, pl.reshape(chunk_sum, [1, WIDEN_ROWS]))
             mean = pl.add(pl.mul(sq_sum, 1.0 / HC_DIM), NORM_EPS)
-            inv_rms[row:row + WIDEN_ROWS, 0:1] = pl.reshape(pl.rsqrt(mean, high_precision=True), [WIDEN_ROWS, 1])
+            inverse_tmp = pl.create_tile([1, WIDEN_ROWS], dtype=pl.FP32)
+            inverse = pl.reshape(pl.tile.rsqrt(mean, inverse_tmp), [WIDEN_ROWS, 1])
+            pl.store(pl.set_validshape(inverse, count, 1), [row, 0], inv_rms)
     # 冷 L2 下投影读权重受单核带宽限制；mHC pre 期间 Vector 核大多空闲，先预热 KV/compressor 权重。
     warm_sink = pl.create_tensor([WARM_WORKERS, SINK_BF16], dtype=pl.BF16)
     warm_kv_weights(wkv, cmp_wkv, cmp_wgate, warm_sink, widen_tid)
