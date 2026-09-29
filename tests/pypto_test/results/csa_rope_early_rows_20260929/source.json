@@ -1,0 +1,23 @@
+{
+  "baseline": "46cec3a0",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-rope-early-revisit-46cec3a0-v1-baseline",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-rope-early-rows-46cec3a0-v1",
+  "variant": "pkg:dsv4_csa_rope_early_rows_46cec3a0_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "提取原RoPE符号计算为同一inline helper，仅T144允许消费者提前派发；其他行数False",
+  "basis": [
+    "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_rope_early_revisit_20260929/decision.json",
+    "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_rope_early_b24_20260929/evidence.json"
+  ],
+  "not_changed": "算术、任务数量/块数、真实依赖、sync_start、cache和权重布局、精度版、Native及工具链",
+  "acceptance": "CPU完整编译后两代表档检验分支开销及收益，性能后八类状态零容差；有效再测T144真实筛选/padding"
+}

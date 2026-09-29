@@ -1,0 +1,20 @@
+{
+  "baseline": "46cec3a0",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-rope-flat-gather-632dd00a-v1-candidate",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-rope-early-revisit-46cec3a0-v1",
+  "variant": "pkg:dsv4_csa_rope_early_revisit_46cec3a0_v1",
+  "cases": [
+    [
+      131072,
+      24
+    ]
+  ],
+  "change": "仅csa_rope_sign生产者allow_early_resolve由默认False改True；真实依赖保持",
+  "previous_attempt": "验证日志§214，2dd51f15/atomic1/8K B16，完整CSA无收益，已撤回",
+  "new_basis": "当前46cec3a0已改Q/Sparse/Indexer Gather和七处early，atomic0/CANN9.2；实际fanin仍确认csa_rope_sign禁止Indexer反量化预派发；复核未覆盖的128K主档",
+  "not_changed": "算术、任务数/分块、sync_start、cache/权重、精度版、Native与工具链",
+  "acceptance": "先完整CPU编译，再同卡两档8:2完整CSA/P95；性能后八类状态零容差，四窗实际提前资格/资源等待；调度改善不得用随机核时下降替代",
+  "purpose": "固定B24/T144补128K，区分上轮短B24优势是batch/工作量还是长度；不拼接不同版本七档",
+  "source_reuse": "复用上一轮两份已编译并冻结pkg，算子/测试源未编辑，无需重复CPU编译",
+  "prior_evidence": "tests/pypto_test/results/csa_rope_early_revisit_20260929/decision.json"
+}
