@@ -28,7 +28,10 @@ export ASCEND_PROCESS_LOG_PATH="$hca_output/ascend"
 # 而 --weight-nz-mode 只进 vLLM 的 additional_config（主机侧权重存储格式）。
 # 两者必须一致，否则主机把 BF16 权重存成 FRACTAL_NZ 而 kernel 按 ND 寻址，
 # 只能靠 recast 出私有副本来兜，量到的就不是生产路径。允许外部覆盖以便对照。
-export VLLM_ASCEND_ENABLE_NZ="${VLLM_ASCEND_ENABLE_NZ:-1}"
+# 默认 2：kernel 侧 BF16_WEIGHT_NZ = 值 >= 2，必须与 --weight-nz-mode（默认 2，
+# 决定主机侧权重存储格式）一致。2026-09-29 之前这里是 1，导致主机把 BF16 权重
+# 存成 FRACTAL_NZ 而 kernel 却按 ND 编译（走 _proj_a_mm_nd），量到的不是生产路径。
+export VLLM_ASCEND_ENABLE_NZ="${VLLM_ASCEND_ENABLE_NZ:-2}"
 export PTO_CSA_VARIANT=performance
 export VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0
 # 与上线 decode 口径对齐，取自
