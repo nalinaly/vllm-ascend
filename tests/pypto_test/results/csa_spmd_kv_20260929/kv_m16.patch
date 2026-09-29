@@ -1,0 +1,59 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -103,6 +103,9 @@
+ KV_FIXED_SMALL_M_TILE = 32
+ 
+ KV_FIXED_SMALL_ROWS = 128
++
++KV_M16_T_ROWS = 96
++KV_M16_GROUP_LIMIT = 6
+ 
+ KV_N_TILE = 128  # kv_proj HEAD_DIM (N) per matmul
+ 
+@@ -798,15 +801,18 @@
+     late_dep: pl.Scalar[pl.TASK_ID],
+     DENSE_M: pl.constexpr,
+     GROUP_ROWS: pl.constexpr,
++    GROUP_LIMIT: pl.constexpr,
++    SYNC_START: pl.constexpr,
+ ):
+     """Partition M/N independently; every block preserves its complete K traversal."""
+     t_dim = pl.tensor.dim(x, 0)
+     x_view = pl.reshape(x, [t_dim, D])
+     kv_full_rows = (tile_rows // DENSE_M) * DENSE_M
+-    kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))
++    kv_m_groups = pl.min(GROUP_LIMIT, pl.max(1, tile_rows // GROUP_ROWS))
+     with pl.spmd(
+         (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
+         name_hint="kv_proj_matmul",
++        sync_start=SYNC_START,
+         deps=[late_dep],
+     ) as _kv_tid:
+         pl.set_cache_policy(wkv, pl.CachePolicy.BYPASS)
+@@ -872,17 +878,23 @@
+             if ATOMIC_ADD == 1:
+                 kv_fp32 = _kv_project(
+                     x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep,
+-                    KV_DENSE_M_TILE, 2 * KV_DENSE_M_TILE,
++                    KV_DENSE_M_TILE, 2 * KV_DENSE_M_TILE, KV_OM, False,
++                )
++            elif t_dim == KV_M16_T_ROWS:
++                # Six M16 groups times four N128 columns: 24 nonempty AIC workers.
++                kv_fp32 = _kv_project(
++                    x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep,
++                    KV_M_TILE, KV_M_TILE, KV_M16_GROUP_LIMIT, False,
+                 )
+             elif tile_rows < KV_FIXED_SMALL_ROWS:
+                 kv_fp32 = _kv_project(
+                     x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep,
+-                    KV_FIXED_SMALL_M_TILE, KV_FIXED_SMALL_M_TILE,
++                    KV_FIXED_SMALL_M_TILE, KV_FIXED_SMALL_M_TILE, KV_OM, False,
+                 )
+             else:
+                 kv_fp32 = _kv_project(
+                     x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep,
+-                    KV_DENSE_M_TILE, KV_DENSE_M_TILE,
++                    KV_DENSE_M_TILE, KV_DENSE_M_TILE, KV_OM, False,
+                 )
+ 
+             kv_view = pl.reshape(kv, [t_dim, HEAD_DIM])

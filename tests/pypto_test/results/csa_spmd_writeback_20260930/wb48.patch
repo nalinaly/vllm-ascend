@@ -1,0 +1,39 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_csa.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_csa.py
+@@ -299,7 +299,8 @@
+             pre_val_store, post_t, comb_t, False, inv_rms,
+         )
+         hc_mix_norm(x_hc32, pre_val_store, attn_norm_w, x_normed_t)
+-    wb_blocks = (t_dim + CSA_WB_TOKEN_TILE - 1) // CSA_WB_TOKEN_TILE
++    wb_rows_per_worker = (t_dim + CSA_WB_WORKERS - 1) // CSA_WB_WORKERS
++    wb_workers = (t_dim + wb_rows_per_worker - 1) // wb_rows_per_worker
+ 
+     idx_sin_signed = pl.create_tensor([t_dim, ROPE_HEAD_DIM], dtype=pl.FP32)
+     cmp_row_offsets = pl.create_tensor([pl.tensor.dim(cmp_seq_lens, 0)], dtype=pl.INT32)
+@@ -361,17 +362,16 @@
+ 
+         ori_block_num = pl.tensor.dim(kv_cache, 0)
+         kv_cache_flat = pl.reshape(kv_cache, [ori_block_num * BLOCK_SIZE, HEAD_DIM])
+-        with pl.spmd(TP1_CSA_WB_WORKERS, name_hint="csa_cache_writeback"):
++        with pl.spmd(wb_workers, name_hint="csa_cache_writeback"):
+             wb_worker = pl.tile.get_block_idx()
+-            for wb_blk in pl.range(wb_worker, wb_blocks, TP1_CSA_WB_WORKERS):
+-                wb_t0 = wb_blk * CSA_WB_TOKEN_TILE
+-                for write_dt in pl.range(pl.min(CSA_WB_TOKEN_TILE, t_dim - wb_t0)):
+-                    write_t = wb_t0 + write_dt
+-                    write_page = pl.read(ori_slot_mapping, [write_t, 0])
+-                    write_offset = pl.read(ori_slot_mapping, [write_t, 1])
+-                    if write_page >= 0 and write_offset >= 0:
+-                        write_row = pl.cast(write_page, pl.INDEX) * BLOCK_SIZE + write_offset
+-                        kv_cache_flat[write_row : write_row + 1, 0:HEAD_DIM] = kv[write_t : write_t + 1, 0:HEAD_DIM]
++            wb_t0 = wb_worker * wb_rows_per_worker
++            for write_dt in pl.range(pl.min(wb_rows_per_worker, t_dim - wb_t0)):
++                write_t = wb_t0 + write_dt
++                write_page = pl.read(ori_slot_mapping, [write_t, 0])
++                write_offset = pl.read(ori_slot_mapping, [write_t, 1])
++                if write_page >= 0 and write_offset >= 0:
++                    write_row = pl.cast(write_page, pl.INDEX) * BLOCK_SIZE + write_offset
++                    kv_cache_flat[write_row : write_row + 1, 0:HEAD_DIM] = kv[write_t : write_t + 1, 0:HEAD_DIM]
+ 
+         # Keep Q_A ahead of the heavier Attention Compressor projection.
+         # The lighter Indexer projection overlaps Q_A; its Hadamard gate stays below.

@@ -1,0 +1,1213 @@
+{
+  "source": {
+    "production": "e110a886",
+    "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-pipeline-sync-46cec3a0-v1-o_post_t96_sync",
+    "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-kv-e110a886-v1",
+    "variant": "pkg:dsv4_csa_spmd_kv_e110a886_v1",
+    "cases": [
+      [
+        131072,
+        16
+      ],
+      [
+        8192,
+        24
+      ]
+    ],
+    "metrics": [
+      "max_us",
+      "min_us",
+      "mean_us"
+    ],
+    "variants": [
+      {
+        "name": "baseline",
+        "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-kv-e110a886-v1-baseline"
+      },
+      {
+        "name": "kv_n64",
+        "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-kv-e110a886-v1-kv_n64"
+      },
+      {
+        "name": "kv_n64_sync",
+        "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-kv-e110a886-v1-kv_n64_sync"
+      },
+      {
+        "name": "kv_n64_linked",
+        "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-kv-e110a886-v1-kv_n64_linked"
+      }
+    ]
+  },
+  "requested_cases": [
+    [
+      131072,
+      24
+    ]
+  ],
+  "scope": "same-card per shape; no seven-case/model acceptance",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 24,
+      "variants": {
+        "baseline_start": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/timing/baseline_start/report.json",
+          "device": 3,
+          "max_us": 1261.780023574829,
+          "min_us": 1218.1999683380127,
+          "mean_us": 1236.9329869747162,
+          "count": 20,
+          "samples_us": [
+            1235.2999448776245,
+            1218.1999683380127,
+            1222.540020942688,
+            1231.5599918365479,
+            1250.2199411392212,
+            1261.780023574829,
+            1228.3200025558472,
+            1251.579999923706,
+            1240.0399446487427,
+            1227.5199890136719,
+            1242.4999475479126,
+            1234.6400022506714,
+            1223.9999771118164,
+            1238.2999658584595,
+            1236.9600534439087,
+            1222.7200269699097,
+            1238.759994506836,
+            1238.7399673461914,
+            1255.679965019226,
+            1239.300012588501
+          ],
+          "initial_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "graph_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "self": {
+            "status": "PASS",
+            "count": 8
+          },
+          "dfx_self": {
+            "status": "PASS",
+            "count": 8
+          },
+          "dfx_guards": [
+            {
+              "status": "PASS",
+              "count": 31
+            },
+            {
+              "status": "PASS",
+              "count": 31
+            }
+          ],
+          "windows": [
+            {
+              "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/swimlane/baseline_start/dfx/merged_swimlane.json",
+              "tasks": {
+                "Compressor": {
+                  "kernel": {
+                    "max_us": 35.06,
+                    "min_us": 18.860000000000014,
+                    "mean_us": 27.88416666666667,
+                    "count": 24
+                  },
+                  "core_us": 669.22,
+                  "workers": 24,
+                  "physical_cores": 19,
+                  "first_start_us": 145.42,
+                  "last_end_us": 208.52,
+                  "start_spread_us": 42.620000000000005,
+                  "kernel_envelope_us": 63.10000000000002
+                },
+                "IndexerCompressor": {
+                  "kernel": {
+                    "max_us": 19.28,
+                    "min_us": 14.640000000000015,
+                    "mean_us": 16.84,
+                    "count": 24
+                  },
+                  "core_us": 404.1600000000001,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 124.28,
+                  "last_end_us": 150.24,
+                  "start_spread_us": 10.620000000000005,
+                  "kernel_envelope_us": 25.960000000000008
+                },
+                "qk_pv": {
+                  "kernel": {
+                    "max_us": 224.34000000000015,
+                    "min_us": 213.96000000000004,
+                    "mean_us": 220.26805555555558,
+                    "count": 72
+                  },
+                  "core_us": 15859.300000000001,
+                  "workers": 72,
+                  "physical_cores": 72,
+                  "first_start_us": 774.74,
+                  "last_end_us": 999.58,
+                  "start_spread_us": 0.7999999999999545,
+                  "kernel_envelope_us": 224.84000000000003
+                },
+                "qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 24.19999999999999,
+                    "min_us": 14.799999999999983,
+                    "mean_us": 19.321249999999992,
+                    "count": 16
+                  },
+                  "core_us": 309.13999999999993,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 109.6,
+                  "last_end_us": 133.85999999999999,
+                  "start_spread_us": 0.21999999999999886,
+                  "kernel_envelope_us": 24.25999999999999
+                },
+                "qproj_matmul": {
+                  "kernel": {
+                    "max_us": 56.30000000000001,
+                    "min_us": 41.539999999999964,
+                    "mean_us": 47.43833333333333,
+                    "count": 24
+                  },
+                  "core_us": 1138.5199999999998,
+                  "workers": 24,
+                  "physical_cores": 16,
+                  "first_start_us": 192.26,
+                  "last_end_us": 294.86,
+                  "start_spread_us": 60.579999999999984,
+                  "kernel_envelope_us": 102.60000000000002
+                },
+                "KV": {
+                  "kernel": {
+                    "max_us": 43.5,
+                    "min_us": 32.41999999999999,
+                    "mean_us": 37.9675,
+                    "count": 8
+                  },
+                  "core_us": 303.73999999999995,
+                  "workers": 8,
+                  "physical_cores": 8,
+                  "first_start_us": 143.3,
+                  "last_end_us": 187.34,
+                  "start_spread_us": 2.1599999999999966,
+                  "kernel_envelope_us": 44.03999999999999
+                },
+                "kv_rms_norm_rope": {
+                  "kernel": {
+                    "max_us": 10.920000000000016,
+                    "min_us": 9.280000000000001,
+                    "mean_us": 9.896000000000004,
+                    "count": 5
+                  },
+                  "core_us": 49.48000000000002,
+                  "workers": 5,
+                  "physical_cores": 5,
+                  "first_start_us": 207.92,
+                  "last_end_us": 219.02,
+                  "start_spread_us": 0.4200000000000159,
+                  "kernel_envelope_us": 11.100000000000023
+                },
+                "idx_qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 27.02000000000001,
+                    "min_us": 8.599999999999994,
+                    "mean_us": 16.916666666666668,
+                    "count": 24
+                  },
+                  "core_us": 406.00000000000006,
+                  "workers": 24,
+                  "physical_cores": 20,
+                  "first_start_us": 178.3,
+                  "last_end_us": 223.68,
+                  "start_spread_us": 33.44,
+                  "kernel_envelope_us": 45.379999999999995
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "kernel": {
+                    "max_us": 334.80000000000007,
+                    "min_us": 325.52,
+                    "mean_us": 329.8541666666667,
+                    "count": 24
+                  },
+                  "core_us": 7916.5,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 379.18,
+                  "last_end_us": 714.0600000000001,
+                  "start_spread_us": 1.6399999999999864,
+                  "kernel_envelope_us": 334.88000000000005
+                },
+                "indexer_score_topk_native_pair_aiv": {
+                  "kernel": {
+                    "max_us": 344.14000000000004,
+                    "min_us": 327.12,
+                    "mean_us": 337.2816666666667,
+                    "count": 48
+                  },
+                  "core_us": 16189.520000000008,
+                  "workers": 48,
+                  "physical_cores": 48,
+                  "first_start_us": 379.32,
+                  "last_end_us": 723.66,
+                  "start_spread_us": 2.4399999999999977,
+                  "kernel_envelope_us": 344.34
+                },
+                "proj_b_act_hc_post": {
+                  "kernel": {
+                    "max_us": 32.22000000000003,
+                    "min_us": 28.0,
+                    "mean_us": 30.248333333333342,
+                    "count": 36
+                  },
+                  "core_us": 1088.9400000000003,
+                  "workers": 36,
+                  "physical_cores": 36,
+                  "first_start_us": 1143.16,
+                  "last_end_us": 1175.5600000000002,
+                  "start_spread_us": 0.7000000000000455,
+                  "kernel_envelope_us": 32.40000000000009
+                }
+              },
+              "worker_span_us": 1175.5600000000002
+            },
+            {
+              "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/swimlane/baseline_start/dfx/window_1/merged_swimlane.json",
+              "tasks": {
+                "Compressor": {
+                  "kernel": {
+                    "max_us": 39.96000000000001,
+                    "min_us": 19.099999999999994,
+                    "mean_us": 28.395,
+                    "count": 24
+                  },
+                  "core_us": 681.4799999999999,
+                  "workers": 24,
+                  "physical_cores": 21,
+                  "first_start_us": 146.79999999999998,
+                  "last_end_us": 205.76,
+                  "start_spread_us": 39.400000000000006,
+                  "kernel_envelope_us": 58.96000000000001
+                },
+                "IndexerCompressor": {
+                  "kernel": {
+                    "max_us": 18.960000000000008,
+                    "min_us": 13.599999999999994,
+                    "mean_us": 15.94416666666667,
+                    "count": 24
+                  },
+                  "core_us": 382.6600000000001,
+                  "workers": 24,
+                  "physical_cores": 23,
+                  "first_start_us": 120.36,
+                  "last_end_us": 153.92,
+                  "start_spread_us": 19.37999999999998,
+                  "kernel_envelope_us": 33.55999999999999
+                },
+                "qk_pv": {
+                  "kernel": {
+                    "max_us": 227.86,
+                    "min_us": 217.72000000000003,
+                    "mean_us": 224.4586111111111,
+                    "count": 72
+                  },
+                  "core_us": 16161.020000000004,
+                  "workers": 72,
+                  "physical_cores": 72,
+                  "first_start_us": 763.0,
+                  "last_end_us": 991.18,
+                  "start_spread_us": 0.8199999999999363,
+                  "kernel_envelope_us": 228.17999999999995
+                },
+                "qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 24.23999999999998,
+                    "min_us": 14.939999999999998,
+                    "mean_us": 19.76375,
+                    "count": 16
+                  },
+                  "core_us": 316.22,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 107.46,
+                  "last_end_us": 131.73999999999998,
+                  "start_spread_us": 0.4000000000000057,
+                  "kernel_envelope_us": 24.279999999999987
+                },
+                "qproj_matmul": {
+                  "kernel": {
+                    "max_us": 55.32000000000002,
+                    "min_us": 42.06,
+                    "mean_us": 47.464166666666664,
+                    "count": 24
+                  },
+                  "core_us": 1139.14,
+                  "workers": 24,
+                  "physical_cores": 21,
+                  "first_start_us": 187.38,
+                  "last_end_us": 288.86,
+                  "start_spread_us": 59.41999999999999,
+                  "kernel_envelope_us": 101.48000000000002
+                },
+                "KV": {
+                  "kernel": {
+                    "max_us": 45.099999999999994,
+                    "min_us": 21.379999999999995,
+                    "mean_us": 33.272499999999994,
+                    "count": 8
+                  },
+                  "core_us": 266.17999999999995,
+                  "workers": 8,
+                  "physical_cores": 8,
+                  "first_start_us": 132.7,
+                  "last_end_us": 185.5,
+                  "start_spread_us": 9.340000000000003,
+                  "kernel_envelope_us": 52.80000000000001
+                },
+                "kv_rms_norm_rope": {
+                  "kernel": {
+                    "max_us": 8.5,
+                    "min_us": 7.4599999999999795,
+                    "mean_us": 8.051999999999998,
+                    "count": 5
+                  },
+                  "core_us": 40.25999999999999,
+                  "workers": 5,
+                  "physical_cores": 5,
+                  "first_start_us": 204.64,
+                  "last_end_us": 213.14,
+                  "start_spread_us": 0.36000000000001364,
+                  "kernel_envelope_us": 8.5
+                },
+                "idx_qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 26.75999999999999,
+                    "min_us": 8.73999999999998,
+                    "mean_us": 16.559166666666666,
+                    "count": 24
+                  },
+                  "core_us": 397.4200000000001,
+                  "workers": 24,
+                  "physical_cores": 19,
+                  "first_start_us": 169.56,
+                  "last_end_us": 227.4,
+                  "start_spread_us": 41.619999999999976,
+                  "kernel_envelope_us": 57.84
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "kernel": {
+                    "max_us": 333.26000000000005,
+                    "min_us": 324.74000000000007,
+                    "mean_us": 329.12583333333333,
+                    "count": 24
+                  },
+                  "core_us": 7899.020000000001,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 371.48,
+                  "last_end_us": 704.98,
+                  "start_spread_us": 1.0199999999999818,
+                  "kernel_envelope_us": 333.5
+                },
+                "indexer_score_topk_native_pair_aiv": {
+                  "kernel": {
+                    "max_us": 342.75999999999993,
+                    "min_us": 325.64,
+                    "mean_us": 336.71,
+                    "count": 48
+                  },
+                  "core_us": 16162.080000000004,
+                  "workers": 48,
+                  "physical_cores": 48,
+                  "first_start_us": 371.64000000000004,
+                  "last_end_us": 714.5799999999999,
+                  "start_spread_us": 2.3799999999999955,
+                  "kernel_envelope_us": 342.9399999999999
+                },
+                "proj_b_act_hc_post": {
+                  "kernel": {
+                    "max_us": 32.200000000000045,
+                    "min_us": 28.160000000000082,
+                    "mean_us": 30.419444444444448,
+                    "count": 36
+                  },
+                  "core_us": 1095.1000000000001,
+                  "workers": 36,
+                  "physical_cores": 36,
+                  "first_start_us": 1136.3400000000001,
+                  "last_end_us": 1168.68,
+                  "start_spread_us": 0.6800000000000637,
+                  "kernel_envelope_us": 32.33999999999992
+                }
+              },
+              "worker_span_us": 1168.68
+            }
+          ],
+          "tasks": {
+            "Compressor": {
+              "max_us": 39.96000000000001,
+              "min_us": 18.860000000000014,
+              "mean_us": 28.139583333333334,
+              "count": 48,
+              "envelope": {
+                "max_us": 63.10000000000002,
+                "min_us": 58.96000000000001,
+                "mean_us": 61.030000000000015,
+                "count": 2
+              },
+              "core_us_per_window": 675.3499999999999
+            },
+            "IndexerCompressor": {
+              "max_us": 19.28,
+              "min_us": 13.599999999999994,
+              "mean_us": 16.392083333333336,
+              "count": 48,
+              "envelope": {
+                "max_us": 33.55999999999999,
+                "min_us": 25.960000000000008,
+                "mean_us": 29.759999999999998,
+                "count": 2
+              },
+              "core_us_per_window": 393.4100000000001
+            },
+            "qk_pv": {
+              "max_us": 227.86,
+              "min_us": 213.96000000000004,
+              "mean_us": 222.36333333333334,
+              "count": 144,
+              "envelope": {
+                "max_us": 228.17999999999995,
+                "min_us": 224.84000000000003,
+                "mean_us": 226.51,
+                "count": 2
+              },
+              "core_us_per_window": 16010.160000000003
+            },
+            "qr_proj_matmul": {
+              "max_us": 24.23999999999998,
+              "min_us": 14.799999999999983,
+              "mean_us": 19.542499999999997,
+              "count": 32,
+              "envelope": {
+                "max_us": 24.279999999999987,
+                "min_us": 24.25999999999999,
+                "mean_us": 24.26999999999999,
+                "count": 2
+              },
+              "core_us_per_window": 312.67999999999995
+            },
+            "qproj_matmul": {
+              "max_us": 56.30000000000001,
+              "min_us": 41.539999999999964,
+              "mean_us": 47.451249999999995,
+              "count": 48,
+              "envelope": {
+                "max_us": 102.60000000000002,
+                "min_us": 101.48000000000002,
+                "mean_us": 102.04000000000002,
+                "count": 2
+              },
+              "core_us_per_window": 1138.83
+            },
+            "KV": {
+              "max_us": 45.099999999999994,
+              "min_us": 21.379999999999995,
+              "mean_us": 35.62,
+              "count": 16,
+              "envelope": {
+                "max_us": 52.80000000000001,
+                "min_us": 44.03999999999999,
+                "mean_us": 48.42,
+                "count": 2
+              },
+              "core_us_per_window": 284.9599999999999
+            },
+            "kv_rms_norm_rope": {
+              "max_us": 10.920000000000016,
+              "min_us": 7.4599999999999795,
+              "mean_us": 8.974,
+              "count": 10,
+              "envelope": {
+                "max_us": 11.100000000000023,
+                "min_us": 8.5,
+                "mean_us": 9.800000000000011,
+                "count": 2
+              },
+              "core_us_per_window": 44.870000000000005
+            },
+            "idx_qr_proj_matmul": {
+              "max_us": 27.02000000000001,
+              "min_us": 8.599999999999994,
+              "mean_us": 16.737916666666667,
+              "count": 48,
+              "envelope": {
+                "max_us": 57.84,
+                "min_us": 45.379999999999995,
+                "mean_us": 51.61,
+                "count": 2
+              },
+              "core_us_per_window": 401.71000000000004
+            },
+            "indexer_score_topk_native_pair_aic": {
+              "max_us": 334.80000000000007,
+              "min_us": 324.74000000000007,
+              "mean_us": 329.49,
+              "count": 48,
+              "envelope": {
+                "max_us": 334.88000000000005,
+                "min_us": 333.5,
+                "mean_us": 334.19000000000005,
+                "count": 2
+              },
+              "core_us_per_window": 7907.76
+            },
+            "indexer_score_topk_native_pair_aiv": {
+              "max_us": 344.14000000000004,
+              "min_us": 325.64,
+              "mean_us": 336.99583333333334,
+              "count": 96,
+              "envelope": {
+                "max_us": 344.34,
+                "min_us": 342.9399999999999,
+                "mean_us": 343.63999999999993,
+                "count": 2
+              },
+              "core_us_per_window": 16175.800000000007
+            },
+            "proj_b_act_hc_post": {
+              "max_us": 32.22000000000003,
+              "min_us": 28.0,
+              "mean_us": 30.333888888888893,
+              "count": 72,
+              "envelope": {
+                "max_us": 32.40000000000009,
+                "min_us": 32.33999999999992,
+                "mean_us": 32.370000000000005,
+                "count": 2
+              },
+              "core_us_per_window": 1092.0200000000002
+            }
+          },
+          "delta_start_pct": 0.0,
+          "delta_max_start_pct": 0.0,
+          "delta_end_pct": 0.7538615211932331,
+          "delta_max_end_pct": 1.4227442648828914
+        },
+        "kv_n64_sync": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/timing/kv_n64_sync/report.json",
+          "device": 3,
+          "max_us": 1260.2200508117676,
+          "min_us": 1203.0999660491943,
+          "mean_us": 1228.9220094680786,
+          "count": 20,
+          "samples_us": [
+            1209.2000246047974,
+            1234.6800565719604,
+            1235.4199886322021,
+            1221.8999862670898,
+            1225.5799770355225,
+            1203.0999660491943,
+            1260.2200508117676,
+            1213.2600545883179,
+            1241.7199611663818,
+            1229.8799753189087,
+            1236.6600036621094,
+            1224.4999408721924,
+            1225.6799936294556,
+            1240.5600547790527,
+            1256.0800313949585,
+            1226.580023765564,
+            1248.020052909851,
+            1223.3200073242188,
+            1207.9399824142456,
+            1214.1400575637817
+          ],
+          "initial_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "graph_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "self": {
+            "status": "PASS",
+            "count": 8
+          },
+          "state_exact": {
+            "x_out": true,
+            "idx_topk": true,
+            "swa.0": true,
+            "compressed.0": true,
+            "state.0": true,
+            "indexer.0": true,
+            "indexer.1": true,
+            "indexer_state.0": true
+          },
+          "state_pass": true,
+          "dfx_self": {
+            "status": "PASS",
+            "count": 8
+          },
+          "dfx_guards": [
+            {
+              "status": "PASS",
+              "count": 31
+            },
+            {
+              "status": "PASS",
+              "count": 31
+            }
+          ],
+          "windows": [
+            {
+              "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/swimlane/kv_n64_sync/dfx/merged_swimlane.json",
+              "tasks": {
+                "Compressor": {
+                  "kernel": {
+                    "max_us": 47.34,
+                    "min_us": 20.900000000000006,
+                    "mean_us": 30.7325,
+                    "count": 24
+                  },
+                  "core_us": 737.58,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 164.44,
+                  "last_end_us": 225.51999999999998,
+                  "start_spread_us": 39.80000000000001,
+                  "kernel_envelope_us": 61.079999999999984
+                },
+                "IndexerCompressor": {
+                  "kernel": {
+                    "max_us": 20.640000000000015,
+                    "min_us": 14.45999999999998,
+                    "mean_us": 17.24083333333333,
+                    "count": 24
+                  },
+                  "core_us": 413.7800000000001,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 125.79999999999998,
+                  "last_end_us": 154.7,
+                  "start_spread_us": 13.660000000000025,
+                  "kernel_envelope_us": 28.900000000000006
+                },
+                "qk_pv": {
+                  "kernel": {
+                    "max_us": 231.10000000000002,
+                    "min_us": 217.30000000000007,
+                    "mean_us": 224.4261111111111,
+                    "count": 72
+                  },
+                  "core_us": 16158.680000000002,
+                  "workers": 72,
+                  "physical_cores": 72,
+                  "first_start_us": 808.8800000000001,
+                  "last_end_us": 1040.32,
+                  "start_spread_us": 0.8399999999999181,
+                  "kernel_envelope_us": 231.43999999999983
+                },
+                "qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 24.560000000000002,
+                    "min_us": 14.939999999999998,
+                    "mean_us": 19.245000000000005,
+                    "count": 16
+                  },
+                  "core_us": 307.9200000000001,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 113.91999999999999,
+                  "last_end_us": 138.6,
+                  "start_spread_us": 0.4000000000000057,
+                  "kernel_envelope_us": 24.680000000000007
+                },
+                "qproj_matmul": {
+                  "kernel": {
+                    "max_us": 56.25999999999999,
+                    "min_us": 43.920000000000016,
+                    "mean_us": 49.17250000000001,
+                    "count": 24
+                  },
+                  "core_us": 1180.1400000000003,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 214.7,
+                  "last_end_us": 286.2,
+                  "start_spread_us": 24.160000000000025,
+                  "kernel_envelope_us": 71.5
+                },
+                "KV": {
+                  "kernel": {
+                    "max_us": 46.03999999999999,
+                    "min_us": 33.04000000000002,
+                    "mean_us": 39.48375,
+                    "count": 16
+                  },
+                  "core_us": 631.74,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 157.18,
+                  "last_end_us": 203.32,
+                  "start_spread_us": 0.37999999999999545,
+                  "kernel_envelope_us": 46.139999999999986
+                },
+                "kv_rms_norm_rope": {
+                  "kernel": {
+                    "max_us": 9.079999999999984,
+                    "min_us": 8.140000000000015,
+                    "mean_us": 8.572000000000003,
+                    "count": 5
+                  },
+                  "core_us": 42.860000000000014,
+                  "workers": 5,
+                  "physical_cores": 5,
+                  "first_start_us": 216.68,
+                  "last_end_us": 225.82,
+                  "start_spread_us": 0.1799999999999784,
+                  "kernel_envelope_us": 9.139999999999986
+                },
+                "idx_qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 25.920000000000016,
+                    "min_us": 8.800000000000011,
+                    "mean_us": 16.390833333333333,
+                    "count": 24
+                  },
+                  "core_us": 393.3799999999999,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 210.57999999999998,
+                  "last_end_us": 291.96,
+                  "start_spread_us": 71.10000000000002,
+                  "kernel_envelope_us": 81.38
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "kernel": {
+                    "max_us": 333.48,
+                    "min_us": 321.82000000000005,
+                    "mean_us": 327.0291666666667,
+                    "count": 24
+                  },
+                  "core_us": 7848.7,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 417.14,
+                  "last_end_us": 750.6600000000001,
+                  "start_spread_us": 4.6200000000000045,
+                  "kernel_envelope_us": 333.5200000000001
+                },
+                "indexer_score_topk_native_pair_aiv": {
+                  "kernel": {
+                    "max_us": 342.2,
+                    "min_us": 325.22,
+                    "mean_us": 334.66583333333335,
+                    "count": 48
+                  },
+                  "core_us": 16063.960000000003,
+                  "workers": 48,
+                  "physical_cores": 48,
+                  "first_start_us": 417.28000000000003,
+                  "last_end_us": 759.58,
+                  "start_spread_us": 5.579999999999984,
+                  "kernel_envelope_us": 342.3
+                },
+                "proj_b_act_hc_post": {
+                  "kernel": {
+                    "max_us": 31.88000000000011,
+                    "min_us": 27.62000000000012,
+                    "mean_us": 29.906111111111116,
+                    "count": 36
+                  },
+                  "core_us": 1076.6200000000001,
+                  "workers": 36,
+                  "physical_cores": 36,
+                  "first_start_us": 1183.44,
+                  "last_end_us": 1215.42,
+                  "start_spread_us": 0.599999999999909,
+                  "kernel_envelope_us": 31.980000000000018
+                }
+              },
+              "worker_span_us": 1215.42
+            },
+            {
+              "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/swimlane/kv_n64_sync/dfx/window_1/merged_swimlane.json",
+              "tasks": {
+                "Compressor": {
+                  "kernel": {
+                    "max_us": 43.53999999999999,
+                    "min_us": 31.019999999999982,
+                    "mean_us": 37.14416666666666,
+                    "count": 24
+                  },
+                  "core_us": 891.46,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 140.76000000000002,
+                  "last_end_us": 184.3,
+                  "start_spread_us": 5.519999999999982,
+                  "kernel_envelope_us": 43.53999999999999
+                },
+                "IndexerCompressor": {
+                  "kernel": {
+                    "max_us": 20.5,
+                    "min_us": 13.579999999999984,
+                    "mean_us": 16.640833333333333,
+                    "count": 24
+                  },
+                  "core_us": 399.37999999999994,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 117.58,
+                  "last_end_us": 145.36,
+                  "start_spread_us": 13.420000000000002,
+                  "kernel_envelope_us": 27.780000000000015
+                },
+                "qk_pv": {
+                  "kernel": {
+                    "max_us": 230.0200000000001,
+                    "min_us": 219.46000000000004,
+                    "mean_us": 225.52305555555557,
+                    "count": 72
+                  },
+                  "core_us": 16237.660000000002,
+                  "workers": 72,
+                  "physical_cores": 72,
+                  "first_start_us": 781.24,
+                  "last_end_us": 1011.8600000000001,
+                  "start_spread_us": 0.8799999999999955,
+                  "kernel_envelope_us": 230.62000000000012
+                },
+                "qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 24.379999999999995,
+                    "min_us": 13.699999999999989,
+                    "mean_us": 19.01625,
+                    "count": 16
+                  },
+                  "core_us": 304.26,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 105.88000000000001,
+                  "last_end_us": 130.3,
+                  "start_spread_us": 0.4399999999999977,
+                  "kernel_envelope_us": 24.42
+                },
+                "qproj_matmul": {
+                  "kernel": {
+                    "max_us": 56.74000000000001,
+                    "min_us": 42.420000000000016,
+                    "mean_us": 49.37833333333333,
+                    "count": 24
+                  },
+                  "core_us": 1185.08,
+                  "workers": 24,
+                  "physical_cores": 20,
+                  "first_start_us": 190.92000000000002,
+                  "last_end_us": 299.76,
+                  "start_spread_us": 59.920000000000016,
+                  "kernel_envelope_us": 108.83999999999997
+                },
+                "KV": {
+                  "kernel": {
+                    "max_us": 46.160000000000025,
+                    "min_us": 35.639999999999986,
+                    "mean_us": 40.910000000000004,
+                    "count": 16
+                  },
+                  "core_us": 654.5600000000002,
+                  "workers": 16,
+                  "physical_cores": 16,
+                  "first_start_us": 257.5,
+                  "last_end_us": 303.94,
+                  "start_spread_us": 1.0600000000000023,
+                  "kernel_envelope_us": 46.44
+                },
+                "kv_rms_norm_rope": {
+                  "kernel": {
+                    "max_us": 8.180000000000007,
+                    "min_us": 7.439999999999998,
+                    "mean_us": 7.743999999999994,
+                    "count": 5
+                  },
+                  "core_us": 38.71999999999997,
+                  "workers": 5,
+                  "physical_cores": 5,
+                  "first_start_us": 354.04,
+                  "last_end_us": 362.70000000000005,
+                  "start_spread_us": 0.5,
+                  "kernel_envelope_us": 8.660000000000025
+                },
+                "idx_qr_proj_matmul": {
+                  "kernel": {
+                    "max_us": 27.80000000000001,
+                    "min_us": 10.47999999999999,
+                    "mean_us": 17.480833333333337,
+                    "count": 24
+                  },
+                  "core_us": 419.54,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 177.68,
+                  "last_end_us": 211.32000000000002,
+                  "start_spread_us": 7.740000000000009,
+                  "kernel_envelope_us": 33.640000000000015
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "kernel": {
+                    "max_us": 332.11999999999995,
+                    "min_us": 326.82,
+                    "mean_us": 329.34,
+                    "count": 24
+                  },
+                  "core_us": 7904.16,
+                  "workers": 24,
+                  "physical_cores": 24,
+                  "first_start_us": 390.92,
+                  "last_end_us": 723.26,
+                  "start_spread_us": 0.28000000000002956,
+                  "kernel_envelope_us": 332.34
+                },
+                "indexer_score_topk_native_pair_aiv": {
+                  "kernel": {
+                    "max_us": 341.67999999999995,
+                    "min_us": 326.73999999999995,
+                    "mean_us": 336.9725,
+                    "count": 48
+                  },
+                  "core_us": 16174.68,
+                  "workers": 48,
+                  "physical_cores": 48,
+                  "first_start_us": 391.06,
+                  "last_end_us": 732.9,
+                  "start_spread_us": 0.5600000000000023,
+                  "kernel_envelope_us": 341.84
+                },
+                "proj_b_act_hc_post": {
+                  "kernel": {
+                    "max_us": 31.59999999999991,
+                    "min_us": 27.440000000000055,
+                    "mean_us": 29.755000000000003,
+                    "count": 36
+                  },
+                  "core_us": 1071.18,
+                  "workers": 36,
+                  "physical_cores": 36,
+                  "first_start_us": 1159.98,
+                  "last_end_us": 1191.82,
+                  "start_spread_us": 0.8199999999999363,
+                  "kernel_envelope_us": 31.839999999999918
+                }
+              },
+              "worker_span_us": 1191.82
+            }
+          ],
+          "tasks": {
+            "Compressor": {
+              "max_us": 47.34,
+              "min_us": 20.900000000000006,
+              "mean_us": 33.93833333333333,
+              "count": 48,
+              "envelope": {
+                "max_us": 61.079999999999984,
+                "min_us": 43.53999999999999,
+                "mean_us": 52.30999999999999,
+                "count": 2
+              },
+              "core_us_per_window": 814.52
+            },
+            "IndexerCompressor": {
+              "max_us": 20.640000000000015,
+              "min_us": 13.579999999999984,
+              "mean_us": 16.940833333333334,
+              "count": 48,
+              "envelope": {
+                "max_us": 28.900000000000006,
+                "min_us": 27.780000000000015,
+                "mean_us": 28.34000000000001,
+                "count": 2
+              },
+              "core_us_per_window": 406.58000000000004
+            },
+            "qk_pv": {
+              "max_us": 231.10000000000002,
+              "min_us": 217.30000000000007,
+              "mean_us": 224.97458333333336,
+              "count": 144,
+              "envelope": {
+                "max_us": 231.43999999999983,
+                "min_us": 230.62000000000012,
+                "mean_us": 231.02999999999997,
+                "count": 2
+              },
+              "core_us_per_window": 16198.170000000002
+            },
+            "qr_proj_matmul": {
+              "max_us": 24.560000000000002,
+              "min_us": 13.699999999999989,
+              "mean_us": 19.130625000000002,
+              "count": 32,
+              "envelope": {
+                "max_us": 24.680000000000007,
+                "min_us": 24.42,
+                "mean_us": 24.550000000000004,
+                "count": 2
+              },
+              "core_us_per_window": 306.09000000000003
+            },
+            "qproj_matmul": {
+              "max_us": 56.74000000000001,
+              "min_us": 42.420000000000016,
+              "mean_us": 49.27541666666667,
+              "count": 48,
+              "envelope": {
+                "max_us": 108.83999999999997,
+                "min_us": 71.5,
+                "mean_us": 90.16999999999999,
+                "count": 2
+              },
+              "core_us_per_window": 1182.6100000000001
+            },
+            "KV": {
+              "max_us": 46.160000000000025,
+              "min_us": 33.04000000000002,
+              "mean_us": 40.196875000000006,
+              "count": 32,
+              "envelope": {
+                "max_us": 46.44,
+                "min_us": 46.139999999999986,
+                "mean_us": 46.28999999999999,
+                "count": 2
+              },
+              "core_us_per_window": 643.1500000000001
+            },
+            "kv_rms_norm_rope": {
+              "max_us": 9.079999999999984,
+              "min_us": 7.439999999999998,
+              "mean_us": 8.157999999999998,
+              "count": 10,
+              "envelope": {
+                "max_us": 9.139999999999986,
+                "min_us": 8.660000000000025,
+                "mean_us": 8.900000000000006,
+                "count": 2
+              },
+              "core_us_per_window": 40.78999999999999
+            },
+            "idx_qr_proj_matmul": {
+              "max_us": 27.80000000000001,
+              "min_us": 8.800000000000011,
+              "mean_us": 16.935833333333335,
+              "count": 48,
+              "envelope": {
+                "max_us": 81.38,
+                "min_us": 33.640000000000015,
+                "mean_us": 57.510000000000005,
+                "count": 2
+              },
+              "core_us_per_window": 406.4599999999999
+            },
+            "indexer_score_topk_native_pair_aic": {
+              "max_us": 333.48,
+              "min_us": 321.82000000000005,
+              "mean_us": 328.18458333333336,
+              "count": 48,
+              "envelope": {
+                "max_us": 333.5200000000001,
+                "min_us": 332.34,
+                "mean_us": 332.93000000000006,
+                "count": 2
+              },
+              "core_us_per_window": 7876.43
+            },
+            "indexer_score_topk_native_pair_aiv": {
+              "max_us": 342.2,
+              "min_us": 325.22,
+              "mean_us": 335.81916666666666,
+              "count": 96,
+              "envelope": {
+                "max_us": 342.3,
+                "min_us": 341.84,
+                "mean_us": 342.07,
+                "count": 2
+              },
+              "core_us_per_window": 16119.320000000002
+            },
+            "proj_b_act_hc_post": {
+              "max_us": 31.88000000000011,
+              "min_us": 27.440000000000055,
+              "mean_us": 29.83055555555556,
+              "count": 72,
+              "envelope": {
+                "max_us": 31.980000000000018,
+                "min_us": 31.839999999999918,
+                "mean_us": 31.909999999999968,
+                "count": 2
+              },
+              "core_us_per_window": 1073.9
+            }
+          },
+          "delta_start_pct": -0.6476484652762626,
+          "delta_max_start_pct": -0.12363270410969962,
+          "delta_end_pct": 0.10133068334465811,
+          "delta_max_end_pct": 1.2973525835659583
+        },
+        "baseline_end": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/h131072_b24/timing/baseline_end/report.json",
+          "device": 3,
+          "max_us": 1244.0799474716187,
+          "min_us": 1213.6600017547607,
+          "mean_us": 1227.677994966507,
+          "count": 20,
+          "samples_us": [
+            1213.6600017547607,
+            1223.3999967575073,
+            1220.3199863433838,
+            1227.0599603652954,
+            1226.3599634170532,
+            1238.9999628067017,
+            1223.960041999817,
+            1228.559970855713,
+            1219.5600271224976,
+            1218.6199426651,
+            1242.300033569336,
+            1230.720043182373,
+            1244.0799474716187,
+            1242.7599430084229,
+            1218.2600498199463,
+            1231.3200235366821,
+            1218.7800407409668,
+            1223.2999801635742,
+            1227.4399995803833,
+            1234.0999841690063
+          ],
+          "initial_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "graph_guards": {
+            "status": "PASS",
+            "count": 31
+          },
+          "self": {
+            "status": "PASS",
+            "count": 8
+          },
+          "delta_start_pct": -0.7482209711978882,
+          "delta_max_start_pct": -1.4027862046082529,
+          "delta_end_pct": 0.0,
+          "delta_max_end_pct": 0.0
+        }
+      }
+    }
+  ],
+  "weighted_8_2_pct": {},
+  "weighted_max_8_2_pct": {}
+}

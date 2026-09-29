@@ -1,0 +1,164 @@
+{
+  "baseline": [
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/baseline/kernels/aic/kv_proj_matmul.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 32, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 32, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 32, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    },
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/baseline/kernels/aic/kv_proj_matmul_0.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 64, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 64, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 64, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    }
+  ],
+  "kv_m16": [
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16/kernels/aic/kv_proj_matmul.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    },
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16/kernels/aic/kv_proj_matmul_0.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 32, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 32, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 32, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    },
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16/kernels/aic/kv_proj_matmul_1.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 64, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 64, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 64, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    }
+  ],
+  "kv_m16_sync": [
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16_sync/kernels/aic/kv_proj_matmul.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    },
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16_sync/kernels/aic/kv_proj_matmul_0.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 32, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 32, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 32, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    },
+    {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_kv_20260929/compiled/kv_m16_sync/kernels/aic/kv_proj_matmul_1.cpp",
+      "tiles": [
+        "Tile<TileType::Acc, float, 16, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Acc, float, 64, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 1024, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Left, bfloat16_t, 16, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Normal>",
+        "Tile<TileType::Left, bfloat16_t, 64, 128, BLayout::RowMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 16, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 512, 128, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Mat, bfloat16_t, 64, 512, BLayout::ColMajor, -1, -1, SLayout::RowMajor, 512, PadValue::Null, CompactMode::Null>",
+        "Tile<TileType::Right, bfloat16_t, 128, 128, BLayout::RowMajor, -1, -1, SLayout::ColMajor, 512, PadValue::Null, CompactMode::Null>"
+      ],
+      "ops": {
+        "TLOAD": 8,
+        "TSTORE": 2,
+        "TMATMUL": 8,
+        "TMATMUL_ACC": 8,
+        "TMOV": 0
+      }
+    }
+  ]
+}
