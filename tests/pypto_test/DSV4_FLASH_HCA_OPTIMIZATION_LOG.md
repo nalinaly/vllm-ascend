@@ -6170,3 +6170,86 @@ only launch width that keeps it deadlock-free across devices」，
 需要重写每块的工作划分（例如 `hca_softmax_pool` 现在每块一个请求，
 B16 只有 16 块；用满 48 核得改成请求×列块的二维分工），
 属于逐个改、逐个测的工作，且每项都要按 97.1 的新判据定符号。
+
+## 98. SPMD 满核 + `sync_start`：`sync_start` 必须与满核配套，且提块数不能压缩核内流水（2026-09-29）
+
+用户 2026-09-29 给出两条 SPMD 原则（尽可能用满核 + 设 `sync_start`），
+随后把目标收窄为「**在尽可能用满核又不影响核内流水的前提下**叠加 `sync_start`，
+逐个逐个改，有并发的需要联动改」。本节记录前三个数据点与由此得到的判据。
+
+### 98.1 三个数据点分离出 `sync_start` 的真实作用
+
+| 变体 | 满核 | `sync_start` | 影响核内流水 | Δ(平均) | base 极差 | 该变体极差 |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| `syncstart`（121 处全开） | ✗ | ✓ | — | **+65.96 有害** | 35.75 | 35.75 |
+| `quant48`（24→48 块） | ✓ | ✗ | ✓ 流水 4→2 次 | +1.46 不可判定 | 46.25 | **27.25** |
+| `quant48ss` | ✓ | ✓ | ✓ 同上 | +2.29 不可判定 | 44.25 | **23.00** |
+
+两条结论：
+
+1. **`sync_start` 不能脱离满核单独使用。** 同样开 `sync_start`：在未满核的
+   121 处是 **+66 μs**，在满核的 `quant` 上只有 +0.83 μs（`quant48ss` 相对
+   `quant48`）、落在噪声内。机制是 `sync_start` 要求所有块同时开始，
+   未满核时这纯粹增加启动等待，拿不到满核的补偿。
+   **用户的原则成立，我此前只做后半条的做法是错的。**
+2. **极差随满核单调收窄**：44~46 → 27.25 → 23.00。满核 + 同步启动让该任务
+   不再受其他任务占核状态影响，波动几乎减半。这本身有价值（可预测性），
+   但没转化成平均耗时。
+
+### 98.2 ★ 判据：提块数不能靠压缩内层循环
+
+`quant` 没拿到收益的原因是 `QUANT_TASK_T_TILE` 32→16 把内层
+`pl.pipeline` 从 4 次迭代压到 2 次——**用流水深度换了核数，两者抵消**。
+这正是新目标里「不影响核内流水」要排除的。
+
+于是 SPMD 任务分成两类：
+
+| 类型 | 结构 | 提块数的后果 |
+| --- | --- | --- |
+| **单维分块** | 块数 × 内层次数 = 常量（`raw_cache_write`：`pl.range(blk, tokens, CACHE_WORKERS)`；`raw_valid`：`pl.range(min(VALID_TOKEN_TILE, …))`；`inverse_rope_sign`：按 `ROPE_CS_T_TILE` 分段；`quant`：`QUANT_TASK_T_TILE`） | **必然压缩内层，不可做** |
+| **有第二个独立维度** | 并行维与核内维正交（`softmax_pool`：`h0` 4 段 × `history_row` 128 次） | **把第二维提到并行维度，内层一行不动** |
+
+**只有第二类值得改。** 第一类要改，必须先找出它自己的第二个可并行维度
+（例如 `raw_cache_write` 的 HEAD_DIM 方向），否则就是重复 `quant48` 的错误。
+
+### 98.3 `pool48`：第一个三条件全满足的候选
+
+`hca_softmax_pool` 原本每块一个请求，B16 只有 16 块、48 个 AIV 核空 32 个；
+外层 `for request` 只迭代一次，**本就不承载流水**。改法：
+
+```python
+pool_segments = HEAD_DIM // POOL_COLS            # 4
+pool_units    = requests * pool_segments         # B16: 64
+pool_workers  = pl.min(pool_units, pl.system.available_aiv_count())   # 48，满核
+with pl.spmd(pool_workers, …, sync_start=True):
+    for unit in pl.range(pl.tile.get_block_idx(), pool_units, pool_workers):
+        request = unit // pool_segments
+        h0      = pl.max(unit - request * pool_segments, 0) * POOL_COLS
+        …
+        for history_row in pl.range(RATIO):      # 128 次，一行未动
+```
+
+用 `available_aiv_count()` 而非字面量 48：核数属于运行落到的设备，
+写死会 under/over-fill，且 `pl.system.syncall` 需要 full occupancy
+才不跨设备死锁（PyPTO 文档 `system_ops.py`）。
+
+量级：`softmax_pool` 814.9 核·μs 现摊在 16 块（墙钟 52.5 μs），
+48 块理论约 17 μs。已提交 8 样本，编译通过（首个 pool48 pass 589.25 vs base 613.5）。
+
+### 98.4 簇划分与联动范围
+
+按泳道（128K/B16）的时间重叠划簇：
+
+| 簇 | 时段 | 成员（块数） | 并发峰值 | 空闲核 |
+| --- | --- | --- | ---: | ---: |
+| A | 0–100 | widen_rms(12)、warm_kv(8)、q_rope_prepare(12)、mix_x_rms(12)、comb_sinkhorn(12) | 32 | 16 |
+| B | 120–213 | qr_rms_quant(12)、kv_rms_rope(3)、**softmax_pool(16)**、raw_cache_write(8)、inverse_rope(16)、raw_valid(12) | 32 | 16 |
+| C | 211–245 | gather_kv(16)、state_commit(16)、norm_rope_write(16) | **48** | **0（已满，不动）** |
+| D | 499–576 | quant(24) | 24 | 24 |
+
+**簇内必须联动**（用户 2026-09-29 的判据）：两个 12 块任务并发时共占 24 核，
+只把一个提到 48 会让它等不到核；两个都提则各自跑满、反而快。
+
+已确认不可动的硬约束：`T_TILE = 8`（源码注明 `other values miscompare`）、
+`LINEAR_T_TILE = 16`（cube 行必须 16 行整块）、`WIDEN_ROWS = 8`
+（`pl.row_sum` 的 FP32 结果至少需 8 个物理行，见第 40.1 节）。
