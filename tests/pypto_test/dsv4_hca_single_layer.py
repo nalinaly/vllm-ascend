@@ -77,6 +77,7 @@ def main():
         "weight_nz_mode": args.weight_nz_mode, "deterministic_level": args.deterministic_level,
         "speculative_tokens": 5, "query_tokens_per_request": 6,
         "operator_source": str(args.operator_source.resolve()) if args.operator_source else "当前 worktree",
+        "simpler_root": os.environ.get("HCA_SIMPLER_ROOT_ACTIVE", "共用 pto-eager/simpler"),
     }
     try:
         import pypto.torch

@@ -249,11 +249,32 @@ Native P50 × 0.80。**未达标。**
 
 ## 剩余事项
 
-1. DP/EP16 正式精度基线 `task_20260928_162843_15654084376` 已 PASS：8K/B16，
+1. **优化版整机 token 验证已完成（2026-09-29）**：`task_20260929_070907_235294817658`，
+   16 卡 TP1×DP/EP16、**128K/B24**、`gpu_memory_utilization=0.97`，PTO 与 Native 同档期
+   各跑一遍（同时补上了 CANN 9.2 口径的 Native 对照）。生产算子为 v17+v21+v22，
+   此前从未整机验证过。
+
+   | 项 | 结果 |
+   | --- | --- |
+   | `token_status` | **PASS** |
+   | token 不一致 | **0 / 98304**（16 rank × 24 请求 × 256 token） |
+   | 比对 rank 数 | 16 |
+
+   证据：`results/hca_token_20260929/h131072_b24_ep16_v1/token_comparison.json`。
+
+   **一项未解释的现象，不计入通过**：`spec_decode_mismatched_cases = 16`，即 16 个 rank 的
+   DSpark 计数全部不一致。Native 每个 rank 恒为 1032 drafts / 5160 draft tokens，
+   PTO 为 1017～1030 drafts 且逐 rank 不同；**两侧接受率都是 100%**
+   （`num_accepted_tokens` = 5 × `num_drafts`），说明 draft 质量相同，差的只是调用次数。
+   两侧日志里抢占/重算均为 0。推测是 `--async-scheduling` 下步的组成随时序变化
+   （PTO 更快，批次凑法不同），但**未经证实**——要证伪需让 Native 自己重跑一次、
+   看它的 1032 是否可复现。在此之前不要把该现象说成无害。
+
+2. DP/EP16 正式精度基线 `task_20260928_162843_15654084376` 已 PASS：8K/B16，
    65536 个 token 全部一致，DSpark 统计一致，16 个 rank 各 20 层 PTO 捕获与 44 次真实 B16 图调用。
    证据 `results/hca_token_20260928/h8192_b16_ep16_v1`；这轮不含后续性能优化。
    长上下文与其余 batch 的整模型 token 覆盖仍需补齐。
-2. 固定归约下的连续 decode 状态轨迹，B1～B64 的动态 BS 切换、整个算子的 padding/dummy、
+3. 固定归约下的连续 decode 状态轨迹，B1～B64 的动态 BS 切换、整个算子的 padding/dummy、
    请求生命周期与 prefix 共享。当前 dummy 证据仅覆盖 compressor 子链。
 
    **2026-09-29 查清了这一项的现状与做法**：CSA 侧早已有完整的 padding 图检查
@@ -364,14 +385,14 @@ Native P50 × 0.80。**未达标。**
 
    **第 2 项至此全部完成**：动态 BS 切换、整算子 padding/dummy、连续 decode 状态轨迹、
    请求生命周期与 prefix 共享。
-3. 单层独立的 metadata A→B→A 地址固定重放**已完成**（2026-09-28 23:0x，CANN 9.2.0-beta.2）：
+4. 单层独立的 metadata A→B→A 地址固定重放**已完成**（2026-09-28 23:0x，CANN 9.2.0-beta.2）：
    `results/hca_optimization_20260928/metadata_replay_cann92/`。B4、history A=124 / B=8190、
    统一页表宽度、B 的页表行反序；54 个 metadata 张量叶子中 23 个在 A/B 间指针与内容都不同。
    A→B→A 三步每步图重放与 eager 逐 bit 相同、写保护按目标状态自身 slot 计算且 PASS、
    输出无非有限值；B 另与在其自身张量上的直接调用逐 bit 相同，第二次 A 与第一次 A 逐 bit 相同。
    脚本 `dsv4_hca_metadata_replay.py` + `run_hca_metadata_replay.sh`。
    每步都从同一初态开始，因此它不覆盖连续多步 decode 轨迹（仍属第 2 项）。
-4. 用户随后要求开始性能优化，目标七档全面超越 Native 20%，并明确先单卡再整机。
+5. 用户随后要求开始性能优化，目标七档全面超越 Native 20%，并明确先单卡再整机。
    已冻结含 KV 精度修正的基线，首项候选将 raw KV 逐行读取改为页内连续搬运；CPU 编译通过。
    单卡长短 B16 的计时/泳道已排队，未预记收益；单卡通过之前不提交优化版整机任务。
    [优化记录](results/hca_optimization_20260928/README.md)。

@@ -33,6 +33,8 @@
 | 去掉压缩器的 `late_dep` | 更差：它是有意的 cube 错峰 | 第 26 节 v24/v25 |
 | 串联 dequant 与 `cmp_work_gather` | 无效：并行改接续，合计跨度不变 | 第 31 节 v27 |
 | 配平并发任务块数（dequant/gather 各 24） | **端到端更差 18.4 μs**，尽管泳道全面改善 | 第 33 节 v29 |
+| 去掉 AICPU 的 dummy 调度依赖改直连 | 无效且方向相反：dummy 每层仅 2～4 个、3～10 μs，远在 ±13 μs 噪声底以下；直连把 N+M 条依赖边变成 N×M 条 | 第 34 节 |
+| 拆 gather 对压缩器的栅栏（v30/v31） | 加权 −7.1 μs，在 ±13 μs 噪声底内；8K 对照档同代码测出 +9.54 μs | 第 37.1 节 |
 | HCA 自己的 ring arena 下限探测 | 不需要，`wo_a` 布局修正后 128K/B24 显存缺口已消失 | 第 13 节 |
 
 ### 0.3 三条必须遵守的计时口径（每条都是踩坑换来的）
@@ -900,3 +902,468 @@ v29（dequant 24 块 + gather 24 块，合计 48 = AIV 核数）的 incore 完�
 共同点：**我反复用一个口径下的观测量去预测另一个口径下的结果。** 今后对"跨度/摊开/空窗"
 一类调度观测量，只能用于解释现象与定位方向，任何收益结论必须回到正式计时口径，
 并且效应要显著超过 ±13 μs 噪声底。
+
+## 34. AICPU 的 dummy 调度依赖：实测只有 3～10 μs，不是缺口来源（2026-09-29）
+
+用户提出假设：「aicpu 上的 dummy 调度依赖，可能是比较影响性能的，可以去除这种依赖，
+换成多任务之间的直接依赖」。这一节用泳道原始记录把它量掉，结论是**假设不成立**，
+并顺带给出真正的量级分布。
+
+### 34.1 dummy 在运行时里的确切语义
+
+`simpler/src/a2a3/runtime/tensormap_and_ringbuffer/runtime/scheduler/scheduler.h:524`：
+
+> Dependency-only tasks (active_mask is empty, shape == DUMMY). Drained by
+> the dispatch loop and completed inline — never goes to AICore.
+
+也就是 `active_mask` 为空的纯依赖任务，进 `dummy_ready_queue`，由派发循环 Phase 3
+（`scheduler_dispatch.cpp:1204`，`DUMMY_DRAIN_BATCH = 8`）成批弹出并就地退休，
+不占 AIC/AIV。`push_ready_routed()`（同文件 `scheduler.h:544`）还会把
+**谓词不通过的任务**一并丢进这个队列，所以它同时是"被跳过的任务"的出口。
+
+### 34.2 实测：每层 2～4 个 dummy，合计 2.8～7.0 μs
+
+运行时带 `chip_swimlane_aicpu_record_dummy_task` 埋点，泳道里有任务级记录。
+取 `results/hca_optimization_20260928/*/after_native/dfx/`（24 次运行，eager 采集）：
+
+| 项 | 实测 |
+| --- | --- |
+| 每层 dummy 任务数 | **2～4 个**（24 次运行全部落在此区间） |
+| dummy 退休阶段合计 | **2.8～7.0 μs** |
+| 占层跨度 | **0.6%** |
+
+以 `incore_v29_h131072_b16` 为例，3 个 dummy 全在调度流 0，退休合计 3.40 μs。
+
+### 34.3 连"它插入的等待"一起算，也还在噪声底以下
+
+退休耗时不等于它给依赖链加的延迟——消费者要等派发循环走到 Phase 3。
+用 `chip_swimlane_records.json` 的 `dummy_task` 记录（`clock_freq_hz = 50 MHz`，
+1 cycle = 0.02 μs）量"前一阶段结束 → dummy 退休"：
+
+| loop_iter | 前一阶段 | 等待 | dummy 阶段 span |
+| --- | --- | --- | --- |
+| 22 | （首条，无法测） | — | 2.92 μs |
+| 27 | release | 1.64 μs | 0.16 μs |
+| 230 | complete | 4.80 μs | 0.32 μs |
+
+调度循环迭代周期 2.61 / 3.48 / 4.07 μs（三条流），与上面的等待同量级——
+dummy 基本是在下一两次迭代内就被排空的。
+
+**退休 3.40 μs + 等待约 6.4 μs < 10 μs，而噪声底是 ±13 μs（第 28 节）、缺口是 76～133 μs。**
+即使把 dummy 彻底去掉、且全部等待都在关键路径上，也测不出这个改善。
+
+### 34.4 而且"换成直接依赖"方向是反的
+
+dummy 做的是扇入汇聚：N 个生产者 → 1 个 dummy → M 个消费者，共 **N+M** 条依赖边；
+改成两两直连是 **N×M** 条。依赖边是在 `complete` 阶段被遍历的
+（`on_task_complete(...).fanout_edges`），而 `complete` 是调度器的最大开销项
+（见 34.5）。所以去 dummy 会**增加**调度器负担。
+
+这与第 24 节 v23 的实测完全一致：去掉 O 投影的宽扇入 dummy 后，48 块消费者
+从每块跟踪 1 条依赖边变成 8 条，端到端更差。v23 是在算子侧做同一件事的实验，
+本节是从运行时侧解释它为什么必然更差。
+
+### 34.5 顺带量出的真实分布（`incore_v29_h131072_b16`，层跨度 591.0 μs）
+
+| 调度阶段 | 次数 | 合计 | 占层跨度 | 处理任务数 |
+| --- | --- | --- | --- | --- |
+| complete | 128 | 448.5 μs | 75.9% | 592 |
+| dispatch | 52 | 229.9 μs | 38.9% | 446 |
+| early_dispatch | 30 | 86.2 μs | 14.6% | 146 |
+| release | 28 | 14.6 μs | 2.5% | 50 |
+| resolve | 5 | 11.4 μs | 1.9% | 14 |
+| **dummy** | **3** | **3.4 μs** | **0.6%** | **3** |
+
+（三条调度线程并行，合计 134% 超过 100% 是正常的。）
+
+三条主调度线程的并发忙碌分布：0 条忙 35.6%、1 条 18.7%、2 条 22.6%、**3 条全忙 22.8%**。
+
+⚠ **不要把 `complete` 的 448.5 μs 读成"每次完成的固定开销"**：它是
+`check_running_cores_for_completion`，主体是**轮询尚未结束的核**，即调度器在等。
+把它压小本身不产生收益。这正是第 33 节那个错误的同一类陷阱——
+泳道上的忙碌时间不等于关键路径。要判断调度是否真的挡住了执行，
+应该量"依赖满足 → 派发到核"的延迟，而不是调度器的忙时。
+
+### 34.6 调度线程数已经拿满，没有这条路
+
+`scheduler_cold_path.cpp:711`：`active_sched_threads_ = aicpu_thread_num_ - 1`
+（一条给 orchestrator）。而 `launch_aicpu_num` 的合法范围是
+`0 (auto) 或 [2, 4]`（`python/simpler/task_interface.py:125`）。
+所以 4 个 AICPU → 3 条调度线程，**当前已是上限**，加线程不可行。
+
+## 35. 核内时间与时间轴全图：最大损失是 AIC 的 102.7 μs 连续空窗（2026-09-29）
+
+第 34 节排除 dummy 后，用同一批泳道把"这 593 μs 到底花在哪"完整量了一遍。
+数据源 `results/hca_optimization_20260928/incore_cann92_v17_h131072_b16/after_native/dfx`
+（v17，eager 采集，pid 4 Worker View），并用 `incore_v28_h131072_b16` 做一致性对照，
+两者结论一致。
+
+### 35.1 核内时间按任务名的分布（128K/B16）
+
+| | AIC（24 核） | AIV（48 核） |
+| --- | --- | --- |
+| 核时合计 | 8940.8 μs | 13224.4 μs |
+| ÷核数 = 完美打包下限 | **372.5 μs** | 275.5 μs |
+| 平均占核 | 15.1/24（63%） | 22.3/48（46%） |
+
+单项占比（AIC）：`hca_unified_attention_aic` 38.7%（24 块，均 144.0 μs）、
+`qproj_matmul` 11.3%、`qr_proj_matmul` 10.8%、`proj_a_mm_0` 合计约 20%（8 个 task id × 8 块）。
+
+单项占比（AIV）：`hca_unified_attention_aiv` 53.9%（48 块，均 148.5 μs）、
+`hca_oproj_hc_post_0` 11.1%、`qproj_dequant_rms_nope_rope` 7.4%、`hca_cmp_work_gather_0` 7.1%。
+
+**attention 一个任务就占 AIC 的 39% / AIV 的 54%，且 24/24 AIC + 48/48 AIV 全占满、
+占核率 96%**，所以它的单块时间（≈148 μs）几乎等于它在层跨度里的贡献，已无打包空间。
+
+### 35.2 attention 已按档位分支，不必再造分支
+
+- 128K 走 `hca_unified_attention_*`：AIC 均 144.0 μs / AIV 均 148.5 μs。
+- 8K 走 `hca_short_attention_pack_*`：AIC 均 65.0 μs / AIV 均 69.1 μs。
+
+8K/B16 层跨度 464.9 μs，AIC 下限 288.6 μs、AIV 下限 176.0 μs。
+**非 attention 部分两档几乎相同**（AIC 下限 224～228 μs），差异全在 attention。
+
+### 35.3 时间轴：三段结构与各段的空闲
+
+| 段 | 窗口 | 实际 | 该段核时下限 | 空隙 |
+| --- | --- | --- | --- | --- |
+| 头（widen_rms → dequant） | 0 → 265.8 | 266 μs | AIC 109 / AIV 92 | **约 157 μs** |
+| attention | 278.5 → 433.5 | 155 μs | 148 μs（96% 占核） | 约 7 μs |
+| 尾（proj_a → quant → proj_b → oproj_post） | 419 → 593 | 174 μs | AIC 120 / AIV 51 | 约 54 μs |
+
+### 35.4 ★ 最大单项损失：AIC 连续空闲 102.7 μs
+
+| 部件 | 完全空闲合计 | 最长单个空窗 |
+| --- | --- | --- |
+| **AIC（24 核）** | 116.3 μs（19.6%） | **175.8 → 278.5，102.7 μs** |
+| AIV（48 核） | 107.3 μs（18.1%） | 533.3 → 558.3，25.0 μs |
+
+AIC 的 116.3 μs 空闲里有 **102.7 μs 是一个连续窗口**，占整层 17.3%，比七档验收
+还差的 76～133 μs 缺口还大。它的成因在时间轴上一目了然：
+
+```
+  qproj_matmul(AIC)          125.2 ──────── 175.8
+  [AIC 全空 102.7 μs]                      175.8 ══════════════════ 278.5
+  raw_cache_write(AIV)                 152.3 ── 164.0
+  norm_rope_write(AIV)                       164.8 ─ 171.4
+  state_commit(AIV)                            173.4 ─ 181.4
+  inverse_rope_sign(AIV)                         178.0 ─ 185.2
+  gather_kv / raw_valid(AIV)                       186.7 ── 202.4
+  cmp_work_gather(AIV, 72 块, 占核 39%)               192.1 ────────── 243.8
+  qproj_dequant_rms_nope_rope(AIV, 48 块, 占核 36%)   192.2 ──────────── 265.8
+  hca_unified_attention_aic/aiv                                    278.5 ──→
+```
+
+也就是：这 103 μs 里 AIV 在跑 KV 写回 → gather → dequant 这条链（各任务占核率只有
+36%～58%），而 **`hca_unified_attention_aic` 在等 `qproj_dequant_*` 的全部 48 块跑完**，
+是一道整体栅栏（265.8 结束，278.5 才起，中间还有 12.7 μs 派发延迟）。
+
+### 35.5 由此确定的方向
+
+**把 gather/dequant → attention 的整体栅栏改成分块流水**：让 attention 的 cube 部分
+按压缩块分组，各组只依赖自己那份 gather+dequant，而不是等全部完成。
+上界就是那 102.7 μs 空窗。
+
+注意这与第 34 节被否的"去 dummy 改直连"不是一回事：那个是把 N+M 条依赖边变成 N×M 条、
+粒度不变；这里是**把一道全局栅栏拆成若干条按块对应的边**，依赖边总数不增加，
+减少的是等待。
+
+动手前按既有约束先做两件事：查 pypto-lib 有没有现成的分块流水实现
+（`decode_csa.py` 是参考最佳实现），以及查 CSA 会话在
+`DSV4_FLASH_CSA_VALIDATION_LOG.md` 里是否已经记过同类优化。
+
+## 36. 缺口的绝对口径：设备跨度要压到 470 μs，其中 68 μs 是不归本项目的 launch 开销（2026-09-29）
+
+第 35 节给出了泳道内部的分布，但要判断"还差多少"必须回到端到端。本节把两者对齐。
+
+### 36.1 七档绝对 P50（v22，`seven_fulldecode_v22/`，图外 NPU Event，50 次）
+
+| 档位 | Native P50 | PTO P50 | 比值 | 目标 0.80×N | 还需降 |
+| --- | --- | --- | --- | --- | --- |
+| 128K/B4 | 405.5 | 409.8 | 1.011 | 324.4 | 85.4 |
+| 128K/B8 | 529.2 | 499.7 | 0.944 | 423.4 | 76.3 |
+| 128K/B16 | 672.8 | 643.5 | 0.957 | 538.2 | **105.3** |
+| 128K/B24 | 868.2 | 799.8 | 0.921 | 694.5 | 105.3 |
+| 8K/B24 | 678.5 | 654.0 | 0.964 | 542.8 | 111.2 |
+| 8K/B32 | 744.3 | 728.1 | 0.978 | 595.4 | 132.7 |
+| （8K/B40，已退役） | 818.7 | 840.1 | 1.026 | 655.0 | 185.1 |
+
+同目录 `baseline`（v17 之前的保留版）比值 1.05～1.16，可见 v17 起的改动确实把 PTO
+从慢于 Native 拉到快于 Native，但离 0.80 还差一截。
+
+### 36.2 ★ 设备跨度与端到端之间有约 68 μs，属于 launch 开销
+
+128K/B16：PTO P50 **643.5 μs**，而同配置泳道的设备侧跨度只有 **约 575 μs**（v22 量级，
+见第 35 节 v28/v29 的 575.9 / 574.8）。差额 **约 68 μs** 与已知的每次调用 kernel-mode
+launch 下限同量级，用户已明确这属于公共优化、本项目不动。
+
+由此得到真正的工程口径（128K/B16）：
+
+| 量 | 值 |
+| --- | --- |
+| 目标端到端 | 538.2 μs |
+| 减去 launch 开销 | −68 μs |
+| **允许的设备跨度** | **约 470 μs** |
+| 当前设备跨度 | 约 575 μs |
+| 核时下限（attention 148 + 其余 AIC 228） | 约 376 μs |
+| 现有打包空隙 | 575 − 376 = **约 199 μs** |
+| **必须吃掉的空隙比例** | 105 / 199 = **约 53%** |
+
+结论：**算术上可行，但要把现有打包空隙吃掉一半以上**，不是靠单点微调能到的。
+
+### 36.3 ⚠ 泳道改善 ≠ 端到端改善：v28/v29 的教训必须前置
+
+| 版本 | dequant 块数 | dequant 窗口 | AIC 最长空窗 | attention 起点 | 设备跨度 |
+| --- | --- | --- | --- | --- | --- |
+| v17 | 48 | 192.2 → 265.8 | **102.7 μs** | 278.5 | 593.0 |
+| v28 | 32 | 194.1 → 244.0 | 74.5 μs | 254.4 | 575.9 |
+| v29 | 24 | 198.7 → 243.2 | 66.9 μs | 256.7 | 574.8 |
+
+v28/v29 把空窗从 102.7 压到 66.9 μs、跨度压了 18 μs，**但 v29 端到端反而差 18.4 μs**
+（第 33 节），v28 的净收益也落在 ±13 μs 噪声底内。所以第 35 节那些空窗数字只能用于
+**定位**，任何候选仍必须用 ABBA 端到端判定。本节把这条前置，免得再被泳道误导一次。
+
+### 36.4 attention 起步晚的真实原因是资源，不是依赖
+
+`_long_sparse_attn_hca_tp1` 里 attention 的依赖是
+`deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid]`，
+**不含 `qproj_dequant`**。这四个依赖在 243.8 μs 就全部满足，可 attention 到 278.5 才起。
+
+原因是 `hca_unified_attention` 是要同时占 **24 AIC + 48 AIV** 的 MIX 任务，
+必须等 AIV 从 gather/dequant 里腾空（dequant 到 265.8 结束）。
+这正是 CSA 记过的那条告诫："单独看空闲 AIC 也不能判断 MIX 所需 AIV 是否可用"。
+
+已按该告诫实测空窗内的 AIV 余量（175.8 → 278.5，102.7 μs）：
+
+| 量 | 值 |
+| --- | --- |
+| 窗口内 AIV 平均占用 | 21.9 / 48 核 |
+| **平均空闲 AIV** | **26.1 核** |
+| 空闲 AIV 容量 | 2682 核·μs（= attention AIV 需求的 38%） |
+| 空闲 AIC 容量 | 2465 核·μs（= attention AIC 需求的 71%） |
+
+即余量确实存在，瓶颈是这段窗口里 AIV 被一条 6 级串行链占着且占核率只有 36%～58%。
+
+### 36.5 v30 探针：gather 不等压缩器能省多少（上界测量）
+
+`hca_cmp_work_gather` 依赖 `cmp_cache_ready_dep`（v22 已收窄为压缩器写 cmp_cache 的
+任务 id）。但**压缩器每请求每步只写 1 行**
+（`decode_compressor_ratio128.py` 末尾 `cache_flat[cache_row:cache_row + 1, :]`），
+而 gather 要搬的是整个压缩历史（128K 下 `cmp_work_count = 8` 个 K128 tile、约 1024 行）。
+也就是 **7/8 的搬运量与本步压缩器输出无关**，却被那一行的写入挡住。
+
+v30 探针（`results/hca_optimization_20260929/source_v30/`，**只改长档那一处** `deps=[]`）
+用来量收益上界。它数值上不严格，仅取证用，不作为交付（见第 0.2 节口径）。
+单层 bench 的 metadata 是定值重放、压缩器每次写同一行，因此精度检查有可能照样通过，
+但那不构成正确性证明。
+
+正式做法（若探针显示收益够大）是按 tile 拆成两个任务，判据**只依赖一个可证明的事实**：
+
+- 压缩器本步写入的行索引 k 满足 `k ∈ {gather_rows−1, gather_rows}`
+  （`k = (closing+1)//RATIO`，`closing+1 ≤ length`，`gather_rows = length//RATIO`；
+  又因 `S = 6 ≪ RATIO = 128`，每步每请求最多跨一个压缩边界）。
+- 于是 tile `w` 覆盖行 `[w*128, (w+1)*128)`，**当 `(w+1)*CMP_ATTN_K_TILE < gather_rows`
+  时该 tile 的最大行号是 `gather_rows−2`，与 k 必然不相交** → 归入"历史任务"，`deps=[]`。
+- 其余（末尾那个不满的 tile）归入"新行任务"，`deps=[cmp_cache_ready_dep]`。
+
+两个任务对 item 的划分是**互斥且穷尽**的，搬运内容、顺序、掩码都不变，
+因此是数值中性的改动（按既有约定也应同步到精度版）。
+
+8K 走 `_short_sparse_attn_hca_tp1`，那里 `cmp_work_count = 1`，只有一个 tile、必然含新行，
+所以该改动在 8K **不生效也不变差**，符合 128K:8K = 8:2 的取舍口径。
+8K/B24 这一档在本轮作为对照档提交。
+
+## 37. v30 否定，并用官方工具拿到权威关键路径（2026-09-29）
+
+### 37.1 v30 否定：栅栏不是问题
+
+| 档位 | PTO 基线 | PTO 候选 | Native 漂移 | 净收益 |
+| --- | --- | --- | --- | --- |
+| 128K/B16 | 641.03 | 630.80 | +4.15 | **−14.39 μs** |
+| 128K/B24 | 797.41 | 798.57 | +9.36 | **−8.20 μs** |
+| 8K/B24 | 653.67 | 657.54 | −5.68 | **+9.54 μs** |
+
+按 128K:8K = 8:2 加权后是 **−7.1 μs，落在 ±13 μs 噪声底以内**。
+
+**8K/B24 那一档是一次意外有用的对照**：v30 只改了长档（`_long_sparse_attn_hca_tp1`），
+8K 走 `_short_...`，两侧执行的代码**完全相同**，可它测出 **+9.54 μs**。
+这独立印证了单档单轮测量的噪声量级就是 ±10 μs 左右，与第 28 节的 ±13 μs 一致。
+以后凡是"只在一档上看到十几 μs 收益"的结论，都要当作噪声处理。
+
+因此按 35.5 节设计的正式 v31（历史 tile / 末尾 tile 拆分）**不再实施**：
+它的上界就是 v30，而 v30 不可测。第 0.2 节补记。
+
+### 37.2 用 `simpler_setup.tools.critical_path` 拿权威关键路径
+
+本仓 simpler 自带工具，能从 level-4 泳道重建官方关键路径，比我手推时间轴可靠：
+
+```bash
+source env-dsv4-0251rc1.sh
+cd simpler && python3 -m simpler_setup.tools.critical_path <结果目录>/after_native --stdout
+```
+
+已有泳道的 `chip_swimlane_level` 就是 4，**不需要重采**。报告写在
+`<...>/dfx/critical_path_report.md`。术语（报告自带）：
+
+- **Static CPM path**：无限核时的依赖下限。
+- **Observed path**：实际关键路径；每个任务的 compute + 其前的调度 stall 精确铺满 makespan。
+- **stall kind**：`data-wait` 等上游、`core-wait` 等核释放、`front-gap` 首任务前的派发延迟。
+
+### 37.3 ★ 128K/B16 的权威分解（v17，makespan 591 μs）
+
+| 量 | 值 | 占 makespan |
+| --- | --- | --- |
+| **静态 CPM 下限** | **420 μs** | 71.1% |
+| 观测路径 compute | 401 μs | 67.9% |
+| 观测路径 stall | 190 μs | 32.1% |
+| — 其中 core-wait | 97 μs | 16.4% |
+| — 其中 data-wait | 93 μs | 15.8% |
+
+观测关键路径 13 个任务：
+
+| # | 任务 | compute μs | stall μs | stall 类型 |
+| --- | --- | --- | --- | --- |
+| 0 | hca_hc_widen_rms | 14.8 | 0.0 | |
+| 1 | hc_pre_linear | 17.7 | 13.8 | data-wait |
+| 2 | mix_x_rms_norm | 21.2 | 11.0 | data-wait |
+| 3 | qr_proj_matmul | 12.9 | 11.3 | data-wait |
+| 4 | hca_kv_score_proj | 18.8 | 5.3 | data-wait |
+| 5 | hca_softmax_pool | 10.5 | 10.6 | data-wait |
+| 6 | hca_norm_rope_write | 6.1 | 15.9 | data-wait |
+| 7 | hca_inverse_rope_sign_0 | 6.7 | 7.0 | core-wait |
+| 8 | qproj_dequant_rms_nope_rope | 73.0 | 7.6 | core-wait |
+| 9 | hca_unified_attention_aic | 154.6 | 13.1 | data-wait |
+| 10 | proj_a_mm_0 | 20.9 | 3.8 | data-wait |
+| 11 | quant_0 | 10.0 | 8.5 | data-wait |
+| 12 | hca_oproj_hc_post_0 | 34.2 | **82.3** | **core-wait** |
+
+**这张表重新定义了目标**：允许的设备跨度约 470 μs（第 36.2 节），而静态 CPM 下限是
+420 μs，所以目标**可达但必须逼近 CPM**——当前高出 CPM 171 μs，要压到 50 μs 以内，
+即消掉 190 μs stall 里的约 140 μs。
+
+### 37.4 起步摊开：48 块能在 3 μs 内整波起来，摊开的不是派发速率
+
+| 任务 | 块数 | 起步摊开 | 用核数 | 块时长 |
+| --- | --- | --- | --- | --- |
+| `hca_oproj_hc_post_0` | 48 | **2.7 μs** | 48 | 30.49 |
+| `hca_unified_attention_aiv` | 48 | **2.9 μs** | 48 | 148.46 |
+| `qproj_dequant` | 48 | 53.8 μs | 37 | 20.48 |
+| `hca_cmp_work_gather_0` | 72 | 36.3 μs | 47 | 13.12 |
+| `quant_0` | 24 | 27.7 μs | 24 | 41.87 |
+
+⚠ **这条否掉了"派发速率是瓶颈"的猜想**：带 `allow_early_resolve=True` 且起步时核空闲的
+任务（oproj、attention）48 块在 3 μs 内全部上核。dequant 的摊开是双峰
+（11 块在 +0，空 40 μs，再 36 块涌入）——起步时只有 11 个 AIV 空闲，
+因为 `cmp_work_gather` 的 72 块同时在抢。两者合计 120 块 / 48 核 = 2.5 波、
+块时长还不齐（13.12 vs 20.48），属**装箱损失**约 34 μs。该轴 v29 试过并失败，已封。
+
+### 37.5 `local_setup_us` 的正确含义（避免第三次误读指标）
+
+`simpler/tests/ut/py/test_swimlane_converter.py:233`：**`local_setup_us = start − receive`**，
+即核收到任务到开始执行的等待；运行时注释称其为 "the clean 'AICore prep we can't hide' figure"。
+算术校验：泳道 `dur` 合计 22165 μs − `kernel-duration-us` 合计 19643.6 μs = 2521.4，
+**正好等于 `local_setup_us` 合计 2521.5**，所以 `dur = kernel-duration + local_setup`。
+
+它集中在两个任务：`quant_0` 787.9 μs（均 32.8，占其核时 78%）、
+`qr_proj_matmul` 701.0 μs（均 29.2，占 73%），两者占全部 setup 的 59%。
+
+⚠ **但这不是可回收的浪费**：它正是 `allow_early_resolve=True` 的工作方式——任务先上核、
+在核上等依赖。它的意义是把**真实计算下限**从 AIC 372 μs 修正到约 318 μs（AIV 约 250 μs），
+不构成一个独立的优化候选。
+
+### 37.6 依赖声明审计：关键路径上 6 个任务缺 `allow_early_resolve`
+
+审了 `deepseek_v4_flash_hca/*.py`、`deepseek_v4_flash_dspark_perf/qkv_proj_rope.py`、
+`deepseek_v4_flash_dspark/q_projection.py` 里全部 40 处 `pl.spmd`。关键路径 13 个任务里
+**有 6 个没有 `allow_early_resolve=True`**：`hca_kv_score_proj`(stall 5.3)、
+`hca_softmax_pool`(10.6)、`hca_norm_rope_write`(15.9)、`hca_inverse_rope_sign`(7.0)、
+`hca_state_commit`、`kv_proj_matmul`。第 27 节的 v21 正是给另外三个任务补上这个标记
+拿到 −11.78 μs，所以这条轴已被证明有效。
+
+另发现一条假依赖：`hca_raw_valid` 与 `hca_inverse_rope_sign` 在 short/long 两个 TP1 变体里
+都带 `deps=[ori_cache_ready_dep]`，但它们的 body 分别只读 `position_ids`/`kv_seq_lens` 和
+`freqs_cos`/`freqs_sin`，**与原始 KV cache 无任何数据关系**。决定性证据是
+**同文件的非 TP1 变体（`sparse_attn_hca`，第 204/217 行）这两个任务根本没有 deps**，
+说明 TP1 变体里那条是误加的。
+
+由此提出两包（都在 `results/hca_optimization_20260929/` 下）：
+
+- **v34a**：只给上述 6 个任务补 `allow_early_resolve=True`（纯调度提示，语义零变化）。
+  刻意没有给全部任务都加——`pypto-lib/models/.../moe.py` 有故意写
+  `allow_early_resolve=False` 的先例（"Keep the routed expert tasks off the cores"），
+  说明早派发会占着核，加多了可能变差。
+- **v34b**：v34a + 去掉上述两条假依赖（short 与 long 变体各 2 处）。
+
+两包分开测以便归因，各跑 128K/B16、128K/B24、8K/B24 三档 ABBA。
+
+## 38. ★ 计时口径的第四次修正：噪声全在轮间，要加轮数而不是加采样数（2026-09-29）
+
+第 28 节定下 ±13 μs 的噪声底，但没说清它从哪来，导致我一直以为"只能接受这个分辨率"。
+把 `abba_null_v22_*`（同一份代码跑 A/A）的方差拆开后，结论完全不同。
+
+### 38.1 方差分解
+
+| 档位 | 轮内 stdev（100 样本） | p50 的标准误 | **轮间 p50 stdev** |
+| --- | --- | --- | --- |
+| 128K/B16 | 14.36 | 1.44 | **13.06** |
+| 128K/B24 | 24.17 | 2.42 | 7.58 |
+| 128K/B4 | 15.03 | 1.50 | 6.29 |
+| 128K/B8 | 13.73 | 1.37 | 8.39 |
+| 8K/B32 | 14.35 | 1.44 | 3.59 |
+
+**噪声几乎全部来自轮与轮之间**：单轮 100 个样本给出的 p50 标准误只有 1.4～2.4 μs，
+而轮间 p50 的 stdev 是 3.6～13.1 μs。最刺眼的例子是 `abba_null_v22_h131072_b16`，
+同一份代码的两轮候选 p50 分别是 658.02 和 626.59，**差 31.4 μs**。
+
+成因明确：`run_hca_abba.sh` 的四轮是**四个独立进程**，每轮重新加载模型、重新分配显存，
+L2 状态、权重落位、时钟/温度都不同。这是轮间方差的来源，**与采样数无关**。
+
+### 38.2 推论：加采样数无用，加轮数有用
+
+净收益的标准误按 1/√(周期数) 下降。因此新增 `run_hca_abba4.sh`：
+做 **4 个 ABBA 周期（16 轮）**，把噪声底从 ±13 μs 压到约 **±6.5 μs**，
+单档耗时从约 4 分钟增加到约 16 分钟。分析器 `abba4.py` 按周期给出净收益的
+均值、周期间 stdev、标准误与 95% 置信区间。
+
+⚠ 顺带纠正一处：`abba_null_v22_h131072_b24` 的 `3_baseline` 轮内 stdev 高达 54.72、
+max 1298.08 μs（单个离群样本）。**p50 对它免疫、均值不免疫**，所以计时一律用 p50，
+不要改用均值。
+
+### 38.3 为什么这件事必须先做
+
+第 37 节的分解显示，剩下要补的约 105 μs **已经不是一件大事，而是十来件 5～15 μs 的小事**
+（关键路径上 6 个任务缺 `allow_early_resolve`、头部多个任务只用到 48 个 AIV 核里的 8～16 个、
+装箱损失等）。在 ±13 μs 的分辨率下，这些候选**一个都验不了**——
+v34a 的单轮结果就是证据：
+
+| 档位 | 净收益（单轮 ABBA） |
+| --- | --- |
+| 128K/B16 | **−21.44 μs** |
+| 128K/B24 | **+11.57 μs** |
+
+符号相反、量级相当，只能说"测不出来"。
+所以本轮改变做法：**先把候选按同一类打成一个大包，用 4 周期测**；
+包能测出收益再做逐项归因，包测不出来就整类放弃。
+
+### 38.4 本轮的大包 v36
+
+`results/hca_optimization_20260929/source_v36/`，= v34b + 块数修正，共 39 行差异：
+
+1. 给关键路径上 6 个缺失的任务补 `allow_early_resolve=True`
+   （`hca_kv_score_proj`、`hca_softmax_pool`、`hca_state_commit`、`hca_norm_rope_write`、
+   `hca_raw_valid`、`hca_inverse_rope_sign`、`kv_proj_matmul`）。
+2. 去掉 `hca_raw_valid` 与 `hca_inverse_rope_sign` 在 short/long 两个 TP1 变体里的假依赖
+   `deps=[ori_cache_ready_dep]`（证据：同文件非 TP1 变体这两个任务没有 deps）。
+3. `CACHE_WORKERS = 8 → 48`：`hca_raw_cache_write` 原先只用 8 个 AIV 核，
+   跨度 11.7 μs 而核时只有 87 μs；循环按 block_idx 跨步取 token，块间不相交。
+4. `ROPE_CS_T_TILE = S(6) → 2`：`hca_inverse_rope_sign` 16 块 → 48 块，纯行切分。
+5. `VALID_TOKEN_TILE = 8 → 2`：`hca_raw_valid` 12 块 → 48 块，纯行切分。
+6. `MM_ROWS = 64 → 32`：`hca_kv_score_proj` 16 块 → 24 块，正好占满 24 个 AIC。
+
+**全部数值中性**（只改块数与调度声明，不改算术、顺序、掩码），按既有约定若保留应同步到精度版。
+
+⚠ 刻意排除的一项：`WIDEN_ROWS = 8 → 2`。本仓自己的注释写明
+"A3 的列主序归约结果按 32 字节寻址；FP32 至少需要 8 个物理行"
+（`decode_compressor_ratio128.py`），而 `hca_hc_widen_rms` 的 `pl.row_sum` 结果有
+`WIDEN_ROWS` 行，降到 2 正好撞这条限制。它是关键路径 #0（跨度 16.4 μs、核时 182.4 μs、
+只用 12 个核），潜在收益约 −12 μs，但需要另找不违反 8 行规则的细分方式。
