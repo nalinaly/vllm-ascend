@@ -1809,3 +1809,481 @@ worktree `.cache/simpler-hca-dispatch-a54c05095`，三层隔离见第 6 版隔�
 
 流程：改 simpler 的派发实现 → 先用 `launch_floor` 验证单价下降 →
 再用 4 周期 ABBA 在整层上确认。
+
+## 45. ★ 预取（allow_early_resolve）的单价实测，并修正第 44.2 节的模型前提（2026-09-29）
+
+用户指出「task 不是有预取的么」，这暴露了第 44.2 节模型的一个前提错误：
+**`dsv4_pto_launch_floor.py` 里 `allow_early_resolve` 出现 0 次**，
+所以那里拟合出的 2.3 μs/任务、0.27 μs/块 量的是**未预取**的派发路径，
+不能直接套到本层里那些已经开了预取的任务上。
+
+### 45.1 A/B：只给链式用例加 `allow_early_resolve=True`
+
+把探针原样复制一份，只把 6 处链式 `pl.spmd(..., deps=[previous])` 加上该标记
+（另 2 处非链式用例的 deps 形式不同，未被改到，**正好构成内部对照**）。
+两次都跑在隔离的 simpler worktree 上，200 次采样：
+
+| tasks | blk/t | chain | 无预取 | 有预取 | 差 | 降幅 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | ✓ | 79.90 | 82.25 | +2.35 | +2.9% |
+| 8 | 1 | ✓ | 96.94 | 97.50 | +0.56 | +0.6% |
+| 8 | 24 | ✓ | 147.97 | 135.97 | **−12.00** | **−8.1%** |
+| 32 | 1 | ✓ | 151.21 | 142.33 | −8.88 | −5.9% |
+| 32 | 24 | ✓ | 352.93 | 291.87 | **−61.06** | **−17.3%** |
+| **75** | **8** | ✓ | 476.08 | 331.11 | **−144.97** | **−30.5%** |
+| 8 | 48 | ✗（未加标记） | 173.26 | 177.37 | +4.11 | +2.4% |
+| 75 | 8 | ✗（未加标记） | 475.58 | 479.03 | +3.45 | +0.7% |
+
+**两个未加标记的非链式用例几乎不变（+0.7%、+2.4%），而加了标记的链式用例最多降 30.5%。**
+这个内部对照使结论可归因，不需要额外的噪声估计。
+
+### 45.2 修正后的单价
+
+| | per-task | per-block |
+| --- | --- | --- |
+| 无预取 | 2.43 / 2.26 μs | 0.277 / 0.274 μs |
+| **有预取** | 2.18 / 1.87 μs | **0.209 / 0.203 μs** |
+
+预取把 **per-block 降约 25%、per-task 降约 15%**。
+**它的价值与块数成正比**——这正是 v34a 无效的原因：那 6 个补标记的任务合计只有 92 块，
+92 × (0.277−0.209) ≈ **6.3 μs**，本来就在噪声里。第 42.2 节说"补标记没有贡献"要按此修正为
+**"补标记的收益与块数成正比，本轮补的都是小任务所以测不出来"**。
+
+顺带查出 v34a 的编辑集漏了两个仍无预取标记的关键路径任务：
+`qproj_matmul`（`deepseek_v4_flash_dspark/q_projection.py:55/98`，24 块）与
+`hca_hc_widen_rms`（`decode_hca.py:117`，12 块）。按上述单价合计约 2.4 μs，
+仍在噪声内；widen_rms 是路径 #0，预取没有可重叠的上游，本就无益。
+
+### 45.3 per-block 成本的机制定位：1～2 次 MMIO
+
+即便全开预取，per-block 仍是 0.209 μs ≈ 209 ns。机制上转换路径每块只剩两件事：
+
+1. **门铃写**：`ring_one_doorbell`（`scheduler.h:787`）对每个被预置的核做一次
+   64-bit MMIO 存储；`ring_staged_doorbell_bits` 逐位循环，**一核一次**。
+2. **完成轮询读**：`check_running_cores_for_completion`（`scheduler_completion.cpp:302`）
+   对每个运行中的核读一次 COND 寄存器（MMIO）。
+
+MMIO 走 Device-nGnRnE（非聚合、强序、无提前写确认），每次存储要等退休才能发下一次，
+**完全串行**；该平台一次约 100～300 ns。**两次 MMIO 就把 209 ns 解释掉了。**
+
+代码里已有的相关优化（不要重复做）：`cond_ptr` 预解析、跳过 STAGING 门控核的轮询、
+prepare/publish 拆分、`prefetch_block_dst` 的 MSHR 顺序（注释称实测有约 30% 改善）、
+按 word 一次 `fetch_or` 发布门控核掩码。
+
+### 45.4 剩下唯一的大杠杆及其风险
+
+**主释放路径仍是单线程串着敲全部门铃**：`try_early_dispatch_release`（`scheduler.h:1033`）
+用 `claim_all_staged_doorbell_bits` 一次 `exchange` 把全部位取走，然后逐位 MMIO。
+一个 48 块的消费者就是 48 次串行 MMIO ≈ 7 μs。
+
+仓库里已有"每线程敲自己核"的辅助函数（`claim_late_staged_doorbell_bits`、
+`ring_claimed_local_doorbell`），但调用点只有 `scheduler_dispatch.cpp:696-702`，
+用于**竞争场景**（staging 线程发现释放已发生时补敲自己的核），**不是通用并行化**。
+
+若把释放时的门铃按核归属分摊到 3 个调度线程：关键路径 331 块 × 约 0.15 μs = 50 μs
+→ 约 17 μs，**预期路径上约 −33 μs**。
+
+⚠ 风险很高：要动运行时最热、注释里满是门铃竞态／`sync_start` 汇合／死锁推理的那部分；
+需要新增"已释放但门铃未敲完"的任务发现机制（当前没有这样的列表），否则其他线程找不到活；
+且这份运行时与 CSA 线共用。
+
+### 45.5 据此给出的可达性判断
+
+| 项（128K/B16） | 值 |
+| --- | --- |
+| 当前 PTO P50 | 632.7 μs |
+| 目标 0.80×Native | 537.3 μs |
+| **缺口** | **95.4 μs** |
+| 算子侧可寻址（data-wait，且实质是派发成本） | 63 μs |
+| 其中门铃并行化预期 | 约 33 μs |
+| 未预取任务补标记 | 约 2.4 μs |
+
+**即便门铃并行化完全成功，也只到约 600 μs（比值约 0.89），达不到 0.80。**
+要到 0.80 必须动那 79.67 μs 的 launch 常数基座（公共优化）或减少真实计算量，
+而 attention 已 96% 占核、qproj_matmul 已完美打包、O 投影链贴着 AIC 下限。
+
+## 46. 调度优化：暂停，待做项清单（2026-09-29）
+
+用户要求**调度优化先暂停**，改为先按上线编译口径刷新一版 Native vs PTO 基线对比，
+之后再继续讨论。以下是暂停时的未决项，供恢复时直接接上。
+
+### 46.1 待用户裁决的一个岔路
+
+| 选项 | 预期 | 风险／前提 |
+| --- | --- | --- |
+| A. 门铃并行化（`try_early_dispatch_release` 按核归属分摊到 3 个调度线程） | 路径上约 **−33 μs** | 高。要动运行时最热、注释里满是门铃竞态／`sync_start` 汇合／死锁推理的部分；需新增"已释放但门铃未敲完"的任务发现机制（当前没有这样的列表）；该运行时与 CSA 线共用 |
+| B. 只落地小收益并交结论 | 约 −2.4 μs + 去假依赖（0～−13，需 8 周期判定） | 低。同时把"0.80 不可达、可达约 0.89"连量化依据交给 PyPTO 团队 |
+| C. 重新考虑 79.67 μs 的 launch 常数基座 | 它单独占缺口的 **83%**，是唯一能把比值真正拉进 0.80 的项 | 用户此前定为"公共优化，先不管"；用户 2026-09-29 明确只把 per-task／per-block 划进本项目范围（见记忆 `launch-overhead-per-task-cost-in-scope`） |
+
+### 46.2 不需要再讨论就可以做的两件小事
+
+1. **补两处漏掉的预取标记**：`qproj_matmul`
+   （`deepseek_v4_flash_dspark/q_projection.py:55` 与 `:98`，24 块）和
+   `hca_hc_widen_rms`（`decode_hca.py:117`，12 块）。按第 45.2 节单价合计约 2.4 μs，
+   在噪声内，但方向正确、数值中性。widen_rms 是关键路径 #0、没有可重叠的上游，
+   预期无益，可只补 `qproj_matmul`。
+2. **去掉 4 条假依赖**（`hca_raw_valid` 与 `hca_inverse_rope_sign` 在 short/long 两个 TP1
+   变体上的 `deps=[ori_cache_ready_dep]`）。可证明为假、数值中性已实测
+   （见第 42.2 节），但量级 0～−13 μs 需 **8 周期** ABBA 才能判定。
+
+### 46.3 已确认不要再碰的（都在第 0.2 节）
+
+块数两个方向（v29 减、v35a 增）、给小任务补预取标记、拆 gather 栅栏（v30/v31）、
+合并 O 投影的组任务（第 44.1 节）、以及第 34 节的 dummy 依赖。
+
+### 46.4 恢复时可直接复用的工具
+
+- `run_hca_abba4.sh`：4 周期 ABBA，噪声底约 ±6.5 μs；`abba4.py` 给置信区间。
+- `dsv4_pto_launch_floor.py`：派发单价探针，单次约 2 分钟；判据用**同一次运行内的斜率**
+  （per-task、per-block），绝对值的运行间噪声可达 10 μs。
+- `simpler_setup.tools.critical_path`：从已有 level-4 泳道重建权威关键路径。
+- 隔离的 simpler worktree：`.cache/simpler-hca-dispatch-a54c05095`，分支
+  `hca/dispatch-probe`，三层隔离（分支／工作区／编译产物）已验证。
+
+## 47. ★★★ 口径纠正：此前所有 Native vs PTO 数字都不是上线编译口径（2026-09-29）
+
+用户要求"把 CSA 那条路径的 native 测试方式移植过来，HCA 单算子测试要用 npugraph_ex
+开 static_compile 与 superkernel"，并补充"`inplace_pass` 也要开"。照此重做后发现，
+**此前七档的全部 Native vs PTO 数字都测在一个错误的口径上**。
+
+### 47.1 旧 bench 把编译开关写进了配置，但根本不过编译器
+
+`dsv4_hca_single_layer.py` 通过 `EngineArgs` 设了
+`ascend_compilation_config = {enable_npugraph_ex: True, enable_static_kernel: True}`，
+但它随后**直接构造 layer、自己 `torch.npu.graph` 捕获**，
+完全不经过 vLLM 的 torch.compile 路径。而这两个开关只在
+`vllm_ascend/compilation/compiler_interface.py` 的 `_configure_backend` 里被消费，
+那是 torch.compile 后端的组装函数。**写进去等于没写。**
+
+（第 33／34 节里"static_kernel 是否生效"的讨论到此有了确定答案：在旧 bench 上从未生效。）
+
+### 47.2 正确入口：`@support_torch_compile` + EngineArgs，或显式 torch.compile
+
+CSA 会话有两个脚本，我一开始把它们混为一谈，这里记清楚区别：
+
+| 脚本 | `--side` | 编译入口 | SuperKernel |
+| --- | --- | --- | --- |
+| `compiled_case.py` | native / pto | **只靠 `@support_torch_compile`**，不调 torch.compile；编译口径来自 EngineArgs 的 `enable_npugraph_ex`/`enable_static_kernel` | 不传 |
+| `native_case.py` | **只有 native** | 额外显式 `torch.compile(backend="npugraph_ex", dynamic=False, options={...})` | `super_kernel_optimize` |
+
+所以在 `compiled_case.py` 里 `module.compiled` 是有效判据；一旦自己再调一次
+`torch.compile`（本项目现在的做法），vLLM 的内层 wrapper 不会被标记，
+`module.compiled` 恒为 False，**不能用它当门禁**。本项目改用静态编译证据判：
+`static_compile_results` 全 True、`_installed_run_pkgs` 非空（仅 Native 侧要求）、
+PTO 侧 `RequirePTORuntime` 计数非零。
+
+### 47.3 生产 options 与本项目 options 的差异（必须记住）
+
+`compiler_interface.py:116-129` 里 vllm-ascend 实际传给 npugraph_ex 的是：
+
+```python
+options = {"force_eager": True, "inplace_pass": False, "clone_input": False, "clone_output": False}
+if enable_static_kernel:
+    options["static_kernel_compile"] = True
+    options["_vllm_aclnn_static_kernel_sym_range"] = _compute_decode_cudagraph_batch_sizes(vllm_config)
+```
+
+| option | 生产 | CSA native_case | 本项目（用户要求） |
+| --- | --- | --- | --- |
+| `force_eager` | **True** | False | False |
+| `inplace_pass` | **False**（注释：avoid gelu fallback to CPU） | False | **True** |
+| `static_kernel_compile` | True（开关开时） | True | True |
+| `super_kernel_optimize` | **生产里不存在此项** | True（仅 Native） | True |
+
+`inplace_pass=True` 实测无问题：那条注释针对 gelu（在 MoE 部分），attention 半边里没有 gelu，
+Native 侧带着它 MEASURED 通过。
+
+### 47.4 ★ SuperKernel 只有 Native 能用
+
+| 侧 | superkernel=1 |
+| --- | --- |
+| Native | 通过，`static_super_flags=[true]` 证明标记确实进了静态编译器 |
+| PTO | **失败**：`super_kernel_optimize: AclskOptimize(model_ri_, options) error 107017`，`Invalid resource handle`，`Parameter funcHandle is invalid` |
+
+PTO 半边整个是一个自定义算子（`dsv4_hca_forward` → PyPTO kernel），
+它的函数句柄不被 SuperKernel 接受。两条旁证：CSA 的 SuperKernel 脚本
+`native_case.py` **只支持 `--side native`**；生产 options 里没有这一项。
+
+**SuperKernel 在 Native 上值 −54.03 μs**（128K/B16：838.34 → 784.31，−6.4%）。
+
+### 47.5 ★ 静态编译也只帮到 Native，比值因此反转
+
+| 侧 | static_compile 触发 | 装包数 |
+| --- | --- | --- |
+| Native | `[True]` | 1 |
+| PTO | **`[]`（一次都没触发）** | **0** |
+
+Native 半边是一串 aclnn 算子，静态 kernel 有东西可编；PTO 半边只有一个自定义算子，
+图里没有可静态化的 aclnn 算子，所以装包数为 0 是**正常的**，
+判据里对 PTO 侧不能要求静态编译（CSA 的 `if runtime is None and ...` 正是这个意思）。
+
+**128K/B16，两侧同配 superkernel=0 的首轮结果：**
+
+| | p50 |
+| --- | --- |
+| Native | **838.34 μs** |
+| PTO | **865.81 μs** |
+| **比值** | **1.033（PTO 更慢）** |
+| 目标 0.80×Native | 670.67 μs，还需降 195.14 μs |
+
+对比旧（非编译）口径的 0.942～0.957：**比值从"PTO 快 5%"反转成"PTO 慢 3%"**，
+若再开 Native 的 SuperKernel 则为 **1.104**。
+
+数值检查：PTO 与自身 eager 参照**逐项 PASS**（逐 bit 一致）；
+Native 的 `x_out`/`swa` 相对 eager 为 FAIL，那是静态 kernel 路径的正常数值差异，
+无非有限值——CSA 同样只对 PTO 侧要求逐 bit（`require_exact=runtime is not None`）。
+
+### 47.6 新增的文件与运行方式
+
+| 文件 | 作用 |
+| --- | --- |
+| `dsv4_hca_compiled_case.py` | 单侧用例，显式 `torch.compile(backend="npugraph_ex", fullgraph=True, dynamic=False, options=...)` |
+| `dsv4_hca_compiled_measure.py` | 图外 NPU Event 计时；**不再嵌套外层 NPUGraph**（npugraph_ex 自己管 capture/replay） |
+| `dsv4_hca_prepare_opp.py` | 每侧一份干净私有 OPP 根，`static_kernel` 留空，不动共用 CANN |
+| `run_hca_compiled_case.sh` | 单侧运行器；**不做 `ASCEND_RT_VISIBLE_DEVICES` 重映射**，直接用队列分配的卡 |
+| `submit_hca_compiled_tiers.sh` | 七档 × 两侧 × `REPEATS` 轮，`--device auto` 并行 |
+
+⚠ 两侧各一个进程，**无法像 ABBA 那样互相扣漂移**（实测进程间 p50 stdev 6～13 μs），
+所以每个（档位, 侧）要重复多轮取 p50 的中位数。
+
+## 48. 上线编译口径的七档基线（2026-09-29）
+
+⚠ **本节的主表用的是错误口径，已在第 49 节纠正。** 用户明确：
+**完整的 HCA 差距要用 Native 开 SuperKernel 的口径**，关掉 SuperKernel（sk=0）
+只供 incore task 的细分对比使用。我当时因为"PTO 侧开不了 SuperKernel"就把两侧都关掉
+来凑同配，这是错的——Native 该用它最好的形态。
+下面 sk=0 的七档数字**只作为 incore 分析的诊断参考线**保留。
+
+按第 47 节的新口径重测七档。42/42 任务 completed，两侧同配 `--super-kernel 0`
+（PTO 侧开不了，见 47.4），`static_kernel_compile=True`、`inplace_pass=True`，
+每个（档位, 侧）跑 3 轮、取各轮 p50 的中位数。
+结果目录 `results/hca_compiled_20260929/seven_sk0/`。
+
+| 档位 | Native p50 | PTO p50 | 比值 | 目标 0.80N | 还需降 |
+| --- | --- | --- | --- | --- | --- |
+| 128K/B4 | 556.18 | 647.69 | **1.165** | 444.94 | 202.75 |
+| 128K/B8 | 662.99 | 727.42 | **1.097** | 530.39 | 197.03 |
+| 128K/B16 | 836.60 | 915.34 | **1.094** | 669.28 | 246.06 |
+| 128K/B24 | 1001.22 | 1046.93 | **1.046** | 800.98 | 245.95 |
+| 8K/B16 | 702.30 | 777.48 | **1.107** | 561.84 | 215.64 |
+| 8K/B24 | 797.48 | 907.75 | **1.138** | 637.98 | 269.77 |
+| 8K/B32 | 892.60 | 1017.16 | **1.140** | 714.08 | 303.08 |
+
+**128K 平均 1.100，8K 平均 1.128，8:2 加权 1.106。七档全部 > 1.0。**
+
+轮间极差多数在 1～30 μs，个别大：128K/B24 的 Native 三轮 988.7 / 1001.2 / 1223.3
+（极差 234.6，有一轮明显掉队），8K/B16 的 PTO 极差 72.6。取中位数可免疫这类离群轮，
+但说明**单轮数据在这条路径上不可信**，重复取中位是必须的。
+
+### 48.1 两侧绝对值都变慢，且 PTO 被拖得更多
+
+| 128K/B16 | 旧口径（不过编译器） | 新口径 | 变化 |
+| --- | --- | --- | --- |
+| Native | 671.57 | 836.60 | **+165.0** |
+| PTO | 632.71 | 915.34 | **+282.6** |
+
+两层原因：
+
+1. 新口径给 Native 加上了 static_kernel（本该更快），它却仍然 +165 μs，
+   说明这条编译路径本身带着额外开销，不是 static_kernel 的问题。
+2. **计时区间的内容变了**。旧 harness 把调用捕获进自建 NPUGraph 后**纯设备重放**
+   （`graphs[name].replay()`）；新口径照 CSA 的 `measure_graph_interval`，每次迭代都执行
+   `run()`，里面包含 `context()`（forward context 进出、compact metadata 缓存预置）
+   与编译后 module 的调用，**主机侧派发也落在两个 Event 之间**。
+   这更接近生产（生产每层也有主机工作），但与旧的"纯设备区间"不是同一个量。
+
+⚠ 因此**不要把第 36／39／43／44／45 节里基于旧口径的绝对数字与新口径混用**。
+那几节的结构性结论（关键路径构成、per-task／per-block 单价、预取价值）仍然成立，
+但"缺口 95 μs、可寻址 63 μs"这类预算数字是旧口径下的，必须按新口径重算。
+
+### 48.2 比值反转的机制归属
+
+| 加速项 | Native | PTO |
+| --- | --- | --- |
+| static_kernel 编译 | 触发，装包 1 个 | **一次都不触发，装包 0 个** |
+| SuperKernel | 可用，值 **−54.03 μs**（128K/B16） | **不可用**（`funcHandle is invalid`） |
+
+PTO 的整个 attention 半边是一个自定义算子（`dsv4_hca_forward` → PyPTO kernel），
+图里没有可静态化的 aclnn 算子，也没有 SuperKernel 能接受的函数句柄。
+
+⚠ **这是设计使然，不是 PTO 的缺陷。** 用户已明确：static_kernel 与 SuperKernel
+都只对 Native 有效，**PTO 用不着**——它靠自己的融合与核内调度，不走这两条。
+所以不要为了让 PTO 吃到这两项而改注册方式、拆图或包装算子，也不要把
+PTO 侧装包数为 0 当成失败。判据里只有 Native 侧要求实际完成静态编译并装包
+（与 CSA 的 `if runtime is None and ...` 一致）。
+
+若把 Native 的 SuperKernel 也开上（上线模板未开，但它确有收益），
+128K/B16 的比值会从 1.094 变成 **1.104**（784.31 vs 865.81 首轮口径）。
+
+### 48.3 由此需要重新界定的问题
+
+到 0.80 的差距从旧口径的 76～133 μs 变成 **197～303 μs**。
+
+这个对比本身是公平的：**Native 用它最好的形态（static_kernel + 可选 SuperKernel），
+PTO 用它自己的形态（一个融合自定义算子）**，PTO 必须在这个基础上赢。
+PTO 用不着那两项，所以问题不是"去把它们接上"，而是
+**PTO 自己的这一个融合算子要比 Native 那串带静态 kernel 的 aclnn 算子更快 20%**。
+
+因此需要重算的是：新口径下 PTO 的 915 μs 里，设备侧真正花在 PTO 任务图上的是多少、
+主机派发占多少、以及第 39 节那套关键路径分解在新口径下还剩多少可回收空间。
+第 36／39／43／44／45 节的绝对数字都要按新口径重做。
+
+## 49. ★★★ 验收口径的七档基线：Native 开 SuperKernel，PTO 比它慢 17.7%（2026-09-29）
+
+第 48 节把两侧都关掉 SuperKernel 当主口径是错的。用户明确：
+**sk=0 是供 incore task 细分对比用的，完整的 HCA 差距要开 sk。**
+Native 该用它最好的形态；PTO 结构上用不了 SuperKernel（第 47.4 节），照常跑即可。
+CSA 的做法一致——其日志原话："分析 incore 时也保持 dynamic=False，只关闭 SuperKernel。"
+
+| 口径 | 用途 |
+| --- | --- |
+| **Native sk=1 vs PTO** | **完整 HCA 差距 / 验收** |
+| Native sk=0 vs PTO | 仅用于 incore task 细分对比（第 48 节那张表） |
+
+### 49.1 验收口径七档（各档各侧 3 轮，取 p50 中位数）
+
+结果目录：Native `results/hca_compiled_20260929/seven_sk1_native/`、
+PTO `results/hca_compiled_20260929/seven_sk0/`（PTO 侧 sk 恒为 0，两处 PTO 数据同源）。
+
+| 档位 | Native(sk=1) | PTO | 比值 | 目标 0.80N | 还需降 | 参考 Native(sk=0) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 128K/B4 | 528.37 | 647.69 | **1.226** | 422.70 | 224.99 | 556.18 |
+| 128K/B8 | 599.18 | 727.42 | **1.214** | 479.34 | 248.08 | 662.99 |
+| 128K/B16 | 782.34 | 915.34 | **1.170** | 625.87 | 289.47 | 836.60 |
+| 128K/B24 | 977.01 | 1046.93 | **1.072** | 781.61 | 265.32 | 1001.22 |
+| 8K/B16 | 640.73 | 777.48 | **1.213** | 512.58 | 264.90 | 702.30 |
+| 8K/B24 | 760.71 | 907.75 | **1.193** | 608.57 | 299.18 | 797.48 |
+| 8K/B32 | 840.78 | 1017.16 | **1.210** | 672.62 | 344.54 | 892.60 |
+
+**128K 平均 1.170，8K 平均 1.206，8:2 加权 1.177。七档全部 > 1.0。**
+每档到 0.80 还需降 **225～345 μs**。
+
+### 49.2 SuperKernel 在 Native 上的实测收益
+
+各档（sk=0 减 sk=1）：27.8 / 63.8 / 54.3 / 24.2 / 61.6 / 36.8 / 51.8 μs，**平均 45.8 μs**。
+这是 Native 独享的加速，PTO 拿不到（设计使然，见第 47.4 节与记忆
+`static-kernel-and-superkernel-are-native-only`）。
+
+### 49.3 与旧口径的对照，以及哪些结论需要重做
+
+| 128K/B16 | 旧口径（不过编译器） | 新口径（验收） |
+| --- | --- | --- |
+| Native | 671.57 | 782.34（sk=1） |
+| PTO | 632.71 | 915.34 |
+| 比值 | 0.942 | **1.170** |
+| 到 0.80 的差距 | 76～133 μs（七档） | **225～345 μs（七档）** |
+
+⚠ **第 36／39／40／43／44／45 节里所有基于旧口径的绝对数字与预算都作废**
+（"缺口 95 μs、可寻址 63 μs、data-wait 63 μs、core-wait 111 μs"等）。
+那几节的**结构性结论**（关键路径由哪些任务组成、per-task／per-block 单价的存在与量级、
+预取的价值与块数成正比、块数两个方向都不是杠杆）仍然成立，但要在新口径下重新标定。
+
+第 46 节的调度优化待做项清单同样需要按新口径重新估值：门铃并行化在旧口径下预期 −33 μs，
+而现在的缺口是 225～345 μs，占比从 1/3 降到 1/10 左右。
+
+## 50. ★★★ 新口径下的拆解：PTO 的设备侧任务图已接近目标，缺口在算子之外（2026-09-29）
+
+给 `dsv4_hca_compiled_case.py` 加了 `--swimlane`（PTO 侧专用）。注意：
+**只在 `pypto.torch.init` 里开 `enable_chip_swimlane=4` 不会落盘**，
+必须显式 `pypto.torch.begin_dfx()` / `end_dfx()` 包住一次调用，
+再用 `dsv4_csa_single_card_bench._export_swimlane` 导出成带真实任务名的泳道
+（`kernel_pattern="_jit__decode_hca_tp1_layer_*/kernel_config.py"`）。
+这与 `dsv4_hca_performance.capture_swimlane` 的做法一致。
+
+### 50.1 PTO 侧（128K/B16，新口径）
+
+`results/hca_compiled_20260929/swim_pto_h131072_b16/dfx/critical_path_report.md`：
+
+| 量 | 值 |
+| --- | --- |
+| **设备侧 PTO 任务图 makespan** | **623 μs** |
+| 静态 CPM 下限 | 434 μs（69.7%） |
+| 观测路径 compute | 485 μs（77.9%） |
+| 观测路径 stall | 138 μs（22.1%；data-wait 105、core-wait 32） |
+| 端到端 PTO p50（3 轮中位数） | 915.34 μs |
+| **任务图之外** | **约 292 μs** |
+
+### 50.2 与旧口径对照：涨的主要不是任务图
+
+| 128K/B16 | 旧口径 | 新口径 | 变化 |
+| --- | --- | --- | --- |
+| 设备侧任务图 makespan | 538 | 623 | +85 |
+| 端到端 PTO | 632.71 | 915.34 | +282.6 |
+| **任务图之外** | **95** | **292** | **+197** |
+
+### 50.3 ⚠ 本小节的判断已被第 51 节的 profiler 实测推翻，保留作为过程记录
+
+**PTO 的设备侧任务图 623 μs，已经几乎等于 0.80×Native 的目标 625.87 μs。**
+
+也就是说，在新口径下缺口的主体**不在 PTO 算子内部**，而在它外面：
+每次调用的 `context()`（forward context 进出、compact metadata 缓存预置）、
+npugraph_ex 对"一个自定义算子"的图重放机制、以及主机派发。
+旧 harness 是把调用捕获进自建 NPUGraph 后纯设备重放，这部分开销被排除在外，
+所以旧口径看不到它。
+
+⚠ **但还不能据此定论**：Native 侧走同一套计时，也付它自己的那份主机开销，
+只是 Native 没有 PyPTO 任务图、无法用同样方式拆。
+必须用 torch_npu profiler 把**两侧**的主机/设备分别拆出来对比，
+才能判断这 292 μs 里有多少是 PTO 独有的。
+两侧的 profiler 采集已提交（`prof_native_h131072_b16` / `prof_pto_h131072_b16`）。
+
+在那份对比出来之前，不要把"缺口在算子之外"当成结论——这是第 41 节同类错误
+（当时我用两条不同代码路径相减推断 105 μs 是 compact metadata，实测后是 0）。
+
+## 51. ★★★ profiler 实测：主机开销两侧相同，差距全在设备侧（2026-09-29）
+
+第 50.3 节据"端到端 915 − 任务图 623 = 292 μs"推断缺口主体在 PTO 算子之外。
+用 torch_npu profiler 把**两侧**分别拆开后，这个推断**不成立**——
+又是一次"拿两个不同来源的数相减"的错误（同第 41 节）。
+
+### 51.1 两侧拆解（128K/B16，profiler 采集，Native sk=1 / PTO sk=0）
+
+| 侧 | kernel 数 | 设备忙时和 | **设备跨度** | 端到端 p50 | **主机/其他** |
+| --- | --- | --- | --- | --- | --- |
+| Native | 17 | 548.8 | **572.5** | 825.37 | **252.9** |
+| PTO | **2** | 1390.3 | **701.2** | 927.40 | **226.2** |
+
+（profiler 会抬高端到端，两侧同受影响；设备跨度取 kernel 记录的首末。）
+
+**主机开销两侧几乎相同（252.9 vs 226.2，PTO 反而低 27 μs）。
+差距全在设备侧：572.5 → 701.2，+128.7 μs**，与端到端差 102 μs 同量级。
+
+### 51.2 两侧的设备侧构成完全不同
+
+PTO 侧只有 **2 个 kernel**：
+
+| 耗时 | 核类型 | 名称 |
+| --- | --- | --- |
+| 701.28 | AI_CPU | `simpler_aicpu_kernel_exec_...`（PyPTO 的 AICPU 调度器，覆盖整个跨度） |
+| 689.04 | MIX_AIC | `aicore_kernel_mode_0`（整个融合算子） |
+
+Native 侧 17 个静态编译 kernel，前几名：
+
+| 耗时 | 核类型 | 名称 |
+| --- | --- | --- |
+| 174.24 | MIX_AIC | `sk_23_..._static_kernel_SparseAttnSharedkv_...` |
+| 102.96 | MIX_AIC | `sk_18_..._static_kernel_InplacePartialRotaryMul_...` |
+| 63.92 | MIX_AIC | `sk_15_..._static_kernel_RmsNorm_...` |
+| 50.34 | MIX_AIC | `sk_13_..._static_kernel_HcPre_...` |
+| 44.20 | MIX_AIC | `sk_20_..._static_kernel_Compressor_...` |
+| 17.82 | AI_VECTOR_CORE | `triton_rms_kernel` |
+| 15.52 | MIX_AIV | `sk_19_..._static_kernel_HcPost_...` |
+| 15.50 / 12.14 | AI_CORE | `aclnnMatmulWeightNz_MatMulCommon_MatMulV2` ×2 |
+
+合计 548.8 μs。
+
+### 51.3 ★ 问题的最终形态
+
+**PTO 用一个融合 kernel 做完这半边要 689 μs；Native 用 17 个静态编译 kernel 只要 549 μs。**
+
+按干净口径（无 profiler）折算：主机开销约 240 μs 两侧共有，
+则 PTO 设备侧约 675 μs、Native 约 542 μs，而 0.80×Native 对应的 PTO 设备侧预算是
+625.87 − 240 ≈ **386 μs**。即 **PTO 的设备侧要从 675 降到 386，−43%**。
+
+这与第 49 节"每档还需降 225～345 μs"一致，并把它定位到了**设备侧融合算子本身**，
+不是主机、不是编译路径、也不是 compact metadata。
+
+下一步该做的是逐项对照：Native 那 17 个 kernel 各自做什么、耗时多少，
+与 PTO 融合算子内部对应的 incore task 比，找出 PTO 慢在哪几段。
+这正是记忆 `perf-target-is-per-incore-task-gap` 说的口径，只是现在有了
+Native 侧带静态 kernel 的真实分项数字可以对照。
