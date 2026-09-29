@@ -35,8 +35,8 @@ for v in "${ab_variants[@]}"; do
     ab_source[base]=""
   elif [ "$label" != "$v" ]; then
     ab_source[$label]="--operator-source ${v#*=}"
-  elif [[ "$v" =~ ^nz[0-9]$ ]]; then
-    ab_source[$v]=""   # 只改环境档位，源码用仓库生产版
+  elif [[ "$v" =~ ^nz[0-9]$ ]] || [ "$v" = dbc ]; then
+    ab_source[$v]=""   # 只改环境/编译开关，源码用仓库生产版
   else
     hit="$(ls -d "$hca_tests"/variants_*/"$v" 2>/dev/null | head -1)"
     [ -n "$hit" ] || { printf '找不到变体 %s\n' "$v" >&2; exit 2; }
@@ -67,6 +67,9 @@ for label in "${ab_order[@]}"; do
   if [[ "$label" =~ ^nz([0-9])$ ]]; then
     ab_env=("VLLM_ASCEND_ENABLE_NZ=${BASH_REMATCH[1]}")
     ab_extra=(--weight-nz-mode "${BASH_REMATCH[1]}")
+  elif [ "$label" = dbc ]; then
+    # 只切编译期的 L0C 双缓冲开关，源码用仓库生产版。
+    ab_extra=(--pypto-dbc)
   fi
   # 不用 exec：要在同一个任务（同一张卡）里接着跑下一个变体。
   env "${ab_env[@]}" bash "$hca_tests/run_hca_compiled_case.sh" "$target" pto \

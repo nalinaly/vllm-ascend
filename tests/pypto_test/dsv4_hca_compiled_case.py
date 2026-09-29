@@ -143,6 +143,13 @@ def main():
     # 单次 profiled 重放的 span 方差太大（实测本不该受影响的档位摆了 44 μs），
     # 分辨不了 20 μs 量级的改动；在同一个 profiler 窗口里连采多次、取中位数。
     parser.add_argument("--profile-replays", type=int, default=9)
+    # legacy-PYPTO planner 下的 L0C 双缓冲开关。没有它时 AutoTileMatmulL0 的
+    # roofline 是 wall ≈ max(C_load, C_mad) + C_drain，FIXPIPE 的 drain 完全暴露；
+    # Native 的 L0C 是 2×64 KiB 双缓冲（ops-transformer 的 L0C_PP_SIZE），PTO 现在只有一份。
+    # 这个 flag 只能经 PassContext 生效（CompileOptions 里没有对应字段），
+    # 而且只在 PYPTO planner 下有意义（PTOAS/DSA_RP 下 dbC=2 是自动的）。
+    parser.add_argument("--pypto-dbc", action="store_true",
+                        help="编译时打开 legacy-PYPTO 的 L0C 双缓冲（dbC=2）")
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--swimlane", action="store_true",
                         help="PTO 侧采 level-4 泳道用于拆解设备侧任务图跨度；"
@@ -172,6 +179,7 @@ def main():
     report = {
         "status": "RUNNING", "side": args.side, "batch": args.batch, "history": args.history,
         "tokens": tokens, "device": args.device, "layer_index": LAYER_INDEX, "source": str(SOURCE),
+        "pypto_l0c_double_buffer": bool(args.pypto_dbc),
         "compile_entry": 'torch.compile(backend="npugraph_ex", dynamic=False)',
         "super_kernel": bool(args.super_kernel), "inplace_pass": bool(args.inplace_pass),
         "variant": os.environ.get("PTO_CSA_VARIANT", "（未设置）"),
@@ -312,7 +320,14 @@ def main():
                                          dynamic=False, options=options)
 
                 def compiled_call():
-                    with context():
+                    with contextlib.ExitStack() as stack:
+                        stack.enter_context(context())
+                        if args.pypto_dbc:
+                            # PyPTO 的 JIT 在首次调用时编译，所以 PassContext 必须在
+                            # 这里生效；后续重放再进出一次只是主机侧开销，不进设备跨度。
+                            from pypto.pypto_core import passes as pypto_passes
+                            stack.enter_context(pypto_passes.PassContext(
+                                [], enable_pypto_l0c_double_buffer=True))
                         compiled(fixture["hidden"], fixture["positions"], output)
 
                 restore(fixture)

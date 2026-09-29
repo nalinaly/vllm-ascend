@@ -4607,3 +4607,62 @@ Mat 片不能跨迭代存活、Mat 片的分支 phi 也受限。而 `hca_unified
 非 attention 部分的修改（`ptoas_k128c`）是有效且可复用的，留在变体目录里。
 
 **这一轮到此为止：七档加权 1.117，距 0.80 差 0.317，没有找到不越界的路径。**
+
+---
+
+## 83. ✗ `enable_pypto_l0c_double_buffer`：旧 allocator 装不下（2026-09-29）
+
+§82 之后还剩一个绕开 attention 阻塞、仍能拿到 PTOAS 一半收益的可能：
+**在默认 PYPTO planner 下单独打开 L0C 双缓冲**。这是 §67.1 里
+Native 有（`ops-transformer` 的 `L0C_PP_SIZE = 64 KiB`，两片共 128 KiB 满 L0C）
+而 PTO 没有的那一项；没有它，`AutoTileMatmulL0` 的 roofline 是
+`wall ≈ max(C_load, C_mad) + C_drain`，FIXPIPE 的 drain 完全暴露。
+
+### 83.1 怎么开
+
+这个 flag **只能经 `PassContext` 生效**——`CompileOptions` 里没有对应字段
+（`pypto/python/pypto/ir/compile.py:177` 有 `enable_pypto_l0c_double_buffer` 这个
+kwarg，但 `CompileOptions.as_compile_kwargs()` 不产出它）。
+而 PyPTO 的 JIT 在**首次调用时**编译，所以 PassContext 必须在那时生效。
+
+已给 `dsv4_hca_compiled_case.py` 加 `--pypto-dbc`，用 `contextlib.ExitStack`
+在 `compiled_call` 里叠一层 `PassContext([], enable_pypto_l0c_double_buffer=True)`；
+`run_hca_ab_same_card.sh` 加 `dbc` 标签（与 `nz1`/`nz2` 同一机制，只切编译开关、
+源码用生产版）。
+
+### 83.2 实测：编译失败
+
+```
+Right buffer usage (131072 bytes) exceeds platform limit (65536 bytes)
+Check failed: limit == 0 || used <= limit
+  at pypto/src/ir/transforms/allocate_memory_addr_pass.cpp
+```
+
+注意溢出的是 **Right（L0B）而不是 Acc（L0C）**。原因在
+`AutoTileMatmulL0` 的 chooser：有没有 dbC 用的是**两个不同的 roofline**
+
+- 无 dbC：`wall ≈ max(C_load, C_mad) + C_drain`
+- 有 dbC：`wall ≈ max(C_load, C_mad, C_drain) + min(compute, C_drain) / T`
+
+于是开了 dbC 之后 `ChooseL0Tile` 选出**另一个更大的 (m, n, k)**，L0B 装不下。
+而旧 PYPTO allocator "只是把复用类顺序堆叠、从不细分已释放区域"
+（`18-auto_tile_matmul_l0.md` 的限制说明 + pypto issue #1908），不会优雅降级。
+
+这与 §67.2 的 `ak128` 是**同一个报错、同一个根因**：
+`A_K_TILE=128` 当初也是 `Right buffer usage 131072 > 65536`。
+**旧 allocator 是这两件事共同的拦路石**，而 `DSA_RP` / `PTOAS`
+"已按实际生命周期放置缓冲"本可以处理——但那两个 planner 又各自被别的东西挡住
+（DSA_RP 找不到 `proj_a_mm` 的放置方案，PTOAS 卡在 attention 的 Mat）。
+
+### 83.3 本轮可用手段至此穷尽
+
+| 层面 | 手段 | 结果 |
+|---|---|---|
+| 算子·块数/分块 | 9 个候选（worker 数、L0/L1 分块、cache policy、pipeline stage、行块…） | 2 个落地（−47 μs），7 个实测否决 |
+| 算子·结构 | B 路线：按 token 分片缩短依赖链 | 四种配置实测 +40～+65 μs，且目标收益已被 `allow_early_resolve` 实现 |
+| 编译期开关 | `memory_planner=PTOAS` | 非 attention 部分 8→1，attention 的 Mat 用法四种写法全被拒 |
+| 编译期开关 | `memory_planner=DSA_RP` | `proj_a_mm` 找不到片上放置方案 |
+| 编译期开关 | `enable_pypto_l0c_double_buffer` | L0B 溢出，旧 allocator 装不下 |
+
+**七档加权 1.117，距 0.80 差 0.317。在不改 PyPTO、不重写 attention 软流水的前提下，
+没有找到进一步的路径。**
