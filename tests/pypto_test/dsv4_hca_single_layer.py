@@ -27,6 +27,9 @@ def main():
     parser.add_argument("--timing-iters", type=int, default=0, help="每侧图重放计时次数；0 不计时")
     parser.add_argument("--timing-warmup", type=int, default=5)
     parser.add_argument("--profile", action="store_true", help="计时结束后分别采集 Native/PTO 图重放 profiler")
+    parser.add_argument("--timing-direct", action="store_true",
+                        help="额外给直接算子调用计时（compact metadata 预先算好），"
+                             "用于量出服务入口里整步 metadata 生成的设备耗时")
     parser.add_argument("--swimlane", action="store_true", help="独立采集两次 PTO 图重放泳道，不与正式计时混用")
     parser.add_argument("--swimlane-cold-l2", action="store_true",
                         help="泳道每个窗口前冲刷 L2，使权重读取与正式交替计时一样为冷数据")
@@ -334,9 +337,16 @@ def main():
                 if args.timing_iters:
                     from dsv4_hca_performance import measure_graph_pair
 
+                    timed = {"native": native_call, "pto": service_call}
+                    refs = {"native": native, "pto": service}
+                    if args.timing_direct:
+                        # 直接算子调用：compact metadata 预先算好，不含服务入口那段。
+                        # 生产里那段每步只算一次、61 层共享（见 dspark/service.py 的
+                        # _compact_metadata docstring），单层 bench 会把它整份记在这一层上。
+                        timed["pto_direct"] = call
+                        refs["pto_direct"] = pto
                     report["timing"] = measure_graph_pair(
-                        fixture, output, {"native": native_call, "pto": service_call},
-                        {"native": native, "pto": service}, collect,
+                        fixture, output, timed, refs, collect,
                         iters=args.timing_iters, warmup=args.timing_warmup,
                         profile_dir=args.output / "profile" if args.profile else None,
                     )
