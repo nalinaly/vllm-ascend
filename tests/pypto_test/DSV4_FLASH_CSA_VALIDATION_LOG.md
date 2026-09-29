@@ -12317,3 +12317,25 @@ CPU在性能结束后读取这次保存的完整状态，x_out、Top-K、cache/s
 [inner wkv复核](results/csa_inner_wkv_nz_confirm_20260929/RESULTS.md)、
 [主wgate复核](results/csa_cmp_wgate_nz_confirm_20260929/RESULTS.md)、
 [八张矩阵总表](results/csa_static_b_nz_20260929/README.md)。
+
+## 464. 回到Sparse热点：参考AscendC整块Gather减少逆RoPE行间屏障（2026-09-29）
+
+上一阶段八张静态B NZ验证已收口。本轮重新依据f4861832七档核内对照：长B24 Sparse AIV
+233.282μs，Native223.867μs，且短档仍有差距；PTO含逆RoPE，不能把二者差额全部视为可回收核时。
+从生产369ad2c1算子建立新的私有整包baseline/candidate，仅性能版Sparse单文件改动。
+
+最新本地AscendC ops-transformer28f40354的rotate_interleaved_split_bsn_pad.h在214行准备整块索引，
+261/295行按calcTotalNum/totalCount执行Gather。PTO Sparse已有单条二维TGATHER，不同于旧Q路径
+额外逐行TMOV；核实ISA A3 TGather.hpp，内部仍按16个validRow分别vmuls、PIPE_V barrier、vgather。
+新候选将绝对head索引16×64展平为1×1024、输入16×512视图展平1×8192，输出原样reshape还原。
+因此16轮变一轮、一次覆盖16个vector repeat，元素数和读取字节数不变，不宣称算术工作减少16倍。
+
+全部Sparse除法/归一化、局部softmax、BF16 RINT、QK/PV、KV分页采集、三槽预发、worker/依赖/early保持。
+完整CPU编译、PTOAS/CCE/link/load及两根解析通过；两个展开点均确认1×1024 TGATHER，reshape重绑同地址。
+与未改Sparse的既有编译产物比，TLOAD23/TSTORE13/TMOV9/TEXTRACT14/TCONCAT4相同，没有新增搬运。
+不做全仓hash扫描，也不据编译通过宣称设备收益或数值中性已验收。
+
+task_20260929_193859_406772521712已正常auto提交，冻结pkg后不再修改；标准128K/B16、8K/B24，
+完整事件计时/P95、四窗Sparse双核，性能完成后检查八类完整状态/索引/保护区。有效才补受影响边界。
+Native旧正式基线复用，精度版/Native流程/工具链和生产算子均未改。
+[源码、补丁、CPU证据与运行入口](results/csa_sparse_rope_flat_gather_20260929/README.md)。

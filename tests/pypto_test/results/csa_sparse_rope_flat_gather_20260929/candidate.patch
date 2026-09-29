@@ -1,0 +1,38 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_sparse_rope_flat_gather_369ad2c1_v1/decode_sparse_attn_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_sparse_rope_flat_gather_369ad2c1_v1/decode_sparse_attn_csa.py
+@@ -470,7 +470,10 @@
+             m_swap_base = pl.create_tile([FINAL_HEAD_TILE, ROPE_DIM], dtype=pl.INT32)
+             m_swap_source = pl.col_expand(m_swap_base, m_swap_row)
+             m_row_offsets = pl.tile.muls(pl.tile.ci(0, [1, FINAL_HEAD_TILE], dtype=pl.INT32), HEAD_DIM)
+-            m_swap_idx = pl.row_expand_add(m_swap_source, pl.reshape(m_row_offsets, [FINAL_HEAD_TILE, 1]))
++            m_swap_idx = pl.reshape(
++                pl.row_expand_add(m_swap_source, pl.reshape(m_row_offsets, [FINAL_HEAD_TILE, 1])),
++                [1, FINAL_HEAD_TILE * ROPE_DIM],
++            )
+             running_m = pl.load(attn_sink_col, [qk_lane_head, 0], [H // 2, 1])
+             # 上游口径：l 从 0 起算，sink 的那一项留到最终发布的分母里补。
+             running_l = pl.tile.muls(running_m, 0.0)
+@@ -617,7 +620,7 @@
+                         # Native SCFA normalizes inside its last PV update. Keep
+                         # PTO arithmetic, but consume the live accumulators instead
+                         # of publishing FP32 mi/li/oi for a separate merge task.
+-                        m_gather_tmp = pl.create_tile([FINAL_HEAD_TILE, ROPE_DIM], dtype=pl.INT32)
++                        m_gather_tmp = pl.create_tile([1, FINAL_HEAD_TILE * ROPE_DIM], dtype=pl.INT32)
+                         for pub_h in pl.unroll((H // 2) // FINAL_HEAD_TILE):
+                             pub_local_head = pub_h * FINAL_HEAD_TILE
+                             m_h0 = qk_lane_head + pub_local_head
+@@ -648,7 +651,13 @@
+                             m_rope = n_full[0:FINAL_HEAD_TILE, NOPE_DIM:HEAD_DIM]
+                             m_cos_il = pl.load(freqs_cos, [pv_t, 0], [1, ROPE_DIM])
+                             m_sin_signed = pl.load(rope_sin_signed, [pv_t, 0], [1, ROPE_DIM])
+-                            m_swapped = pl.tile.gather(n_full, m_swap_idx, m_gather_tmp)
++                            # The indices already contain the absolute head-row offset.
++                            # One contiguous Gather avoids A3's per-row vector barriers.
++                            m_swapped_flat = pl.tile.gather(
++                                pl.reshape(n_full, [1, FINAL_HEAD_TILE * HEAD_DIM]),
++                                m_swap_idx, m_gather_tmp,
++                            )
++                            m_swapped = pl.reshape(m_swapped_flat, [FINAL_HEAD_TILE, ROPE_DIM])
+                             m_rot = pl.add(pl.col_expand_mul(m_rope, m_cos_il),
+                                            pl.col_expand_mul(m_swapped, m_sin_signed))
+                             n_rope_bf16 = pl.cast(m_rot, target_type=pl.BF16, mode="rint")

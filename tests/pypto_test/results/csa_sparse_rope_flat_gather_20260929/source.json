@@ -1,0 +1,21 @@
+{
+  "baseline": "369ad2c1",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-sparse-rope-flat-gather-369ad2c1-v1",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1-baseline",
+  "variant": "pkg:dsv4_csa_sparse_rope_flat_gather_369ad2c1_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "仅Sparse最终逆RoPE的16x64 Gather展平1x1024；沿用绝对head偏移，输出reshape还原",
+  "native_reference": "ops-transformer28f40354/rotary_position_embedding/rotate_interleaved_split_bsn_pad.h",
+  "isa_reference": "pto-isa-src/include/pto/npu/a2a3/TGather.hpp:TGather逐validRow vmuls/barrier/vgather",
+  "not_changed": "Sparse QK/PV、softmax与舍入/除法、KV采集、任务依赖/early、Native cache、四张NZ及工具链",
+  "acceptance": "同卡两档完整CSA/P95与四窗Sparse核内；性能后八类完整状态；有收益再补H127/B3/padding"
+}

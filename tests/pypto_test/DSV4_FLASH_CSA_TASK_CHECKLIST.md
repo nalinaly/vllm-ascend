@@ -163,6 +163,12 @@ Indexer Q/head及主Compressor wkv、inner wgate均回退；Hadamard出现明显
 两次复核性能后的八类完整状态仍零容差通过；本轮没有新NZ候选接入，不扩测边界/模型或改Native流程。
 当前生产仍369ad2c1算子，完整七档仍f4861832，不能把单项或历史精度PASS代替最新模型验收。
 
+下一项[Sparse最终逆RoPE整块Gather](results/csa_sparse_rope_flat_gather_20260929/README.md)：
+参考AscendC整块索引，当前Sparse已无逐行TMOV，但A3二维TGATHER内部仍循环16次vmuls/barrier/vgather。
+候选仅将16×64索引/输出展平1×1024，输入视图1×8192；绝对索引、算术及任务结构保持。
+完整CPU编译/load通过，生成码没有增加搬运，已正常auto提交task_20260929_193859_406772521712。
+两代表档完整CSA/P95、四窗Sparse双核与性能后完整状态待验证；未改生产，不先扩测七档或模型。
+
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |
 | 1 | Native新标准七档已完成 | dynamic=False/inplace=True/static+superkernel、显式named backend自管图；[七档实测](results/csa_native_inplace_seven_20260929/NATIVE_RESULTS.md)与八类同图状态通过，PTO配套采集不阻塞发布，不再试开关 |
@@ -714,7 +720,8 @@ mode=2 已接通的四张 Q/O 权重不能代表全部投影权重已经使用 N
 Native 原权重应保持 ND，但 PTO 的两个实现都以 Cube matmul 消费它们，适合单独准备 NZ；
 不改变 Native 融合接口，新增显存也必须记录。`hadamard_idx` 同样是 BF16 静态 matmul B，
 应纳入初始化 NZ 范围，供 Indexer Q 和压缩 K 两条路径共用。
-因此当前生产共有八张 BF16/INT8 静态矩阵仍以 ND 进入 matmul，KV 候选已测，其余七张待做。
+因此当前生产共有八张 BF16/INT8 静态矩阵仍以 ND 进入 matmul；八项及两个获益单项的反序复核现已完成。
+完整CSA收益未稳定重现或精度失败，本轮均未采用；结果与取舍以C5～C8及逐项总表为准。
 `hc_attn_fn` 虽也是 matmul B，但为 FP32，不直接套用当前 BF16/INT8 NZ 接入策略，
 不为改布局擅自降精度；运行期产生的 Score/Attention B 及 scale/norm 向量也不属于初始化权重转换。
 证据见 [KV 原地址记录](results/csa_kv_native_nz_20260929/bindings.json)、
