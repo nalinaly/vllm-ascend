@@ -12,8 +12,8 @@ ND/NZ仅表示本行改动的权重；两侧四张Q/O仍使用mode2 NZ。保持�
 | [Indexer Q](../csa_idx_q_nz_20260929/RESULTS.md) | 957.030→966.292 | 919.489→935.123 | +1.114% | PASS | 不接入 |
 | [Indexer head投影](../csa_idx_weights_nz_20260929/RESULTS.md) | 967.587→971.545 | 919.207→947.245 | +0.937% | PASS | 不接入 |
 | [主Compressor wkv](../csa_cmp_wkv_nz_20260929/RESULTS.md) | 961.629→982.969 | 911.449→911.962 | +1.787% | PASS | 不接入 |
-| [主Compressor wgate](../csa_cmp_wgate_nz_20260929/RESULTS.md) | 966.279→966.485 | 939.797→906.600 | -0.689% | PASS | 单项有收益，组合未保住 |
-| [Indexer Compressor wkv](../csa_inner_wkv_nz_20260929/RESULTS.md) | 975.051→967.129 | 949.969→926.813 | -1.137% | PASS | 反序复核中 |
+| [主Compressor wgate](../csa_cmp_wgate_nz_20260929/RESULTS.md) | 966.279→966.485 | 939.797→906.600 | -0.689% | PASS | 复核未保住收益，暂缓 |
+| [Indexer Compressor wkv](../csa_inner_wkv_nz_20260929/RESULTS.md) | 975.051→967.129 | 949.969→926.813 | -1.137% | PASS | 复核未保住收益，暂缓 |
 | [Indexer Compressor wgate](../csa_inner_wgate_nz_20260929/RESULTS.md) | 956.620→974.555 | 923.882→936.842 | +1.780% | PASS | 不接入 |
 | [共享Hadamard](../csa_hadamard_nz_20260929/RESULTS.md) | 971.293→971.507 | 937.610→926.751 | -0.214% | FAIL | 精度失败，禁止接入 |
 | [主wgate＋inner wkv](../csa_compressor_pair_nz_20260929/RESULTS.md) | 962.850→967.722 | 918.730→921.210 | +0.459% | PASS | 组合回退，不接入 |
@@ -24,8 +24,12 @@ x_out最大绝对差0.2421875；短档Top-K有73669/73728个元素不同，x_out
 
 主wgate独立DFX核时：长18.654→18.079（−3.080%），短30.782→28.362（−7.861%）。
 DFX与正式计时为独立任务，不能相减推算调度开销。它与inner wkv组合后CSA加权反增0.459%，不能相加单项收益。
-仅对inner wkv做一次反序复核，原因是它首轮两档均值/P95下降，但组合及不同任务的基线有漂移。
-复核通过才补ND/尾块/padding与接入；其余失败项不扩测七档或整模型。
+inner wkv反序复核完整CSA长959.464→962.505、短917.629→920.767，8:2 +0.322%；P95均上升，
+八类完整状态仍精确一致。首轮−1.137%没有重现，因此暂缓采用，不补边界/整模型。
+主wgate独立复核也未重现首轮收益：长970.169→970.859、短935.773→938.735，8:2 +0.120%，
+短P95 957.840→969.660；八类完整状态精确一致。两轮均保留，不择优发布第一轮。
+**本轮收口：没有确认稳定缩短完整CSA的新NZ候选，生产保持369ad2c1算子。**
+明确回退或精度失败的候选不接入；仅首轮获益的候选暂缓，不宣称NZ本身永远无效。
 
 所有已通过状态检查均为八类完整输出/缓存/状态零容差，包括x_out、idx_topk、SWA、压缩cache、
 两套Compressor state、Indexer INT8 cache及scale；还检查自身图重放、metadata/保护区和Top-K结构。
@@ -37,4 +41,5 @@ Native已有NZ的主KV/Indexer Q/head候选直接借用原存储；Compressor Na
 
 环境：CANN9.2 beta2、同工具链与真实第二CSA层权重；mode2/atomic0/det0，5预热20正式事件。
 PTO现有图方式、inplace_pass=True，未重测Native。CPU编译通过不替代设备性能/精度。
-[复核任务](../csa_inner_wkv_nz_confirm_20260929/source.json)。
+[inner wkv反序复核](../csa_inner_wkv_nz_confirm_20260929/RESULTS.md)、
+[主wgate反序复核](../csa_cmp_wgate_nz_confirm_20260929/RESULTS.md)。

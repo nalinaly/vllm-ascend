@@ -1,0 +1,1649 @@
+{
+  "task": "task_20260929_191806_381636314625",
+  "task_status": "completed (exit=0)",
+  "source": {
+    "baseline": "369ad2c1",
+    "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-inner-wkv-nz-369ad2c1-v2-confirm",
+    "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1-baseline",
+    "variant": "pkg:dsv4_csa_inner_wkv_nz_369ad2c1_v1",
+    "cases": [
+      [
+        131072,
+        16
+      ],
+      [
+        8192,
+        24
+      ]
+    ],
+    "change": "仅inner_wkv的BF16 B按NZ读取，初始化准备PTO专用NZ，Native原权重不变；矩阵方向/K顺序/任务数/依赖保持；已测kernel保持，补旧快照迁移与两版根契约；反序复核单项收益",
+    "acceptance": "先看完整CSA绝对时间与P95，8:2；性能后核对全部状态，未证实整体收益不接生产",
+    "not_included": "独立对照，不叠加KV候选；旧快照/ND/atomic/尾行按收益决定后续受影响检查",
+    "first_measurement": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_20260929"
+  },
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "sides": {
+        "baseline": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/baseline/report.json",
+          "device": 0,
+          "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+          "requested": {
+            "ascend_compilation_config": {
+              "enable_npugraph_ex": true,
+              "enable_static_kernel": true,
+              "fuse_norm_quant": true,
+              "align_decode_capture_sizes": false,
+              "fuse_qknorm_rope": true,
+              "fuse_muls_add": true
+            },
+            "enable_cpu_binding": true,
+            "multistream_overlap_shared_expert": true,
+            "recompute_scheduler_enable": false,
+            "weight_nz_mode": 2,
+            "enable_kv_nz": false,
+            "enable_dsa_cp": false,
+            "pto_csa_ring_config": {
+              "heap_mb": [
+                256,
+                128,
+                256,
+                32
+              ],
+              "task_window": 4096
+            }
+          },
+          "compiler": {
+            "wrapper_compiled": true,
+            "fresh_compile_flag": true,
+            "aot_loaded_from_disk": false,
+            "static_compile_results": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3
+          },
+          "mean_us": 959.4640046358109,
+          "us_min": 947.5200176239014,
+          "us_p50": 958.510011434555,
+          "us_p95": 972.3600149154663,
+          "us_max": 978.0200123786926,
+          "states": {
+            "x_out": {
+              "status": "PASS",
+              "shape": [
+                96,
+                4,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                96,
+                4,
+                4096
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 1572864,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "idx_topk": {
+              "status": "PASS",
+              "shape": [
+                96,
+                512
+              ],
+              "dtype": "torch.int32",
+              "expected_shape": [
+                96,
+                512
+              ],
+              "expected_dtype": "torch.int32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 49152,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "swa.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                145,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 2375680,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "compressed.0": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 268976128,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "state.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                2,
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                145,
+                2,
+                1,
+                2048
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 593920,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.0": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                128
+              ],
+              "dtype": "torch.int8",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                128
+              ],
+              "expected_dtype": "torch.int8",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 67244032,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.1": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                1
+              ],
+              "dtype": "torch.float16",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                1
+              ],
+              "expected_dtype": "torch.float16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 525344,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer_state.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                2,
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                145,
+                2,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 148480,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            }
+          },
+          "topk": {
+            "status": "MEASURED",
+            "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+            "rows": 96,
+            "position_mismatches": 0,
+            "order_only_rows": 0,
+            "different_set_rows": 0,
+            "replaced_indices": 0,
+            "invalid_rows": 0,
+            "structural_errors": [],
+            "set_examples": []
+          },
+          "guards": {
+            "PASS": 31
+          },
+          "profile_kernel_count": 2,
+          "profile_types_us": {
+            "simpler_aicpu_kernel_exec_7faa170e72898cfd": [
+              997.52
+            ],
+            "aicore_kernel_mode_0": [
+              983.48
+            ]
+          },
+          "profile_csv": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/baseline/profile/liteserver-hps-365a-00001_3848625_20260929192130559_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/baseline/profile/liteserver-hps-365a-00001_3848625_20260929192130559_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "static_descriptor_types": {},
+          "installed_static_binaries": {},
+          "samples_us": [
+            962.3799920082092,
+            964.4799828529358,
+            959.0200185775757,
+            964.139997959137,
+            955.8200240135193,
+            954.4399976730347,
+            961.9200229644775,
+            947.6000070571899,
+            949.5999813079834,
+            964.3599987030029,
+            971.0000157356262,
+            955.839991569519,
+            952.6200294494629,
+            952.0599842071533,
+            960.7200026512146,
+            947.5200176239014,
+            978.0200123786926,
+            972.3600149154663,
+            958.0000042915344,
+            957.3799967765808
+          ],
+          "p95_over_p50": 1.0144495136364644,
+          "over_p50_5pct": 0
+        },
+        "candidate": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/candidate/report.json",
+          "device": 0,
+          "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+          "requested": {
+            "ascend_compilation_config": {
+              "enable_npugraph_ex": true,
+              "enable_static_kernel": true,
+              "fuse_norm_quant": true,
+              "align_decode_capture_sizes": false,
+              "fuse_qknorm_rope": true,
+              "fuse_muls_add": true
+            },
+            "enable_cpu_binding": true,
+            "multistream_overlap_shared_expert": true,
+            "recompute_scheduler_enable": false,
+            "weight_nz_mode": 2,
+            "enable_kv_nz": false,
+            "enable_dsa_cp": false,
+            "pto_csa_ring_config": {
+              "heap_mb": [
+                256,
+                128,
+                256,
+                32
+              ],
+              "task_window": 4096
+            }
+          },
+          "compiler": {
+            "wrapper_compiled": true,
+            "fresh_compile_flag": true,
+            "aot_loaded_from_disk": false,
+            "static_compile_results": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3
+          },
+          "mean_us": 962.5050008296967,
+          "us_min": 950.8799910545349,
+          "us_p50": 962.0600044727325,
+          "us_p95": 977.8599739074707,
+          "us_max": 978.4600138664246,
+          "states": {
+            "x_out": {
+              "status": "PASS",
+              "shape": [
+                96,
+                4,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                96,
+                4,
+                4096
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 1572864,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "idx_topk": {
+              "status": "PASS",
+              "shape": [
+                96,
+                512
+              ],
+              "dtype": "torch.int32",
+              "expected_shape": [
+                96,
+                512
+              ],
+              "expected_dtype": "torch.int32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 49152,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "swa.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                145,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 2375680,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "compressed.0": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 268976128,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "state.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                2,
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                145,
+                2,
+                1,
+                2048
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 593920,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.0": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                128
+              ],
+              "dtype": "torch.int8",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                128
+              ],
+              "expected_dtype": "torch.int8",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 67244032,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.1": {
+              "status": "PASS",
+              "shape": [
+                16417,
+                32,
+                1,
+                1
+              ],
+              "dtype": "torch.float16",
+              "expected_shape": [
+                16417,
+                32,
+                1,
+                1
+              ],
+              "expected_dtype": "torch.float16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 525344,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer_state.0": {
+              "status": "PASS",
+              "shape": [
+                145,
+                2,
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                145,
+                2,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 148480,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            }
+          },
+          "topk": {
+            "status": "MEASURED",
+            "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+            "rows": 96,
+            "position_mismatches": 0,
+            "order_only_rows": 0,
+            "different_set_rows": 0,
+            "replaced_indices": 0,
+            "invalid_rows": 0,
+            "structural_errors": [],
+            "set_examples": []
+          },
+          "guards": {
+            "PASS": 31
+          },
+          "profile_kernel_count": 2,
+          "profile_types_us": {
+            "simpler_aicpu_kernel_exec_7faa170e72898cfd": [
+              998.6
+            ],
+            "aicore_kernel_mode_0": [
+              985.92
+            ]
+          },
+          "profile_csv": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/candidate/profile/liteserver-hps-365a-00001_3816555_20260929191942493_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h131072_b16/timing/candidate/profile/liteserver-hps-365a-00001_3816555_20260929191942493_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "static_descriptor_types": {},
+          "installed_static_binaries": {},
+          "samples_us": [
+            969.4399833679199,
+            963.5000228881836,
+            963.9400243759155,
+            957.7800035476685,
+            961.3800048828125,
+            964.0600085258484,
+            977.8599739074707,
+            957.0599794387817,
+            963.7799859046936,
+            959.0200185775757,
+            952.3000121116638,
+            952.4000287055969,
+            962.7400040626526,
+            978.4600138664246,
+            957.8199982643127,
+            959.119975566864,
+            968.1199789047241,
+            959.9000215530396,
+            950.8799910545349,
+            970.5399870872498
+          ],
+          "p95_over_p50": 1.0164230602678441,
+          "over_p50_5pct": 0
+        }
+      },
+      "state_checks": {
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 268976128,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "idx_topk": {
+          "status": "PASS",
+          "shape": [
+            96,
+            512
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            512
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 49152,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.0": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            128
+          ],
+          "expected_dtype": "torch.int8",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 67244032,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.1": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            1
+          ],
+          "expected_dtype": "torch.float16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 525344,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer_state.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            145,
+            2,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 148480,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            145,
+            2,
+            1,
+            2048
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 593920,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "delta_us": 3.0409961938858032,
+      "change_pct": 0.31694739762957447
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "sides": {
+        "baseline": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/baseline/report.json",
+          "device": 0,
+          "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+          "requested": {
+            "ascend_compilation_config": {
+              "enable_npugraph_ex": true,
+              "enable_static_kernel": true,
+              "fuse_norm_quant": true,
+              "align_decode_capture_sizes": false,
+              "fuse_qknorm_rope": true,
+              "fuse_muls_add": true
+            },
+            "enable_cpu_binding": true,
+            "multistream_overlap_shared_expert": true,
+            "recompute_scheduler_enable": false,
+            "weight_nz_mode": 2,
+            "enable_kv_nz": false,
+            "enable_dsa_cp": false,
+            "pto_csa_ring_config": {
+              "heap_mb": [
+                256,
+                128,
+                256,
+                32
+              ],
+              "task_window": 4096
+            }
+          },
+          "compiler": {
+            "wrapper_compiled": true,
+            "fresh_compile_flag": true,
+            "aot_loaded_from_disk": false,
+            "static_compile_results": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3
+          },
+          "mean_us": 917.6290065050125,
+          "us_min": 901.4000296592712,
+          "us_p50": 916.7300164699554,
+          "us_p95": 931.3799738883972,
+          "us_max": 937.5200271606445,
+          "states": {
+            "x_out": {
+              "status": "PASS",
+              "shape": [
+                144,
+                4,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                144,
+                4,
+                4096
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 2359296,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "idx_topk": {
+              "status": "PASS",
+              "shape": [
+                144,
+                512
+              ],
+              "dtype": "torch.int32",
+              "expected_shape": [
+                144,
+                512
+              ],
+              "expected_dtype": "torch.int32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 73728,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "swa.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                217,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 3555328,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "compressed.0": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 25968640,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "state.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                2,
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                217,
+                2,
+                1,
+                2048
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 888832,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.0": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                128
+              ],
+              "dtype": "torch.int8",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                128
+              ],
+              "expected_dtype": "torch.int8",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 6492160,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.1": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                1
+              ],
+              "dtype": "torch.float16",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                1
+              ],
+              "expected_dtype": "torch.float16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 50720,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer_state.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                2,
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                217,
+                2,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 222208,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            }
+          },
+          "topk": {
+            "status": "MEASURED",
+            "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+            "rows": 144,
+            "position_mismatches": 0,
+            "order_only_rows": 0,
+            "different_set_rows": 0,
+            "replaced_indices": 0,
+            "invalid_rows": 0,
+            "structural_errors": [],
+            "set_examples": []
+          },
+          "guards": {
+            "PASS": 31
+          },
+          "profile_kernel_count": 2,
+          "profile_types_us": {
+            "simpler_aicpu_kernel_exec_7faa170e72898cfd": [
+              936.94
+            ],
+            "aicore_kernel_mode_0": [
+              928.82
+            ]
+          },
+          "profile_csv": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/baseline/profile/liteserver-hps-365a-00001_3878337_20260929192312592_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/baseline/profile/liteserver-hps-365a-00001_3878337_20260929192312592_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "static_descriptor_types": {},
+          "installed_static_binaries": {},
+          "samples_us": [
+            926.580011844635,
+            911.0599756240845,
+            904.8200249671936,
+            937.5200271606445,
+            931.3799738883972,
+            921.6799736022949,
+            926.360011100769,
+            916.8400168418884,
+            914.6599769592285,
+            916.6200160980225,
+            915.4800176620483,
+            931.2599897384644,
+            905.4800271987915,
+            931.2400221824646,
+            901.4000296592712,
+            902.1400213241577,
+            921.0000038146973,
+            916.3399934768677,
+            917.0200228691101,
+            903.6999940872192
+          ],
+          "p95_over_p50": 1.0159806673232477,
+          "over_p50_5pct": 0
+        },
+        "candidate": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/candidate/report.json",
+          "device": 0,
+          "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+          "requested": {
+            "ascend_compilation_config": {
+              "enable_npugraph_ex": true,
+              "enable_static_kernel": true,
+              "fuse_norm_quant": true,
+              "align_decode_capture_sizes": false,
+              "fuse_qknorm_rope": true,
+              "fuse_muls_add": true
+            },
+            "enable_cpu_binding": true,
+            "multistream_overlap_shared_expert": true,
+            "recompute_scheduler_enable": false,
+            "weight_nz_mode": 2,
+            "enable_kv_nz": false,
+            "enable_dsa_cp": false,
+            "pto_csa_ring_config": {
+              "heap_mb": [
+                256,
+                128,
+                256,
+                32
+              ],
+              "task_window": 4096
+            }
+          },
+          "compiler": {
+            "wrapper_compiled": true,
+            "fresh_compile_flag": true,
+            "aot_loaded_from_disk": false,
+            "static_compile_results": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3
+          },
+          "mean_us": 920.767006278038,
+          "us_min": 887.3199820518494,
+          "us_p50": 919.2200005054474,
+          "us_p95": 936.8600249290466,
+          "us_max": 946.3800191879272,
+          "states": {
+            "x_out": {
+              "status": "PASS",
+              "shape": [
+                144,
+                4,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                144,
+                4,
+                4096
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 2359296,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "idx_topk": {
+              "status": "PASS",
+              "shape": [
+                144,
+                512
+              ],
+              "dtype": "torch.int32",
+              "expected_shape": [
+                144,
+                512
+              ],
+              "expected_dtype": "torch.int32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 73728,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "swa.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                217,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 3555328,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "compressed.0": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                512
+              ],
+              "dtype": "torch.bfloat16",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.bfloat16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 25968640,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "state.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                2,
+                1,
+                2048
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                217,
+                2,
+                1,
+                2048
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 888832,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.0": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                128
+              ],
+              "dtype": "torch.int8",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                128
+              ],
+              "expected_dtype": "torch.int8",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 6492160,
+              "comparison": "exact",
+              "nonfinite": 0,
+              "max_abs": null,
+              "rmse": null,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer.1": {
+              "status": "PASS",
+              "shape": [
+                1585,
+                32,
+                1,
+                1
+              ],
+              "dtype": "torch.float16",
+              "expected_shape": [
+                1585,
+                32,
+                1,
+                1
+              ],
+              "expected_dtype": "torch.float16",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 50720,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            },
+            "indexer_state.0": {
+              "status": "PASS",
+              "shape": [
+                217,
+                2,
+                1,
+                512
+              ],
+              "dtype": "torch.float32",
+              "expected_shape": [
+                217,
+                2,
+                1,
+                512
+              ],
+              "expected_dtype": "torch.float32",
+              "atol": 0,
+              "rtol": 0,
+              "elements": 222208,
+              "comparison": "tolerance",
+              "nonfinite": 0,
+              "max_abs": 0.0,
+              "rmse": 0.0,
+              "mismatches": 0,
+              "first_mismatches": []
+            }
+          },
+          "topk": {
+            "status": "MEASURED",
+            "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+            "rows": 144,
+            "position_mismatches": 0,
+            "order_only_rows": 0,
+            "different_set_rows": 0,
+            "replaced_indices": 0,
+            "invalid_rows": 0,
+            "structural_errors": [],
+            "set_examples": []
+          },
+          "guards": {
+            "PASS": 31
+          },
+          "profile_kernel_count": 2,
+          "profile_types_us": {
+            "simpler_aicpu_kernel_exec_7faa170e72898cfd": [
+              949.88
+            ],
+            "aicore_kernel_mode_0": [
+              938.42
+            ]
+          },
+          "profile_csv": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/candidate/profile/liteserver-hps-365a-00001_3898177_20260929192454486_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_inner_wkv_nz_confirm_20260929/h8192_b24/timing/candidate/profile/liteserver-hps-365a-00001_3898177_20260929192454486_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "static_descriptor_types": {},
+          "installed_static_binaries": {},
+          "samples_us": [
+            921.8599796295166,
+            918.2000160217285,
+            908.4200263023376,
+            919.3800091743469,
+            916.5400266647339,
+            887.3199820518494,
+            932.9000115394592,
+            910.7800126075745,
+            929.1599988937378,
+            936.8600249290466,
+            929.7800064086914,
+            917.900025844574,
+            946.3800191879272,
+            918.6199903488159,
+            919.8200106620789,
+            914.2600297927856,
+            919.0599918365479,
+            928.3999800682068,
+            926.8400073051453,
+            912.8599762916565
+          ],
+          "p95_over_p50": 1.0191902095405883,
+          "over_p50_5pct": 0
+        }
+      },
+      "state_checks": {
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 25968640,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "idx_topk": {
+          "status": "PASS",
+          "shape": [
+            144,
+            512
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            144,
+            512
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 73728,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.0": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            128
+          ],
+          "expected_dtype": "torch.int8",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 6492160,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.1": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            1
+          ],
+          "expected_dtype": "torch.float16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 50720,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer_state.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            217,
+            2,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 222208,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            217,
+            2,
+            1,
+            2048
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 888832,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            217,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 3555328,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            144,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            144,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2359296,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "delta_us": 3.1379997730255127,
+      "change_pct": 0.3419682410626068
+    }
+  ],
+  "state_status": "PASS",
+  "weighted_8_2_delta_us": 3.060396909713745,
+  "weighted_8_2_change_pct": 0.32195156631618094
+}
