@@ -556,6 +556,20 @@ def q_proj_q_dequant(
                 q_cos_il = rope_cos_il[out_tg : out_tg + Q_ROPE_T_TILE, :]
                 q_sin_signed = rope_sin_signed[out_tg : out_tg + Q_ROPE_T_TILE, :]
                 q_swap_idx = rope_swap_idx[out_tg : out_tg + Q_ROPE_T_TILE, :]
+                # Flat gather handles all eight rows in one vector operation.
+                # Axis gather lowers to a scalar loop with one gather per row.
+                q_gather_row_seed = pl.mul(
+                    pl.cast(pl.arange(0, [1, Q_ROPE_T_TILE], dtype=pl.INT32), pl.FP32),
+                    ROPE_DIM_SCALE,
+                )
+                q_gather_row_grid = pl.col_expand_mul(
+                    pl.full([ROPE_DIM, Q_ROPE_T_TILE], dtype=pl.FP32, value=1.0),
+                    q_gather_row_seed,
+                )
+                q_gather_row_offsets = pl.cast(
+                    pl.transpose(q_gather_row_grid, axis1=0, axis2=1), pl.INT32,
+                )
+                q_swap_flat_idx = pl.add(q_swap_idx, q_gather_row_offsets)
                 for h_inner in pl.pipeline(dq_head_tile, stage=2):
                     h = hg + h_inner
                     h0 = h * HEAD_DIM
@@ -578,7 +592,7 @@ def q_proj_q_dequant(
 
                     q_rope_chunk_raw = q_head_dq[:, NOPE_DIM:HEAD_DIM]
                     q_rope_chunk = pl.row_expand_mul(q_rope_chunk_raw, q_head_inv_rms_t)
-                    q_rope_swapped = pl.gather(q_rope_chunk, dim=-1, index=q_swap_idx)
+                    q_rope_swapped = pl.gather(q_rope_chunk, index=q_swap_flat_idx)
                     q_rope_base = pl.mul(q_rope_chunk, q_cos_il)
                     q_rope_delta = pl.mul(q_rope_swapped, q_sin_signed)
                     q_rope_rot = pl.add(q_rope_base, q_rope_delta)

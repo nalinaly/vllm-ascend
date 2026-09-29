@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "a7a9f314",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-al1-slices-a7a9f314-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-flat-gather-a7a9f314-20260930/flat",
+  "change": "Q RoPE axis gather to flat gather over eight rows; row offsets prepared once per head group",
+  "invariants": "same arithmetic/rounding, workers, head pipeline stage2, task dependencies; tail unchanged",
+  "reference": "ops-transformer 28f40354 interleave_rope_b11d.h:127 batches vector work across factor rows; not a claim that the installed Native selects this template"
+}

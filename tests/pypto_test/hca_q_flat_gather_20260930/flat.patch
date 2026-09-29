@@ -1,0 +1,20 @@
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -558,0 +559,14 @@
++                # Flat gather handles all eight rows in one vector operation.
++                # Axis gather lowers to a scalar loop with one gather per row.
++                q_gather_row_seed = pl.mul(
++                    pl.cast(pl.arange(0, [1, Q_ROPE_T_TILE], dtype=pl.INT32), pl.FP32),
++                    ROPE_DIM_SCALE,
++                )
++                q_gather_row_grid = pl.col_expand_mul(
++                    pl.full([ROPE_DIM, Q_ROPE_T_TILE], dtype=pl.FP32, value=1.0),
++                    q_gather_row_seed,
++                )
++                q_gather_row_offsets = pl.cast(
++                    pl.transpose(q_gather_row_grid, axis1=0, axis2=1), pl.INT32,
++                )
++                q_swap_flat_idx = pl.add(q_swap_idx, q_gather_row_offsets)
+@@ -581 +595 @@
+-                    q_rope_swapped = pl.gather(q_rope_chunk, dim=-1, index=q_swap_idx)
++                    q_rope_swapped = pl.gather(q_rope_chunk, index=q_swap_flat_idx)
