@@ -13465,3 +13465,75 @@ AIC 的空闲不是 AIV 效率问题，而是**这一层里所有 AIC 工作都�
 
 ⚠ 本轮所有实验的基线均为 e110a886 + early3（生产 `9a983dae`），
 每侧 20 正式事件、前后基线夹；检测底见第 490.3 节（整段 CSA 约 20 μs / 2%）。
+
+## 496. gate 权重转 NZ：128K/B24 确凿 −15.22 μs，但七档加权只 −0.0008，不落地（2026-09-30）
+
+按第 495.3 节的第二条方向（降低 AIC 绝对工作量）做的第一个候选。
+
+### 496.1 发现
+
+`nz_mode.py` 的文档写明「两版**四张**目标权重均声明可选 NZ」——
+即只有 `wq_a` / `wq_b` / `wo_a` / `wo_b`。但扫全树发现还有多个**同样只作
+matmul B 操作数**的权重留在 ND：`wgate`、`cmp_wgate`、`inner_wgate`、
+`wkv`、`cmp_wkv`、`inner_wkv`、`weights_proj`、`idx_wq_b`。
+
+先做爆炸半径最小的 gate 系列。它们在 kernel 里只出现在
+`pl.matmul(_acc)` 的 B 侧（`decode_compressor_ratio4.py:142`、
+`decode_indexer_compressor.py:152`），切片是
+`wgate[o0 : o0+PROJ_OUT_TILE, k0 : k0+K_TILE]`，
+行偏移是 32/64 的倍数、列偏移是 512 的倍数，满足 NZ 的 16 行 / C0 列对齐。
+
+⚠ 与 HCA 的关键区别：HCA 侧同类改动（`wkv`/`cmp_wkv`/`cmp_wgate` → NZ）
+实测 +14.75/+20.25/符号不稳，原因是 HCA 用**空闲 Vector 核做 L2 预热**
+（`weight_warm.py`，实测值 +25.75 μs），而 NZ 张量只能以 Cube 操作数读入 Mat，
+预热失效。**CSA 没有这套预热**（`kv_proj_matmul` 用的是
+`set_cache_policy(wkv, BYPASS)`），所以这条在 CSA 上值得单独测。
+
+### 496.2 实现
+
+- `nz_mode.py` 新增 `extra_b_operand_layouts(root_function)`，**与
+  `root_weight_layouts` 分开**——后者会被 `native_adapter.root_weight`
+  用来 `getattr(attention, name)`，而这两张权重挂在子模块上
+  （`main.wgate` / `inner.wgate`），名字对不上。
+  第一次把它们塞进 `root_weight_layouts` 导致精度阶段
+  `AttributeError: 'DeepseekV4Attention' object has no attribute 'cmp_wgate'`。
+- `native_adapter.weight(...)` 增加 `layout_name=` 参数，按新名单转 format 29。
+- 根签名与三处内层 kernel 参数加 `BF16_WEIGHT_LAYOUT`，精度版同步。
+
+### 496.3 结果（完整七档，每侧 20 事件，前后基线夹；基线 = 已落地的 early3）
+
+| 档位 | 漂移 | 基线均 | `nzgate` | Δmean | Δmin | Δmax | 三项全低 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | :-: |
+| 128K/B4 | 12.09 | 631.16 | 636.49 | +5.33 | +0.70 | +3.62 | 否 |
+| 128K/B8 | 6.56 | 731.07 | 733.26 | +2.18 | −3.86 | +9.56 | 否 |
+| 128K/B16 | 9.71 | 964.33 | 966.56 | +2.24 | −0.40 | +7.84 | 否 |
+| **128K/B24** | **2.35** | 1242.02 | **1226.80** | **−15.22** | **−43.52** | **−25.90** | **是** |
+| 8K/B16 | 26.56 | 748.23 | 743.02 | −5.21 | −27.04 | +35.48 | 否 |
+| 8K/B24 | 10.30 | 917.73 | 916.01 | −1.72 | −11.72 | +4.98 | 否 |
+| 8K/B32 | 2.81 | 1058.57 | 1056.75 | −1.82 | −9.96 | −2.48 | 是 |
+
+| | 128K 均 | 8K 均 | 8:2 加权 |
+| --- | ---: | ---: | ---: |
+| 基线（已落地 early3） | 0.8789 | 0.9957 | **0.9023** |
+| `nzgate` | 0.8788 | 0.9922 | **0.9015** |
+
+**128K/B24 是本轮最扎实的单档结果**：Δmean 是该档漂移的 6.5 倍，三项全低，
+且与上一轮（精度阶段失败但 timing 有效）的 −17.73 / −43.14 / −16.00 独立吻合。
+B24 又恰好是 128K 里最差的一档。
+
+精度：`exact_comparison_required = True`，八个输出 mismatches 全 0、
+守卫全 PASS——NZ 只改存储分形序，matmul 读到的数值不变。
+
+**但七档加权只从 0.9023 降到 0.9015（−0.0008）**：B24 一档的收益被
+B4/B8/B16 的小幅正值抵掉。**不落地**——0.0008 不足以支撑一个跨全档的
+权重布局改动，而布局标注是模块加载期的全局常量，做不成按档分支。
+
+### 496.4 留给后续
+
+- 同类未测的还有 `wkv` / `cmp_wkv` / `inner_wkv`（用量比 gate 大，
+  `kv_proj_matmul` + `kv_score_proj` 合计核·μs 是 gate 路径的数倍）
+  与 `weights_proj`、`idx_wq_b`。实现骨架（`extra_b_operand_layouts` +
+  `weight(layout_name=)`）已经在 `.cache/csa-nzgate-e110a886-v1-nzgate` 里，
+  加名字即可。
+- 需要先确认 `wkv` 是否在某处被读入 Vec（那会触发
+  `NZ layout currently supports only matmul operand loads`）。
