@@ -122,10 +122,14 @@ HCA约20μs为其单项实测，不能当成CSA收益；Q_B worker 24→20另列
 [Q_B worker 24→20](results/csa_qb_workers20_20260929/README.md)同卡两档已完成退出0，八类状态/16窗通过。
 完整CSA长+2.337%、短+3.465%，8:2 +2.563%，两侧P95升高；Q_B总核时8:2 −0.803%但四窗重叠，
 跨度反增且20份仍多波，尚无稳定核内收益，生产继续24，不扩测该候选。
-下一项为[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)，参考AscendC多行Vector处理。
-保持48-worker、512列逐head规约、舍入和尾行，先反量化[8,1024]再reshape为[16,512]，不合并head的归约。
-去除内层输出TCONCAT后CPU完整编译/load通过；私有包16:22正常auto提交task_20260929_162257_18683029171。
-只测长B16/短B24，Q_B仍24；按目标核四窗真实收益、完整状态与CSA/P95决定，不叠加worker候选。
+[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)已完成退出0，不采用。
+八类状态/16窗通过，但目标核长+12.492%、短+20.088%，8:2 +14.012%；完整CSA 8:2 +1.179%，P95均升。
+保持生产逐head和48-worker，不补失败候选的尾行/七档/模型，不把减少源码循环当成性能收益。
+下一项[满行整块Gather](results/csa_qrope_flat_gather_20260929/README.md)独立使用f4861832基线：
+参考ops-transformer28f40354的RoPE整块索引，8×64展平为1×512执行一次tile.gather再原样reshape。
+不叠加双head或Q_B20；512列逐head规约、高精度rsqrt、BF16 RINT、尾行及调度保持。
+完整CPU编译/load通过，满行取消逐行TMOV，Vec仅增加1088字节；这些不替代设备收益/状态证据。
+16:39正常auto提交task_20260929_163903_24675961128，设备2上running，先长B16/短B24。
 
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |

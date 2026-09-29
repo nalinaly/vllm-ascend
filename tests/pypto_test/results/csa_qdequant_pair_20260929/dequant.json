@@ -1,0 +1,2588 @@
+{
+  "task": "task_20260929_162257_18683029171",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "sides": {
+        "baseline": [
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/baseline/dfx/merged_swimlane.json",
+            "kernel_mean_us": 24.883333333333336,
+            "first_start_us": 257.84000000000003,
+            "last_end_us": 287.08000000000004,
+            "span_us": 29.24000000000001,
+            "start_spread_us": 1.0199999999999818,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 136.70000000000002,
+                "finish_us": 158.06,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 162.72,
+                "finish_us": 247.06,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 165.64000000000001,
+                "finish_us": 177.38,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 16,
+                "last_finish_to_start_us": 7.5800000000000125,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 183.32000000000002,
+                "finish_us": 207.52,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 5.940000000000026,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 208.32000000000002,
+                "finish_us": 212.94,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.8000000000000114,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 211.0,
+                "finish_us": 225.2,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.5799999999999841,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 226.76,
+                "finish_us": 233.22000000000003,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 13.819999999999993,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 233.88,
+                "finish_us": 243.48000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.6599999999999682,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 256.68,
+                "finish_us": 294.90000000000003,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 9.620000000000005,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 298.28000000000003,
+                "finish_us": 314.86,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.7800000000000296,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 316.0,
+                "finish_us": 553.5600000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 1.1399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 594.7,
+                "finish_us": 758.08,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8400000000000318,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/baseline/dfx/window_1/merged_swimlane.json",
+            "kernel_mean_us": 20.833333333333336,
+            "first_start_us": 256.28000000000003,
+            "last_end_us": 285.14,
+            "span_us": 28.859999999999957,
+            "start_spread_us": 10.439999999999998,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 128.54000000000002,
+                "finish_us": 144.9,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6800000000000068,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 150.74,
+                "finish_us": 163.18,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 16,
+                "last_finish_to_start_us": 5.840000000000003,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 151.46,
+                "finish_us": 250.5,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 165.8,
+                "finish_us": 184.72,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 2.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 198.86,
+                "finish_us": 212.58,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.6800000000000068,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 210.98000000000002,
+                "finish_us": 213.70000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 26.26000000000002,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 214.36,
+                "finish_us": 233.14000000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.6599999999999966,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 233.92000000000002,
+                "finish_us": 245.48000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7800000000000011,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 255.52000000000004,
+                "finish_us": 290.56,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 5.020000000000039,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 295.54,
+                "finish_us": 311.32,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.7200000000000273,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 312.2,
+                "finish_us": 550.0,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8799999999999955,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 584.02,
+                "finish_us": 744.78,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 54,
+                "rows": 72,
+                "last_finish_to_start_us": 0.82000000000005,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/baseline/dfx/window_2/merged_swimlane.json",
+            "kernel_mean_us": 21.17708333333334,
+            "first_start_us": 275.36,
+            "last_end_us": 302.53999999999996,
+            "span_us": 27.17999999999995,
+            "start_spread_us": 6.17999999999995,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 142.48,
+                "finish_us": 166.14,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.5999999999999943,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 170.26,
+                "finish_us": 178.38,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 16,
+                "last_finish_to_start_us": 4.1200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 171.94,
+                "finish_us": 259.34,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 182.26,
+                "finish_us": 195.68,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 3.8799999999999955,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 203.44,
+                "finish_us": 234.51999999999998,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 2,
+                "rows": 6,
+                "last_finish_to_start_us": 0.6999999999999886,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 224.22,
+                "finish_us": 232.74,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 28.539999999999992,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 233.36,
+                "finish_us": 237.8,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 238.65999999999997,
+                "finish_us": 249.92000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.8599999999999568,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 274.1,
+                "finish_us": 308.8,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 14.760000000000048,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 295.7,
+                "finish_us": 308.8,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 5.680000000000007,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 318.38,
+                "finish_us": 558.98,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 72,
+                "last_finish_to_start_us": 9.579999999999984,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 600.18,
+                "finish_us": 765.64,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/baseline/dfx/window_3/merged_swimlane.json",
+            "kernel_mean_us": 19.127916666666675,
+            "first_start_us": 245.57999999999998,
+            "last_end_us": 284.34,
+            "span_us": 38.75999999999999,
+            "start_spread_us": 20.860000000000014,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 130.58,
+                "finish_us": 150.1,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.7199999999999989,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 147.48,
+                "finish_us": 235.70000000000002,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 157.72,
+                "finish_us": 168.74,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 16,
+                "last_finish_to_start_us": 7.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 172.5,
+                "finish_us": 196.42,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 3.759999999999991,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 205.0,
+                "finish_us": 221.2,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.6599999999999966,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 210.76,
+                "finish_us": 215.94,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 14.340000000000003,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 216.62,
+                "finish_us": 227.7,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.6800000000000068,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 228.52,
+                "finish_us": 239.26000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.8200000000000216,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 244.48,
+                "finish_us": 286.56000000000006,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 8.779999999999973,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 305.08000000000004,
+                "finish_us": 320.74,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 321.46000000000004,
+                "finish_us": 560.28,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7200000000000273,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 599.1999999999999,
+                "finish_us": 764.3199999999999,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          }
+        ],
+        "candidate": [
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/candidate/dfx/merged_swimlane.json",
+            "kernel_mean_us": 27.823333333333334,
+            "first_start_us": 276.5,
+            "last_end_us": 308.56,
+            "span_us": 32.06,
+            "start_spread_us": 6.5,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 129.86,
+                "finish_us": 153.1,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 1.8400000000000034,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 144.5,
+                "finish_us": 259.50000000000006,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 153.74,
+                "finish_us": 167.16,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 15,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6400000000000148,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 174.14000000000001,
+                "finish_us": 195.48,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 6.980000000000018,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 199.16,
+                "finish_us": 223.32,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.6599999999999966,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 211.0,
+                "finish_us": 224.54,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 15.52000000000001,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 225.18,
+                "finish_us": 237.11999999999998,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.6400000000000148,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 237.66,
+                "finish_us": 247.78,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.5400000000000205,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 275.28000000000003,
+                "finish_us": 314.92,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 15.779999999999973,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 303.16,
+                "finish_us": 315.76000000000005,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 17.0,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 324.68,
+                "finish_us": 563.12,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 72,
+                "last_finish_to_start_us": 8.919999999999959,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 603.04,
+                "finish_us": 769.58,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6599999999999682,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+            "kernel_mean_us": 22.89958333333333,
+            "first_start_us": 245.82000000000002,
+            "last_end_us": 300.41999999999996,
+            "span_us": 54.59999999999994,
+            "start_spread_us": 33.15999999999994,
+            "chain": [
+              {
+                "name": "qproj_matmul",
+                "start_us": 134.92000000000002,
+                "finish_us": 236.52000000000004,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 146.84,
+                "finish_us": 178.70000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 2.9199999999999875,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 181.42000000000002,
+                "finish_us": 194.3,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 2.719999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 198.02,
+                "finish_us": 211.68,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 3.719999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 244.78000000000003,
+                "finish_us": 304.40000000000003,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 8.259999999999991,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 251.58000000000004,
+                "finish_us": 260.04,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.5200000000000387,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 268.26,
+                "finish_us": 283.22,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 8.21999999999997,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 279.54,
+                "finish_us": 291.68,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.6399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 284.0,
+                "finish_us": 295.58000000000004,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7799999999999727,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 310.5,
+                "finish_us": 318.34000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.5399999999999636,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 327.48,
+                "finish_us": 569.4399999999999,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 72,
+                "last_finish_to_start_us": 9.139999999999986,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 611.78,
+                "finish_us": 782.9399999999999,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7200000000000273,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+            "kernel_mean_us": 22.976666666666667,
+            "first_start_us": 250.60000000000002,
+            "last_end_us": 284.72,
+            "span_us": 34.120000000000005,
+            "start_spread_us": 11.639999999999986,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 145.5,
+                "finish_us": 161.38000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 153.24,
+                "finish_us": 244.10000000000002,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 168.78,
+                "finish_us": 196.16000000000003,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 16,
+                "last_finish_to_start_us": 7.399999999999977,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 196.78,
+                "finish_us": 213.58,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.6199999999999761,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 207.42000000000002,
+                "finish_us": 222.52,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 6,
+                "rows": 6,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 214.16000000000003,
+                "finish_us": 223.44000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.5800000000000125,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 230.94,
+                "finish_us": 239.94,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 7.499999999999972,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 240.58000000000004,
+                "finish_us": 267.76,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.6400000000000432,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 249.48000000000002,
+                "finish_us": 289.68,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 5.3799999999999955,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 293.66,
+                "finish_us": 300.42,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.7800000000000296,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 309.74,
+                "finish_us": 552.14,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 72,
+                "last_finish_to_start_us": 9.319999999999993,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 592.88,
+                "finish_us": 761.88,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6999999999999318,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h131072_b16/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+            "kernel_mean_us": 23.068333333333335,
+            "first_start_us": 218.01999999999998,
+            "last_end_us": 267.62,
+            "span_us": 49.60000000000002,
+            "start_spread_us": 27.860000000000014,
+            "chain": [
+              {
+                "name": "qproj_matmul",
+                "start_us": 145.88,
+                "finish_us": 211.22,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 198.84,
+                "finish_us": 219.4,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 6,
+                "last_finish_to_start_us": 9.200000000000017,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 217.01999999999998,
+                "finish_us": 278.4,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 5.799999999999983,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 223.64,
+                "finish_us": 243.12,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 243.60000000000002,
+                "finish_us": 250.62,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.4800000000000182,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 282.18,
+                "finish_us": 297.9,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 31.560000000000002,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 298.6,
+                "finish_us": 307.68,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7000000000000455,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 319.18,
+                "finish_us": 329.2,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 1,
+                "rows": 2,
+                "last_finish_to_start_us": 11.5,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 325.96,
+                "finish_us": 334.14,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 16,
+                "rows": 16,
+                "last_finish_to_start_us": 0.5799999999999841,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 329.8,
+                "finish_us": 344.42,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.6000000000000227,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 345.2,
+                "finish_us": 584.5200000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7799999999999727,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 625.1,
+                "finish_us": 787.6400000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7199999999999136,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          }
+        ]
+      },
+      "kernel_change_pct": 12.492492201577088
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "sides": {
+        "baseline": [
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/baseline/dfx/merged_swimlane.json",
+            "kernel_mean_us": 32.440000000000005,
+            "first_start_us": 340.40000000000003,
+            "last_end_us": 379.56000000000006,
+            "span_us": 39.160000000000025,
+            "start_spread_us": 8.379999999999995,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 167.20000000000002,
+                "finish_us": 194.72,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 1.3200000000000216,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 200.56,
+                "finish_us": 214.8,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": 5.840000000000003,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 207.36,
+                "finish_us": 317.7,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 223.52,
+                "finish_us": 243.38000000000002,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 8.719999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 244.14000000000001,
+                "finish_us": 250.08,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 251.35999999999999,
+                "finish_us": 271.44,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 1.0,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 260.06,
+                "finish_us": 293.96,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 3,
+                "last_finish_to_start_us": 9.980000000000018,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 294.71999999999997,
+                "finish_us": 310.96,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 339.08,
+                "finish_us": 388.97999999999996,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 21.379999999999995,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 371.9,
+                "finish_us": 388.97999999999996,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 17.139999999999986,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 389.58,
+                "finish_us": 449.71999999999997,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 57,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6000000000000227,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 483.13999999999993,
+                "finish_us": 670.1800000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6999999999999318,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/baseline/dfx/window_1/merged_swimlane.json",
+            "kernel_mean_us": 32.43375,
+            "first_start_us": 315.06,
+            "last_end_us": 358.18,
+            "span_us": 43.120000000000005,
+            "start_spread_us": 10.800000000000011,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 151.01999999999998,
+                "finish_us": 178.94,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.7199999999999989,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 179.51999999999998,
+                "finish_us": 192.94,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5799999999999841,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 190.56,
+                "finish_us": 307.74,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 200.7,
+                "finish_us": 220.32,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 7.759999999999991,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 226.54,
+                "finish_us": 232.56,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 6.219999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 233.29999999999998,
+                "finish_us": 242.68,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 3,
+                "rows": 3,
+                "last_finish_to_start_us": 0.7399999999999807,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 240.18,
+                "finish_us": 257.74,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.7200000000000273,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 243.15999999999997,
+                "finish_us": 255.94,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.47999999999996135,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 314.14,
+                "finish_us": 364.82,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 6.399999999999977,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 371.16,
+                "finish_us": 381.86,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.7400000000000091,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 382.52,
+                "finish_us": 439.3,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 57,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6599999999999682,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 473.12,
+                "finish_us": 659.5600000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8199999999999932,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/baseline/dfx/window_2/merged_swimlane.json",
+            "kernel_mean_us": 34.45708333333333,
+            "first_start_us": 321.0,
+            "last_end_us": 361.32,
+            "span_us": 40.31999999999999,
+            "start_spread_us": 4.840000000000032,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 180.06,
+                "finish_us": 204.34,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.6599999999999966,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 195.06,
+                "finish_us": 302.36,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 209.54,
+                "finish_us": 228.34,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": 5.199999999999989,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 229.1,
+                "finish_us": 246.66,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 247.55999999999997,
+                "finish_us": 256.36,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.8999999999999773,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 260.8,
+                "finish_us": 291.18,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 9,
+                "last_finish_to_start_us": 12.979999999999961,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 277.06,
+                "finish_us": 287.74,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 3,
+                "last_finish_to_start_us": 20.69999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 288.36,
+                "finish_us": 305.32000000000005,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.6200000000000045,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 319.98,
+                "finish_us": 369.5,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 17.620000000000005,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 354.90000000000003,
+                "finish_us": 370.34000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 17.600000000000023,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 370.98,
+                "finish_us": 429.90000000000003,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 66,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 464.6,
+                "finish_us": 650.64,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7799999999999727,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/baseline/dfx/window_3/merged_swimlane.json",
+            "kernel_mean_us": 30.422083333333333,
+            "first_start_us": 311.46000000000004,
+            "last_end_us": 376.52000000000004,
+            "span_us": 65.06,
+            "start_spread_us": 36.24000000000001,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 157.36,
+                "finish_us": 179.08,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5800000000000125,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 179.84,
+                "finish_us": 203.3,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 16,
+                "rows": 24,
+                "last_finish_to_start_us": 0.7599999999999909,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 198.96,
+                "finish_us": 303.9,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 208.4,
+                "finish_us": 226.82,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 5.099999999999994,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 272.0,
+                "finish_us": 285.36,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7000000000000455,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 285.94000000000005,
+                "finish_us": 294.17999999999995,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 3,
+                "rows": 3,
+                "last_finish_to_start_us": 0.5800000000000409,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 294.56000000000006,
+                "finish_us": 315.0,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.7800000000000296,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 302.4,
+                "finish_us": 333.03999999999996,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 1,
+                "last_finish_to_start_us": 8.220000000000027,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 310.58000000000004,
+                "finish_us": 379.36,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 6.680000000000007,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 366.91999999999996,
+                "finish_us": 379.48,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5199999999999818,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 380.34000000000003,
+                "finish_us": 439.03999999999996,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 39,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8600000000000136,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 475.58000000000004,
+                "finish_us": 661.0600000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.7200000000000273,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          }
+        ],
+        "candidate": [
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/candidate/dfx/merged_swimlane.json",
+            "kernel_mean_us": 39.14625,
+            "first_start_us": 335.62,
+            "last_end_us": 380.0,
+            "span_us": 44.379999999999995,
+            "start_spread_us": 5.060000000000002,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 165.18,
+                "finish_us": 191.76000000000002,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5999999999999943,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 197.10000000000002,
+                "finish_us": 211.20000000000002,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": 5.340000000000003,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 204.14000000000001,
+                "finish_us": 316.24,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 217.42000000000002,
+                "finish_us": 238.84000000000003,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 6.219999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 269.78000000000003,
+                "finish_us": 281.7,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 14.520000000000039,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 282.36,
+                "finish_us": 289.1,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 3,
+                "rows": 3,
+                "last_finish_to_start_us": 0.660000000000025,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 282.94,
+                "finish_us": 308.18,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.8600000000000136,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 293.58,
+                "finish_us": 315.78000000000003,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 1,
+                "last_finish_to_start_us": 4.479999999999961,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 334.06,
+                "finish_us": 394.48,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 17.819999999999993,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 374.02000000000004,
+                "finish_us": 394.96000000000004,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 23.220000000000027,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 395.6,
+                "finish_us": 458.46000000000004,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6399999999999864,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 496.74,
+                "finish_us": 686.5600000000001,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8799999999999955,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+            "kernel_mean_us": 41.01041666666667,
+            "first_start_us": 312.1,
+            "last_end_us": 357.2,
+            "span_us": 45.099999999999966,
+            "start_spread_us": 5.060000000000002,
+            "chain": [
+              {
+                "name": "qproj_matmul",
+                "start_us": 171.28,
+                "finish_us": 294.28000000000003,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 172.84,
+                "finish_us": 192.16,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5999999999999943,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 195.68,
+                "finish_us": 226.20000000000002,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": 3.5200000000000102,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 226.74,
+                "finish_us": 251.07999999999998,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 2,
+                "rows": 2,
+                "last_finish_to_start_us": 0.539999999999992,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 231.56,
+                "finish_us": 254.66000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.6599999999999966,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 251.76,
+                "finish_us": 257.16,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.6800000000000068,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 264.44,
+                "finish_us": 270.88,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 3,
+                "last_finish_to_start_us": 7.279999999999973,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 271.66,
+                "finish_us": 291.12,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7800000000000296,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 310.90000000000003,
+                "finish_us": 364.26,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 16.620000000000005,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 351.14,
+                "finish_us": 371.42,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 1,
+                "rows": 24,
+                "last_finish_to_start_us": 29.060000000000002,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 371.98,
+                "finish_us": 436.24,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.5600000000000023,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 471.88,
+                "finish_us": 664.76,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.5399999999999636,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+            "kernel_mean_us": 39.91416666666667,
+            "first_start_us": 330.16,
+            "last_end_us": 375.62,
+            "span_us": 45.45999999999998,
+            "start_spread_us": 5.099999999999966,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 155.62,
+                "finish_us": 183.62,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.4200000000000159,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 184.12,
+                "finish_us": 197.38,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 14,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 205.98,
+                "finish_us": 307.96000000000004,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 214.85999999999999,
+                "finish_us": 238.43999999999997,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 17.47999999999999,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 243.66,
+                "finish_us": 260.28000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.7800000000000296,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 265.08000000000004,
+                "finish_us": 274.04,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 26.640000000000043,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 274.64000000000004,
+                "finish_us": 281.58000000000004,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 3,
+                "rows": 3,
+                "last_finish_to_start_us": 0.6000000000000227,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 282.18,
+                "finish_us": 304.48,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.5999999999999659,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 329.28000000000003,
+                "finish_us": 388.78000000000003,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 21.319999999999993,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 367.3,
+                "finish_us": 386.8,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 20.039999999999964,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 387.36,
+                "finish_us": 452.62,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 69,
+                "rows": 72,
+                "last_finish_to_start_us": 0.5600000000000023,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 489.6000000000001,
+                "finish_us": 678.64,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.8600000000000705,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          },
+          {
+            "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/h8192_b24/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+            "kernel_mean_us": 35.74666666666667,
+            "first_start_us": 324.70000000000005,
+            "last_end_us": 399.84000000000003,
+            "span_us": 75.13999999999999,
+            "start_spread_us": 40.839999999999975,
+            "chain": [
+              {
+                "name": "scatter_softmax_pool_0",
+                "start_us": 157.66,
+                "finish_us": 178.78,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.5799999999999841,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_boundary_init",
+                "start_us": 183.16,
+                "finish_us": 196.36,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": 4.3799999999999955,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_matmul",
+                "start_us": 189.0,
+                "finish_us": 302.40000000000003,
+                "eligible": false,
+                "observed_early": "unverifiable",
+                "early_rows": 0,
+                "rows": 24,
+                "last_finish_to_start_us": null,
+                "untimed_producers": [
+                  "4294967311"
+                ],
+                "non_early_producers": [
+                  "4294967311"
+                ]
+              },
+              {
+                "name": "rmsnorm_rope",
+                "start_us": 201.8,
+                "finish_us": 218.56,
+                "eligible": true,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 2,
+                "last_finish_to_start_us": 5.439999999999998,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "rmsnorm_rope_cache_write",
+                "start_us": 232.58,
+                "finish_us": 260.40000000000003,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 9,
+                "rows": 9,
+                "last_finish_to_start_us": 0.4800000000000182,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_hadamard",
+                "start_us": 259.66,
+                "finish_us": 263.56000000000006,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 41.099999999999994,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "kv_and_cache_write",
+                "start_us": 264.26000000000005,
+                "finish_us": 274.36,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 3,
+                "rows": 3,
+                "last_finish_to_start_us": 0.6999999999999886,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "idx_kv_scale_commit",
+                "start_us": 275.1,
+                "finish_us": 288.52000000000004,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 1,
+                "rows": 1,
+                "last_finish_to_start_us": 0.7400000000000091,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qproj_dequant_rms_nope_rope",
+                "start_us": 323.56000000000006,
+                "finish_us": 401.8,
+                "eligible": false,
+                "observed_early": "none",
+                "early_rows": 0,
+                "rows": 48,
+                "last_finish_to_start_us": 21.160000000000025,
+                "untimed_producers": [],
+                "non_early_producers": [
+                  "qproj_matmul"
+                ]
+              },
+              {
+                "name": "indexer_head_coefficients",
+                "start_us": 338.28000000000003,
+                "finish_us": 375.00000000000006,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 24,
+                "rows": 24,
+                "last_finish_to_start_us": 0.6000000000000227,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "indexer_score_topk_native_pair_aic",
+                "start_us": 375.56000000000006,
+                "finish_us": 431.38000000000005,
+                "eligible": true,
+                "observed_early": "partial",
+                "early_rows": 66,
+                "rows": 72,
+                "last_finish_to_start_us": 0.5600000000000023,
+                "untimed_producers": [],
+                "non_early_producers": []
+              },
+              {
+                "name": "qk_pv_aic",
+                "start_us": 468.82000000000005,
+                "finish_us": 656.28,
+                "eligible": true,
+                "observed_early": "full",
+                "early_rows": 72,
+                "rows": 72,
+                "last_finish_to_start_us": 0.6800000000000068,
+                "untimed_producers": [],
+                "non_early_producers": []
+              }
+            ]
+          }
+        ]
+      },
+      "kernel_change_pct": 20.087859296676047
+    }
+  ],
+  "weighted_8_2_kernel_pct": 14.01156562059688
+}

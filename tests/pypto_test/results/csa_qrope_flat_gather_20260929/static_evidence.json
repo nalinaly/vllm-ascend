@@ -1,0 +1,35 @@
+{
+  "status": "CPU_CODEGEN_PASS",
+  "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qrope_flat_gather_20260929/compiled/candidate",
+  "vec_max_end_bytes": 106592,
+  "baseline_vec_max_end_bytes": 105504,
+  "static_calls": {
+    "TMOV": 0,
+    "TCONCAT": 0,
+    "TGATHER": 4,
+    "TSTORE": 8,
+    "TROWSUM": 4,
+    "TRSQRT": 3
+  },
+  "full_tile_gather_shape": [
+    1,
+    512
+  ],
+  "unchanged_tail_gather_shape": [
+    8,
+    64
+  ],
+  "high_precision_rsqrt_calls": [
+    "TRSQRT(v254, v250, v252);",
+    "TRSQRT(v328, v324, v326);",
+    "TRSQRT(v420, v416, v418);"
+  ],
+  "gather_ops": [
+    "pto.tgather ins(%q_rope_flat_inline8119__ssa_v0, %q_abs_swap_inline8117__ssa_v0, %q_flat_gather_tmp_inline8091__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%q_swapped_flat_inline8092__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>)",
+    "pto.tgather ins(%20, %q_abs_swap_inline8117__ssa_v0, %q_flat_gather_tmp_inline8091__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%21 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>)",
+    "pto.tgather ins(%47, %q_abs_swap_inline8117__ssa_v0, %q_flat_gather_tmp_inline8091__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%48 : !pto.tile_buf<loc=vec, dtype=f32, rows=1, cols=512, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>)",
+    "pto.tgather ins(%q_rope_chunk_tail_inline8071__ssa_v0, %q_swap_idx_tail_inline8131__ssa_v0, %q_gather_tmp_inline8133__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=8, cols=64, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=8, cols=64, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>, !pto.tile_buf<loc=vec, dtype=i32, rows=8, cols=64, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>) outs(%q_rope_swapped_tail_inline8132__ssa_v0 : !pto.tile_buf<loc=vec, dtype=f32, rows=8, cols=64, v_row=?, v_col=?, blayout=row_major, slayout=none_box, fractal=512, pad=0>)"
+  ],
+  "scope": "满行每head由8次1×64 gather加逐行TMOV变为1次1×512 gather；静态4个调用点含pipeline展开和尾行，不代表动态调用总数或实测收益",
+  "native_index_units": "AscendC SetGatherSrcOffset用字节；PTO索引用元素，A3 TGather内部乘sizeof(float)，不重复乘4"
+}

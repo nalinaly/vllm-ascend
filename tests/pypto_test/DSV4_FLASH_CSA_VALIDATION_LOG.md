@@ -12024,3 +12024,40 @@ gather逐行TMOV保持，不能声称全部指令数减半。Vec末端105504→1
 私有源码只读；只做长B16/短B24反序同卡5预热20次正式事件、四窗DFX及八类完整状态。
 保持生产不动，有真实核内收益再补受影响尾行/padding；不额外采Native/七档/模型。
 [来源、补丁和CPU证据](results/csa_qdequant_pair_20260929/README.md)。
+
+## 451. 双head合批未获核内收益，保持逐head（2026-09-29）
+
+task_20260929_162257_18683029171已完成退出0，auto设备0，CANN9.2/mode2/atomic0/det0。
+两档八类完整状态零容差、图重放/保护区与16窗官方join通过，48-worker覆盖保持。
+长B16 Q反量化核时21.505→24.192μs（+12.492%），短B24 32.438→38.954（+20.088%），8:2 +14.012%。
+长档四窗范围19.128–24.883对22.900–27.823，短档30.422–34.457对35.747–41.010；短档范围完全分离。
+完整CSA长964.179→977.284（+1.359%），短918.781→922.982（+0.457%），8:2 +1.179%。
+P95长988.000→995.400、短934.660→941.380；max长988.840→996.680、短940.140→952.480。
+四组均0/20超过各自P50的105%，仍判回退，不以没有异常大尾掩盖变慢。
+
+不采用，不扩大尾行、七档或16卡测试；生产仍f4861832，逐head/Q_B24/七处early均保留。
+双head减少源码循环但UB工作集扩大且gather仍逐行，不能假定动态向量成本下降；
+本次没有分离各成本份额，不将UB容量单独定性为原因。下一项独立消除逐行Gather搬运。
+[完整对照](results/csa_qdequant_pair_20260929/RESULTS.md)、
+[四窗及query链](results/csa_qdequant_pair_20260929/dequant.json)、
+[取舍](results/csa_qdequant_pair_20260929/decision.json)。
+
+## 452. 参考AscendC整块索引，RoPE展平Gather候选排队（2026-09-29）
+
+从f4861832已测包独立复制，不叠加Q_B20或双head。只改性能版qkv_proj_rope.py满8行，
+仍逐head/48-worker，依赖/early/尾行、512列RMS与舍入均保持。
+本地ops-transformer28f40354的rotate_interleaved_split_bsn_pad.h一次准备整块索引，按calcTotalNum Gather；
+A3注册和模板引用已确认，但不宣称当前Native二进制在本模型必选该tiling。
+当前PTO/pypto-lib2164563的Tensor gather逐行1×64后TMOV，低层Gather本身也逐行；
+候选外层将原局部索引加行起点，8×64无搬运展平为1×512，单次tile.gather再reshape回原形。
+PTO索引按元素，ISA内部乘4；不重复套用Native字节索引。无额外GM buffer或cache重排。
+
+首版CPU发现Tile rsqrt不支持high_precision属性，未占卡；二版显式FP32 scratch，
+生成三参数TRSQRT与基线高精度一致，未改低精度。完整PTOAS/CCE/link/load、基线/候选入口解析通过。
+满行3个展开Gather均1×512，尾行保留8×64；整核TMOV从3处到0、无TCONCAT，Vec105504→106592字节。
+仅定向Ruff/shell/diff；统一format.sh ci仍缺pre-commit，未声称全CI通过。工具链/精度版/生产不改。
+
+16:39正常auto提交task_20260929_163903_24675961128，16:44确认设备2上running，max-time7200。
+两侧同卡反序，只测长B16/短B24，5预热20正式事件、独立四窗及八类完整状态；
+私有源码/运行入口只读。有真实核内收益再补受影响尾行/padding，不先重测Native或七档。
+[来源、补丁、编译证据和入口](results/csa_qrope_flat_gather_20260929/README.md)。

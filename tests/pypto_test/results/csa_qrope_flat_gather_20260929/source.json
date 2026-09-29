@@ -1,0 +1,20 @@
+{
+  "baseline": "f4861832",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-qrope-flat-gather-f4861832-v2",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-early-chain-7b296153-candidate",
+  "variant": "pkg:dsv4_csa_qrope_flat_gather_f4861832_v2",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "满行RoPE先展平8×64，绝对元素索引单次tile.gather；保持逐head和48-worker",
+  "reference": "ops-transformer28f40354/rotary_position_embedding/rotate_interleaved_split_bsn_pad.h:Compute",
+  "not_changed": "Q_B24、量化顺序/逐head RMS/舍入、依赖/early、尾行、精度版/工具链",
+  "scope": "与在跑双head方案独立；先确认展平gather生成单行512元素指令且无逐行TMOV，再两档验证"
+}

@@ -1,0 +1,5 @@
+{
+  "scope": "CPU only, no device task",
+  "error": "Error: pl.rsqrt: 'high_precision' is not supported for Tile operands. The tile form selects precision by taking a scratch tile: pl.tile.rsqrt(tile, tmp).",
+  "resolution": "Tile rsqrt显式传与Tensor高精度lowering同形的FP32 scratch，保留TRSQRT高精度三参数形式"
+}

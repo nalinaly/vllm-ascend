@@ -1,0 +1,93 @@
+{
+  "decision": "REJECT_KEEP_SINGLE_HEAD",
+  "task": "task_20260929_162257_18683029171",
+  "task_status": "completed (exit=0)",
+  "state_status": "PASS",
+  "weighted_8_2_csa_pct": 1.178797658149584,
+  "weighted_8_2_q_dequant_kernel_pct": 14.01156562059688,
+  "reason": "目标Q反量化核时两档均回退，短档四窗范围完全分离；完整CSA/P95均变差，没有需要保留的核内收益",
+  "production": "unchanged f4861832; single head, Q_B24, 48 dequant workers, seven early flags",
+  "follow_up": "不补此失败候选的尾行/七档/模型；独立评估原基线的整块Gather候选",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "csa_change_pct": 1.3591879788771521,
+      "q_kernel_change_pct": 12.492492201577088,
+      "sides": {
+        "baseline": {
+          "mean_us": 964.1789972782135,
+          "us_p95": 987.9999756813049,
+          "us_max": 988.8399839401245,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "q_kernel_mean_us": 21.505416666666672,
+          "q_window_means_us": [
+            24.883333333333336,
+            20.833333333333336,
+            21.17708333333334,
+            19.127916666666675
+          ]
+        },
+        "candidate": {
+          "mean_us": 977.2840023040771,
+          "us_p95": 995.4000115394592,
+          "us_max": 996.6800212860107,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "q_kernel_mean_us": 24.191979166666666,
+          "q_window_means_us": [
+            27.823333333333334,
+            22.89958333333333,
+            22.976666666666667,
+            23.068333333333335
+          ]
+        }
+      }
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "csa_change_pct": 0.4572363752393116,
+      "q_kernel_change_pct": 20.087859296676047,
+      "sides": {
+        "baseline": {
+          "mean_us": 918.7809973955154,
+          "us_p95": 934.660017490387,
+          "us_max": 940.1400089263916,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "q_kernel_mean_us": 32.438229166666666,
+          "q_window_means_us": [
+            32.440000000000005,
+            32.43375,
+            34.45708333333333,
+            30.422083333333333
+          ]
+        },
+        "candidate": {
+          "mean_us": 922.9819983243942,
+          "us_p95": 941.3800239562988,
+          "us_max": 952.4800181388855,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "q_kernel_mean_us": 38.954375,
+          "q_window_means_us": [
+            39.14625,
+            41.01041666666667,
+            39.91416666666667,
+            35.74666666666667
+          ]
+        }
+      }
+    }
+  ]
+}

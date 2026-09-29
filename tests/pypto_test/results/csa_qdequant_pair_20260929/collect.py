@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+TITLE = "Q反量化满行按双head合批"
+DESCRIPTION = "48-worker和尾行不变；保持逐head 512列归约与量化顺序，另列目标核的四窗分布。"
 
 
 def load(name, path):
@@ -21,8 +23,8 @@ def main():
     chain = load("dq_chain", ROOT.parent / "csa_indexer_early_chain_20260929/collect.py")
     common = load("dq_common", ROOT.parent / "csa_sparse_first_pv_20260929/collect.py")
     common.ROOT = ROOT
-    common.TITLE = "Q反量化满行按双head合批"
-    common.DESCRIPTION = "48-worker和尾行不变；保持逐head 512列归约与量化顺序，另列目标核的四窗分布。"
+    common.TITLE = TITLE
+    common.DESCRIPTION = DESCRIPTION
     common.TARGETS = {"score_aic": "indexer_score_topk_native_pair_aic",
                       "score_aiv": "indexer_score_topk_native_pair_aiv",
                       "sparse_aic": "qk_pv_aic", "sparse_aiv": "qk_pv_aiv"}

@@ -342,7 +342,7 @@ release Native的HcPostDSplit同样先整组读取。PTO此前沿pypto-lib216456
 性能版继续reexport，两版依赖图通过。完整精度版/Native逐token及EP16验收仍后置。
 [测量、边界和采用证据](results/csa_hc_post_resident_20260929/README.md)。
 
-## 5. Q反量化/RMS/RoPE：多行Vector合批候选（2026-09-29）
+## 7. Q反量化/RMS/RoPE：多行Vector合批候选（2026-09-29）
 
 参考本地ops-nn19614968的`norm/rms_norm/op_kernel/rms_norm_whole_reduce_sum.h`：
 `SubProcess910`将多行输入一并载入，`ComputeRstd`的平方等向量操作按整批执行，再逐行归约。
@@ -360,3 +360,24 @@ Vec最大末端105504→148000字节，完整CPU编译/load通过；gather的逐
 不能把合批数2直接宣称动态指令全部减半。正常auto只排长B16/短B24，核内/CSA/P95与状态另验。
 与HCA的Q_B20-worker候选独立；后者CSA 8:2 +2.563%，已经维持24，不叠加。
 [实现差异、CPU证据与单卡入口](results/csa_qdequant_pair_20260929/README.md)。
+
+双档设备任务已完成退出0，八类跨版本状态与16窗通过，但目标核长+12.492%、短+20.088%，
+8:2 +14.012%；完整CSA 8:2 +1.179%，不采用、不扩测。按整批表达不能代替生成码和实测判据。
+
+## 8. Q RoPE整块Gather：吸收AscendC的整块索引方式（2026-09-29）
+
+ops-transformer28f40354的`posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn_pad.h`
+在Process为整块调用SetGatherSrcOffset；Compute/ComputeCastFp32按calcLen×headDimAlign Gather。
+rotary_position_embedding.cpp引用该路径，host支持ascend910_93；只作为A3实现参考，
+不认定当前Native二进制针对本模型必选该tiling。Native用字节索引，PTO用元素索引且TGather内部乘4。
+
+PTO与pypto-lib2164563的Tensor gather(dim=-1)在满8行时逐行生成1×64 TGATHER和TMOV拼回，
+A3低层Gather又按validRow循环。独立候选保持逐head，先给原有局部索引加行起点，展平8×64为1×512，
+一次tile.gather后按原样reshape；保持FP32运算、逐head512列RMS、高精度rsqrt和BF16 RINT。
+尾行原样保留、48-worker和任务依赖不变，不叠加双head失败候选。
+
+显式Tile的rsqrt通过同形FP32 scratch生成三参数TRSQRT，与原高精度实现一致。
+CPU完整编译/load通过，满行三个展开调用均为1×512，整核TMOV三处降为零、无TCONCAT，
+Vec末端105504→106592字节。源代码差异源于消除实际lowering中的逐行搬运，不改变vLLM cache或NZ布局。
+正常auto单卡只测长B16/短B24，完整状态、目标核/CSA/P95待结果。
+[候选和编译依据](results/csa_qrope_flat_gather_20260929/README.md)。
