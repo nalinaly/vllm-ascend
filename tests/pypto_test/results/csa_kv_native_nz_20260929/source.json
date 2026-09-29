@@ -1,0 +1,22 @@
+{
+  "baseline": "369ad2c1",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-qrope-flat-gather-f4861832-v2-candidate",
+  "variant": "pkg:dsv4_csa_kv_native_nz_369ad2c1_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "性能版KV复用Native [512,4096] NZ权重原地址，Cube b_trans=True；不在加载期转ND转置",
+  "reference": "Native最新七档KV MatMulV2的NZ输入；ops-nn19614968按实际B布局选择加载路径",
+  "not_changed": "M/N/K分块、完整K顺序、worker数量、依赖/early、缓存布局、精度版签名及工具链",
+  "scope": "先测新鲜真实权重路径；若采用，另补旧快照方向迁移、ND/atomic/尾行兼容",
+  "comparison_limit": "Native和PTO分工不同，不能将单核均值直接相减为同工作量性能差距",
+  "nz_proof": "按原有M分组1/2/3显式constexpr分支，常量直接进入核体；任务数量和工作映射与旧公式一致"
+}

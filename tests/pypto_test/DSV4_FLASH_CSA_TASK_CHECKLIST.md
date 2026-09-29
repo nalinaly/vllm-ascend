@@ -151,6 +151,12 @@ task_20260929_170813_2046519748已完成退出0，八类状态与16窗通过。
 五个O-A核体与已测参考一致。17:36正常auto提交task_20260929_173611_20993369288，
 只验证长短B16的完整分支效果与状态/P95，生产未改，不提前补全七档或16卡。
 
+另一个独立[NZ KV投影候选](results/csa_kv_native_nz_20260929/README.md)沿Native权重方向：
+性能版wkv改为[512,4096] NZ并b_trans读取，加载期可直接借用原地址；精度版保持旧方向。
+原M组1/2/3显式constexpr化以满足NZ偏移证明，不改工作映射；CPU完整编译通过，L0仍K128。
+17:44正常auto提交task_20260929_174400_225474124825，长B16/短B24，仅局部状态/核时/CSA/P95及原地址证据。
+不叠加O-A分支；若有效再补旧快照/ND/atomic/尾行兼容，生产尚未接入。
+
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |
 | 1 | Native新标准七档已完成 | dynamic=False/inplace=True/static+superkernel、显式named backend自管图；[七档实测](results/csa_native_inplace_seven_20260929/NATIVE_RESULTS.md)与八类同图状态通过，PTO配套采集不阻塞发布，不再试开关 |

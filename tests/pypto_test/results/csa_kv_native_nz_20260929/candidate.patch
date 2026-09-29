@@ -1,0 +1,161 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_kv_native_nz_369ad2c1_v1/qkv_proj_rope.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_kv_native_nz_369ad2c1_v1/qkv_proj_rope.py
+@@ -788,9 +788,9 @@
+ 
+ 
+ @pl.jit.inline(auto_scope=False)
+-def _kv_project(
++def _kv_project_grouped(
+     x: pl.Tensor[[KV_T_DYN, D], pl.BF16],
+-    wkv: pl.Tensor[[D, HEAD_DIM], pl.BF16],
++    wkv: pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     kv_fp32: pl.Tensor[[KV_MM_T_DYN, HEAD_DIM], pl.FP32],
+     tile_base: pl.Scalar[pl.INDEX],
+     tile_rows: pl.Scalar[pl.INDEX],
+@@ -798,32 +798,32 @@
+     late_dep: pl.Scalar[pl.TASK_ID],
+     DENSE_M: pl.constexpr,
+     GROUP_ROWS: pl.constexpr,
++    KV_M_GROUPS: pl.constexpr,
+ ):
+     """Partition M/N independently; every block preserves its complete K traversal."""
+     t_dim = pl.tensor.dim(x, 0)
+     x_view = pl.reshape(x, [t_dim, D])
+     kv_full_rows = (tile_rows // DENSE_M) * DENSE_M
+-    kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))
+     with pl.spmd(
+-        (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
++        (HEAD_DIM // KV_N_TILE) * KV_OK * KV_M_GROUPS,
+         name_hint="kv_proj_matmul",
+         deps=[late_dep],
+     ) as _kv_tid:
+         pl.set_cache_policy(wkv, pl.CachePolicy.BYPASS)
+         kbg = pl.tile.get_block_idx()
+-        kv_col0 = (kbg // (KV_OK * kv_m_groups)) * KV_N_TILE
+-        kv_k_base = ((kbg // kv_m_groups) % KV_OK) * KV_SPLIT_K_TILE
+-        kv_m_group = kbg % kv_m_groups
+-        for dense_t0 in pl.range(kv_m_group * DENSE_M, kv_full_rows, kv_m_groups * DENSE_M):
++        kv_col0 = (kbg // (KV_OK * KV_M_GROUPS)) * KV_N_TILE
++        kv_k_base = ((kbg // KV_M_GROUPS) % KV_OK) * KV_SPLIT_K_TILE
++        kv_m_group = kbg % KV_M_GROUPS
++        for dense_t0 in pl.range(kv_m_group * DENSE_M, kv_full_rows, KV_M_GROUPS * DENSE_M):
+             dense_x0 = tile_base + dense_t0
+             dense_acc = pl.create_tensor([DENSE_M, KV_N_TILE], dtype=pl.FP32)
+             for dense_k in pl.pipeline(0, KV_SPLIT_K_TILE // KV_K_TILE, stage=2):
+                 dense_d0 = kv_k_base + dense_k * KV_K_TILE
+                 dense_x = x_view[dense_x0 : dense_x0 + DENSE_M, dense_d0 : dense_d0 + KV_K_TILE]
+-                dense_w = wkv[dense_d0 : dense_d0 + KV_K_TILE, kv_col0 : kv_col0 + KV_N_TILE]
+-                dense_acc = pl.matmul_acc(dense_acc, dense_x, dense_w, init_cond=(dense_k == 0))
++                dense_w = wkv[kv_col0 : kv_col0 + KV_N_TILE, dense_d0 : dense_d0 + KV_K_TILE]
++                dense_acc = pl.matmul_acc(dense_acc, dense_x, dense_w, b_trans=True, init_cond=(dense_k == 0))
+             kv_fp32 = pl.assemble(kv_fp32, dense_acc, [dense_t0, kv_col0], atomic=STORE_ATOMIC)
+-        for t0 in pl.range(kv_full_rows + kv_m_group * KV_M_TILE, t_matmul, kv_m_groups * KV_M_TILE):
++        for t0 in pl.range(kv_full_rows + kv_m_group * KV_M_TILE, t_matmul, KV_M_GROUPS * KV_M_TILE):
+             kv_acc = pl.create_tensor([KV_M_TILE, KV_N_TILE], dtype=pl.FP32)
+             for db in pl.pipeline(KV_SPLIT_K_TILE // KV_K_TILE, stage=2):
+                 d0 = kv_k_base + db * KV_K_TILE
+@@ -835,16 +835,45 @@
+                     [x_t0, d0],
+                     valid_shape=[kv_rows, KV_K_TILE],
+                 )
+-                wkv_chunk = wkv[d0 : d0 + KV_K_TILE, kv_col0 : kv_col0 + KV_N_TILE]
+-                kv_acc = pl.matmul_acc(kv_acc, kv_x_chunk_bf16, wkv_chunk, init_cond=(db == 0))
++                wkv_chunk = wkv[kv_col0 : kv_col0 + KV_N_TILE, d0 : d0 + KV_K_TILE]
++                kv_acc = pl.matmul_acc(kv_acc, kv_x_chunk_bf16, wkv_chunk, b_trans=True, init_cond=(db == 0))
+             kv_fp32 = pl.assemble(kv_fp32, kv_acc, [t0, kv_col0], atomic=STORE_ATOMIC)
++    return kv_fp32
++
++
++@pl.jit.inline(auto_scope=False)
++def _kv_project(
++    x: pl.Tensor[[KV_T_DYN, D], pl.BF16],
++    wkv: pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
++    kv_fp32: pl.Tensor[[KV_MM_T_DYN, HEAD_DIM], pl.FP32],
++    tile_base: pl.Scalar[pl.INDEX],
++    tile_rows: pl.Scalar[pl.INDEX],
++    t_matmul: pl.Scalar[pl.INDEX],
++    late_dep: pl.Scalar[pl.TASK_ID],
++    DENSE_M: pl.constexpr,
++    GROUP_ROWS: pl.constexpr,
++):
++    """Keep the existing 1/2/3 M partition; make its NZ divisor explicit."""
++    kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))
++    if kv_m_groups == 3:
++        kv_fp32 = _kv_project_grouped(
++            x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep, DENSE_M, GROUP_ROWS, 3,
++        )
++    elif kv_m_groups == 2:
++        kv_fp32 = _kv_project_grouped(
++            x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep, DENSE_M, GROUP_ROWS, 2,
++        )
++    else:
++        kv_fp32 = _kv_project_grouped(
++            x, wkv, kv_fp32, tile_base, tile_rows, t_matmul, late_dep, DENSE_M, GROUP_ROWS, 1,
++        )
+     return kv_fp32
+ 
+ 
+ @pl.jit.inline(auto_scope=False)
+ def kv_proj_rope(
+     x: pl.Tensor[[KV_T_DYN, D], pl.BF16],
+-    wkv: pl.Tensor[[D, HEAD_DIM], pl.BF16],
++    wkv: pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     gamma_ckv: pl.Tensor[[HEAD_DIM], pl.BF16],
+     rope_cos_il: pl.Tensor[[KV_T_DYN, ROPE_DIM], pl.FP32],
+     rope_sin_signed: pl.Tensor[[KV_T_DYN, ROPE_DIM], pl.FP32],
+@@ -1054,7 +1083,7 @@
+     wq_a: pl.Tensor[[Q_LORA, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     wq_b: pl.Tensor[[Q_LORA, H * HEAD_DIM], pl.INT8, QUANT_WEIGHT_LAYOUT],
+     wq_b_scale: pl.Tensor[[H * HEAD_DIM], pl.FP32],
+-    wkv: pl.Tensor[[D, HEAD_DIM], pl.BF16],
++    wkv: pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     rope_cos: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
+     rope_sin: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
+     gamma_cq: pl.Tensor[[Q_LORA], pl.BF16],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_kv_native_nz_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_kv_native_nz_369ad2c1_v1/decode_csa.py
+@@ -140,7 +140,7 @@
+     wq_a: pl.Tensor[[Q_LORA, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     wq_b: pl.Tensor[[Q_LORA, H * HEAD_DIM], pl.INT8, QUANT_WEIGHT_LAYOUT],
+     wq_b_scale: pl.Tensor[[H * HEAD_DIM], pl.FP32],
+-    wkv: pl.Tensor[[D, HEAD_DIM], pl.BF16],
++    wkv: pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     gamma_cq: pl.Tensor[[Q_LORA], pl.BF16],
+     gamma_ckv: pl.Tensor[[HEAD_DIM], pl.BF16],
+     freqs_cos: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
+@@ -20,6 +20,8 @@
+ import pypto.language as pl
+ 
+ from vllm_ascend import envs
++
++from .config import FLASH
+ 
+ WEIGHT_NZ_MODE = envs.VLLM_ASCEND_ENABLE_NZ
+ if WEIGHT_NZ_MODE not in (0, 1, 2):
+@@ -90,7 +92,11 @@
+     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
+     params = inspect.signature(root_function).parameters
+     result = {}
+-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
++    names = ("wq_a", "wq_b", "wo_a", "wo_b")
++    # 精度版旧方向保持；仅原生几何的性能版KV进入直接绑定。
++    if tuple(params["wkv"].annotation.shape) == (FLASH.head_dim, FLASH.hidden_size):
++        names += ("wkv",)
++    for name in names:
+         layout = params[name].annotation.layout
+         if layout is None:
+             result[name] = "ND"
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -191,7 +191,8 @@
+         "wq_a": root_weight("wq_a", (1024, 4096), bf16),
+         "wq_b": root_weight("wq_b", (1024, 32768), int8),
+         "wq_b_scale": scale(attention.wq_b, 32768),
+-        "wkv": weight(attention.wkv, (512, 4096), bf16, True),
++        "wkv": (root_weight("wkv", (512, 4096), bf16) if "wkv" in layouts
++                else weight(attention.wkv, (512, 4096), bf16, True)),
+         "gamma_cq": weight(attention.q_norm, (1024,), bf16),
+         "gamma_ckv": weight(attention.kv_norm, (512,), bf16),
+         "cmp_wkv": weight(main.wkv, (1024, 4096), bf16),

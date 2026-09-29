@@ -12146,3 +12146,25 @@ Indexer scratch作用域不扩大；生成orchestration的seq_lens读取点2→1
 仅长短B16，同卡反序5预热20事件、八类完整状态及四窗DFX；前置长度扫描移动也计入完整CSA/P95。
 有收益后补实际长度切换/padding边界，生产仍369ad2c1，不新增Native/七档或EP16占用。
 [分支、源码和CPU证据](results/csa_oa_short_branch_20260929/README.md)。
+
+## 457. KV投影按Native原生NZ读取，CPU通过后独立排队（2026-09-29）
+
+继续沿最新本地AscendC参考，ops-nn19614968/mat_mul_v3.cpp按FORMAT_X2选NZ、transB=1进入MatmulType。
+Native七档KV MatMulV2 profile实际输入NZ；不将其旧二进制与当前源码等同。
+当前PTO及pypto-lib2164563仍用ND [4096,512] KV权重，适配器在加载阶段将Native NZ解包并转置一份。
+候选根签名改为[512,4096] BF16_WEIGHT_LAYOUT，Cube b_trans=True，目标为借用Native原地址。
+加载期副本不在CSA计时里，因此不会将省掉一次加载转换混算成每步性能提升。
+
+隔离369ad2c1私有整包，只改性能版根/qkv及共享布局/权重绑定四文件，不叠加O-A分支候选。
+共享逻辑仅在根wkv为Native几何时启用，精度版仍原ND转置方向。完整K顺序、M/N/K分块、工作编号/任务数/依赖不变。
+NZ非负偏移证明首先在动态M组除数上失败；max被简化后不能解决，编排常量别名被outline捕获也不够。
+最终原有1/2/3 M组以显式constexpr专化，常量直接进入核体，完整CPU编译/link/load及两入口解析通过。
+生成两种M尺寸各三种组数，L0仍K128双缓冲、无TMOV，权重GM描述符为NZ；未修改工具链。
+新增分支/常量除数成本须一起计入CSA，不能将未来所有收益只归因布局。
+
+17:44正常auto提交task_20260929_174400_225474124825，max-time7200，私有Python与运行入口只读。
+长128K/B16、短8K/B24，同卡反序5预热20事件、八类完整状态与独立四窗；另验证wkv format29/原地址。
+Native和PTO的KV工作分工不同，不直接相减单核均值；先测同工作量的PTO A/B。
+该候选仅覆盖新鲜真实权重，若保留还须补旧快照方向迁移、ND/atomic及尾行兼容，生产未接入。
+PyPTO88f605986/Simplera54c05095未变，CANN9.2；定向Ruff通过，统一format.sh ci仍因缺pre-commit未完成。
+[接口范围、源码和CPU证据](results/csa_kv_native_nz_20260929/README.md)。

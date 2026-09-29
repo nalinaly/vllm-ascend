@@ -1,0 +1,249 @@
+{
+  "notes": "静态类型与代码生成证据，不代替设备收益；任务分工按原1/2/3 M组显式专化。",
+  "sides": {
+    "baseline": [
+      {
+        "kernel": "kv_proj_matmul",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=32, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=32, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": false,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v49 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v47, v48)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v57 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v3, v55, v56)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v172 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v164 + (v163 + v161 * v22 + v162 * v21), v170, v171)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v194 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v186 + (v185 + v161 * v22 + v184 * v21), v192, v193)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v77 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v72 + (v73 + v70 * v74 + v71), v75, v76)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v95 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v90 + (v91 + v70 * v92 + v89), v93, v94)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v103 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v98 + (v99 + v89 * v100 + v80), v101, v102)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v181 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v176 + (v177 + v162 * v178 + v175), v179, v180)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v202 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v197 + (v198 + v184 * v199 + v175), v200, v201)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v86 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v81 + (v82 + v71 * v83 + v80), v84, v85)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v40 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v38, v39)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v248 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v243 + (v244 + v241 * v245 + v242), v246, v247)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND> v149 = GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND>(v144 + (v145 + v142 * v146 + v143), v147, v148)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_0",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=64, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=64, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": false,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v49 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v47, v48)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v57 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v3, v55, v56)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v172 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v164 + (v163 + v161 * v22 + v162 * v21), v170, v171)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v194 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v186 + (v185 + v161 * v22 + v184 * v21), v192, v193)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v103 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v98 + (v99 + v89 * v100 + v80), v101, v102)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v181 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v176 + (v177 + v162 * v178 + v175), v179, v180)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v202 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v197 + (v198 + v184 * v199 + v175), v200, v201)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND> v86 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 512, 128>, pto::Stride<262144, 262144, 262144, 512, 1>, pto::Layout::ND>(v81 + (v82 + v71 * v83 + v80), v84, v85)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v77 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v72 + (v73 + v70 * v74 + v71), v75, v76)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v95 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v90 + (v91 + v70 * v92 + v89), v93, v94)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v40 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v38, v39)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v248 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v243 + (v244 + v241 * v245 + v242), v246, v247)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND> v149 = GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND>(v144 + (v145 + v142 * v146 + v143), v147, v148)"
+        ]
+      }
+    ],
+    "candidate": [
+      {
+        "kernel": "kv_proj_matmul",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=32, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=32, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v56 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v54, v55)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v53 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v51, v52)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v182 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v174 + (v173 + v171 * v21 + v172 * v20), v180, v181)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v208 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v200 + (v199 + v171 * v21 + v198 * v20), v206, v207)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v76 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v71 + (v72 + v69 * v73 + v70), v74, v75)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v98 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v93 + (v94 + v69 * v95 + v92), v96, v97)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v109 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v103 + (v104 + v102 * v105 + v82 * v106), v107, v108)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v195 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v189 + (v190 + v186 * v191 + v188 * v192), v193, v194)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v219 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v213 + (v214 + v212 * v215 + v188 * v216), v217, v218)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v89 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v83 + (v84 + v80 * v85 + v82 * v86), v87, v88)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v44 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v42, v43)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v269 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v264 + (v265 + v262 * v266 + v263), v267, v268)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND> v159 = GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND>(v154 + (v155 + v152 * v156 + v153), v157, v158)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_0",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=32, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=32, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v54 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v52, v53)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v51 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v49, v50)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v180 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v172 + (v171 + v169 * v21 + v170 * v20), v178, v179)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v206 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v198 + (v197 + v169 * v21 + v196 * v20), v204, v205)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v74 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v69 + (v70 + v67 * v71 + v68), v72, v73)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v96 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v91 + (v92 + v67 * v93 + v90), v94, v95)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v107 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v101 + (v102 + v100 * v103 + v80 * v104), v105, v106)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v193 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v187 + (v188 + v184 * v189 + v186 * v190), v191, v192)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v217 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v211 + (v212 + v210 * v213 + v186 * v214), v215, v216)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v87 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v81 + (v82 + v78 * v83 + v80 * v84), v85, v86)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v42 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v40, v41)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v267 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v262 + (v263 + v260 * v264 + v261), v265, v266)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND> v157 = GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND>(v152 + (v153 + v150 * v154 + v151), v155, v156)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_1",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=32, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=32, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v53 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v51, v52)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v50 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v48, v49)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v177 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v169 + (v168 + v166 * v21 + v167 * v20), v175, v176)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v203 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v195 + (v194 + v166 * v21 + v193 * v20), v201, v202)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v71 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v66 + (v67 + v64 * v68 + v65), v69, v70)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND> v93 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 32, 512>, pto::Stride<131072, 131072, 131072, 4096, 1>, pto::Layout::ND>(v88 + (v89 + v64 * v90 + v87), v91, v92)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v104 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v98 + (v99 + v97 * v100 + v77 * v101), v102, v103)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v190 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v184 + (v185 + v181 * v186 + v183 * v187), v188, v189)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v214 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v208 + (v209 + v207 * v210 + v183 * v211), v212, v213)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v84 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v78 + (v79 + v75 * v80 + v77 * v81), v82, v83)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v41 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v39, v40)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v264 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v259 + (v260 + v257 * v261 + v258), v262, v263)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND> v154 = GlobalTensor<float, pto::Shape<1, 1, 1, 32, 128>, pto::Stride<16384, 16384, 16384, 512, 1>, pto::Layout::ND>(v149 + (v150 + v147 * v151 + v148), v152, v153)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_2",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=64, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=64, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v57 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v55, v56)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v54 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v52, v53)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v183 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v175 + (v174 + v172 * v21 + v173 * v20), v181, v182)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v209 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v201 + (v200 + v172 * v21 + v199 * v20), v207, v208)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v77 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v72 + (v73 + v70 * v74 + v71), v75, v76)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v99 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v94 + (v95 + v70 * v96 + v93), v97, v98)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v110 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v104 + (v105 + v103 * v106 + v83 * v107), v108, v109)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v196 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v190 + (v191 + v187 * v192 + v189 * v193), v194, v195)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v220 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v214 + (v215 + v213 * v216 + v189 * v217), v218, v219)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v90 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v84 + (v85 + v81 * v86 + v83 * v87), v88, v89)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v45 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v43, v44)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v270 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v265 + (v266 + v263 * v267 + v264), v268, v269)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND> v160 = GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND>(v155 + (v156 + v153 * v157 + v154), v158, v159)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_3",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=64, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=64, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v54 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v52, v53)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v51 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v49, v50)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v180 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v172 + (v171 + v169 * v21 + v170 * v20), v178, v179)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v206 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v198 + (v197 + v169 * v21 + v196 * v20), v204, v205)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v74 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v69 + (v70 + v67 * v71 + v68), v72, v73)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v96 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v91 + (v92 + v67 * v93 + v90), v94, v95)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v107 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v101 + (v102 + v100 * v103 + v80 * v104), v105, v106)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v193 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v187 + (v188 + v184 * v189 + v186 * v190), v191, v192)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v217 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v211 + (v212 + v210 * v213 + v186 * v214), v215, v216)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v87 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v81 + (v82 + v78 * v83 + v80 * v84), v85, v86)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v42 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v40, v41)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v267 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v262 + (v263 + v260 * v264 + v261), v265, v266)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND> v157 = GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND>(v152 + (v153 + v150 * v154 + v151), v155, v156)"
+        ]
+      },
+      {
+        "kernel": "kv_proj_matmul_4",
+        "l0_types": [
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=16, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=acc, dtype=f32, rows=64, cols=128, v_row=?, v_col=?, blayout=col_major, slayout=row_major, fractal=1024, pad=0>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=16, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0, compact=1>",
+          "!pto.tile_buf<loc=left, dtype=bf16, rows=64, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=row_major, fractal=512, pad=0>",
+          "!pto.tile_buf<loc=right, dtype=bf16, rows=128, cols=128, v_row=?, v_col=?, blayout=row_major, slayout=col_major, fractal=512, pad=0>"
+        ],
+        "loads": 8,
+        "tmov": 0,
+        "tmatmul": 16,
+        "tmatmul_acc": 0,
+        "nz_gm": true,
+        "global_tensor_types": [
+          "GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ> v54 = GlobalTensor<bfloat16_t, pto::Shape<-1, -1, -1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::NZ>(v3, v52, v53)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v51 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v2, v49, v50)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v178 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v170 + (v169 + v167 * v21 + v168 * v20), v176, v177)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v204 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, -1, 512>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v196 + (v195 + v167 * v21 + v194 * v20), v202, v203)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v72 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v67 + (v68 + v65 * v69 + v66), v70, v71)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND> v94 = GlobalTensor<bfloat16_t, pto::Shape<1, 1, 1, 64, 512>, pto::Stride<262144, 262144, 262144, 4096, 1>, pto::Layout::ND>(v89 + (v90 + v65 * v91 + v88), v92, v93)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v105 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v99 + (v100 + v98 * v101 + v78 * v102), v103, v104)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v191 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v185 + (v186 + v182 * v187 + v184 * v188), v189, v190)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v215 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v209 + (v210 + v208 * v211 + v184 * v212), v213, v214)",
+          "GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ> v85 = GlobalTensor<bfloat16_t, pto::Shape<1, 32, 8, 16, 16>, pto::Stride<2097152, 8192, 256, 16, 1>, pto::Layout::NZ>(v79 + (v80 + v76 * v81 + v78 * v82), v83, v84)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND> v42 = GlobalTensor<float, pto::Shape<1, 1, 1, -1, -1>, pto::Stride<-1, -1, -1, -1, -1>, pto::Layout::ND>(v1, v40, v41)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND> v265 = GlobalTensor<float, pto::Shape<1, 1, 1, 16, 128>, pto::Stride<8192, 8192, 8192, 512, 1>, pto::Layout::ND>(v260 + (v261 + v258 * v262 + v259), v263, v264)",
+          "GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND> v155 = GlobalTensor<float, pto::Shape<1, 1, 1, 64, 128>, pto::Stride<32768, 32768, 32768, 512, 1>, pto::Layout::ND>(v150 + (v151 + v148 * v152 + v149), v153, v154)"
+        ]
+      }
+    ]
+  }
+}
