@@ -6642,3 +6642,84 @@ B16 下 `requests = 16`，`min(16, 48) ≡ min(16, 16)`——**生成的 kernel 
 20 块换成 7 轮但恒为一波。
 
 **这同时是第 98.8 节那张表第四行（"已为留派发余量而故意调低"）的实测背书。**
+
+### 98.20 ✗ `state_commit` 的 `deps=[pool_tid]` 不是假依赖——是 WAR 顺序
+
+查 206.5–285.5 那个 79 μs 阻塞窗口时注意到：`hca_state_commit` 的依赖是
+`pool_tid`，而它的循环体只读 `kv_proj` / `score_proj` / `ape` / `state_slots` /
+`positions` / `seq_lens`，**从不读 `pooled`**（读 `pooled` 的是
+`norm_rope_write`）。按数据流看像是可以改成 `deps=[projection_tid]`，
+让它提前约 18 μs 起跑。
+
+**核对源码后否掉了。** `hca_softmax_pool` 在历史分支里读 `state`：
+
+```python
+values[history_row:history_row+1, :] = pl.slice(state, [1, POOL_COLS], [page, column])
+scores[history_row:history_row+1, :] = pl.slice(state, [1, POOL_COLS], [page, column + HEAD_DIM])
+```
+
+而 `state_commit` 正是**写** `state` 的那个任务。所以 `deps=[pool_tid]` 是
+真实的 **WAR（写后读）顺序约束**，文件开头的 docstring 已经写明：
+「先完成历史读取，再提交 Native state，避免滚动页覆盖」，
+`softmax_pool` 体内也有「当前步的行在 UB 中覆盖历史读取；不先写 state，
+不需要搬运窗口」。
+
+要放松它，必须证明 `state_slots` 给当前 token 分配的页与 `state_table` 里
+历史位置的页不重叠，而这取决于 cache 分配器的滚动策略——不在算子里可判定。
+**结论：这条依赖不能动。**
+
+记下来是为了避免以后再"发现"一次：**只看数据流（谁读谁的输出）会漏掉 WAR，
+必须同时看谁写了对方读的缓冲。**
+
+### 98.21 ⚠ 无卡"编译校验"抓不到 `@pl.jit` 的 trace 错误
+
+`nodummy` 第一次提交时编译失败：
+`UnsupportedFeatureError('Unsupported expression type: ListComp')`。
+原因是我把 `return partials, act_scale_dq, [proj_b_tids[i] for i in range(O_GROUPS)]`
+写进了 return——**PyPTO 允许参数位置的列表推导**（原代码
+`task_dummy(deps=[proj_b_tids[i] for i in range(O_GROUPS)])` 就是），
+**但不允许 return 里的**。改法是返回 `proj_b_tids` 数组本身，
+让每个消费者在 `deps=[...]` 参数位置展开。
+
+随后我写了一个无卡校验脚本（把变体包覆盖进 `PYTHONPATH` 再 import
+`HCAOperators` 触发注册），两个变体都报 OK。**但拿故意写坏的副本反证，
+它同样报 OK**——注册只走到算子登记，`@pl.jit` 的 trace 要等首次带真实 shape
+调用才发生，所以这类错误无卡查不出来。
+
+**这条校验路径作废，不要再用。** 正确做法是直接提交 A/B：
+`run_hca_ab_same_card.sh` 会把失败的 pass 如实记成
+`None  UnsupportedFeatureError(...)`，只废掉一个 pass，不影响其余变体。
+
+### 98.22 O 投影尾部的两个依赖重排（在测）
+
+用户 2026-09-30 批准「改依赖与交错」。泳道（128K/B16）：O 投影段
+504.2–668.1 = 163.8 μs，AIC 下限 101.9，差 **61.9 μs（占总空隙的三分之一）**。
+
+| 组成 | 核·μs | 单元 | 下限 |
+| --- | ---: | --- | ---: |
+| `proj_a_mm` ×8 组 | 1 723.2 | AIC | 71.8 |
+| `proj_b_mm` ×8 组 | 721.7 | AIC | 30.1 |
+| `quant` ×8 组 | 949.3 | AIV | 19.8 |
+| `hca_oproj_hc_post` | 1 662.5 | AIV | 34.6 |
+
+差距的构成：组阶段排空约 15 μs + `task_dummy` 那一跳 6.8 μs +
+`hca_oproj_hc_post` 独占 39.4 μs（期间 **AIC 完全空转**）。
+而组阶段（504–622）AIV 只有 5.5~16/48 在跑——**post 的 AIV 工作量
+本来完全装得进那个空当**。
+
+两个候选：
+
+1. **`nodummy`**：删掉 `parts_ready = pl.system.task_dummy(deps=[8 个 proj_b])`，
+   让 `hca_oproj_hc_post` 直接依赖 8 个 tid。最后一个 proj_b 结束于 621.8，
+   post 到 628.6 才起跑，中间 6.8 μs 就是这一跳 + 48 块派发。
+   本仓库已经因为同样理由删过一次这种 dummy
+   （`decode_compressor_ratio128.py` 的注释）。不改数值、不改块数、不加任务。
+2. **`postsplit`**：把 post 里 `for group in pl.pipeline(O_GROUPS)` 的求和拆成
+   g=0–3 / g=4–7。前半段 `hca_oproj_acc_lo` 只依赖前 4 个 proj_b
+   （分别结束于 592.7 / 596.7 / 599.5 / 601.2，比 628.6 早约 27 μs），
+   那段 AIV 占用仅 1.4~9.6/48。累加次序仍是 g=0→7，FP32 经 GM 往返不丢精度。
+
+⚠ 环境记录：本轮无卡校验的日志显示当前 CANN 为 **9.2.0-beta.2**
+（`/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2`）。
+公共入口会被其他 session 改动，跨轮的绝对数字不可直接比较，
+同卡 ABBA 的轮内 Δ 不受影响。
