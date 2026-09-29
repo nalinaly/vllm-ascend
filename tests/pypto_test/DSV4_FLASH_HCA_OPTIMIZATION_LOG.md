@@ -5325,3 +5325,67 @@ torch_npu profiler 也拆不开"。
   **这条路被 L1 容量堵死**，除非同时把 slot 数从 3 降到 1（那会丢掉 QK 的软流水）。
 - 用 `PYPTO_LOG_LEVEL=info` 的 `perf_hints.log` 找标量热点，
   以及确认 `pl.read` 这类 GM 标量读在 tick 循环里出现了多少次。
+
+### 90.5 量出标量热点：每 tick 6 次 `% 3`，而 3 不是 2 的幂
+
+按 90.4 去量 `hca_unified_attention` 的 tick 循环体（`decode_sparse_attn_hca.py`
+第 1191–1324 行，134 行）：
+
+| 构造 | 次数/​tick | 说明 |
+| --- | --- | --- |
+| `pl.read(` | **0** | 循环内没有 GM 标量读，这一项是干净的 |
+| `//` | 17 | **绝大多数是编译期常量**（`H // 2`、`HEAD_DIM // 2`、`HEAD_DIM // PV_N_TILE`、`H // 2 // H_TILE`），会被折叠 |
+| `%` | **6** | **全部是运行时取模**，见下 |
+| `pl.cast(` | 7 | — |
+| `pl.gather_row` / `pl.matmul` | 2 / 1 | 实际计算 |
+
+六处运行时取模，除数都是 `QK_TRANSFER_SLOTS`：
+
+```python
+l1_row     = (tick % QK_TRANSFER_SLOTS) * ATTN_K_TILE
+row        = (worker * QK_TRANSFER_SLOTS + tick % QK_TRANSFER_SLOTS) * H
+pv_row     = (worker * QK_TRANSFER_SLOTS + pv_work % QK_TRANSFER_SLOTS) * H
+pv_l1_row  = (pv_work % QK_TRANSFER_SLOTS) * ATTN_K_TILE
+vec_row    = (worker * QK_TRANSFER_SLOTS + vec_tick % QK_TRANSFER_SLOTS) * H + head0
+out_row    = (worker * QK_TRANSFER_SLOTS + out_work % QK_TRANSFER_SLOTS) * H + head0
+```
+
+`QK_TRANSFER_SLOTS = QK_PRE_LAUNCH + 1 = 3`——**不是 2 的幂**，所以编译器不能降成
+位与，只能出真除法或魔数乘法＋移位。36 tick × 6 次 = 每 worker 216 次除法类运算，
+24 个 worker 合计约 5200 次。这与 90.2 的 mac/scalar 比（PTO 0.25 vs Native 0.45）
+方向一致。
+
+### 90.6 ✗ 把 `QK_TRANSFER_SLOTS` 改成 4 被 L1 容量堵死
+
+4 是 2 的幂，取模能降成位与。但 `kv_l1` 是
+`pl.create_tile([QK_TRANSFER_SLOTS * ATTN_K_TILE, HEAD_DIM], BF16, Mat)`：
+
+| SLOTS | kv_l1 | 结论 |
+| --- | --- | --- |
+| 3（现状） | 3 × 128 × 512 × 2B = **384 KiB** | 装得下 |
+| 4 | 4 × 128 × 512 × 2B = **512 KiB** | **正好占满整个 Mat 空间**，query 与权重无处可放 |
+
+和 90.4 里 `ATTN_K_TILE` 128→256 是同一道墙。**不要再往这个方向调常量。**
+
+### 90.7 下一步：用循环携带的 slot 计数器消掉取模（未实现）
+
+除数改不动，但取模本身可以不用除法算——`slot` 每 tick 只 +1、到 `SLOTS` 归零，
+用 `pl.range` 的 `init_values` 携带它，归零用比较＋条件减（无除法、无 `if`，
+避免 `@pl.jit` trace 两个分支）：
+
+```python
+for tick, (slot,) in pl.range(work_count + QK_PRE_LAUNCH, init_values=[0]):
+    l1_row = slot * ATTN_K_TILE          # 原来是 (tick % SLOTS) * ATTN_K_TILE
+    ...
+    nxt = slot + 1
+    pl.yield_(nxt - QK_TRANSFER_SLOTS * pl.cast(nxt >= QK_TRANSFER_SLOTS, pl.INDEX))
+```
+
+六处取模分布在 AIC lane（`tick`／`pv_work`）与 AIV lane（`vec_tick`／`out_work`）
+的不同循环里，要各自携带一个计数器。`slot` 是标量而非 Mat tile，
+不触犯"Mat-resident tile 不能做 loop-carried iter_arg"那条限制。
+
+⚠ 尚未实现与验证。预期收益量级：若 216 次除法/worker 每次按 10~20 周期估，
+约 2~4 μs/worker——**这个量级低于本批卡的分辨力（10 μs）**，
+所以要么等它与其它标量削减叠加后一起量，要么改用 incore 模拟器（`incore-profiling`
+技能）在周期级验证，而不是拿同卡 ABBA 去测。
