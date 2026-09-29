@@ -6804,3 +6804,32 @@ attention的首次启动base/syncq/syncboth为338.96/320.20/349.12。
 因此只看单组跨度下降会误判，必须检查生产者、并行旁路和消费者一起的时序。
 单张syncq泳道虽更快，独立ABBA均值仍更慢；不将单窗口机制线索写成稳定整层收益。
 完整输出/cache/state逐bit一致；证据见本节链接的result_h131072_b16.json。
+
+## 101. 恢复核内优化：完整有效压缩块省mask的组合未受益（2026-09-30）
+
+参考最新ops-transformer的SparseAttnSharedkv A3 `DealBmm1ResBaseBlock`：
+缩放score后按实际有效列数进入softmax。PTO候选由gather发布实际搬入行数，
+只有当前query可见完整K128且所有页真实有效时省mask/bias/fillpad/乘mask，
+尾块与无效页继续原分支，不改变分块max、BF16概率和running归约。
+新增计数按64字节行距隔离，避免并发scalar write共享cache line；
+CPU先修正嵌套yield与行距，再编译通过上卡，没有用设备试错这两项问题。
+
+task_20260930_013917_58586026298完成，128K/B16同卡ABBA，每侧18次设备span：
+
+| 实现 | min | max | mean |
+| --- | ---: | ---: | ---: |
+| base | 557.25 | 624.25 | 582.63 |
+| fullmask | 578.75 | 645.25 | 605.39 |
+
+独立DFX的attention AIC mean148.04→166.96、AIV152.03→171.05，
+AIV max155.62→174.18，整组跨度155.80→174.26 μs。
+gather mean26.33→21.04而组跨度34.80→36.48，不能把局部均值下降当成整组提速。
+没有目标attention核内收益，不接入、不补短档，不扩大功能测试。
+已有完整输出/cache/state跨版本逐bit一致、自身图重放和保护区通过；仅代表正常长档，
+不声称无效页/边界/Native模型已验收。额外标量读取与分支是待查成本，不能唯一归因。
+证据：[hca_fullmask_20260930](hca_fullmask_20260930/README.md)。
+
+下一项可用实现参考已经核对：CSA第430–432节的O-B AL1-full/N-first二版，
+保留K128 L0流水，在ROW≤96时把一次激活载入复用给两个N256输出。
+HCA当前尚未吸收；只能按函数移植评估，不能把CSA的其他O投影调度/后处理一起复制。
+仍按核内与调度交替推进；本阶段默认只新增第99节residual复用，20%领先目标尚未达成。

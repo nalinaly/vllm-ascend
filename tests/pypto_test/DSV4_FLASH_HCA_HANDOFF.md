@@ -22,7 +22,10 @@ Native使用npugraph_ex dynamic=False、inplace/static开启，正式对照开Su
 分工、依赖、逐输出加法顺序和BF16舍入点不变。基线与候选均已显式CPU解析/编译通过。
 私有冻结包实验见[hca_residual_reuse_20260930](hca_residual_reuse_20260930/README.md)。
 128K/B16与8K/B24完整状态逐bit一致，post核内mean分别下降26.01%/6.85%，已保留实现。
-整层mean分别+2.72%/−0.82%，max均增加，尚未证明整层收益；接下来检查投影与attention的调度联动。
+整层mean分别+2.72%/−0.82%，max均增加，尚未证明整层收益。
+随后Q投影sync_start及与反量化联动、完整压缩块mask快路径均未受益，未接入，见LOG第100–101节。
+前者泳道证明等待会转移至反量化；后者新增标量分支后attention核内也更慢。
+下一项参考为CSA已验证的O-B激活常驻二版，只提取目标函数，不整体覆盖HCA公共算子。
 
 ## 目标与分支
 

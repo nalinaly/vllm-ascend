@@ -50,15 +50,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--history", type=int, default=131072)
     parser.add_argument("--batch", type=int, default=16)
+    parser.add_argument("--experiment-root", type=Path, default=ROOT)
+    parser.add_argument("--candidate-label", default="reuse")
     args = parser.parse_args()
-    result_root = ROOT.parent / f"results/hca_residual_reuse_20260930/h{args.history}_b{args.batch}"
+    experiment = args.experiment_root.resolve()
+    label = args.candidate_label
+    result_root = experiment.parent / f"results/{experiment.name}/h{args.history}_b{args.batch}"
     import torch
 
     torch.set_num_threads(4)
-    source = json.loads((ROOT / "source.json").read_text())
+    source = json.loads((experiment / "source.json").read_text())
     states = torch.load(result_root / "abba/p1_base/states.pt", map_location="cpu", weights_only=True)
     passes = []
-    for folder in ("p1_base", "p2_reuse", "p3_reuse", "p4_base"):
+    for folder in ("p1_base", f"p2_{label}", f"p3_{label}", "p4_base"):
         path = result_root / "abba" / folder
         report = json.loads((path / "report.json").read_text())
         assert report["status"] == "MEASURED", report.get("error")
@@ -88,7 +92,7 @@ def main():
         )
     assert len({p["device"] for p in passes}) == 1
     summary = {}
-    for side in ("base", "reuse"):
+    for side in ("base", label):
         selected = [p for p in passes if p["side"] == side]
         summary[side] = {
             "all_device_replays": stats([s for p in selected for s in p["span_samples_us"]]),
@@ -105,11 +109,11 @@ def main():
         ),
     }
     output["incore"] = {}
-    for side in ("base", "reuse"):
+    for side in ("base", label):
         report = json.loads((result_root / f"swimlane_{side}/report.json").read_text())
         assert report["status"] == "MEASURED"
         output["incore"][side] = incore(Path(report["swimlane"]["merged_swimlane"]))
-    (ROOT / f"result_h{args.history}_b{args.batch}.json").write_text(
+    (experiment / f"result_h{args.history}_b{args.batch}.json").write_text(
         json.dumps(output, ensure_ascii=False, indent=2) + "\n"
     )
     print(json.dumps(summary, ensure_ascii=False))
