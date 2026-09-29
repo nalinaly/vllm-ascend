@@ -24,7 +24,11 @@ mkdir -p "$hca_output/ascend"
 # 不做 ASCEND_RT_VISIBLE_DEVICES 重映射：直接用队列分配的那张卡（TASK_DEVICE），
 # 与 CSA 的 compiled_case 一致。早先又重映射又强行传 --device 0，两者打架。
 export ASCEND_PROCESS_LOG_PATH="$hca_output/ascend"
-export VLLM_ASCEND_ENABLE_NZ=1
+# kernel 侧的 nz_mode.py 读的是这个环境变量（BF16_WEIGHT_NZ = 值 >= 2），
+# 而 --weight-nz-mode 只进 vLLM 的 additional_config（主机侧权重存储格式）。
+# 两者必须一致，否则主机把 BF16 权重存成 FRACTAL_NZ 而 kernel 按 ND 寻址，
+# 只能靠 recast 出私有副本来兜，量到的就不是生产路径。允许外部覆盖以便对照。
+export VLLM_ASCEND_ENABLE_NZ="${VLLM_ASCEND_ENABLE_NZ:-1}"
 export PTO_CSA_VARIANT=performance
 export VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0
 # 与上线 decode 口径对齐，取自

@@ -3357,3 +3357,220 @@ CPM 能显著下降。代价：任务数翻倍（每级 2.3 μs + 每块 0.27 μ
 可交付的现实目标是 **约 1.05～1.07×**（从当前 1.200 起，纯调度侧的空间）；
 要真的过 0.80×，必须从 A（改 PyPTO 的 NZ DMA）或 B（按 token 分片重构）里选一条，
 两者都是较大的工程量，需要用户裁决。
+
+---
+
+## 66. ★★★★★ 根因确认：每个 cube 矩阵乘的 L0 ping-pong 都被削掉了，编译器早已报告（2026-09-29）
+
+用户 2026-09-29 要求"先看 `ops-transformer` 里的 incore task 流水是否有可借鉴之处"。
+照做之后，Native 的配方与 PyPTO 的 perf hint 两头对上，根因确认。
+
+### 66.1 Native 的配方（`ops-transformer` 的 AscendC 源码）
+
+`experimental/attention/sparse_attn_sharedkv/op_kernel/arch22/sparse_attn_sharedkv_scfa_block_cube.h`：
+
+```
+M_SPLIT_SIZE    = 128      N_SPLIT_SIZE = 128
+K_L1_SPLIT_SIZE = 256   ← GM→L1 的 K 分块
+K_L0_SPLIT_SIZE = 128   ← L1→L0 的 K 分块（两级不同！）
+L1_BLOCK_SIZE = 64*512*sizeof(Q_T) = 64 KiB
+  bufQPL1 = L1_BLOCK_SIZE * 4 = 256 KiB    bufKVL1 = L1_BLOCK_SIZE * 3 = 192 KiB   （共 448/512 KiB）
+L0A_PP_SIZE = L0B_PP_SIZE = 32 KiB → tmpBufL0A/B = 2 × 32 KiB = 64 KiB（满 L0A/L0B）
+L0C_PP_SIZE = 64 KiB              → tmpBufL0C  = 2 × 64 KiB = 128 KiB（满 L0C）
+```
+
+同步用 7 个 `MTE1_MTE2` flag（`L1_EVENT0..6`）+ 2 个 `M_MTE1`（`L0AB_EVENT0/1`），
+逐 slot `SetFlag`/`WaitFlag`，还有反向同步（注释："表示 L1 中的 A 已经被 mte1 消费完"）。
+编排是一个 MIX kernel：`if ASCEND_IS_AIC` / `if ASCEND_IS_AIV` 两套代码，
+靠 `CrossCoreSetFlag`/`CrossCoreWaitFlag` 握手（4 个 flag 在飞，信用式），
+外层 `for (s2LoopIdx < s2LoopEnd + extraLoop)` 是错一拍软流水。
+
+**要点：L1 深度（7）与 L0 深度（2）解耦，L0A/L0B 每片只占一半空间才能 ping-pong。**
+
+⚠ 那个"错一拍软流水"PTO 的 attention **已经有了**
+（`hca_unified_attention` 的 `for tick in pl.range(work_count + QK_PRE_LAUNCH)`），
+这也正是 PTO 的 attention（166.9 μs）快于 Native 的 `SparseAttnSharedkv`（187.7 μs）的原因。
+差距不在 attention，在几个矩阵乘任务上。
+
+### 66.2 PyPTO 的 perf hint 一直在报告同一件事
+
+JIT 的 build output 里有 `report/perf_hints.log`（`PYPTO_LOG_LEVEL` 默认 info 就会写），
+之前从没看过。128K/B16 那份里有 **50 条 `PH-MR-001`**，内容全是：
+
+```
+MemoryReuse: software pipelining requested depth 2 for pipeline group 0 in Right,
+but only 1 of 2 buffers fit (32768 B per stage, 65536 B free)
+— stages 1 apart share storage and serialize.
+The operand would fit depth 2 on its own, but co-resident buffers /
+other pipeline groups over-subscribe the space
+```
+
+按源码位置汇总：
+
+| 文件:行 | 任务 | 空间 | 每 stage | 空闲 | 请求→实得 | 条数 |
+|---|---|---|---:|---:|---|---:|
+| decode_o_proj.py:232 | proj_a | Left | 32768 | 65536 | 2→1 | 6 |
+| decode_o_proj.py:232 | proj_a | Right | 32768 | 65536 | 2→1 | 9 |
+| qkv_proj_rope.py:249 | qr_proj | Right | 32768 | 65536 | 2→1 | 8 |
+| qkv_proj_rope.py:783 | kv_proj | Right | 32768 | 65536 | 2→1 | 8 |
+| decode_compressor_ratio128.py:81 | kv_score_proj | Left/Right | 32768 | 65536 | 2→1 | 5+5 |
+| decode_o_proj.py:303 | proj_b | Right | 32768 | 65536 | 2→1 | 4 |
+| decode_o_proj.py:400 | quant | Vec | 32768 | 188416 | 2→1 | 3 |
+| **q_projection.py:98** | **qproj_matmul** | Right | **65536** | 65536 | 2→1 | 1 |
+| decode_hca.py:117 | widen | Vec | 16384 | 188416 | 4→3 | 1 |
+
+**每 stage 32768 B 正好是 Native 的 `L0B_PP_SIZE`** —— 说明 `ChooseL0Tile`
+选的 L0 分块跟 Native 一样对。L0B 也正好装得下 2 份。
+**丢掉 ping-pong 的原因是同一个 task 里并存多个 pipeline group 争这块空间**，
+`MemoryReuse` 的跨 group 削减把每个都降到 depth 1，于是
+"stages 1 apart share storage and **serialize**" —— MTE1 搬运无法与 MAD 重叠。
+
+**这就是 §62.3 里 mte2 占忙时 56%（Native 77%）的直接机制。**
+
+group 数为什么会多：用户写的 `pl.pipeline(stage=2)` 是 **L1 级**的 K 循环，
+而 `AutoTileMatmulL0` 会再为每个 `matmul`/`matmul_acc` 生成一个 **L0 级**的
+K 循环（同样 `pipeline_stages=2`）。两层嵌套，副本数相乘
+（文档 18-auto_tile_matmul_l0.md 明确说"嵌套 pipeline 仍然走复制路径"）。
+
+所以正确方向与 §63 试的 stage=3 **恰好相反**：应当**减少 group 数**，
+把外层 L1 级的 `pl.pipeline(stage=2)` 降成 `pl.range`，
+让 L0 的 ping-pong 由 AutoTile 那一层独占空间。已提交同卡 ABBA 对照：
+`seqk_all`（14 处 cube K 循环全改）/ `seqk_proja`（只改 proj_a）/
+`qproj_n128`（`QPROJ_MM_N_TILE` 256→128，把每 stage 从 65536 B 降到 32768 B）。
+
+`qproj_matmul` 那条最值得单独说：它的每 stage 就是 **65536 B = 整个 L0B**，
+**任何深度都不可能双缓冲**。而它是观测关键路径上的第二大项（111.5 μs，15.9% makespan）。
+
+### 66.3 ✗ B（按 token 分片改短依赖链）经计算不成立
+
+§65.2 提的 B 路线在权重受限的矩阵乘上不成立，理由就是 §64 的实测：
+`qr_proj` 一类算子**每块都要读它那个 N 列块在全部 K 上的权重**，
+与该块处理多少行 token 无关。按 token 分成 S 片，等于把 M 分组乘以 S：
+
+- 每片的 qr_proj 耗时与整份几乎相同（m1/m2/m1n64/m1n32 四个变体实测证明了
+  改每核流量不改耗时）；
+- 权重总流量乘以 S；
+- 任务数乘以 S，再付 2.3 μs/任务 + 0.27 μs/块的派发单价。
+
+也就是说 B 会把最大的几项各算 S 遍。**除非先解决每核搬运速率，B 都是负收益。**
+A（修 L0 ping-pong）反而是 B 的前提。
+
+### 66.4 口径再修一次：A/B 必须同卡
+
+§61.3 把轮内改成 9 次重放取中位数，仍然不够。七档复测
+`allow_early_resolve` 时 128K/B16 的 Δ 从 −23.75 变成 **+21.00**，
+查卡号发现 base/变体分别落在 device 11/13/15 —— **同配置换卡差 45 μs**。
+
+新增 `run_hca_ab_same_card.sh`：一个 task-submit 占一张卡，在**同一张卡**上
+按 ABBA…BA 顺序顺序跑各变体（每个变体两个样本，抵消卡内漂移），
+各变体各自独立进程与私有 OPP 根。配套 `summarize_hca_ab.py` 汇总。
+⚠ `task-submit` 会在命令末尾自动追加 `--device N`，包装脚本收集变体名时
+必须在第一个以 `-` 开头的参数处停止，否则它会被当成变体名。
+
+**此前所有跨任务的 A/B 数字（含 §51–§58 的八个否决候选）都是跨卡测的，
+结论不可靠，需要用同卡口径重测。**
+
+---
+
+## 67. 同卡口径下的 A 路线实测：`qproj_n128` 是唯一有效项；发现 NZ 档位口径错（2026-09-29）
+
+### 67.1 生成代码给出地面真相：L0 已对齐 Native，差的是 L1 深度
+
+读 JIT 产出的 `ptoas/proj_a_mm.pto`（PTO IR，带源码行溯源），proj_a 的实际分配：
+
+| 层级 | PTO 实际发出 | Native（`ops-transformer`） |
+|---|---|---|
+| L1 (Mat) | xa 2 份 @131072/196608（各 64 KiB）+ wa 2 份 @0/65536（各 64 KiB）= **256 KiB，深度 2** | **448 KiB，深度 7**（bufQPL1 ×4 + bufKVL1 ×3） |
+| L0A (Left) | 2 片 @0/32768，各 32 KiB = 满 64 KiB | 2 × `L0A_PP_SIZE` 32 KiB = 满 64 KiB |
+| L0B (Right) | 2 片 @0/32768，各 32 KiB = 满 64 KiB | 2 × `L0B_PP_SIZE` 32 KiB = 满 64 KiB |
+| L0C (Acc) | 1 片 128×128 FP32 = 64 KiB | 2 × 64 KiB = 满 128 KiB（dbC） |
+
+**L0A/L0B 的片大小与深度已经和 Native 一致**（`ChooseL0Tile` 选得对），
+`wa` 的 `tload` 带 `cache_policy = l2_bypass`。两处差别：
+**L1 深度 2 vs 7**，以及 **L0C 没有双缓冲**（Native 有 dbC，PTO 的 drain 暴露在外）。
+
+### 67.2 同卡 ABBA 实测（128K/B16，每变体 2 样本）
+
+| 变体 | 改动 | Δ vs base | 判读 |
+|---|---|---:|---|
+| `seqk_all` | 14 处 cube K 循环 `pl.pipeline(stage=2)` → `pl.range` | **+25.12** | 明确更差 |
+| `seqk_proja` | 只改 proj_a 两处 | −6.25 | 噪声内 |
+| **`qproj_n128`** | `QPROJ_MM_N_TILE` 256→128 | **−10.25** | **唯一有效** |
+| `qproj_k128` | `QPROJ_PIPE_K_TILE` 256→128 | +4.88 | 减 K 不如减 N |
+| `seqk_qprojk128` | 两者合并 | +8.88 | 更差 |
+| `m96` | `PROJ_A_ROW_TILE` 128→96 | −0.25 | 中性 |
+| `ak128m96` | `A_K_TILE` 128 + m96 | −3.25 | 噪声内 |
+| `ak128` | `A_K_TILE` 256→128 | 编译失败 | 见下 |
+| `all`（§66 的 early_resolve） | 16 处补 `allow_early_resolve` | −5.62 | 中性偏好 |
+
+**`seqk_all` 的 +25.12 直接否掉 §66.2 提的"减少 pipeline group"方向**：
+外层 `pl.pipeline(stage=2)` 是 L1 级预取，去掉它损失的比 L0 争用换回来的多。
+结合 67.1 的地面真相，正确方向是**加深 L1**（Native 用 7 级），不是减少 group。
+
+**`qproj_n128` 为什么有效**：`q_projection.py:98` 的每 stage 是
+`QPROJ_PIPE_K_TILE(256) × QPROJ_MM_N_TILE(256) × 1 B`(INT8) = **65536 B = 整个 L0B**，
+**任何深度都不可能双缓冲**（这是七处 PH-MR-001 里唯一"每 stage 就占满空间"的）。
+N 减到 128 后每 stage 32768 B，L0B 能放 2 片。
+减 K 同样能到 32 KiB 却反而 +4.88，说明起作用的是 N 方向的块数
+（`QPROJ_N_BLOCKS` 从 128 变 256，24 个 worker 上的轮次更细），不只是片大小。
+
+**`ak128` 的硬错误**：`ValueError: Right buffer usage (131072 bytes) exceeds platform
+limit (65536 bytes)`。这正是 §57 记的"K=128 → allocator 仍然要 128 KiB"，
+现在知道根因：`A_K_TILE=128` 时 L1 stage 2 份 × L0 2 片 = 4 × 32 KiB = 128 KiB，
+而旧 PYPTO planner 的 `AllocateMemoryAddr`"只把复用类顺序堆叠、从不细分已释放区域"
+（见 `18-auto_tile_matmul_l0.md` 的限制说明与 pypto issue #1908），
+所以不会优雅降级，直接报超限。
+
+### 67.3 ★ 口径错误：kernel 侧一直在 nz_mode=1，BF16 权重走的是 ND 分支
+
+从 `proj_a_mm.pto` 的行号溯源发现，编译进去的全部是
+`decode_o_proj.py:232–265`，即 **`_proj_a_mm_nd`**，而不是 `_proj_a_mm_nz`（173–217）。
+
+原因：`proj_a_mm = _proj_a_mm_nz if BF16_WEIGHT_NZ else _proj_a_mm_nd`，
+而 `BF16_WEIGHT_NZ = WEIGHT_NZ_MODE >= 2`，`WEIGHT_NZ_MODE = envs.VLLM_ASCEND_ENABLE_NZ`。
+`run_hca_compiled_case.sh:27` 写的是 `export VLLM_ASCEND_ENABLE_NZ=1` → **1 >= 2 为假**。
+
+而 `--weight-nz-mode 2` 只进 vLLM 的 `additional_config`（主机侧权重存储格式），
+report 里 `native_weight_formats` 是 `{wq_a: 29, wq_b: 29, wo_a: 29, wo_b: 29}`
+—— **29 = FRACTAL_NZ**。也就是说：**主机把 BF16 权重存成 NZ，kernel 却按 ND 编译**，
+只能靠 recast 出私有副本兜住，量到的不是生产路径。
+这正是既有约束 `perf-tests-prioritize-nz-mode-2` 警告的情形。
+
+已把 runner 改成 `export VLLM_ASCEND_ENABLE_NZ="${VLLM_ASCEND_ENABLE_NZ:-1}"`
+（可外部覆盖），`run_hca_ab_same_card.sh` 支持 `nz1` / `nz2` 标签
+（同时设环境变量与 `--weight-nz-mode`，两侧保持一致）。
+同卡 `nz1` vs `nz2` 对照已提交。
+
+⚠ 若 nz2 成立，则 §59–§66 的全部数字都是 nz_mode=1 口径下的，需要重建基线。
+
+### 67.4 ✗ 两条方法论教训
+
+1. **A/B 必须同卡**（§66.4 已记）。同卡 ABBA 下 `allow_early_resolve` 是 −5.62，
+   而跨卡测出的是 −23.75 与 +21.00 —— 两个都是假的。
+2. **不要在任务执行期间编辑 shell 脚本。** bash 是增量读取脚本文件的，
+   运行中改动会让它在原字节偏移处解析失败，报
+   `line NN: unexpected EOF while looking for matching '"'`。
+   三个同卡任务因此都以 exit=2 结束（**各 pass 的数据已落盘、可用**，
+   只是最后一行 printf 没执行）。与 `pto-jit-rereads-source-pin-variant`
+   是同一类陷阱：JIT 与 bash 都在"运行期"重读源文件。
+3. 同卡 ABBA 只 2 个样本时分辨力约 ±7～10 μs：实测 base 自身从第 1 遍的
+   627.75 漂到第 4 遍的 642.25（卡内 14.5 μs 漂移）。已给
+   `run_hca_ab_same_card.sh` 加 `CYCLES` 支持（`CYCLES=3` → 每变体 6 样本）。
+
+### 67.5 ★★★ 三个有效候选（同卡 ABBA，机制互不重叠）
+
+| 候选 | 改动 | Δ @128K/B16 | 机制 |
+|---|---|---:|---|
+| **`nz2`** | kernel 侧 `VLLM_ASCEND_ENABLE_NZ` 1→2 | **−22.62** | 口径修正：走 `_proj_a_mm_nz` 而非 ND 分支 |
+| **`proja_s3`** | proj_a 的 L1 级 K 循环 `stage` 2→3 | **−12.88** | L1 预取深度，对齐 Native 的 7 级方向 |
+| **`qproj_n128`** | `QPROJ_MM_N_TILE` 256→128 | **−10.25** | L0B 片 64 KiB（占满）→32 KiB，恢复 ping-pong |
+| `proja_s4` | 同上但 stage=4 | −8.50 | 比 s3 差，L1 384→512 KiB 太挤 |
+
+`nz2` 的分支切换已由 IR 行号溯源确认：nz1 编译 232–259（`_proj_a_mm_nd`），
+nz2 编译 186–214（`_proj_a_mm_nz`），两者逐 bit 对照都 PASS。
+但 nz2 的两个样本散得大（593.25 / 629.50，差 36 μs），需要更多样本；
+无论数字多少，这条都该改——nz_mode=2 是既定的优先口径。
+
+若三者可叠加，128K/B16 约 641.5 − 45 ≈ 596 μs，比值从 1.190 降到约 1.11。
+已提交 `qproj_n128` 的三档六样本确认，以及组合变体 `s3_n128`
+（proj_a L1 stage=3 + `QPROJ_MM_N_TILE`=128）待在 nz2 下测。
