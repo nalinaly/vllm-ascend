@@ -56,8 +56,6 @@ def _o_proj_hc_post_tiled(
         row0 = worker // (D // COL_TILE) * TASK_TOKENS
         col0 = worker % (D // COL_TILE) * COL_TILE
         weight_scale = pl.reshape(pl.load(wo_scale, [col0], [COL_TILE]), [1, COL_TILE])
-        row_ids = pl.cast(pl.tile.arange(0, [1, TOKEN_TILE], dtype=pl.INT32), pl.FP32)
-        gather_tmp = pl.create_tile([1, TOKEN_TILE], dtype=pl.INT32)
         for row in pl.range(row0, pl.min(row0 + TASK_TOKENS, tokens), TOKEN_TILE):
             valid = pl.min(TOKEN_TILE, tokens - row)
             acc = pl.tile.full([TOKEN_TILE, COL_TILE], dtype=pl.FP32, value=0.0)
@@ -89,37 +87,31 @@ def _o_proj_hc_post_tiled(
                 residual_flat, [row, 3 * D + col0], [TOKEN_TILE, COL_TILE],
                 valid_shape=[valid, COL_TILE],
             ), pl.FP32)
+            post_columns = pl.transpose(post_rows, axis1=0, axis2=1)
+            comb_columns = pl.transpose(comb_rows, axis1=0, axis2=1)
             for out_h in pl.unroll(HC_MULT):
-                post_index = pl.cast(pl.add(pl.mul(row_ids, 8.0), pl.cast(pl.cast(out_h, pl.INT32), pl.FP32)), pl.INT32)
-                post_weight = pl.reshape(pl.tile.gather(post_rows, post_index, gather_tmp), [TOKEN_TILE, 1])
+                post_weight = pl.reshape(
+                    pl.tile.slice(post_columns, [1, TOKEN_TILE], [out_h, 0]), [TOKEN_TILE, 1],
+                )
                 value = pl.row_expand_mul(attention, post_weight)
-                # 顺序仍为 post*x，随后按输入 HC 0、1、2、3 逐项相加。
-                comb_index_0 = pl.cast(pl.add(
-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(0 * HC_MULT + out_h, pl.INT32), pl.FP32),
-                ), pl.INT32)
                 coefficient_0 = pl.reshape(
-                    pl.tile.gather(comb_rows, comb_index_0, gather_tmp), [TOKEN_TILE, 1],
+                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [0 * HC_MULT + out_h, 0]),
+                    [TOKEN_TILE, 1],
                 )
                 value = pl.add(value, pl.row_expand_mul(residual_0, coefficient_0))
-                comb_index_1 = pl.cast(pl.add(
-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(1 * HC_MULT + out_h, pl.INT32), pl.FP32),
-                ), pl.INT32)
                 coefficient_1 = pl.reshape(
-                    pl.tile.gather(comb_rows, comb_index_1, gather_tmp), [TOKEN_TILE, 1],
+                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [1 * HC_MULT + out_h, 0]),
+                    [TOKEN_TILE, 1],
                 )
                 value = pl.add(value, pl.row_expand_mul(residual_1, coefficient_1))
-                comb_index_2 = pl.cast(pl.add(
-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(2 * HC_MULT + out_h, pl.INT32), pl.FP32),
-                ), pl.INT32)
                 coefficient_2 = pl.reshape(
-                    pl.tile.gather(comb_rows, comb_index_2, gather_tmp), [TOKEN_TILE, 1],
+                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [2 * HC_MULT + out_h, 0]),
+                    [TOKEN_TILE, 1],
                 )
                 value = pl.add(value, pl.row_expand_mul(residual_2, coefficient_2))
-                comb_index_3 = pl.cast(pl.add(
-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(3 * HC_MULT + out_h, pl.INT32), pl.FP32),
-                ), pl.INT32)
                 coefficient_3 = pl.reshape(
-                    pl.tile.gather(comb_rows, comb_index_3, gather_tmp), [TOKEN_TILE, 1],
+                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [3 * HC_MULT + out_h, 0]),
+                    [TOKEN_TILE, 1],
                 )
                 value = pl.add(value, pl.row_expand_mul(residual_3, coefficient_3))
                 result = pl.cast(value, pl.BF16, mode="rint")
