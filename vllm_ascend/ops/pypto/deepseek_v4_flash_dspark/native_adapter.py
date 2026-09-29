@@ -117,6 +117,7 @@ class CSAOperators:
 # torch_npu 的 acl format 取值：0=NCHW、2=ND，二者都是 PyPTO 根入参接受的基础格式。
 _ACL_FORMAT_NCHW = 0
 _ACL_FORMAT_ND = 2
+_ACL_FORMAT_FRACTAL_NZ = 29
 
 
 def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
@@ -153,17 +154,23 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
             return value
         return _recast(name, value, current, _ACL_FORMAT_ND)
 
-    def weight(module, shape, dtype, transpose=False):
+    def weight(module, shape, dtype, transpose=False, layout_name=None):
         value = module.weight.detach()
         if tuple(value.shape) != shape or value.dtype != dtype:
             raise ValueError(f"Unexpected loaded weight: {value.shape}/{value.dtype}; expected {shape}/{dtype}")
         if torch_npu.get_npu_format(value) not in (_ACL_FORMAT_NCHW, _ACL_FORMAT_ND):
-            # 这些非目标权重仍由根签名声明 ND，按其数学方向在加载期准备一次。
-            # 四张目标权重由 root_weight 独立绑定，已有 NZ 存储直接复用。
+            # 先统一回 ND，才能按数学方向转置；四张目标权重由 root_weight 独立绑定，
+            # 已有 NZ 存储直接复用，不走这里。
             value = torch_npu.npu_format_cast(value, _ACL_FORMAT_ND)
         if transpose:
             value = value.transpose(-1, -2)
-        return _base_weight_format(value.contiguous())
+        value = _base_weight_format(value.contiguous())
+        # cube matmul 的 B 操作数若在根签名里声明了 NZ，就在加载期一次性转成分形序，
+        # 之后每次矩阵乘直接以 NZ 读入 Mat，省掉片上的 ND→NZ 转换。布局由根签名说话
+        # （见 nz_mode.B_OPERAND_WEIGHTS），这里不再写死。
+        if layout_name is not None and layouts.get(layout_name) == "NZ":
+            return torch_npu.npu_format_cast(value, _ACL_FORMAT_FRACTAL_NZ)
+        return value
 
     def scale(module, width):
         result = module.weight_scale.detach().reshape(-1)
@@ -191,11 +198,11 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
         "wq_a": root_weight("wq_a", (1024, 4096), bf16),
         "wq_b": root_weight("wq_b", (1024, 32768), int8),
         "wq_b_scale": scale(attention.wq_b, 32768),
-        "wkv": weight(attention.wkv, (512, 4096), bf16, True),
+        "wkv": weight(attention.wkv, (512, 4096), bf16, True, layout_name="wkv"),
         "gamma_cq": weight(attention.q_norm, (1024,), bf16),
         "gamma_ckv": weight(attention.kv_norm, (512,), bf16),
-        "cmp_wkv": weight(main.wkv, (compressor_width, 4096), bf16),
-        "cmp_wgate": weight(main.wgate, (compressor_width, 4096), bf16),
+        "cmp_wkv": weight(main.wkv, (compressor_width, 4096), bf16, layout_name="cmp_wkv"),
+        "cmp_wgate": weight(main.wgate, (compressor_width, 4096), bf16, layout_name="cmp_wgate"),
         "cmp_ape": main.ape.detach().float().contiguous(),
         # Match Native A3 storage; the RMS task widens loaded BF16 tiles.
         "cmp_norm_w": weight(main.norm, (512,), bf16),

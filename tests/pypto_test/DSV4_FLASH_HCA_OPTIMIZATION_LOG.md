@@ -4686,3 +4686,146 @@ Check failed: limit == 0 || used <= limit
 （gather_row 的地址空间对 ×2、tile.assemble 同错、Mat 片不能跨迭代、
 non-mat tmov 形状不匹配 ×2），已经足以判定：
 这个函数在 PTOAS 下的问题不是某一处写法，而是它整体依赖 Mat 的方式。**
+
+## 84. ⚠ 修正 §83 的归因：旧 allocator **已经能**细分已释放区域（2026-09-29）
+
+§83 把 `enable_pypto_l0c_double_buffer` 与 `ak128` 的
+`Right buffer usage (131072 bytes) exceeds platform limit (65536 bytes)`
+都归因为"旧 PYPTO allocator 顺序堆叠复用类、从不细分已释放区域（issue #1908）"。
+**这个归因是错的，它来自文档而不是实测。**
+
+### 84.1 文档描述的是历史状态
+
+`pypto/docs/zh/dev/passes/18-auto_tile_matmul_l0.md:77` 那段确实这么写着，
+而且 `auto_tile_matmul_l0_pass.cpp:3281` 至今有一道 #1908 guard：PYPTO planner
+下强制把 Mat-scratch 链式 matmul 的生产者改成 output-stationary。
+
+但**细分能力后来已经在 `MemoryReuse` 里补上了**，而且用的正是"先不细分、
+溢出了才重试"的策略（`memory_reuse_pass.cpp:3640` 起）：
+
+```cpp
+std::vector<PackedBuffer> buffers = pack(/*allow_subranges=*/false);
+auto retry_with_subranges = [&]() {
+  if (!subrange_space_safe || cap == 0 || footprint(buffers) <= cap) return;
+  auto subdivided = pack(/*allow_subranges=*/true);
+  if (footprint(subdivided) < footprint(buffers)) buffers = std::move(subdivided);
+};
+```
+
+`LifetimeAnalysisResult` 里已有 `subrange_unsafe_groups`，
+`whole_root_subrange_eligible` 也已按 root 的静态 offset 逐 group 判定。
+
+### 84.2 实测：细分确实在工作
+
+在 `pypto` 的 `fix/1908-legacy-allocator-subdivide` 分支上给
+`retry_with_subranges` 加了一条环境变量门控的诊断（`PYPTO_TRACE_1908=1`），
+用 `test_chained_matmul_mat_scratch_issue_1908_dsa_rp_dbc` 的形状
+（m=128, k=128, nmid=512, n=64）复现：
+
+| planner / 开关 | space | 不细分的 footprint | 细分后 | 结果 |
+| --- | --- | --- | --- | --- |
+| PYPTO, dbC=on | Right | 98304 | **65536** | ACCEPTED，编译通过 |
+| PYPTO（#1908 guard 关）, dbC=off | Right | 81920 | **65536** | ACCEPTED，编译通过 |
+
+四种组合（PYPTO/DSA_RP × dbC 开关）全部编译通过，一个都没复现溢出。
+把 guard 关掉（`PYPTO_DISABLE_1908_GUARD=1`，同样只用于取证）后也全部通过。
+
+### 84.3 结论与后续
+
+**HCA 的 `Right 131072 > 65536` 另有原因，不是 allocator 不会细分。**
+三道门里最可能挡住的是 `subrange_space_safe`（该 space 内存在
+dynamic-offset 成员）或逐 group 的 `whole_root_subrange_eligible`；
+也可能是细分后仍然装不下（`stage=2` 实际要 4 片，见第 2485 行的记录）。
+要定位必须在 HCA 上跑同一条诊断——本机没有完整 vllm 运行时，只能在设备任务里取。
+
+教训：**用文档里的限制去解释一个报错之前，先在真实路径上跑一遍诊断。**
+第 33、37.5、40.2 节已经三次因为"把指标读成收益"出错，这次是同类问题的另一种形态
+——把文档读成现状。
+
+## 85. HCA 权重的 NZ 覆盖盘点：三张 matmul B 操作数还在 ND（2026-09-29）
+
+用户问"当前 HCA 用到的所有权重都是 NZ 的么，有没有遗漏的"。逐个盘 
+`_decode_hca_tp1_layer` 的签名，分三档。
+
+### 85.1 已走 NZ（4 张，零拷贝借用 Native 存储）
+
+经 `native_adapter.root_weight()`，布局由 `nz_mode` 的三个常量决定：
+
+| 权重 | 形状 | dtype | 何时是 NZ |
+| --- | --- | --- | --- |
+| `wq_a` | [1024, 4096] | BF16 | `VLLM_ASCEND_ENABLE_NZ >= 2` |
+| `wq_b` | [1024, 32768] | INT8 | `>= 1`（**默认档就是 NZ**）|
+| `wo_a` | [8, 4096, 1024] | BF16 | `>= 2` **且** 当前 CANN 支持三维 BF16 cast |
+| `wo_b` | [8192, 4096] | INT8 | `>= 1` |
+
+### 85.2 ✗ 仍是 ND 的 cube B 操作数（3 张）
+
+经 `native_adapter.weight()`，被 `npu_format_cast(..., ND)` 强制转成 ND：
+
+| 权重 | 形状 | 消费者 | 怎么用 |
+| --- | --- | --- | --- |
+| `wkv` | [512,4096] 加载期转置成 [4096,512] | `qkv_proj_rope.py` 的 `kv_proj_matmul` | 正常 B 操作数 |
+| `cmp_wkv` | [512, 4096] | `decode_compressor_ratio128.py` 的 `hca_kv_score_proj` | `b_trans=True` |
+| `cmp_wgate` | [512, 4096] | 同上 | `b_trans=True` |
+
+`weight()` 里的注释把它们称作"非目标权重"，但判据应该是**它是不是 matmul 的
+B 操作数**——是，就该考虑 NZ，否则 cube 每次都要走片上 ND→NZ 转换
+（`TLoadGm2L1Nd2Nz`）。注意这条路径**没有** `_recast` 那样的告警
+（只有四张目标权重有），所以缺口容易长期看不见。
+
+### 85.3 不需要 NZ 的（NZ 只对 cube 操作数有意义）
+
+1D 的 norm 权重（`attn_norm_w`、`gamma_cq`、`gamma_ckv`、`cmp_norm_w`）、
+量化 scale（`wq_b_scale`、`wo_b_scale`）、`attn_sink`；
+mHC 门控 `hc_attn_fn` / `hc_attn_scale` / `hc_attn_base` 只进
+`hc_pre_norm` 的向量路径，不是 matmul 操作数；`cmp_ape` 是 FP32 位置编码。
+
+### 85.4 实测前提：NZ 与 `b_trans=True` 可以并存
+
+`cmp_wkv` / `cmp_wgate` 是转置使用的，所以先单独验证这个组合能不能编译
+（最小 PyPTO 程序，`private` 隔离环境）：
+
+| 形态 | 结果 |
+| --- | --- |
+| NZ `[HEAD_DIM, D]` + `b_trans=True`（HCA 现状的形状） | **OK** |
+| NZ `[D, HEAD_DIM]` 正常 B 操作数（`wq_a` 的形状） | OK |
+
+**所以不需要改 kernel 的数学方向**，只加布局标注即可。
+
+### 85.5 代价：NZ 权重不能再由 Vector 核预热
+
+`weight_warm.py` 的 `hca_warm_kv_weights` 让 8 个空闲 Vector 核按块读这三张
+权重，把它们带进 L2（冷 L2 下单个 AIC 读权重只有约 24 GB/s）。改成 NZ 后
+这条路走不通，PyPTO 明确拒绝：
+
+```
+ValueError: NZ layout currently supports only matmul operand loads
+(target_memory=pl.Mem.Mat), got Vec. An NZ tensor is a cube weight:
+load it into Mat, or annotate the tensor as pl.ND.
+```
+
+机制：`pl.NZ` 让 `BlockNzTensorViews` 把张量改写成分形 rank-5 形状并改写
+`tile.load` 坐标，生成 `TLoadGm2L1Nz2nz`（GM 分形序直搬 L1），这是 cube
+操作数通路；预热用的 `[64, 512]` 二维开窗在分形排布下内存不连续，Vec 通路
+也没有分形→逻辑的转换单元。
+
+`BlockNzTensorViews` 的文档留了一条出路：**覆盖全部元素的 rank-1 view 与
+layout 无关**（分块重排的是索引空间而不是内存），所以整块展平后仍可按 ND 读，
+文档原话是"没有这条规则，给权重标注 `pl.NZ` 就会悄悄让它失去 SDMA L2 预热"。
+`reshape` 必须发生在 Orchestration 层（InCore 里张量已变成 tile）。
+PyPTO 另有 `pl.prefetch.async_prefetch`（SDMA、不占 Vector 核，要求源是
+flat 1D），但那需要运行时开 SDMA，先不引入——按用户裁定"能用 vector 就先继续用 vector"。
+
+### 85.6 逐项测量的口径
+
+按用户要求"逐个测试，有收益才接入，判据是绝对时间，测完再验精度"，
+造了 `variants_nzweights_20260929/{nz_wkv,nz_cmpwkv,nz_cmpwgate,nz_all}`
+四个快照，每个只把一张（或全部三张）权重切成 NZ，并把它那段 Vector 预热循环
+删掉。所以**量到的是净效应**：cube 以 NZ 读 B 操作数的收益，减去该张权重
+失去 L2 预热的损失。
+
+生产侧同时做了一处通用改动（对基线零影响）：
+`nz_mode.B_OPERAND_WEIGHTS` 扩展到 7 张，`root_weight_layouts()` 只读根签名里
+实际存在的参数（CSA 没有 `cmp_wgate`）；`native_adapter.weight()` 新增
+`layout_name`，声明为 NZ 时在加载期一次性 `npu_format_cast(..., 29)`。
+基线签名不带 layout → 读出 "ND" → 行为与改前逐字节一致。
