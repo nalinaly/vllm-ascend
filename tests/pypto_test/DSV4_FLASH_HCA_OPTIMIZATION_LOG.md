@@ -5090,3 +5090,57 @@ base 在那张卡上的极差达到 33.7 μs，更需要样本量。
 而 `cmp_wgate` 与 `cmp_wkv` 形状相同、同一 kernel、同样 `b_trans=True`，
 一个 −10.50 一个 +16.00 在机制上讲不通，所以在 `nz_cmpwkv` 的 6 样本出来之前
 不对 NZ 是否有益下总结论。
+
+### 88.8 6 样本定稿：`cmp_wgate` 有收益、`cmp_wkv` 有害，预热本身很值钱
+
+| 变体 | 样本 | 中位数 | 相对 base | 独立复现 |
+| --- | --- | --- | --- | --- |
+| `nz_cmpwgate` | 6 | 571.62 | **−10.50** | 三轮同向（−8.0 / −13 / −10.5） |
+| `nz_cmpwkv` | 6 | 601.00 | **+20.25** | 两轮同向（+16.0 / +20.25） |
+| `nowarm_cmp` | 6 | 609.38 | **+25.75** | — |
+
+`nowarm_cmp` 把 compressor 两张权重的 Vector 预热定价在 **+25.75 μs**
+（单张约 +12.9），所以它**很值钱**，88.6 那条"净损失"完全说反了。
+把它扣掉，NZ 自身的效应是：
+
+| 权重 | NZ 自身（估） |
+| --- | --- |
+| `cmp_wgate` | 约 **−23** |
+| `cmp_wkv` | 约 +7 |
+
+⚠ 这两个估值是跨卡相减（各自的 Δ 都是同卡内测的，但两个 Δ 来自不同任务／不同卡），
+依赖"效应可叠加且与卡无关"这个假设，不如 Δ 本身硬。
+
+### 88.9 为什么两张形状相同的权重表现相反（假设）
+
+`hca_kv_score_proj` 里两个 matmul **顺序执行、共享 A 操作数**：
+
+```python
+kv_acc    = pl.matmul(first_tile, wkv[...],   b_trans=True)   # 第一个，承担 A 的 L1 加载
+score_acc = pl.matmul(first_tile, wgate[...], b_trans=True)   # 第二个，复用已在 L1 的 A
+```
+
+假设：**第一个 matmul 的 B 加载路径变化会连带扰动 A 的加载调度与 L1 分配**，
+第二个则不会。这能解释 `wkv`（第一个）改 NZ 变差而 `wgate`（第二个）改 NZ 变好。
+可验证方向是对比两个变体的 L1 footprint 与 `PH-MR-001` 提示，尚未做。
+
+### 88.10 ND 别名：让 NZ 与 Vector 预热共存
+
+要拿到 `cmp_wgate` 那约 −23 μs，必须在改 NZ 的同时**保留**预热，而 PyPTO
+堵掉了所有展平读法（第 86.2 节）。绕法在于**预热只需要把字节拉进 L2，
+它从不消费数值**（只写哨兵防 DCE）：
+
+给同一块存储再绑一个**不带 layout 标注**的参数，matmul 读 NZ 的那个、
+预热读 ND 别名，预热代码一行不改：
+
+```python
+# 根签名
+cmp_wgate:      pl.Tensor[[HEAD_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+cmp_wgate_warm: pl.Tensor[[HEAD_DIM, D], pl.BF16],   # ND 别名，只供预热
+# native_adapter
+weights["cmp_wgate_warm"] = weights["cmp_wgate"]      # 同一个张量对象，零额外显存
+```
+
+按 ND 解释 NZ 字节会得到错的值，在这里无害——没有任何计算消费它。
+变体 `nz_cmpwgate_alias`，三方同卡对照（base / `nz_cmpwgate` / 别名版）在测。
+若方案成立，别名版应从 −10.50 扩大到约 −23。
