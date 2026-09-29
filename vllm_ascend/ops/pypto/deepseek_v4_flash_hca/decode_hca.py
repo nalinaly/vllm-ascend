@@ -142,7 +142,9 @@ def _decode_hca_tp1_layer(
     warm_sink = pl.create_tensor([WARM_WORKERS, SINK_BF16], dtype=pl.BF16)
     warm_kv_weights(wkv, cmp_wkv, cmp_wgate, warm_sink, widen_tid)
     with pl.scope():
-        hc_pre_norm(x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms)
+        hc_pre_norm(
+            x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms, x_hc,
+        )
 
     q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16)
     kv = pl.create_tensor([tokens, HEAD_DIM], dtype=pl.BF16)

@@ -1,0 +1,57 @@
+--- a/deepseek_v4_flash_hca/hc_pre_fused.py
++++ b/deepseek_v4_flash_hca/hc_pre_fused.py
+@@ -278 +277,0 @@
+-    x_mixed = pl.create_tensor([t_pad, D], dtype=pl.BF16)
+@@ -306 +305 @@
+-        pre_tile = pre_val_store[t0:t0 + T_TILE, 0:HC_PAD]
++        pre_tile = pl.load(pre_val_store, [t0, 0], [T_TILE, HC_PAD])
+@@ -333 +332,3 @@
+-        sq_sum = pl.full([1, T_TILE], dtype=pl.FP32, value=0.0)
++        # 保留已量化的混合值，后续 RMS 不再经过 GM。
++        mixed_ub = pl.create_tile([D // D_TILE * T_TILE, D_TILE], dtype=pl.BF16)
++        sq_sum = pl.tile.full([1, T_TILE], dtype=pl.FP32, value=0.0)
+@@ -336,4 +337,4 @@
+-            x0 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, d0], valid_shape=[valid_rows, D_TILE])
+-            x1 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, D + d0], valid_shape=[valid_rows, D_TILE])
+-            x2 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, 2 * D + d0], valid_shape=[valid_rows, D_TILE])
+-            x3 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, 3 * D + d0], valid_shape=[valid_rows, D_TILE])
++            x0 = pl.load(x_flat, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
++            x1 = pl.load(x_flat, [t0, D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
++            x2 = pl.load(x_flat, [t0, 2 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
++            x3 = pl.load(x_flat, [t0, 3 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+@@ -348 +349 @@
+-            x_mixed[t0:t0 + T_TILE, d0:d0 + D_TILE] = y_bf16
++            mixed_ub = pl.tile.assemble(mixed_ub, y_bf16, [mix_db * T_TILE, 0])
+@@ -351 +352,2 @@
+-            y_sq_sum = pl.row_sum(y_sq)
++            sum_tmp = pl.create_tile([T_TILE, D_TILE], dtype=pl.FP32)
++            y_sq_sum = pl.row_sum(y_sq, sum_tmp)
+@@ -354,5 +356,4 @@
+-        norm_sq_sum = pl.create_tensor([1, T_TILE], dtype=pl.FP32)
+-        norm_sq_sum[:, :] = sq_sum
+-        y_inv = pl.create_tensor([1, T_TILE], dtype=pl.FP32)
+-        inverse_result = rms_norm_inverse(norm_sq_sum)
+-        y_inv[:, :] = inverse_result
++        # 与 rms_norm_inverse/apply 相同的运算与高精度 rsqrt，统计量留在 UB。
++        mixed_variance = pl.add(pl.mul(sq_sum, 1.0 / D), NORM_EPS)
++        inverse_tmp = pl.create_tile([1, T_TILE], dtype=pl.FP32)
++        inverse_col = pl.reshape(pl.tile.rsqrt(mixed_variance, inverse_tmp), [T_TILE, 1])
+@@ -361,4 +362,8 @@
+-            mixed_input = x_mixed[t0:t0 + T_TILE, d0:d0 + D_TILE]
+-            norm_w_input = norm_w[d0:d0 + D_TILE]
+-            norm_w_row = pl.reshape(norm_w_input, [1, D_TILE])
+-            normed_bf16 = rms_norm_apply(mixed_input, norm_w_row, y_inv)
++            mixed_input = pl.tile.extract(
++                mixed_ub, norm_db * T_TILE, 0, [T_TILE, D_TILE], target_memory=pl.MemorySpace.Vec,
++            )
++            norm_w_input = pl.load(norm_w, [d0], [D_TILE])
++            norm_w_row = pl.cast(pl.reshape(norm_w_input, [1, D_TILE]), pl.FP32)
++            mixed_fp32 = pl.cast(mixed_input, pl.FP32)
++            scaled = pl.row_expand_mul(mixed_fp32, inverse_col)
++            normed_bf16 = pl.cast(pl.col_expand_mul(scaled, norm_w_row), pl.BF16, mode="rint")
+@@ -366 +371 @@
+-                x_normed[t0:t0 + T_TILE, d0:d0 + D_TILE] = normed_bf16
++                pl.store(normed_bf16, [t0, d0], x_normed)
+@@ -368 +373 @@
+-                x_normed_tail_store[0:T_TILE, d0:d0 + D_TILE] = normed_bf16
++                pl.store(normed_bf16, [0, d0], x_normed_tail_store)

@@ -4,7 +4,6 @@
 import pypto.language as pl
 
 from ..deepseek_v4_flash_dspark.config import FLASH as M, DECODE_BATCH, DECODE_SEQ, TP
-from ..deepseek_v4_flash_dspark.rmsnorm import rms_norm_apply, rms_norm_inverse
 
 
 # Dynamic shape variables.
@@ -24,13 +23,15 @@ NORM_EPS = M.rms_norm_eps
 # tiling
 MIX_PAD = 32  # mix_hc (24) padded to a 32-wide cube N / vector row
 HC_PAD = 8  # hc (4) padded for 32B-aligned vector ops
-T_TILE = 8  # other values miscompare
+T_TILE = 8  # FP32列向量物理盒保持32B对齐
+MIX_ROWS = 4  # 每worker只读写4个有效token；B16为24个mix worker
 LINEAR_T_TILE = 16  # cube matmul rows must be a 16-row boxed tile
 COMB_T_TILE = 8
 PRE_POST_WORKERS = 16
 RMS_K_TILE = 512
 LINEAR_K_TILE = 256
-D_TILE = 256
+D_TILE = 512
+RMS_REDUCE_COLS = 256
 D_SPMD = 4096
 LINEAR_OK = 4
 LINEAR_K_PER_SPLIT = HC_DIM // LINEAR_OK
@@ -103,6 +104,7 @@ def hc_pre_norm(
     x_normed: pl.Tensor[[T_DYN, D], pl.BF16],
     row_recip: pl.Scalar[pl.BOOL],
     inv_rms: pl.Tensor[[HC_PAD_ROWS_DYN, 1], pl.FP32],
+    x_original: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
 ):
     """Normalize pre-mixed activations for complete eight-token decode tiles."""
     t_dim = pl.tensor.dim(x, 0)
@@ -268,27 +270,27 @@ def hc_pre_norm(
             pl.store(row3_tail, [t0, 3 * HC_MULT], comb)
 
 
-    x_flat = pl.reshape(x, [t_dim, HC_DIM])
+    x_flat = pl.reshape(x_original, [t_dim, HC_DIM])
     # 上游这段按整 8 行块走（它的 T 恒为 384）。本包的档位只保证是 DSpark 的 6 的
     # 倍数，t_dim=12/18/30/... 都不是 8 的倍数，向下取整会整块丢掉尾部 token。
     # 这里按向上取整分块：读侧靠 pl.slice 的 valid_shape 补零（x 是 FP32，切片直接
     # 带有效行标记，不像 BF16 那样要先 cast 而丢掉它），写侧尾块走 tail_store。
-    # x_mixed 是内部缓冲，直接按补齐行数分配，无效行的统计量只落在它自己那几行上。
-    t_pad = ((t_dim + T_TILE - 1) // T_TILE) * T_TILE
+    # 物理8行、有效4行；门控和统计留UB，中间混合值只写各worker的有效行。
+    t_pad = ((t_dim + MIX_ROWS - 1) // MIX_ROWS) * MIX_ROWS
     x_mixed = pl.create_tensor([t_pad, D], dtype=pl.BF16)
-    post_tail_store = pl.create_tensor([T_TILE, HC_PAD], dtype=pl.FP32)
-    x_normed_tail_store = pl.create_tensor([T_TILE, D], dtype=pl.BF16)
 
     # The RMS statistic includes the intermediate BF16 rounding.
-    with pl.spmd(t_pad // T_TILE, name_hint="mix_x_rms_norm", allow_early_resolve=True) as mixed_tid:
-        t0 = pl.tile.get_block_idx() * T_TILE
-        valid_rows = pl.min(T_TILE, t_dim - t0)
+    with pl.spmd(t_pad // MIX_ROWS, name_hint="mix_x_rms_norm", allow_early_resolve=True) as mixed_tid:
+        t0 = pl.tile.get_block_idx() * MIX_ROWS
+        valid_rows = pl.min(MIX_ROWS, t_dim - t0)
         # 两个消费者各自按 split 0→3 归约，避免额外的归约任务与 GM 中间行。
-        mixes_total = pl.load(mixes_partials, [t0, 0], [T_TILE, MIX_PAD])
+        pre_mixes_total = pl.load(mixes_partials, [t0, 0], [T_TILE, MIX_PAD], valid_shape=[valid_rows, MIX_PAD])
         for split in pl.range(1, LINEAR_OK):
-            mixes_piece = pl.load(mixes_partials, [split * t_linear + t0, 0], [T_TILE, MIX_PAD])
-            mixes_total = pl.add(mixes_total, mixes_piece)
-        inv_col = pl.load(inv_rms, [t0, 0], [T_TILE, 1])
+            pre_mixes_piece = pl.load(
+                mixes_partials, [split * t_linear + t0, 0], [T_TILE, MIX_PAD], valid_shape=[valid_rows, MIX_PAD],
+            )
+            pre_mixes_total = pl.add(pre_mixes_total, pre_mixes_piece)
+        inv_col = pl.load(inv_rms, [t0, 0], [T_TILE, 1], valid_shape=[valid_rows, 1])
 
         pre_base = pl.load(hc_base_2d, [0, 0], [1, HC_PAD])
         # 显式 gather 避免 TEXTRACT 从 UB 的非 32B 对齐列读取。
@@ -297,13 +299,12 @@ def hc_pre_norm(
         pre_grid = pl.col_expand_add(pl.tile.full([T_TILE, HC_PAD], dtype=pl.FP32, value=0.0), pre_col_ids)
         pre_indices = pl.cast(pl.row_expand_add(pre_grid, pl.mul(pre_row_ids, MIX_PAD)), pl.INT32)
         pre_gather_tmp = pl.create_tile([T_TILE, HC_PAD], dtype=pl.INT32)
-        pre_mixes = pl.tile.gather(mixes_total, pre_indices, pre_gather_tmp)
+        pre_mixes = pl.tile.gather(pre_mixes_total, pre_indices, pre_gather_tmp)
         pre_scaled = pl.mul(pl.row_expand_mul(pre_mixes, inv_col), scale0)
         pre_logits = pl.add(pre_scaled, pl.col_expand(pre_scaled, pre_base))
         pre_sig = pl.recip(pl.add(pl.exp(pl.neg(pre_logits)), 1.0))
         pre_val = pl.add(pre_sig, HC_EPS)
-        pl.store(pre_val, [t0, 0], pre_val_store)
-        pre_tile = pre_val_store[t0:t0 + T_TILE, 0:HC_PAD]
+        pre_tile = pre_val
 
         post_base = pl.load(hc_base_2d, [0, HC_MULT], [1, HC_PAD])
         # 显式 gather 避免 TEXTRACT 从 UB 的非 32B 对齐列读取。
@@ -312,31 +313,33 @@ def hc_pre_norm(
         post_grid = pl.col_expand_add(pl.tile.full([T_TILE, HC_PAD], dtype=pl.FP32, value=0.0), post_col_ids)
         post_indices = pl.cast(pl.row_expand_add(post_grid, pl.mul(post_row_ids, MIX_PAD)), pl.INT32)
         post_gather_tmp = pl.create_tile([T_TILE, HC_PAD], dtype=pl.INT32)
-        post_mixes = pl.tile.gather(mixes_total, post_indices, post_gather_tmp)
+        post_mixes = pl.tile.gather(pre_mixes_total, post_indices, post_gather_tmp)
         post_scaled = pl.mul(pl.row_expand_mul(post_mixes, inv_col), scale1)
         post_logits = pl.add(post_scaled, pl.col_expand(post_scaled, post_base))
         post_sig = pl.recip(pl.add(pl.exp(pl.neg(post_logits)), 1.0))
         post_pad = pl.mul(post_sig, 2.0)
-        if valid_rows == T_TILE:
-            pl.store(pl.set_validshape(post_pad, T_TILE, HC_MULT), [t0, 0], post)
-        else:
-            pl.store(post_pad, [0, 0], post_tail_store)
-            post_tile = pl.load(post_tail_store, [0, 0], [T_TILE, HC_PAD], valid_shape=[valid_rows, HC_MULT], target_memory=pl.MemorySpace.Vec)
-            pl.store(post_tile, [t0, 0], post)
+        pl.store(pl.set_validshape(post_pad, valid_rows, HC_MULT), [t0, 0], post)
 
-
-        pre_tile_t = pl.transpose(pre_tile, axis1=0, axis2=1)
-        pre0 = pl.reshape(pre_tile_t[0:1, 0:T_TILE], [T_TILE, 1])
-        pre1 = pl.reshape(pre_tile_t[1:2, 0:T_TILE], [T_TILE, 1])
-        pre2 = pl.reshape(pre_tile_t[2:3, 0:T_TILE], [T_TILE, 1])
-        pre3 = pl.reshape(pre_tile_t[3:4, 0:T_TILE], [T_TILE, 1])
-        sq_sum = pl.full([1, T_TILE], dtype=pl.FP32, value=0.0)
+        gate_rows = pl.cast(pl.tile.arange(0, [1, T_TILE], dtype=pl.INT32), pl.FP32)
+        gate_idx0 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 0), pl.INT32)
+        gate_tmp0 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
+        pre0 = pl.reshape(pl.tile.gather(pre_tile, gate_idx0, gate_tmp0), [T_TILE, 1])
+        gate_idx1 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 1), pl.INT32)
+        gate_tmp1 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
+        pre1 = pl.reshape(pl.tile.gather(pre_tile, gate_idx1, gate_tmp1), [T_TILE, 1])
+        gate_idx2 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 2), pl.INT32)
+        gate_tmp2 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
+        pre2 = pl.reshape(pl.tile.gather(pre_tile, gate_idx2, gate_tmp2), [T_TILE, 1])
+        gate_idx3 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 3), pl.INT32)
+        gate_tmp3 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
+        pre3 = pl.reshape(pl.tile.gather(pre_tile, gate_idx3, gate_tmp3), [T_TILE, 1])
+        sq_sum = pl.tile.full([1, T_TILE], dtype=pl.FP32, value=0.0)
         for mix_db in pl.pipeline(D // D_TILE, stage=2):
             d0 = mix_db * D_TILE
-            x0 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, d0], valid_shape=[valid_rows, D_TILE])
-            x1 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, D + d0], valid_shape=[valid_rows, D_TILE])
-            x2 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, 2 * D + d0], valid_shape=[valid_rows, D_TILE])
-            x3 = pl.slice(x_flat, [T_TILE, D_TILE], [t0, 3 * D + d0], valid_shape=[valid_rows, D_TILE])
+            x0 = pl.cast(pl.load(x_flat, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
+            x1 = pl.cast(pl.load(x_flat, [t0, D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
+            x2 = pl.cast(pl.load(x_flat, [t0, 2 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
+            x3 = pl.cast(pl.load(x_flat, [t0, 3 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
             y0 = pl.row_expand_mul(x0, pre0)
             y1 = pl.row_expand_mul(x1, pre1)
             y2 = pl.row_expand_mul(x2, pre2)
@@ -345,31 +348,31 @@ def hc_pre_norm(
             y23 = pl.add(y2, y3)
             y = pl.add(y01, y23)
             y_bf16 = pl.cast(y, pl.BF16, mode="rint")
-            x_mixed[t0:t0 + T_TILE, d0:d0 + D_TILE] = y_bf16
+            pl.store(pl.set_validshape(y_bf16, valid_rows, D_TILE), [t0, d0], x_mixed)
             y_rounded = pl.cast(y_bf16, pl.FP32)
             y_sq = pl.mul(y_rounded, y_rounded)
-            y_sq_sum = pl.row_sum(y_sq)
-            y_sq_row = pl.reshape(y_sq_sum, [1, T_TILE])
-            sq_sum = pl.add(sq_sum, y_sq_row)
-        norm_sq_sum = pl.create_tensor([1, T_TILE], dtype=pl.FP32)
-        norm_sq_sum[:, :] = sq_sum
-        y_inv = pl.create_tensor([1, T_TILE], dtype=pl.FP32)
-        inverse_result = rms_norm_inverse(norm_sq_sum)
-        y_inv[:, :] = inverse_result
+            sum_tmp = pl.create_tile([T_TILE, RMS_REDUCE_COLS], dtype=pl.FP32)
+            # 读取/混合/归一化用512列，统计仍按原先0,256,512,...次序累加。
+            left_sq = pl.tile.extract(y_sq, 0, 0, [T_TILE, RMS_REDUCE_COLS], target_memory=pl.MemorySpace.Vec)
+            left_sum = pl.row_sum(left_sq, sum_tmp)
+            sq_sum = pl.add(sq_sum, pl.reshape(left_sum, [1, T_TILE]))
+            right_sq = pl.tile.extract(
+                y_sq, 0, RMS_REDUCE_COLS, [T_TILE, RMS_REDUCE_COLS], target_memory=pl.MemorySpace.Vec,
+            )
+            right_sum = pl.row_sum(right_sq, sum_tmp)
+            sq_sum = pl.add(sq_sum, pl.reshape(right_sum, [1, T_TILE]))
+        # 保持原RMS运算与高精度rsqrt；D512搬运仍按D256粒度顺序统计。
+        mixed_variance = pl.add(pl.mul(sq_sum, 1.0 / D), NORM_EPS)
+        inverse_tmp = pl.create_tile([1, T_TILE], dtype=pl.FP32)
+        inverse_col = pl.reshape(pl.tile.rsqrt(mixed_variance, inverse_tmp), [T_TILE, 1])
         for norm_db in pl.pipeline(D // D_TILE, stage=2):
             d0 = norm_db * D_TILE
-            mixed_input = x_mixed[t0:t0 + T_TILE, d0:d0 + D_TILE]
-            norm_w_input = norm_w[d0:d0 + D_TILE]
-            norm_w_row = pl.reshape(norm_w_input, [1, D_TILE])
-            normed_bf16 = rms_norm_apply(mixed_input, norm_w_row, y_inv)
-            if valid_rows == T_TILE:
-                x_normed[t0:t0 + T_TILE, d0:d0 + D_TILE] = normed_bf16
-            else:
-                x_normed_tail_store[0:T_TILE, d0:d0 + D_TILE] = normed_bf16
-                normed_valid = pl.load(
-                    x_normed_tail_store, [0, d0], [T_TILE, D_TILE],
-                    valid_shape=[valid_rows, D_TILE], target_memory=pl.MemorySpace.Vec,
-                )
-                pl.store(normed_valid, [t0, d0], x_normed)
+            mixed_input = pl.load(x_mixed, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+            norm_w_input = pl.load(norm_w, [d0], [D_TILE])
+            norm_w_row = pl.cast(pl.reshape(norm_w_input, [1, D_TILE]), pl.FP32)
+            mixed_fp32 = pl.cast(mixed_input, pl.FP32)
+            scaled = pl.row_expand_mul(mixed_fp32, inverse_col)
+            normed_bf16 = pl.cast(pl.col_expand_mul(scaled, norm_w_row), pl.BF16, mode="rint")
+            normed_valid = pl.set_validshape(normed_bf16, valid_rows, D_TILE)
+            pl.store(normed_valid, [t0, d0], x_normed)
     return mixed_tid
-
