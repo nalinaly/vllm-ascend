@@ -13631,3 +13631,37 @@ T144 与 T96 的分支差异）。**布局标注是模块加载期的全局常�
 七档验收若要给出可对外的绝对数字，必须**同一轮、同卡、Native 与 PTO 交替**
 （`run_hca_sides_same_card.sh` 在 HCA 侧的做法），本轮的 PTO 读数与
 `LATEST_EXISTING_COMPARISON.md` 的 Native 列来自不同轮次，只能作量级参考。
+
+### 497.5 同卡 Native↔PTO 七档验收：Native 侧 static_kernel 未装包，未跑成
+
+为给已落地生产（`9a983dae`）一个可对外的绝对数字，搭了
+`results/csa_accept_20260930`：每档在同一张卡上按 **native→pto→pto→native**
+的 ABBA 顺序跑，冻结源 `.cache/csa-accept-9a983dae`（= e110a886 基底 +
+两份生产 `decode_csa.py`，私有包 `dsv4_csa_accept_9a983dae`，
+`allow_early_resolve=True` 共 4 处，含 early3 三处）。
+
+两处坑记下来：
+
+1. `coefficients_seven_experiment/compiled_case.py` 有两个版本。
+   `csa_native_superkernel_20260929` 用的那份（源 `csa-native-superkernel-4ffccb7b`）
+   **只支持 `--side native`** 且要求 `--super-kernel`；
+   而支持 `--side {native,pto}` 的那份没有 `--super-kernel`，
+   编译配置走 vllm 的 `@support_torch_compile`（两侧同配置）。
+   验收应当用后者，`--super-kernel` 要去掉。
+2. 但 Native 侧随即失败：
+
+```
+RuntimeError: Compilation failed: {'wrapper_compiled': True, 'fresh_compile_flag': True,
+ 'static_compile_results': [False], 'installed_static_packages': 0, 'pto_dispatch_calls': 0}
+```
+
+Native 路径要求 static_kernel 装包成功（`compiled_case.py` 里那道
+`if runtime is None and (not static_results or not ...._installed_run_pkgs): raise`），
+而本目录的 OPP 准备没让它装上。要跑通得照
+`results/csa_native_template_20260929` 那套 OPP/env 准备复现，
+不是把 `--side` 换一下就行。
+
+**所以本轮没有同轮同卡的 Native 读数。** 对外数字仍只能引用
+第 497.4 节的表述：已落地改动在同轮内值 **−0.0123**，绝对水平约 **0.90**，
+跨轮绝对数字不可比。留给后续：按 `csa_native_template_20260929` 的
+OPP 准备重建 Native 侧，再跑 `csa_accept_20260930/run.sh` 的七档 ABBA。
