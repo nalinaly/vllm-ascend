@@ -13723,3 +13723,58 @@ PTO 头上，而那部分是 PTO 结构上拿不到的加速项
    `compiled_case_sk.py` 已放开）；支持两侧的那份没有该参数。
    用前者跑当前源报 `Cannot prepare for replay during capturing stage`。
    **在这条修好之前，无法在同一口径下给出"Native 开 SuperKernel"的两侧对比。**
+
+### 498.3 ★★ 修正后的七档：Native 开 SuperKernel、按 p50，8:2 加权 0.8194（min 口径 0.8052）
+
+第 498 节初稿用的是"Native 不开 SuperKernel"且按 mean 汇总，两点都要修正：
+
+1. **Native 必须开 SuperKernel。** 在能跑通的 vllm 装饰器入口里通过
+   `record_options` 钩子注入 `super_kernel_optimize=True`
+   （`backend_options` 与 `installed_static_packages: 1` 确认生效），
+   PTO 侧不开——它结构上用不上。
+2. **必须用 p50 而不是 mean。** `h131072_b8/native_a` 的 20 次里有一次
+   **16371.66 μs** 尖峰（p50 仅 951.82），把该侧 mean 拉到 1723.32、
+   两次 native 的 mean 差 761.52 μs，按 mean 算出的该档比值 0.553 是假的。
+
+修正后的完整七档（同卡 ABBA，每侧 20 事件，详见
+[RESULTS.md](results/csa_accept_20260930/RESULTS.md)）：
+
+| 档位 | Native+SK p50 | PTO p50 | 比值 |
+| --- | ---: | ---: | ---: |
+| 128K/B4 | 791.36 | 639.00 | 0.807 |
+| 128K/B8 | 954.91 | 737.74 | **0.773** |
+| 128K/B16 | 1249.04 | 969.09 | **0.776** |
+| 128K/B24 | 1425.46 | 1230.91 | 0.864 |
+| 8K/B16 | 864.73 | 765.01 | 0.885 |
+| 8K/B24 | 1056.98 | 915.86 | 0.866 |
+| 8K/B32 | 1183.42 | 1043.50 | 0.882 |
+
+| 口径 | 128K 均 | 8K 均 | 8:2 加权 | 距 0.80 |
+| --- | ---: | ---: | ---: | ---: |
+| 按 p50 | 0.8049 | 0.8776 | **0.8194** | +0.0194 |
+| 按 min | 0.7916 | 0.8594 | **0.8052** | +0.0052 |
+| 按 p95 | 0.8164 | 0.8892 | 0.8309 | +0.0309 |
+
+**128K/B8 与 128K/B16 已在 0.80 以内；缺口集中在 128K/B24 (0.864)
+与三个短档 (0.866~0.885)。**
+
+### 498.4 ★ 归档 Native 基线（1130.85）无法用于当前源
+
+`LATEST_EXISTING_COMPARISON.md` 的 Native 列走
+`torch.compile(backend="npugraph_ex", options={force_eager: False,
+inplace_pass: False, static_kernel_compile: True, super_kernel_optimize: True})`。
+**那条入口对当前源两侧都不可用**：
+
+- Native：`Cannot prepare for replay during capturing stage ...
+  npuStreamCaptureStatusActive` —— `_replay_graph.replay()` 在外层捕获活跃时
+  被调用（嵌套图捕获），旧 harness 对当前 torch_npu 2.10.0.post2 版本错配。
+- PTO：`wrapper_compiled: False`、装包 0，`torch.compile(fullgraph=True)`
+  没产出编译体。
+
+所以 **1130.85 配不上一个同入口的 PTO 读数**，此前所有"对 SK 基线 0.9078"
+的表述都是拿两条不同入口的数字相除，不成立。当前源上唯一内部一致的
+同卡对比就是第 498.3 节那张表。
+
+另记：在 vllm 装饰器入口下开 `super_kernel_optimize`，128K/B16 的 Native p50
+从 1218.55（不开）变成 1249.04（开）——**这条入口下该开关没有兑现归档基线
+那 7.7% 的优势**，归档的优势来自整条 `force_eager=False` + 直接 npugraph_ex。
