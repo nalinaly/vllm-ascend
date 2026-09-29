@@ -1172,7 +1172,12 @@ def _long_sparse_attn_hca_tp1(
     ) as attention_tid:
         worker = pl.tile.get_block_idx()
         pl.system.set_ffts(ffts)
-        for token in pl.range(worker, t_dim, NUM_QK_CORES):
+        # QK进入下一query时保留上一query的KV槽；只在本worker最后一条query排空。
+        kv_l1 = pl.create_tile([QK_TRANSFER_SLOTS * ATTN_K_TILE, HEAD_DIM],
+                              dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+        for token, (work_offset,) in pl.range(
+            worker, t_dim, NUM_QK_CORES, init_values=(pl.cast(0, pl.INDEX),),
+        ):
             request = token // S
             length = pl.max(pl.read(kv_seq_lens, [request]), 0)
             position = pl.max(pl.read(position_ids, [token]), -1)
@@ -1184,11 +1189,14 @@ def _long_sparse_attn_hca_tp1(
             first_length = pl.min(WIN, pl.max(pl.min(pl.read(position_ids, [request * S]) + 1, length), 0))
             raw_drop = pl.max(first_length + token % S - WIN, 0)
             query = pl.load(q_flat, [token * H, 0], [H, HEAD_DIM], target_memory=pl.MemorySpace.Mat)
-            kv_l1 = pl.create_tile([QK_TRANSFER_SLOTS * ATTN_K_TILE, HEAD_DIM],
-                                   dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
-            for tick in pl.range(work_count + QK_PRE_LAUNCH):
+            if token + NUM_QK_CORES >= t_dim:
+                extra = pl.yield_(QK_PRE_LAUNCH)
+            else:
+                extra = pl.yield_(0)
+            for tick in pl.range(work_count + extra):
+                global_tick = work_offset + tick
                 if tick < work_count:
-                    l1_row = (tick % QK_TRANSFER_SLOTS) * ATTN_K_TILE
+                    l1_row = (global_tick % QK_TRANSFER_SLOTS) * ATTN_K_TILE
                     if tick == cmp_blocks:
                         kv_l1 = pl.gather_row(kv_l1, raw_kv, [l1_row, 0],
                                              [request * REQUEST_KV_ROWS + raw_drop, 0], [ATTN_K_TILE, HEAD_DIM])
@@ -1198,11 +1206,11 @@ def _long_sparse_attn_hca_tp1(
                                              [ATTN_K_TILE, HEAD_DIM])
                     key_t = pl.tile.slice(pl.tile.transpose_view(kv_l1), [HEAD_DIM, ATTN_K_TILE], [0, l1_row])
                     qk = pl.matmul(query, key_t, out_dtype=pl.FP32)
-                    row = (worker * QK_TRANSFER_SLOTS + tick % QK_TRANSFER_SLOTS) * H
+                    row = (worker * QK_TRANSFER_SLOTS + global_tick % QK_TRANSFER_SLOTS) * H
                     pl.store(qk, [row, 0], scores)
                     pl.system.sync_set(0, pipe=pl.PipeType.FIX, ffts_mode=2, core_type=pl.KernelType.AIC)
-                if tick >= QK_PRE_LAUNCH:
-                    pv_work = tick - QK_PRE_LAUNCH
+                if global_tick >= QK_PRE_LAUNCH:
+                    pv_work = global_tick - QK_PRE_LAUNCH
                     pv_row = (worker * QK_TRANSFER_SLOTS + pv_work % QK_TRANSFER_SLOTS) * H
                     pl.system.sync_wait(1, pipe=pl.PipeType.MTE2, core_type=pl.KernelType.AIC)
                     probability = pl.load(probs, [pv_row, 0], [H, ATTN_K_TILE], target_memory=pl.MemorySpace.Mat)
@@ -1220,29 +1228,51 @@ def _long_sparse_attn_hca_tp1(
                     pl.store(previous, [pv_row, HEAD_DIM - PV_N_TILE], values)
                     pl.system.sync_set(2, pipe=pl.PipeType.FIX, ffts_mode=2, core_type=pl.KernelType.AIC)
 
-            for lane in pl.split_aiv(2, mode=pl.SplitMode.NONE):
-                pl.system.set_ffts(ffts)
-                head0 = lane * (H // 2)
-                reduce_tmp = pl.create_tile([H // 2, ATTN_K_TILE], dtype=pl.FP32)
-                running_m = pl.load(sink_col, [head0, 0], [H // 2, 1])
-                running_l = pl.mul(running_m, 0.0)
-                running_left = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
-                running_right = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
-                # Native keeps softmaxMax/Sum in UB across the delayed PV stages.
-                # These values never cross cores; only scores/probs/values need GM.
-                max_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
-                sum_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
+            work_offset_done = pl.yield_(work_offset + work_count)  # noqa: F841 -- PyPTO循环状态
+
+        for lane in pl.split_aiv(2, mode=pl.SplitMode.NONE):
+            pl.system.set_ffts(ffts)
+            head0 = lane * (H // 2)
+            reduce_tmp = pl.create_tile([H // 2, ATTN_K_TILE], dtype=pl.FP32)
+            stream_seed_m = pl.load(sink_col, [head0, 0], [H // 2, 1])
+            stream_seed_l = pl.mul(stream_seed_m, 0.0)
+            stream_seed_left = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
+            stream_seed_right = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
+            # Native keeps softmaxMax/Sum in UB across the delayed PV stages.
+            # These values never cross cores; only scores/probs/values need GM.
+            max_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
+            sum_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
+            query_ring = pl.tile.full([QK_TRANSFER_SLOTS, 8], dtype=pl.INT32, value=0)
+            for vec_token, (vec_offset, m_query, l_query, left_query, right_query, max_query, sum_query) in pl.range(
+                worker, t_dim, NUM_QK_CORES,
+                init_values=(pl.cast(0, pl.INDEX), stream_seed_m, stream_seed_l,
+                             stream_seed_left, stream_seed_right, max_ring_init, sum_ring_init),
+            ):
+                request = vec_token // S
+                length = pl.max(pl.read(kv_seq_lens, [request]), 0)
+                position = pl.max(pl.read(position_ids, [vec_token]), -1)
+                cmp_rows = pl.cast(pl.min(HCA_MAX_COMPRESSED_ROWS, pl.min(
+                    (position + 1) // COMPRESS_RATIO, length // COMPRESS_RATIO,
+                )), pl.INDEX)
+                cmp_blocks = pl.min(cmp_work_count, (cmp_rows + ATTN_K_TILE - 1) // ATTN_K_TILE)
+                work_count = 1 + cmp_blocks
+                first_length = pl.min(WIN, pl.max(pl.min(pl.read(position_ids, [request * S]) + 1, length), 0))
+                raw_drop = pl.max(first_length + vec_token % S - WIN, 0)
+                if vec_token + NUM_QK_CORES >= t_dim:
+                    vec_extra = pl.yield_(QK_PRE_LAUNCH)
+                else:
+                    vec_extra = pl.yield_(0)
                 for vec_tick, (m_iter, l_iter, left_iter, right_iter, max_ring, sum_ring) in pl.range(
-                    work_count + QK_PRE_LAUNCH,
-                    init_values=(running_m, running_l, running_left, running_right,
-                                 max_ring_init, sum_ring_init),
+                    work_count + vec_extra,
+                    init_values=(m_query, l_query, left_query, right_query, max_query, sum_query),
                 ):
+                    vec_global = vec_offset + vec_tick
                     if vec_tick < work_count:
-                        vec_row = (worker * QK_TRANSFER_SLOTS + vec_tick % QK_TRANSFER_SLOTS) * H + head0
+                        vec_row = (worker * QK_TRANSFER_SLOTS + vec_global % QK_TRANSFER_SLOTS) * H + head0
                         pl.system.sync_wait(0, pipe=pl.PipeType.MTE2, core_type=pl.KernelType.AIV)
                         score = pl.load(scores, [vec_row, 0], [H // 2, ATTN_K_TILE])
                         if vec_tick == cmp_blocks:
-                            raw_mask = pl.load(raw_valid, [token, 0], [1, ATTN_K_TILE])
+                            raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
                             raw_bias = pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF)
                             raw_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), raw_bias)
                             raw_m = pl.row_max(raw_scaled, reduce_tmp)
@@ -1264,17 +1294,22 @@ def _long_sparse_attn_hca_tp1(
                         vec_probability = pl.cast(exponent, pl.BF16, mode="rint")
                         pl.store(vec_probability, [vec_row, 0], probs)
                         next_max_ring = pl.tile.assemble(
-                            max_ring, pl.reshape(maximum, [1, H // 2]), [vec_tick % QK_TRANSFER_SLOTS, 0],
+                            max_ring, pl.reshape(maximum, [1, H // 2]), [vec_global % QK_TRANSFER_SLOTS, 0],
                         )
                         next_sum_ring = pl.tile.assemble(
-                            sum_ring, pl.reshape(total, [1, H // 2]), [vec_tick % QK_TRANSFER_SLOTS, 0],
+                            sum_ring, pl.reshape(total, [1, H // 2]), [vec_global % QK_TRANSFER_SLOTS, 0],
                         )
+                        # 描述符仅供本AIV消费；PV延迟两步时仍指向正确query，不增加GM任务。
+                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 0], pl.cast(vec_token, pl.INT32))
+                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 1], pl.cast(vec_tick, pl.INT32))
+                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 2],
+                                      pl.cast(work_count - vec_tick - 1, pl.INT32))
                         pl.system.sync_set(1, pipe=pl.PipeType.MTE3, ffts_mode=2, core_type=pl.KernelType.AIV)
                         updated_max_ring, updated_sum_ring = pl.yield_(next_max_ring, next_sum_ring)
                     else:
                         updated_max_ring, updated_sum_ring = pl.yield_(max_ring, sum_ring)
-                    if vec_tick >= QK_PRE_LAUNCH:
-                        out_work = vec_tick - QK_PRE_LAUNCH
+                    if vec_global >= QK_PRE_LAUNCH:
+                        out_work = vec_global - QK_PRE_LAUNCH
                         out_row = (worker * QK_TRANSFER_SLOTS + out_work % QK_TRANSFER_SLOTS) * H + head0
                         pl.system.sync_wait(2, pipe=pl.PipeType.MTE2, core_type=pl.KernelType.AIV)
                         out_m = pl.reshape(pl.tile.extract(
@@ -1285,19 +1320,72 @@ def _long_sparse_attn_hca_tp1(
                             updated_sum_ring, out_work % QK_TRANSFER_SLOTS, 0, [1, H // 2],
                             target_memory=pl.MemorySpace.Vec,
                         ), [H // 2, 1])
+                        out_local = pl.tile.read(query_ring, [out_work % QK_TRANSFER_SLOTS, 1])
+                        if out_local == 0:
+                            fresh_m = pl.load(sink_col, [head0, 0], [H // 2, 1])
+                            fresh_l = pl.mul(fresh_m, 0.0)
+                            fresh_left = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
+                            fresh_right = pl.tile.full([H // 2, HEAD_DIM // 2], dtype=pl.FP32, value=0.0)
+                            current_m, current_l, current_left, current_right = pl.yield_(
+                                fresh_m, fresh_l, fresh_left, fresh_right,
+                            )
+                        else:
+                            current_m, current_l, current_left, current_right = pl.yield_(
+                                m_iter, l_iter, left_iter, right_iter,
+                            )
                         # 长历史的 running_m 从 sink 开始，只增不减；最后 raw 合并不需要另设分支。
-                        # 直接保留循环最大值，避免多层 Tile 分支返回值与后续 PV 载入共用 UB。
-                        next_m = pl.maximum(m_iter, out_m)
-                        alpha = pl.exp(pl.sub(m_iter, next_m))
+                        # 归约状态跟随PV消费的query；QK提前进入下一query不改变这里的归约顺序。
+                        next_m = pl.maximum(current_m, out_m)
+                        alpha = pl.exp(pl.sub(current_m, next_m))
                         beta = pl.exp(pl.sub(out_m, next_m))
-                        next_l = pl.add(pl.mul(alpha, l_iter), pl.mul(beta, out_l))
+                        next_l = pl.add(pl.mul(alpha, current_l), pl.mul(beta, out_l))
                         # 两个乘积先各自舍入为 FP32；有限值加法两侧交换不改变结果。
                         pv_left = pl.load(values, [out_row, 0], [H // 2, HEAD_DIM // 2])
-                        next_left = pl.add(pl.row_expand_mul(left_iter, alpha),
+                        next_left = pl.add(pl.row_expand_mul(current_left, alpha),
                                            pl.row_expand_mul(pv_left, beta))
                         pv_right = pl.load(values, [out_row, HEAD_DIM // 2], [H // 2, HEAD_DIM // 2])
-                        next_right = pl.add(pl.row_expand_mul(right_iter, alpha),
+                        next_right = pl.add(pl.row_expand_mul(current_right, alpha),
                                             pl.row_expand_mul(pv_right, beta))
+                        remaining = pl.tile.read(query_ring, [out_work % QK_TRANSFER_SLOTS, 2])
+                        if remaining == 0:
+                            publish_token = pl.cast(pl.tile.read(
+                                query_ring, [out_work % QK_TRANSFER_SLOTS, 0],
+                            ), pl.INDEX)
+                            final_sink = pl.load(sink_col, [head0, 0], [H // 2, 1])
+                            sink_value = pl.add(pl.sub(next_m, next_m), final_sink)
+                            denominator = pl.add(next_l, pl.exp(pl.sub(sink_value, next_m)))
+                            cosine = pl.load(rope_cos_il, [publish_token, 0], [1, ROPE_DIM])
+                            sine = pl.load(rope_sin_signed, [publish_token, 0], [1, ROPE_DIM])
+                            swap_one = pl.tile.full([1, ROPE_DIM], dtype=pl.FP32, value=1.0)
+                            swap_ids = pl.cast(pl.tile.arange(0, [1, ROPE_DIM], dtype=pl.INT32), pl.FP32)
+                            swap_col = pl.col_expand_mul(swap_one, swap_ids)
+                            swap_pair = pl.cast(pl.cast(pl.mul(swap_col, 0.5), pl.INT32, mode="trunc"), pl.FP32)
+                            swap_lane = pl.sub(swap_col, pl.mul(swap_pair, 2.0))
+                            swap = pl.sub(pl.add(swap_col, 1.0), pl.mul(swap_lane, 2.0))
+                            swap_grid = pl.col_expand_add(pl.tile.full([H_TILE, ROPE_DIM], dtype=pl.FP32, value=0.0),
+                                                          pl.add(swap, NOPE_DIM))
+                            row_ids = pl.cast(pl.tile.arange(0, [1, H_TILE], dtype=pl.INT32), pl.FP32)
+                            swap_index = pl.cast(pl.row_expand_add(swap_grid, pl.reshape(pl.mul(row_ids, HEAD_DIM),
+                                                                                        [H_TILE, 1])), pl.INT32)
+                            gather_tmp = pl.create_tile([H_TILE, ROPE_DIM], dtype=pl.INT32)
+                            for head_part in pl.unroll(H // 2 // H_TILE):
+                                offset = head_part * H_TILE
+                                head = head0 + offset
+                                merged = pl.concat(pl.tile.slice(next_left, [H_TILE, HEAD_DIM // 2], [offset, 0]),
+                                                    pl.tile.slice(next_right, [H_TILE, HEAD_DIM // 2], [offset, 0]))
+                                normalized = pl.row_expand_div(
+                                    merged, pl.tile.slice(denominator, [H_TILE, 1], [offset, 0]),
+                                )
+                                bf16 = pl.cast(normalized, pl.BF16, mode="rint")
+                                rope = normalized[0:H_TILE, NOPE_DIM:HEAD_DIM]
+                                swapped = pl.tile.gather(normalized, swap_index, gather_tmp)
+                                rotated = pl.add(pl.col_expand_mul(rope, cosine), pl.col_expand_mul(swapped, sine))
+                                rope_bf16 = pl.cast(rotated, pl.BF16, mode="rint")
+                                full = pl.concat(bf16[0:H_TILE, 0:NOPE_DIM], rope_bf16)
+                                groups = pl.reshape(full, [PUBLISH_GROUPS, O_GROUP_IN])
+                                packed_row = (head // HEADS_PER_GROUP) * T_PAD + publish_token
+                                pl.store(groups[0:1, :], [packed_row, 0], o_packed_heads)
+                                pl.store(groups[1:2, :], [packed_row + T_PAD, 0], o_packed_heads)
                         m_after, l_after, left_after, right_after = pl.yield_(
                             next_m, next_l, next_left, next_right,
                         )
@@ -1306,39 +1394,10 @@ def _long_sparse_attn_hca_tp1(
                     running_m, running_l, running_left, running_right, max_ring_done, sum_ring_done = pl.yield_(
                         m_after, l_after, left_after, right_after, updated_max_ring, updated_sum_ring,
                     )
-                final_sink = pl.load(sink_col, [head0, 0], [H // 2, 1])
-                sink_value = pl.add(pl.sub(running_m, running_m), final_sink)
-                denominator = pl.add(running_l, pl.exp(pl.sub(sink_value, running_m)))
-                cosine = pl.load(rope_cos_il, [token, 0], [1, ROPE_DIM])
-                sine = pl.load(rope_sin_signed, [token, 0], [1, ROPE_DIM])
-                swap_one = pl.tile.full([1, ROPE_DIM], dtype=pl.FP32, value=1.0)
-                swap_ids = pl.cast(pl.tile.arange(0, [1, ROPE_DIM], dtype=pl.INT32), pl.FP32)
-                swap_col = pl.col_expand_mul(swap_one, swap_ids)
-                swap_pair = pl.cast(pl.cast(pl.mul(swap_col, 0.5), pl.INT32, mode="trunc"), pl.FP32)
-                swap_lane = pl.sub(swap_col, pl.mul(swap_pair, 2.0))
-                swap = pl.sub(pl.add(swap_col, 1.0), pl.mul(swap_lane, 2.0))
-                swap_grid = pl.col_expand_add(pl.tile.full([H_TILE, ROPE_DIM], dtype=pl.FP32, value=0.0),
-                                              pl.add(swap, NOPE_DIM))
-                row_ids = pl.cast(pl.tile.arange(0, [1, H_TILE], dtype=pl.INT32), pl.FP32)
-                swap_index = pl.cast(pl.row_expand_add(swap_grid, pl.reshape(pl.mul(row_ids, HEAD_DIM),
-                                                                            [H_TILE, 1])), pl.INT32)
-                gather_tmp = pl.create_tile([H_TILE, ROPE_DIM], dtype=pl.INT32)
-                for head_part in pl.unroll(H // 2 // H_TILE):
-                    offset = head_part * H_TILE
-                    head = head0 + offset
-                    merged = pl.concat(pl.tile.slice(running_left, [H_TILE, HEAD_DIM // 2], [offset, 0]),
-                                        pl.tile.slice(running_right, [H_TILE, HEAD_DIM // 2], [offset, 0]))
-                    normalized = pl.row_expand_div(merged, pl.tile.slice(denominator, [H_TILE, 1], [offset, 0]))
-                    bf16 = pl.cast(normalized, pl.BF16, mode="rint")
-                    rope = normalized[0:H_TILE, NOPE_DIM:HEAD_DIM]
-                    swapped = pl.tile.gather(normalized, swap_index, gather_tmp)
-                    rotated = pl.add(pl.col_expand_mul(rope, cosine), pl.col_expand_mul(swapped, sine))
-                    rope_bf16 = pl.cast(rotated, pl.BF16, mode="rint")
-                    full = pl.concat(bf16[0:H_TILE, 0:NOPE_DIM], rope_bf16)
-                    groups = pl.reshape(full, [PUBLISH_GROUPS, O_GROUP_IN])
-                    packed_row = (head // HEADS_PER_GROUP) * T_PAD + token
-                    pl.store(groups[0:1, :], [packed_row, 0], o_packed_heads)
-                    pl.store(groups[1:2, :], [packed_row + T_PAD, 0], o_packed_heads)
+                offset_done, m_done, l_done, left_done, right_done, max_done, sum_done = pl.yield_(
+                    vec_offset + work_count, running_m, running_l, running_left, running_right,
+                    max_ring_done, sum_ring_done,
+                )
     return o_packed_heads, attention_tid
 
 
