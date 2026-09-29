@@ -1,0 +1,19 @@
+{
+  "baseline": "7b296153",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-ob-hc-scalar-fused-9a868d26-candidate",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-sparse-plan-rope-7b296153",
+  "variant": "pkg:dsv4_csa_sparse_plan_rope_7b296153",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "SWA计划复用已有rope_cs任务提前执行；压缩plan依赖此任务及Top-K，不增加AIV任务数",
+  "scope": "私有单文件调度候选；数学、cache、Sparse incore保持，未修改生产或工具链",
+  "comparison_scope": "两侧总核时均包含SWA、压缩plan及RoPE符号计算"
+}

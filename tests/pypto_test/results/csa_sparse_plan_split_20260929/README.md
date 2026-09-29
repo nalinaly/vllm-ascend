@@ -40,11 +40,26 @@ window_swa_indices，而本仓为直接复用Native位置/页表，在PTO内部�
 
 baseline/candidate两个入口依赖解析通过；candidate完整PTOAS/CCE/link/load通过。
 Ruff和shell语法通过，私有包全部Python源只读。
-14:44正常auto提交task_20260929_144431_322320312386，已确认设备1上running。
+14:44正常auto提交task_20260929_144431_322320312386，设备1上已退出0。
 128K/B16先baseline后candidate，8K/B24反序；CANN9.2/mode2/atomic0/det0，
 每侧5预热20次正式计时、四窗DFX和八类完整状态零容差。
 收集完整CSA/P95、计划总核时、Merge FIN→Sparse start及未改任务耗时，避免只观察等待转移。
-有收益再补受影响的尾行/padding；当前没有设备结论，不做Native/七档/EP16扩测。
+两档八类完整状态零容差、自身图/保护区/Top-K结构及16窗官方join和worker覆盖通过。
+真实依赖确认压缩计划等SWA与Top-K，两阶段写有效位不重叠。
+
+**结论：不采用。** 长B16 CSA977.729→988.349μs（+1.086%）、短B24 923.959→932.331（+0.906%），
+长短8:2 +1.050%；P95分别992.720→999.880、949.860→953.100μs。
+四组均0/20超过自身P50的105%，不能将均值回退归为少数异常尾部。
+计划总核时长96.995→133.035μs（+37.157%）、短132.675→168.825（+27.247%），
+8:2 +35.175%，四窗范围均完全分离。Merge FIN→Sparse start仅长16.840→15.415、短16.850→16.710。
+未改Sparse核时长档变慢、短档变快，Q_B启动也没有整体变晚；不声称前段整体被新任务拖慢。
+局部交接缩短及未改merge核时下降，不足以证明有可单独保留的核内算法收益。
+
+不扩大到边界/Native/七档/EP16，生产保持7b296153。
+下一份独立候选将SWA复用已有rope_cs任务，不增加任务总数；尚无该新结构的性能结论。
+临时长档预览已由两档完整结果替代，保留下面的正式样本与状态。
+[完整结果](RESULTS.md)、[状态和样本](summary.json)、[全部任务](evidence.json)、
+[四窗关键链](handoff.json)、[取舍](decision.json)。
 
 [私有构造](prepare.py)、[差异](candidate.patch)、[源码来源](source.json)、
 [CPU编译](compile_candidate.json)、[生成调度代码](static_evidence.json)、

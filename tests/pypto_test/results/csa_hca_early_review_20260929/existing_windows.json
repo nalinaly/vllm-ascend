@@ -1,0 +1,4603 @@
+{
+  "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/evidence.json",
+  "source_commit": "7b296153",
+  "new_device_sampling": false,
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "windows": [
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/merged_swimlane.json",
+          "joined_rows": 953,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 0.0,
+              "finish_us": 22.960000000000008,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 31.5,
+              "finish_us": 47.42,
+              "last_finish_to_start_us": 8.539999999999992,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 110.36000000000001,
+              "finish_us": 141.42000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 119.78,
+              "finish_us": 154.28,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 123.22,
+              "finish_us": 196.98000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 147.72,
+              "finish_us": 174.18,
+              "last_finish_to_start_us": 6.299999999999983,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 157.66,
+              "finish_us": 171.5,
+              "last_finish_to_start_us": 3.3799999999999955,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 158.68,
+              "finish_us": 255.16,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 176.66,
+              "finish_us": 193.44,
+              "last_finish_to_start_us": 5.159999999999997,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 180.64000000000001,
+              "finish_us": 190.54,
+              "last_finish_to_start_us": 6.460000000000008,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 184.38,
+              "finish_us": 200.8,
+              "last_finish_to_start_us": 10.199999999999989,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 196.54000000000002,
+              "finish_us": 215.16,
+              "last_finish_to_start_us": 6.000000000000028,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 205.62000000000003,
+              "finish_us": 228.42,
+              "last_finish_to_start_us": 8.640000000000015,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 222.76000000000002,
+              "finish_us": 226.16,
+              "last_finish_to_start_us": 7.600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 239.54,
+              "finish_us": 253.84,
+              "last_finish_to_start_us": 11.120000000000005,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 6,
+              "start_us": 239.54,
+              "finish_us": 255.00000000000003,
+              "last_finish_to_start_us": 11.120000000000005,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 239.58,
+              "finish_us": 247.70000000000002,
+              "last_finish_to_start_us": 13.420000000000016,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 251.79999999999998,
+              "finish_us": 267.86,
+              "last_finish_to_start_us": 4.099999999999966,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 260.9,
+              "finish_us": 299.29999999999995,
+              "last_finish_to_start_us": 5.740000000000009,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 16,
+              "rows": 16,
+              "start_us": 301.86,
+              "finish_us": 317.26,
+              "last_finish_to_start_us": 0.5999999999999659,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": false,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 318.32000000000005,
+              "finish_us": 554.72,
+              "last_finish_to_start_us": 1.0600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 560.1999999999999,
+              "finish_us": 577.9,
+              "last_finish_to_start_us": 5.4799999999999045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 598.16,
+              "finish_us": 761.2,
+              "last_finish_to_start_us": 0.7799999999999727,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+          "joined_rows": 953,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 0.0,
+              "finish_us": 19.9,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 25.200000000000003,
+              "finish_us": 46.48,
+              "last_finish_to_start_us": 5.300000000000004,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 110.0,
+              "finish_us": 142.42,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 111.03999999999999,
+              "finish_us": 151.46,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 129.62,
+              "finish_us": 187.6,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 146.78,
+              "finish_us": 255.14,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 148.72,
+              "finish_us": 162.04,
+              "last_finish_to_start_us": 6.300000000000011,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 159.07999999999998,
+              "finish_us": 179.28,
+              "last_finish_to_start_us": 7.619999999999976,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 168.64,
+              "finish_us": 180.68,
+              "last_finish_to_start_us": 6.599999999999994,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 186.82,
+              "finish_us": 203.07999999999998,
+              "last_finish_to_start_us": 7.539999999999992,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 188.12,
+              "finish_us": 205.98,
+              "last_finish_to_start_us": 8.840000000000003,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 197.35999999999999,
+              "finish_us": 215.28,
+              "last_finish_to_start_us": 9.759999999999991,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 206.6,
+              "finish_us": 222.96,
+              "last_finish_to_start_us": 3.5200000000000102,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 230.66,
+              "finish_us": 238.68,
+              "last_finish_to_start_us": 7.699999999999989,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 6,
+              "start_us": 238.76,
+              "finish_us": 253.12,
+              "last_finish_to_start_us": 23.47999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 238.88,
+              "finish_us": 253.8,
+              "last_finish_to_start_us": 23.599999999999994,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 245.12,
+              "finish_us": 259.44,
+              "last_finish_to_start_us": 6.439999999999998,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 262.08,
+              "finish_us": 301.16,
+              "last_finish_to_start_us": 6.939999999999998,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 283.14,
+              "finish_us": 292.8,
+              "last_finish_to_start_us": 23.69999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 16,
+              "rows": 16,
+              "start_us": 306.38,
+              "finish_us": 314.06,
+              "last_finish_to_start_us": 0.7599999999999909,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": false,
+              "eligible_from_producers": true,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 72,
+              "start_us": 323.3,
+              "finish_us": 560.9000000000001,
+              "last_finish_to_start_us": 9.240000000000009,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 566.7600000000001,
+              "finish_us": 584.1600000000001,
+              "last_finish_to_start_us": 5.860000000000014,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "partial",
+              "early_rows": 51,
+              "rows": 72,
+              "start_us": 597.0400000000001,
+              "finish_us": 759.6200000000001,
+              "last_finish_to_start_us": 0.7799999999999727,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+          "joined_rows": 953,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 0.0,
+              "finish_us": 19.42,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 23.9,
+              "finish_us": 45.7,
+              "last_finish_to_start_us": 4.479999999999997,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 108.64,
+              "finish_us": 139.68,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 109.3,
+              "finish_us": 150.42000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 122.42,
+              "finish_us": 186.95999999999998,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 145.82,
+              "finish_us": 170.7,
+              "last_finish_to_start_us": 6.140000000000015,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 155.06,
+              "finish_us": 170.78000000000003,
+              "last_finish_to_start_us": 4.640000000000015,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 158.24,
+              "finish_us": 252.0,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 176.98000000000002,
+              "finish_us": 197.38,
+              "last_finish_to_start_us": 6.199999999999989,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 177.0,
+              "finish_us": 195.74,
+              "last_finish_to_start_us": 6.300000000000011,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 183.36,
+              "finish_us": 207.3,
+              "last_finish_to_start_us": 12.659999999999997,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 190.64,
+              "finish_us": 213.56,
+              "last_finish_to_start_us": 3.680000000000007,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 213.95999999999998,
+              "finish_us": 225.88,
+              "last_finish_to_start_us": 18.22,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 6,
+              "start_us": 224.68,
+              "finish_us": 239.40000000000003,
+              "last_finish_to_start_us": 11.119999999999976,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 224.78000000000003,
+              "finish_us": 243.32,
+              "last_finish_to_start_us": 11.219999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 231.12,
+              "finish_us": 233.94,
+              "last_finish_to_start_us": 5.240000000000009,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 239.62,
+              "finish_us": 244.74,
+              "last_finish_to_start_us": 5.680000000000007,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 246.8,
+              "finish_us": 258.98,
+              "last_finish_to_start_us": 2.0600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 257.88,
+              "finish_us": 292.88,
+              "last_finish_to_start_us": 5.8799999999999955,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 16,
+              "rows": 16,
+              "start_us": 298.18,
+              "finish_us": 314.62,
+              "last_finish_to_start_us": 0.5799999999999841,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": false,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 315.54,
+              "finish_us": 552.9200000000001,
+              "last_finish_to_start_us": 0.9200000000000159,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 558.32,
+              "finish_us": 574.9200000000001,
+              "last_finish_to_start_us": 5.399999999999977,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 594.7,
+              "finish_us": 766.02,
+              "last_finish_to_start_us": 0.8600000000000136,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h131072_b16/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+          "joined_rows": 953,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 0.0,
+              "finish_us": 20.46,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 25.0,
+              "finish_us": 43.81999999999999,
+              "last_finish_to_start_us": 4.539999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 12,
+              "start_us": 104.7,
+              "finish_us": 134.72000000000003,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 107.08,
+              "finish_us": 148.56,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 121.32000000000001,
+              "finish_us": 194.24,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 138.22000000000003,
+              "finish_us": 149.10000000000002,
+              "last_finish_to_start_us": 3.5,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 141.07999999999998,
+              "finish_us": 249.48000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 152.66000000000003,
+              "finish_us": 168.32,
+              "last_finish_to_start_us": 3.5600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 155.12,
+              "finish_us": 180.07999999999998,
+              "last_finish_to_start_us": 6.560000000000002,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 185.2,
+              "finish_us": 198.48000000000002,
+              "last_finish_to_start_us": 5.1200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 188.48000000000002,
+              "finish_us": 207.0,
+              "last_finish_to_start_us": 8.400000000000006,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 203.89999999999998,
+              "finish_us": 226.24,
+              "last_finish_to_start_us": 9.659999999999997,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 208.18,
+              "finish_us": 224.7,
+              "last_finish_to_start_us": 9.699999999999989,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 6,
+              "start_us": 231.5,
+              "finish_us": 248.21999999999997,
+              "last_finish_to_start_us": 5.260000000000019,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 16,
+              "start_us": 231.56,
+              "finish_us": 247.82,
+              "last_finish_to_start_us": 5.320000000000022,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 232.18,
+              "finish_us": 240.03999999999996,
+              "last_finish_to_start_us": 7.480000000000018,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 242.12,
+              "finish_us": 248.44,
+              "last_finish_to_start_us": 2.080000000000041,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 256.68,
+              "finish_us": 294.82,
+              "last_finish_to_start_us": 7.199999999999989,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 256.92,
+              "finish_us": 273.71999999999997,
+              "last_finish_to_start_us": 8.480000000000018,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 16,
+              "rows": 16,
+              "start_us": 298.98,
+              "finish_us": 306.98,
+              "last_finish_to_start_us": 0.4600000000000364,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": false,
+              "eligible_from_producers": true,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 72,
+              "start_us": 316.15999999999997,
+              "finish_us": 551.98,
+              "last_finish_to_start_us": 9.17999999999995,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 557.72,
+              "finish_us": 575.08,
+              "last_finish_to_start_us": 5.740000000000009,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 593.1800000000001,
+              "finish_us": 757.58,
+              "last_finish_to_start_us": 0.82000000000005,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "windows": [
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/merged_swimlane.json",
+          "joined_rows": 1061,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 18,
+              "start_us": 0.0,
+              "finish_us": 31.559999999999995,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 36.080000000000005,
+              "finish_us": 54.6,
+              "last_finish_to_start_us": 4.52000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 126.78,
+              "finish_us": 164.76,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 147.96,
+              "finish_us": 210.18,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 148.04,
+              "finish_us": 220.76000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 171.18,
+              "finish_us": 193.28,
+              "last_finish_to_start_us": 6.420000000000016,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 199.04,
+              "finish_us": 212.56,
+              "last_finish_to_start_us": 5.759999999999991,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 199.9,
+              "finish_us": 307.22,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 206.28,
+              "finish_us": 224.88000000000002,
+              "last_finish_to_start_us": 13.0,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 215.62,
+              "finish_us": 235.85999999999999,
+              "last_finish_to_start_us": 3.0600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 5,
+              "start_us": 216.02,
+              "finish_us": 230.20000000000002,
+              "last_finish_to_start_us": 5.840000000000003,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 226.73999999999998,
+              "finish_us": 246.76000000000002,
+              "last_finish_to_start_us": 5.979999999999961,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 235.28,
+              "finish_us": 256.06,
+              "last_finish_to_start_us": 5.079999999999984,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 241.46,
+              "finish_us": 247.84,
+              "last_finish_to_start_us": 5.600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 9,
+              "start_us": 254.98,
+              "finish_us": 270.18,
+              "last_finish_to_start_us": 8.21999999999997,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 255.02,
+              "finish_us": 273.52000000000004,
+              "last_finish_to_start_us": 8.259999999999991,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 260.28000000000003,
+              "finish_us": 266.44000000000005,
+              "last_finish_to_start_us": 12.439999999999998,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 269.36,
+              "finish_us": 294.1,
+              "last_finish_to_start_us": 2.919999999999959,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 312.86,
+              "finish_us": 361.56,
+              "last_finish_to_start_us": 5.639999999999986,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 24,
+              "rows": 24,
+              "start_us": 368.36,
+              "finish_us": 379.50000000000006,
+              "last_finish_to_start_us": 0.6800000000000068,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "partial",
+              "early_rows": 39,
+              "rows": 72,
+              "start_us": 380.26000000000005,
+              "finish_us": 439.18,
+              "last_finish_to_start_us": 0.7599999999999909,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 48,
+              "rows": 48,
+              "start_us": 439.82000000000005,
+              "finish_us": 456.04,
+              "last_finish_to_start_us": 0.6400000000000432,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 472.50000000000006,
+              "finish_us": 671.4,
+              "last_finish_to_start_us": 0.7000000000000455,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+          "joined_rows": 1061,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 18,
+              "start_us": 0.0,
+              "finish_us": 29.599999999999998,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 34.64,
+              "finish_us": 53.56,
+              "last_finish_to_start_us": 5.039999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 125.88000000000001,
+              "finish_us": 168.82,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 129.5,
+              "finish_us": 182.44,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 151.85999999999999,
+              "finish_us": 212.92,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 5,
+              "start_us": 173.57999999999998,
+              "finish_us": 191.35999999999999,
+              "last_finish_to_start_us": 4.759999999999991,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 187.29999999999998,
+              "finish_us": 204.12,
+              "last_finish_to_start_us": 4.859999999999985,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 195.98,
+              "finish_us": 206.84,
+              "last_finish_to_start_us": 4.6200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 205.9,
+              "finish_us": 308.28000000000003,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 208.76,
+              "finish_us": 222.85999999999999,
+              "last_finish_to_start_us": 4.639999999999986,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 220.26,
+              "finish_us": 254.32000000000002,
+              "last_finish_to_start_us": 16.139999999999986,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 228.28,
+              "finish_us": 261.3,
+              "last_finish_to_start_us": 15.360000000000014,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 234.35999999999999,
+              "finish_us": 258.70000000000005,
+              "last_finish_to_start_us": 11.5,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 266.94,
+              "finish_us": 272.56,
+              "last_finish_to_start_us": 8.239999999999952,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 278.98,
+              "finish_us": 306.22,
+              "last_finish_to_start_us": 17.680000000000007,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 9,
+              "start_us": 278.98,
+              "finish_us": 301.02000000000004,
+              "last_finish_to_start_us": 17.680000000000007,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 295.22,
+              "finish_us": 306.26000000000005,
+              "last_finish_to_start_us": 22.660000000000025,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 308.46000000000004,
+              "finish_us": 323.38,
+              "last_finish_to_start_us": 2.1999999999999886,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 322.24,
+              "finish_us": 392.96000000000004,
+              "last_finish_to_start_us": 13.95999999999998,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 24,
+              "rows": 24,
+              "start_us": 361.12,
+              "finish_us": 377.68,
+              "last_finish_to_start_us": 17.74000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "partial",
+              "early_rows": 69,
+              "rows": 72,
+              "start_us": 378.24,
+              "finish_us": 438.0,
+              "last_finish_to_start_us": 0.5600000000000023,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 48,
+              "rows": 48,
+              "start_us": 438.62,
+              "finish_us": 455.88000000000005,
+              "last_finish_to_start_us": 0.6200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 471.58000000000004,
+              "finish_us": 670.22,
+              "last_finish_to_start_us": 0.6800000000000068,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+          "joined_rows": 1061,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 18,
+              "start_us": 0.0,
+              "finish_us": 30.060000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 35.03999999999999,
+              "finish_us": 55.14,
+              "last_finish_to_start_us": 4.97999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 124.9,
+              "finish_us": 181.44,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 127.46000000000001,
+              "finish_us": 170.92000000000002,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 147.54,
+              "finish_us": 217.26,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 172.66,
+              "finish_us": 294.4,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 5,
+              "start_us": 175.14000000000001,
+              "finish_us": 190.54,
+              "last_finish_to_start_us": 4.219999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 186.42000000000002,
+              "finish_us": 211.38,
+              "last_finish_to_start_us": 4.980000000000018,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 195.88,
+              "finish_us": 208.84,
+              "last_finish_to_start_us": 5.340000000000003,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 216.72,
+              "finish_us": 229.32,
+              "last_finish_to_start_us": 5.340000000000003,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 224.1,
+              "finish_us": 244.54000000000002,
+              "last_finish_to_start_us": 12.719999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 233.82,
+              "finish_us": 257.9,
+              "last_finish_to_start_us": 16.560000000000002,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 265.58,
+              "finish_us": 289.24,
+              "last_finish_to_start_us": 36.25999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 268.42,
+              "finish_us": 289.9,
+              "last_finish_to_start_us": 10.520000000000039,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 9,
+              "start_us": 280.1,
+              "finish_us": 293.12,
+              "last_finish_to_start_us": 22.200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 292.46,
+              "finish_us": 306.58,
+              "last_finish_to_start_us": 3.2199999999999704,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 300.6,
+              "finish_us": 354.94,
+              "last_finish_to_start_us": 6.2000000000000455,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 335.88,
+              "finish_us": 349.56,
+              "last_finish_to_start_us": 29.30000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 354.92,
+              "finish_us": 370.8,
+              "last_finish_to_start_us": 5.360000000000014,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 24,
+              "rows": 24,
+              "start_us": 361.88,
+              "finish_us": 375.46,
+              "last_finish_to_start_us": 0.6800000000000068,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "partial",
+              "early_rows": 60,
+              "rows": 72,
+              "start_us": 376.26,
+              "finish_us": 437.2,
+              "last_finish_to_start_us": 0.8000000000000114,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 48,
+              "rows": 48,
+              "start_us": 437.8,
+              "finish_us": 453.88,
+              "last_finish_to_start_us": 0.6000000000000227,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 471.44,
+              "finish_us": 664.5799999999999,
+              "last_finish_to_start_us": 0.5399999999999636,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_ob_hc_scalar_fused_20260929/h8192_b24/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+          "joined_rows": 1061,
+          "tasks": [
+            {
+              "task_id": "2",
+              "name": "hc_widen_rms",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 18,
+              "start_us": 0.0,
+              "finish_us": 27.139999999999997,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [],
+              "producers": []
+            },
+            {
+              "task_id": "4294967298",
+              "name": "hc_pre_linear",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 32.239999999999995,
+              "finish_us": 49.599999999999994,
+              "last_finish_to_start_us": 5.100000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "2",
+                  "name": "hc_widen_rms",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967318",
+              "name": "kv_score_proj_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 123.97999999999999,
+              "finish_us": 156.44,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967314",
+              "name": "kv_score_proj",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 144.22,
+              "finish_us": 215.5,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967313"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967313",
+                  "name": "4294967313",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934599",
+              "name": "kv_proj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 144.82,
+              "finish_us": 203.44,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967307"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967307",
+                  "name": "4294967307",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967304",
+                  "name": "mix_x_rms_norm",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967319",
+              "name": "scatter_softmax_pool_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 163.48,
+              "finish_us": 183.1,
+              "last_finish_to_start_us": 7.039999999999992,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967321",
+              "name": "indexer_boundary_init",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 188.12,
+              "finish_us": 198.74,
+              "last_finish_to_start_us": 5.02000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967320",
+              "name": "compress_state_commit_0",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 197.42,
+              "finish_us": 216.94,
+              "last_finish_to_start_us": 14.319999999999993,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967318",
+                  "name": "kv_score_proj_0",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934596",
+              "name": "qproj_matmul",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "unverifiable",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 197.76,
+              "finish_us": 309.88000000000005,
+              "last_finish_to_start_us": null,
+              "untimed_producers": [
+                "4294967311"
+              ],
+              "producers": [
+                {
+                  "task_id": "4294967311",
+                  "name": "4294967311",
+                  "early": false
+                },
+                {
+                  "task_id": "8589934594",
+                  "name": "qr_rms_norm_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967322",
+              "name": "rmsnorm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 2,
+              "start_us": 201.5,
+              "finish_us": 226.9,
+              "last_finish_to_start_us": 2.759999999999991,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967319",
+                  "name": "scatter_softmax_pool_0",
+                  "early": false
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967321",
+                  "name": "indexer_boundary_init",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934600",
+              "name": "kv_rms_norm_rope",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 5,
+              "start_us": 208.0,
+              "finish_us": 223.54,
+              "last_finish_to_start_us": 4.560000000000002,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934599",
+                  "name": "kv_proj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967315",
+              "name": "scatter_softmax_pool",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 220.62,
+              "finish_us": 243.61999999999998,
+              "last_finish_to_start_us": 5.1200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967312",
+              "name": "csa_cache_writeback",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 8,
+              "start_us": 228.76,
+              "finish_us": 251.34,
+              "last_finish_to_start_us": 5.219999999999999,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934600",
+                  "name": "kv_rms_norm_rope",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967323",
+              "name": "kv_hadamard",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 229.64,
+              "finish_us": 232.66,
+              "last_finish_to_start_us": 2.7399999999999807,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967322",
+                  "name": "rmsnorm_rope",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967324",
+              "name": "kv_and_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 3,
+              "start_us": 255.88000000000002,
+              "finish_us": 276.64000000000004,
+              "last_finish_to_start_us": 23.220000000000027,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967323",
+                  "name": "kv_hadamard",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967317",
+              "name": "rmsnorm_rope_cache_write",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 9,
+              "start_us": 259.82000000000005,
+              "finish_us": 285.28000000000003,
+              "last_finish_to_start_us": 16.200000000000045,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967316",
+              "name": "compress_state_commit",
+              "allows_consumers_early": false,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 24,
+              "start_us": 264.92,
+              "finish_us": 288.74,
+              "last_finish_to_start_us": 21.30000000000001,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967315",
+                  "name": "scatter_softmax_pool",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967314",
+                  "name": "kv_score_proj",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "4294967325",
+              "name": "idx_kv_scale_commit",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 1,
+              "start_us": 278.78000000000003,
+              "finish_us": 290.56,
+              "last_finish_to_start_us": 2.1399999999999864,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967324",
+                  "name": "kv_and_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "3",
+                  "name": "csa_row_offsets",
+                  "early": false
+                }
+              ]
+            },
+            {
+              "task_id": "8589934597",
+              "name": "qproj_dequant_rms_nope_rope",
+              "allows_consumers_early": true,
+              "eligible_from_producers": false,
+              "observed_early": "none",
+              "early_rows": 0,
+              "rows": 48,
+              "start_us": 315.3,
+              "finish_us": 385.22,
+              "last_finish_to_start_us": 5.419999999999959,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934596",
+                  "name": "qproj_matmul",
+                  "early": false
+                },
+                {
+                  "task_id": "4294967310",
+                  "name": "q_rope_prepare",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934611",
+              "name": "indexer_head_coefficients",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 24,
+              "rows": 24,
+              "start_us": 329.26000000000005,
+              "finish_us": 344.26000000000005,
+              "last_finish_to_start_us": 0.6000000000000227,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934609",
+                  "name": "weights_proj_reduce",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "8589934612",
+              "name": "indexer_score_topk_native_pair_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "partial",
+              "early_rows": 18,
+              "rows": 72,
+              "start_us": 345.00000000000006,
+              "finish_us": 421.84000000000003,
+              "last_finish_to_start_us": 0.7400000000000091,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934611",
+                  "name": "indexer_head_coefficients",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967325",
+                  "name": "idx_kv_scale_commit",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934606",
+                  "name": "qr_hadamard_quant",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "12884901888",
+              "name": "indexer_topk_query_merge",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 48,
+              "rows": 48,
+              "start_us": 422.42,
+              "finish_us": 438.52000000000004,
+              "last_finish_to_start_us": 0.5799999999999841,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "8589934612",
+                  "name": "indexer_score_topk_native_pair_aic",
+                  "early": true
+                }
+              ]
+            },
+            {
+              "task_id": "4294967332",
+              "name": "qk_pv_aic",
+              "allows_consumers_early": true,
+              "eligible_from_producers": true,
+              "observed_early": "full",
+              "early_rows": 72,
+              "rows": 72,
+              "start_us": 457.18,
+              "finish_us": 645.86,
+              "last_finish_to_start_us": 0.6399999999999864,
+              "untimed_producers": [],
+              "producers": [
+                {
+                  "task_id": "4294967326",
+                  "name": "kv_touch",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967331",
+                  "name": "rope_cs",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967317",
+                  "name": "rmsnorm_rope_cache_write",
+                  "early": true
+                },
+                {
+                  "task_id": "8589934597",
+                  "name": "qproj_dequant_rms_nope_rope",
+                  "early": true
+                },
+                {
+                  "task_id": "4294967330",
+                  "name": "csa_slots_build_valid_qk_plan",
+                  "early": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

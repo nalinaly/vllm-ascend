@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "qk_pv_source_unchanged": true,
+  "extra_aiv_workers": 0,
+  "current_case_worker_counts": {
+    "baseline": [
+      16,
+      16
+    ],
+    "candidate": [
+      16,
+      16
+    ]
+  },
+  "shared_validity_stride_bytes": 64,
+  "scalar_writes_serialized": true,
+  "window_without_topk": true,
+  "rope_input_and_publication_retained": true,
+  "orchestration_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_sparse_plan_rope_20260929/compiled/candidate/orchestration/_decode_csa_tp1_layer.cpp",
+  "orchestration_excerpt": "        // Spmd csa_slots_window_rope_plan_spmd: csa_slots_window_rope_plan\n        CoreTaskArgs params_t49;\n        params_t49.add_output(sparse_bias_inline4131);\n        params_t49.add_input(position_ids_t1);\n        params_t49.add_input(ext_kv_seq_lens);\n        params_t49.add_input(ext_ori_block_table);\n        params_t49.add_output(valid_block_mask_inline4113);\n        params_t49.add_input(ext_freqs_sin);\n        params_t49.add_output(rope_sin_signed_inline4172);\n        params_t49.add_scalar(t_dim_inline4127);\n        params_t49.add_scalar(rope_cs_blocks_inline4145);\n        params_t49.launch_spec.set_block_num(std::min<int64_t>(rope_cs_blocks_inline4145, 16));\n        params_t49.set_allow_early_resolve(true);\n        TaskOutputTensors task_49_outs = rt_submit_aiv_task(54, params_t49);\n        TaskId rope_tid_inline4115 = task_49_outs.task_id();\n\n        // Spmd csa_slots_compressed_plan_spmd: csa_slots_compressed_plan\n        CoreTaskArgs params_t50;\n        params_t50.add_output(cmp_sparse_indices_inline4140);\n        params_t50.add_inout(sparse_bias_inline4131);\n        params_t50.add_input(ext_idx_topk);\n        params_t50.add_input(position_ids_t1);\n        params_t50.add_inout(valid_block_mask_inline4113);\n        params_t50.add_scalar(t_dim_inline4127);\n        params_t50.launch_spec.set_block_num(16);\n        params_t50.set_allow_early_resolve(true);\n        TaskId params_t50_deps[1];\n        uint32_t params_t50_deps_count = 0;\n        params_t50_deps[params_t50_deps_count++] = rope_tid_inline4115;\n        params_t50.set_dependencies(params_t50_deps, params_t50_deps_count);\n        TaskOutputTensors task_50_outs = rt_submit_aiv_task(55, params_t50);\n        TaskId qk_plan_tid_inline4134 = task_50_outs.task_id();\n        int64_t cmp_block_num_inline4186 = (int64_t)orch_args.tensor(34).ref().shapes[0];\n        uint32_t cmp_kv_flat_inline4187_shapes[2] = {static_cast<uint32_t>((cmp_block_num_inline4186 * 32)), 512};\n        Tensor cmp_kv_flat_inline4187 = ext_cmp_kv.reshape(cmp_kv_flat_inline4187_shapes, 2);\n        uint32_t q_flat_inline4151_shapes[2] = {static_cast<uint32_t>(t_heads_inline4111), 512};\n        Tensor q_flat_inline4151 = q__ssa_v1.reshape(q_flat_inline4151_shapes, 2);\n        uint32_t attn_sink_col_inline4188_shapes[2] = {64, 1};\n        Tensor attn_sink_col_inline4188 = ext_attn_sink.reshape(attn_sink_col_inline4188_shapes, 2);\n\n"
+}

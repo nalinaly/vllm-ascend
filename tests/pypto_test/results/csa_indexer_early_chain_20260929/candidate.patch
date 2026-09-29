@@ -1,0 +1,68 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_csa.py
+@@ -308,7 +308,7 @@
+     # 原先两件事共用一个 CORE_GROUP 任务，整段被前缀和拖成串行——泳道实测
+     # csa_rope_sign count=1、Exec 13.42us 却独占一个串行窗口。拆成两个任务，
+     # 符号那段走 SPMD，靠 deps 保证偏移先算好。
+-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets") as offsets_tid:
++    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets", allow_early_resolve=True) as offsets_tid:
+         build_compact_row_offsets(cmp_query_start_loc, cmp_seq_lens, cmp_row_offsets)
+         build_compact_row_offsets(idx_query_start_loc, kv_seq_lens, idx_row_offsets)
+ 
+--- a/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_compressor_ratio4.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_compressor_ratio4.py
+@@ -120,7 +120,7 @@
+     # Caller-ordered KV and score projections.
+     with pl.spmd(
+         KV_SCORE_WORKERS,
+-        name_hint="kv_score_proj",
++        name_hint="kv_score_proj", allow_early_resolve=True,
+         deps=[late_dep],
+     ) as _kv_score_tid:
+         kv_worker = pl.tile.get_block_idx()
+--- a/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_indexer_compressor.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_indexer_early_chain_7b296153/decode_indexer_compressor.py
+@@ -130,7 +130,7 @@
+     # Caller-ordered KV and score projections.
+     with pl.spmd(
+         KV_SCORE_WORKERS,
+-        name_hint="kv_score_proj",
++        name_hint="kv_score_proj", allow_early_resolve=True,
+         deps=[late_dep, chain_dep],
+     ) as _kv_score_tid:
+         kv_worker = pl.tile.get_block_idx()
+@@ -186,7 +186,7 @@
+ 
+     # Ratio-4 pooling reads Native historical state and current projections.
+     pool_workers = pl.min(b_dim, POOL_WORKERS)
+-    with pl.spmd(pool_workers, name_hint="scatter_softmax_pool", deps=[_kv_score_tid]) as pool_tid:
++    with pl.spmd(pool_workers, name_hint="scatter_softmax_pool", allow_early_resolve=True, deps=[_kv_score_tid]) as pool_tid:
+         pool_worker = pl.tile.get_block_idx()
+         for c_idx in pl.range(pool_worker, b_dim, pool_workers):
+             first_pos_b = pl.read(position_ids, [c_idx * s_dim])
+@@ -290,14 +290,14 @@
+     norm_w_2d = pl.reshape(norm_w, [1, HEAD_DIM])
+     # S=6 intervals can close one or two compression groups. Reserve the
+     # maximum per request, and initialize unused rows before Hadamard reads.
+-    with pl.spmd(b_dim, name_hint="indexer_boundary_init", deps=[pool_tid]) as boundary_init_tid:
++    with pl.spmd(b_dim, name_hint="indexer_boundary_init", allow_early_resolve=True, deps=[pool_tid]) as boundary_init_tid:
+         init_request = pl.tile.get_block_idx()
+         compact_begin = init_request * BOUNDARY_ROWS_PER_REQUEST
+         normed_kv[compact_begin : compact_begin + BOUNDARY_ROWS_PER_REQUEST, :] = pl.full(
+             [BOUNDARY_ROWS_PER_REQUEST, HEAD_DIM], dtype=pl.BF16, value=0.0
+         )
+     rms_workers = pl.min(rms_blocks, RMS_WORKERS)
+-    with pl.spmd(rms_workers, name_hint="rmsnorm_rope", deps=[pool_tid, boundary_init_tid]) as rms_tid:
++    with pl.spmd(rms_workers, name_hint="rmsnorm_rope", allow_early_resolve=True, deps=[pool_tid, boundary_init_tid]) as rms_tid:
+         rms_worker = pl.tile.get_block_idx()
+         rope_ones = pl.full([RMS_PAD_TILE, ROPE_HEAD_DIM], dtype=pl.FP32, value=1.0)
+         rope_index = pl.arange(0, [1, ROPE_HEAD_DIM], dtype=pl.INT32)
+@@ -422,7 +422,7 @@
+     # Caller-ordered KV Hadamard projection.
+     with pl.at(
+         level=pl.Level.CORE_GROUP,
+-        name_hint="kv_hadamard",
++        name_hint="kv_hadamard", allow_early_resolve=True,
+         deps=[rms_tid, hadamard_dep],
+     ) as hadamard_tid:
+         # Hadamard column tiles.

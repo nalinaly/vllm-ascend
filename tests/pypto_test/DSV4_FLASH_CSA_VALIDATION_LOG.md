@@ -11817,3 +11817,86 @@ Ruff/shell通过、两份Python源只读。14:44正常auto提交task_20260929_14
 报告计划总核时、完整CSA/P95、实际依赖和等待是否转移。有收益再补边界，目前无设备结论。
 生产保持7b296153，不重测Native或扩大七档/模型。
 [现有时戳、私有差异和CPU证据](results/csa_sparse_plan_split_20260929/README.md)。
+
+## 440. 独立SWA计划两档均回退，不采用；准备复用已有RoPE任务（2026-09-29）
+
+task_20260929_144431_322320312386在设备1退出0。八类完整状态跨版本零容差、自身图/保护区、
+Top-K结构及16窗官方raw join/worker覆盖通过，真实图确认SWA→压缩计划保护共享有效位行且执行无重叠。
+长B16完整CSA977.729→988.349μs（+1.086%）、P95 992.720→999.880；
+短B24 923.959→932.331（+0.906%）、P95 949.860→953.100；8:2完整CSA +1.050%。
+四组均0/20超过自身P50的105%，不以少数异常拖尾解释平均退化。
+
+计划总核时长96.995→133.035μs（+37.157%）、短132.675→168.825（+27.247%），
+两档四窗均完全分离，8:2 +35.175%。Merge FIN→Sparse start仅16.840→15.415、16.850→16.710μs。
+长档未改Sparse AIC146.678→156.240、AIV150.656→160.223；短档相反略快，
+Q_B启动没有整体变晚，不能归因“前段整体被新增任务拖慢”，也不能把独立DFX当正式CSA逐项分解。
+局部merge核时下降没有对应算法改变，不构成可单独迁移保留的核内优化。完整路径与计划工作均退化，不采用。
+不补边界/Native/七档/模型，临时长档预览由完整两档记录替代，失败副本继续冻结，生产未改。
+[完整结果](results/csa_sparse_plan_split_20260929/RESULTS.md)、
+[真实前置和计划总核时](results/csa_sparse_plan_split_20260929/handoff.json)。
+
+## 441. SWA复用RoPE任务完成CPU编译，保持原任务数做新双档筛选（2026-09-29）
+
+新副本重新从7b296153对应已测收尾融合构造，只改Sparse文件。
+把原SWA与原rope_cs两段循环放在同一提前任务，压缩计划仍等Top-K及该任务；
+原plan+rope_cs和新window+rope/压缩plan均为两任务，两代表档都是16+16份worker。
+SWA仍按8行、16 lane步进，提前任务沿用min(ceil(T/6),16)个worker：T≤96时lane数覆盖全部SWA块，
+T>96时仍为16，压缩有效位写入用显式rope_tid依赖保护相同64字节行。
+所有算术、保护逻辑、输入cache与QK/PV主体保持，不冒称算术本身减少。
+
+两侧两入口依赖解析、candidate完整PTOAS/CCE/link/load通过；生成代码没有第三个独立SWA/rope_cs任务，
+提前任务不读Top-K、保留freqs_sin输入和符号输出，压缩任务有显式前置。Ruff/shell通过。
+私有Python源只读。15:00正常auto提交task_20260929_150040_348018519899，确认设备1上running。
+长B16/短B24反序，5预热20次正式计时、四窗DFX和八类状态零容差；计划核时两侧都包含RoPE以保持范围一致。
+以完整CSA/P95和8:2筛选，有收益再补边界，当前无设备收益或采用结论；生产保持7b296153。
+[新副本与CPU证据](results/csa_sparse_plan_rope_20260929/README.md)。
+
+## 442. 借鉴HCA的early补齐：按真实生产链找缺口，复用八窗、不新增占卡（2026-09-29）
+
+审查HCA c5f4252a/2920a11c及日志§70/72：16处early单项128K/B16约−20μs，
+另有Q_B workers24→20约−16.5μs；七档比值1.157→1.117是组合收益，不能全归early。
+16个源码位置含三条互斥Sparse路径；原始六样本仍有少量范围重叠，不采用“完全分离”措辞。
+
+CSA仍缺Indexer projection/pool/boundary init/RMS/Hadamard标志。其真实前置还包括未开启的
+Attention Compressor projection与csa_row_offsets，单给write加标志不足以获得提前派发资格。
+按Simpler当前A3实际代码核对生产者语义、ready/early与sync_start独立通道；不删除真实依赖。
+
+复用7b296153已测候选的长B16/短B24各四窗，官方raw join后检查全部直接前置。
+两档Indexer pool最晚前置FIN→首start均值6.655/5.825μs，RMS为9.360/13.395，
+Hadamard为7.005/4.950，key/cache write为6.905/21.905，相关消费者均未实际预派发。
+这些数包含资源等待且链路重叠，不能相加推断可回收时间。未计时dummy处不做ready归因。
+Sparse交接只有0.810/0.640μs且已有实际early；长档Score关闭early是既有尾部策略，先保留。
+
+提出七处标志的完整Indexer cache生产链为下一独立候选，不改worker/算术/cache/任务依赖；
+KV链与Q_B workers分开验证。HC旧§212无收益不原样重跑，当前融合RMS后的复查另需明确依据。
+本次只读审查与记录，未改生产、未改在跑副本、未提交新设备任务，不能声称已有CSA收益。
+[详细对应、时延表与候选范围](results/csa_hca_early_review_20260929/README.md)、
+[八窗原始来源与逐任务证据](results/csa_hca_early_review_20260929/existing_windows.json)。
+
+## 443. SWA复用RoPE双档完成：长档回退，8:2无收益，不合入（2026-09-29）
+
+task_20260929_150040_348018519899完成退出0，同设备1、CANN9.2、mode2/atomic0/det0。
+长B16 CSA 964.810→972.711μs（+0.819%），P95 974.160→985.860，max 976.780→990.580；
+短B24 941.392→922.634（−1.993%），P95 957.800→942.900，max 958.240→945.100。
+完整CSA的8:2为+0.257%，不采用；八类状态零容差、图重放/保护区及16窗官方覆盖通过。
+四组均0/20超过1.05×P50，P95/P50 1.0066–1.0221；未出现大尾部不等同EP16验证。
+
+计划加RoPE总核时145.255→162.215 / 178.195→203.195μs，8:2 +12.147%。
+Merge FIN→Sparse start 18.335→15.220 / 17.930→18.065，局部交接缩短没有转成全局收益。
+Sparse算术未改，其核时下降不构成独立incore算法优化。短B24单轮收益保留证据但不外推全短档分支，
+优先处理长档权重更大的真实early断点；不扩大本候选测试，生产仍为7b296153。
+[双档结果](results/csa_sparse_plan_rope_20260929/RESULTS.md)、
+[取舍](results/csa_sparse_plan_rope_20260929/decision.json)。
+
+## 444. 七处early生产链独立候选完成编译，正常排队双档（2026-09-29）
+
+依据§442，整包重新从7b296153对应已测候选冻结，仅三文件七处新增early=True：
+csa_row_offsets、Attention projection、Indexer projection/pool/boundary init/RMS/Hadamard。
+去除新增关键字后AST与基线相同；算术、cache、任务数、worker、真实依赖及长短Score策略保持。
+两入口解析和candidate完整PTOAS/CCE/link/load通过，生成AICPU代码确认七处标志生效，Ruff/shell通过。
+
+私有Python源码只读，15:19以auto提交task_20260929_151902_390858217467，确认running。
+长B16/短B24同卡反序，每侧5预热20次正式计时、四窗DFX及八类状态零容差。
+检查真实early/关键链是否缩短、完整CSA/P95/max、Score/Sparse核时，按8:2决定；有收益再补边界。
+不叠加前两版Sparse候选、不更改生产或HCA仓、不新测Native/七档/整模型。当前尚无设备收益结论。
+[冻结候选与复现入口](results/csa_indexer_early_chain_20260929/README.md)。

@@ -1,0 +1,34 @@
+{
+  "baseline": "7b296153",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-ob-hc-scalar-fused-9a868d26-candidate",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-early-chain-7b296153",
+  "variant": "pkg:dsv4_csa_indexer_early_chain_7b296153",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "只补Indexer cache生产链七处allow_early_resolve；含Attention projection和row offsets前置",
+  "modified_dispatches": {
+    "decode_csa.py": [
+      "csa_row_offsets"
+    ],
+    "decode_compressor_ratio4.py": [
+      "kv_score_proj"
+    ],
+    "decode_indexer_compressor.py": [
+      "kv_score_proj",
+      "scatter_softmax_pool",
+      "indexer_boundary_init",
+      "rmsnorm_rope",
+      "kv_hadamard"
+    ]
+  },
+  "only_seven_flags_ast_verified": true,
+  "scope": "私有三文件调度候选；数学、任务数、依赖、worker、Score准入与长短early策略保持"
+}
