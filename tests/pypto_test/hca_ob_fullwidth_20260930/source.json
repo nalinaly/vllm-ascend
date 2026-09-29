@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "0742f07c",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-fullwidth-0742f07c-20260930-v7/base",
+    "grouped": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-fullwidth-0742f07c-20260930-v7/grouped",
+    "full": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-fullwidth-0742f07c-20260930-v7/full",
+    "full_m96": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-fullwidth-0742f07c-20260930-v7/full_m96",
+    "full_m96_rowmax": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-fullwidth-0742f07c-20260930-v7/full_m96_rowmax"
+  },
+  "arithmetic": "BF16 O-A output; whole8192 token amax; channel scale then token scale; grouped reference sums INT32",
+  "candidate": "full K8192 INT32 matmul M32/N256/K512 stage2, no eight-part output reduction",
+  "limits": "different arithmetic from performance baseline; state exact and separate grouped reference required",
+  "full_m96": "M96/N128/K512; one M block for96 tokens,32 Cube workers; unchanged arithmetic",
+  "full_m96_rowmax": "same full-row max via row_max on8x1024, then8-lane reduction; no arithmetic relaxation"
+}

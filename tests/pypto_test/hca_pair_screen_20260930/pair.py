@@ -56,6 +56,10 @@ def main():
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--padding-graph", action="store_true", help="候选同址图检查满档→补位→满档，不计入性能")
     parser.add_argument("--padding-variant", choices=("base", "candidate"), default="candidate")
+    parser.add_argument(
+        "--diagnostic-output-differences", action="store_true",
+        help="仅记录x_out浮点算术差异并继续性能筛选；cache/state仍精确，不代表精度验收",
+    )
     args = parser.parse_args()
     if args.cycles < 1:
         parser.error("cycles必须为正数")
@@ -205,7 +209,20 @@ def main():
 
         exact = {k: bool(torch.equal(v, references["candidate"][k])) for k, v in references["base"].items()}
         report["cross_variant_exact"] = exact
-        if not all(exact.values()):
+        if args.diagnostic_output_differences:
+            from dsv4_csa_validation import compare_tensor
+
+            output_diagnostic = compare_tensor(references["candidate"]["x_out"], references["base"]["x_out"], 0, 0)
+            report["output_arithmetic_diagnostic"] = {
+                "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+                "comparison": output_diagnostic,
+                "scope": "性能筛选诊断，不把非零输出误差判定为精度通过",
+            }
+            assert output_diagnostic.get("nonfinite") == 0
+            assert output_diagnostic["shape"] == output_diagnostic["expected_shape"]
+            assert output_diagnostic["dtype"] == output_diagnostic["expected_dtype"]
+        required_exact = {k: v for k, v in exact.items() if k != "x_out" or not args.diagnostic_output_differences}
+        if not all(required_exact.values()):
             from dsv4_csa_validation import compare_tensor
 
             report["status"] = "CORRECTNESS_FAILED"
