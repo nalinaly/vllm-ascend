@@ -4569,3 +4569,41 @@ left_iter, right_iter) in pl.range(..., init_values=(...))`，
 变体全部留在 `tests/pypto_test/variants_planner_20260929/`
 （`ptoas_k128c` 是非 attention 部分全部修好的版本，`ptoas_long` 再叠加强制长路径，
 `ptoas_shift` 是移位寄存器的失败尝试）。
+
+### 82.4 第三次尝试：展平循环、每拍新建 Mat 片——仍失败，但换了一种错
+
+既然 Mat 片不能跨拍存活，就把错拍也去掉：`QK_PRE_LAUNCH = 0` 之后
+PV 在同一拍消费同一片，两个 `if` 恒真、循环体可以展平，
+KV 每拍用 `pl.load(..., target_memory=Mat)` 新建一片，**完全不需要持久缓冲**。
+分支用 `pl.yield_` 汇合（本文件里既有的 tile 分支写法）。
+
+结果是第三种错误：
+
+```
+'pto.tmov' op expects A2/A3 non-mat tmov to use matching src/dst shapes
+```
+
+位置在 `pypto/python/pypto/language/parser/ast_parser.py:3837`（编译器内部生成的 move），
+最可能是 `pl.yield_` 合并两个 Mat 片时发出的 phi move。
+
+### 82.5 ✗ PTOAS 路线收尾
+
+三次尝试、三种不同的拒绝，指向同一件事：
+
+| 尝试 | 写法 | 错误 |
+|---|---|---|
+| 1 | `pl.gather_row` 往 Mat 环形缓冲写（原样，含"写整片"探针） | `unsupported tmov address-space pair` |
+| 1' | `pl.load` 到 Mat 片 + `pl.tile.assemble` 进环形缓冲 | 同上 |
+| 2 | `pl.range(init_values=...)` 携带 Mat 片做移位寄存器 | `ConvertToSSA` 失败，Mat 片 `used outside its defining scope` |
+| 3 | 展平循环、每拍新建 Mat 片、分支 `pl.yield_` 汇合 | `non-mat tmov to use matching src/dst shapes` |
+
+**PTOAS 对 Mat 的处理远比默认 PYPTO planner 严格**：不能对 Mat 做 DPS 写、
+Mat 片不能跨迭代存活、Mat 片的分支 phi 也受限。而 `hca_unified_attention`
+的设计重度依赖 Mat（KV 环形缓冲、query、probability 都驻留 Mat，
+且 `pl.matmul` 的 B 操作数必须是 Mat）。
+
+**所以 PTOAS 路线在不重写 attention 的前提下走不通**，而 planner 是 kernel
+编译级设置，这一个函数编不过就拿不到任何 PTOAS 下的数字。
+非 attention 部分的修改（`ptoas_k128c`）是有效且可复用的，留在变体目录里。
+
+**这一轮到此为止：七档加权 1.117，距 0.80 差 0.317，没有找到不越界的路径。**
