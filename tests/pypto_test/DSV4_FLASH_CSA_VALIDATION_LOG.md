@@ -13665,3 +13665,61 @@ Native 路径要求 static_kernel 装包成功（`compiled_case.py` 里那道
 第 497.4 节的表述：已落地改动在同轮内值 **−0.0123**，绝对水平约 **0.90**，
 跨轮绝对数字不可比。留给后续：按 `csa_native_template_20260929` 的
 OPP 准备重建 Native 侧，再跑 `csa_accept_20260930/run.sh` 的七档 ABBA。
+
+## 498. ★★ 同卡 Native↔PTO 七档验收：同入口 0.8314，对既有 SK 基线 0.9078（2026-09-30）
+
+`results/csa_accept_20260930`，生产 `9a983dae`，每档同卡
+`native_a → pto_a → pto_b → native_b` 的 ABBA、每侧 20 事件。
+**这是本轮方法上最干净的一次测量**：128K/B8 的 Native 两次只差 1.71 μs、
+128K/B4 差 2.70 μs——远好于此前所有"前后基线夹同一侧"的轮次（0.34~95 μs）。
+
+完整表见 [RESULTS.md](results/csa_accept_20260930/RESULTS.md)。要点：
+
+| 口径 | 128K 均 | 8K 均 | 8:2 加权 |
+| --- | ---: | ---: | ---: |
+| **同入口**（两侧都走 vllm `@support_torch_compile`，Native 无 SuperKernel） | 0.8156 | 0.8945 | **0.8314** |
+| 对既有 SK 基线（`LATEST_EXISTING_COMPARISON.md` 的 Native 列） | 0.8837 | 1.0041 | **0.9078** |
+
+同入口下 **128K/B8 = 0.779、128K/B16 = 0.789 已在 0.80 以内**。
+
+### 498.1 ★ 入口差异对 Native 值 6.6%~12.7%，这个量以前没记过
+
+既有 Native 基线走的是
+`torch.compile(backend="npugraph_ex", options={force_eager: False,
+inplace_pass: False, static_kernel_compile: True, super_kernel_optimize: True})`；
+本轮两侧统一走 vllm 的 `@support_torch_compile`
+（`force_eager: True, inplace_pass: True`，**无** `super_kernel_optimize`）。
+同一份 Native 在两条入口下：
+
+| 档位 | 本轮（无 SK） | 既有 SK 基线 | 差% |
+| --- | ---: | ---: | ---: |
+| 128K/B4 | 798.00 | 748.30 | 6.6% |
+| 128K/B8 | 936.40 | 859.56 | 8.9% |
+| 128K/B16 | 1225.08 | 1130.85 | 8.3% |
+| 128K/B24 | 1402.96 | 1281.89 | 9.4% |
+| 8K/B16 | 848.62 | 757.48 | **12.0%** |
+| 8K/B24 | 1025.45 | 915.37 | **12.0%** |
+| 8K/B32 | 1196.95 | 1062.08 | **12.7%** |
+
+**短档受益明显大于长档**（12% vs 7~9%）——与第 493.1 节"短档的固定开销占比更高"
+一致：SuperKernel 融的是 launch，短档的 launch 占比大。
+
+⚠ 这也意味着：此前所有"对 SK 基线"的比值都把 Native 的这 6.6%~12.7% 算在了
+PTO 头上，而那部分是 PTO 结构上拿不到的加速项
+（见 `static-kernel-and-superkernel-are-native-only`：SuperKernel 对 PTO 无效）。
+**"目标 Native 的 80%" 究竟按哪条口径算，是个需要确认的前提。**
+
+### 498.2 两个工程上的坑（已修/已记）
+
+1. **`OSError: [Errno 36] File name too long`**：static_kernel 编译器把 CWD 的
+   完整路径展平（`/`→`_`）当生成文件名，结果目录一深就越过 255 字节，
+   表现为 `static_compile_results: [False]`、`installed_static_packages: 0`、
+   Native 侧判编译失败。**修法：在短路径下编译**（本目录用
+   `$workspace/.cache/a/<档位>_<tag>`），report 仍由 `--output` 写回结果目录。
+   PTO 侧不走 static_kernel 装包，所以只有 Native 侧会碰到。
+2. **两代 harness 不兼容**：`coefficients_seven_experiment/compiled_case.py`
+   有两个版本——`csa-native-superkernel-4ffccb7b` 那份支持 `--super-kernel`
+   但 `--side` 只有 native（内部其实有 `CompiledPTOHalf`，本目录
+   `compiled_case_sk.py` 已放开）；支持两侧的那份没有该参数。
+   用前者跑当前源报 `Cannot prepare for replay during capturing stage`。
+   **在这条修好之前，无法在同一口径下给出"Native 开 SuperKernel"的两侧对比。**
