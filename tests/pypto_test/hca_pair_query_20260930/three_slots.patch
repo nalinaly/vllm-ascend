@@ -1,0 +1,67 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1164 +1164 @@
+-    pair_slots = 2
++    pair_slots = 3
+@@ -1178 +1178 @@
+-        kv_l1 = pl.create_tile([2 * ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
++        kv_l1 = pl.create_tile([3 * ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+@@ -1189,4 +1189,3 @@
+-            pair_query = pl.load(q_flat, [token0 * H, 0], [2 * H, HEAD_DIM], target_memory=pl.MemorySpace.Mat)
+-            # A two-slot ring leaves L1 capacity for M128 queries. Drain only
+-            # once per pair; QK for the next block overlaps the preceding PV.
+-            for tick in pl.range(work_count + 1):
++            # Q and probability have disjoint L1 lifetimes; load Q per block
++            # to share their storage and restore two-step QK/PV lookahead.
++            for tick in pl.range(work_count + 2):
+@@ -1194,2 +1193,2 @@
+-                    l1_row = (tick % 2) * ATTN_K_TILE
+-                    row = (worker * 2 + tick % 2) * (2 * H)
++                    l1_row = (tick % 3) * ATTN_K_TILE
++                    row = (worker * 3 + tick % 3) * (2 * H)
+@@ -1200,0 +1200,2 @@
++                        pair_query = pl.load(q_flat, [token0 * H, 0], [2 * H, HEAD_DIM],
++                                             target_memory=pl.MemorySpace.Mat)
+@@ -1209 +1210,2 @@
+-                        raw_query = pl.tile.slice(pair_query, [H, HEAD_DIM], [raw_lane * H, 0])
++                        raw_query = pl.load(q_flat, [(token0 + raw_lane) * H, 0], [H, HEAD_DIM],
++                                            target_memory=pl.MemorySpace.Mat)
+@@ -1213,3 +1215,3 @@
+-                if tick >= 1:
+-                    pv_tick = tick - 1
+-                    pv_row = (worker * 2 + pv_tick % 2) * (2 * H)
++                if tick >= 2:
++                    pv_tick = tick - 2
++                    pv_row = (worker * 3 + pv_tick % 3) * (2 * H)
+@@ -1217 +1219 @@
+-                    pv_l1_row = (pv_tick % 2) * ATTN_K_TILE
++                    pv_l1_row = (pv_tick % 3) * ATTN_K_TILE
+@@ -1268,2 +1270,2 @@
+-                seed_max = pl.tile.full([2, H], dtype=pl.FP32, value=0.0)
+-                seed_sum = pl.tile.full([2, H], dtype=pl.FP32, value=0.0)
++                seed_max = pl.tile.full([3, H], dtype=pl.FP32, value=0.0)
++                seed_sum = pl.tile.full([3, H], dtype=pl.FP32, value=0.0)
+@@ -1272 +1274 @@
+-                    cmp_blocks + 3,
++                    cmp_blocks + 4,
+@@ -1276 +1278 @@
+-                        vec_row = (worker * 2 + vec_tick % 2) * (2 * H) + lane * H
++                        vec_row = (worker * 3 + vec_tick % 3) * (2 * H) + lane * H
+@@ -1301,2 +1303,2 @@
+-                            next_max = pl.tile.assemble(max_ring, pl.reshape(maximum, [1, H]), [vec_tick % 2, 0])
+-                            next_sum = pl.tile.assemble(sum_ring, pl.reshape(total, [1, H]), [vec_tick % 2, 0])
++                            next_max = pl.tile.assemble(max_ring, pl.reshape(maximum, [1, H]), [vec_tick % 3, 0])
++                            next_sum = pl.tile.assemble(sum_ring, pl.reshape(total, [1, H]), [vec_tick % 3, 0])
+@@ -1312,3 +1314,3 @@
+-                    if vec_tick >= 1:
+-                        out_tick = vec_tick - 1
+-                        out_row = (worker * 2 + out_tick % 2) * (2 * H) + lane * H
++                    if vec_tick >= 2:
++                        out_tick = vec_tick - 2
++                        out_row = (worker * 3 + out_tick % 3) * (2 * H) + lane * H
+@@ -1317 +1319 @@
+-                            out_m = pl.reshape(pl.tile.extract(updated_max, out_tick % 2, 0, [1, H],
++                            out_m = pl.reshape(pl.tile.extract(updated_max, out_tick % 3, 0, [1, H],
+@@ -1319 +1321 @@
+-                            out_l = pl.reshape(pl.tile.extract(updated_sum, out_tick % 2, 0, [1, H],
++                            out_l = pl.reshape(pl.tile.extract(updated_sum, out_tick % 3, 0, [1, H],
