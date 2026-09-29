@@ -4316,3 +4316,63 @@ base 的 5 个），而边际候选（|Δ| < 1.5σ）在加样本后无一例外
 - **给 PyPTO 加弹性块数**：仍然是唯一的结构性出路，但 `pypto/` 与 `simpler/`
   是单一共享 checkout（不是 per-worktree），改动会直接影响并行的 CSA 调试 session，
   这条约束是用户定的，需要用户放行。
+
+---
+
+## 80. ★★★★ 直击 PH-MR-001 根因的尝试：算子层做不到，必须改 PyPTO（2026-09-29）
+
+§66 确认了根因：每个 cube 矩阵乘的 L0 ping-pong 被削到 depth 1，
+编译器提示是 "**other pipeline groups over-subscribe the space**"。
+一直没试过的正解是**减少一个 task 里的 pipeline group 数**。
+
+### 80.1 group 从哪来：剥离写法
+
+`proj_a`（`decode_o_proj.py:205`）与 `hca_kv_score_proj`
+（`decode_compressor_ratio128.py:90`）都用**剥离写法**：把 k=0 那一步单独写成
+`pl.matmul`，再用 `pl.pipeline` 做后续的 `matmul_acc`。
+`AutoTileMatmulL0` 会给**每个** matmul 调用各生成一个 L0 K-loop
+（`pipeline_stages=2`），于是：
+
+- `proj_a`：2 个 group × 2 个 slot × 32 KiB = 128 KiB > 64 KiB 的 L0B
+- `hca_kv_score_proj`：两个累加器各剥一次 = **4 个 group**（实测 hint 报了 5 条）
+
+`AutoTileMatmulL0` 的文档明确写了另一种规范形式——**谓词写法**：
+单个 4 操作数 `tile.matmul_acc(acc, lhs, rhs, init_cond)`，没有分支也没有 phi。
+合成一个 group 后 2 个 slot 正好装下 64 KiB，而且 K 的累加次序完全不变、**数值等价**。
+
+### 80.2 ✗ 三次尝试，三个不同的拒绝
+
+| 种子写法 | 报错 |
+|---|---|
+| `pl.create_tensor([1, M, N], FP32)` | `NZ layout currently supports only matmul operand loads (target_memory=pl.Mem.Mat), got Vec` |
+| 同上（kv_score） | `Verification failed after 'InferTileMemorySpace'` |
+| `pl.full([1, M, N], FP32, 0.0)` | `tile.batch_matmul_acc requires argument 0 to live in Acc memory, but it is in Vec memory. No target has any data path into Acc` |
+
+第三条是要害：**累加器必须驻留 Acc（L0C），而张量层能造出来的种子只会落在 Vec，
+两者之间没有数据通路。** 文档里说的"iter-arg 初值为 Acc-resident 的
+`tile.create([m, n], dtype, target_memory=Acc)` 种子"是 `AutoTileMatmulL0`
+在 **tile 层自己生成**的东西，张量层 API 表达不出来。
+
+再者，`AutoTileMatmulL0` 识别"前端规范 split-K"需要
+"一个 `tile.create` 全输出累加器占位值 + 循环携带它完成 K 归约 + 一个 2D 输出 store"
+这三段相邻；而 proj_a 的结果流向 `pl.assemble`（不是 2D store）、
+操作数还是 3D（`wo_a` 带 group 轴，走 batch_matmul），两条都不匹配。
+
+### 80.3 ★ 结论：一个精确的 PyPTO 需求
+
+**PH-MR-001 指出的根因在算子层无法规避——剥离写法是张量级 API 下的唯一选择。**
+要消掉它，需要 PyPTO 做下面任一件事：
+
+1. **让 `AutoTileMatmulL0` 识别剥离写法并自动合并**成单个带谓词的 K-loop
+   （它已经能识别"peel 写法"的 split-K 三元组，但只在 M/N 切分路径上；
+   这里需要的是在**不切 M/N**、只切 K 的路径上也做同样的合并）；
+2. 或者**允许张量层声明 Acc-resident 的累加器种子**，让作者能自己写谓词形式。
+
+这比 §77.4 里"给 PyPTO 加弹性块数"具体得多，改动面也小得多——
+它只动 `AutoTileMatmulL0` 这一个 pass，不碰运行时调度器，
+因此**不影响并行的 CSA 调试 session**（那条约束针对的是共享运行时）。
+
+预期收益：把每个 cube 矩阵乘的 L0 ping-pong 从 depth 1 恢复到 2，
+按 §62.3 的 pipe 数据，PTO 的 AIC 忙时里只有 56% 有 mte2 在跑（Native 是 77%），
+这 21 个百分点正对应搬运与计算无法重叠。AIC 总量 10353.8 核·μs 若能降到
+Native 的 8981，B16 的资源下限从 431.4 降到 374，比值下限从 0.792 到 **0.686**。
