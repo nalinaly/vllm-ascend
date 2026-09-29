@@ -35,14 +35,24 @@ groups = {}
 for _, label, span, _ in rows:
     if span is not None:
         groups.setdefault(label, []).append(span)
-print(f"\n{'变体':>12s} {'样本':>18s} {'中位数':>9s} {'均值':>9s}")
+# 用户 2026-09-29 要求：报最小／平均／最大三个，而不只是中位数。
+# 极差（max-min）直接反映这张卡这一轮的噪声水平——本批卡实测可达 58 μs，
+# 所以 Δ 必须和极差一起看，否则小于噪声的效应会被当成收益。
+print(f"\n{'变体':>12s} {'样本':>3s} {'最小':>9s} {'平均':>9s} {'最大':>9s} {'极差':>8s}")
 summary = {}
 for label, spans in groups.items():
-    summary[label] = statistics.median(spans)
-    print(f"{label:>12s} {str([round(s, 1) for s in spans]):>18s} "
-          f"{statistics.median(spans):9.2f} {statistics.mean(spans):9.2f}")
+    summary[label] = statistics.mean(spans)
+    print(f"{label:>12s} {len(spans):3d} {min(spans):9.2f} {statistics.mean(spans):9.2f} "
+          f"{max(spans):9.2f} {max(spans) - min(spans):8.2f}")
+for label, spans in groups.items():
+    print(f"  {label:>12s} 样本 {[round(s, 1) for s in spans]}")
 if "base" in summary:
-    print("\n相对 base（同卡 ABBA，正负号可信）:")
+    base_spans = groups["base"]
+    base_range = max(base_spans) - min(base_spans)
+    print("\n相对 base 的平均值之差（同卡 ABBA，正负号可信）:")
     for label, value in summary.items():
-        if label != "base":
-            print(f"  {label:>12s} {value - summary['base']:+8.2f} μs")
+        if label == "base":
+            continue
+        delta = value - summary["base"]
+        verdict = "低于 base 极差，不可判定" if abs(delta) < base_range else ""
+        print(f"  {label:>12s} {delta:+8.2f} μs   (base 极差 {base_range:.2f}) {verdict}")
