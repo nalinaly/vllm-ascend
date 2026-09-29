@@ -1,0 +1,75 @@
+{
+  "decision": "ADOPT",
+  "weighted_8_2_csa_pct": -0.9568906347864559,
+  "reason": "两个代表档正式CSA均改善、8:2有收益，完整状态与必要尾行/padding通过",
+  "state_status": "PASS",
+  "boundary_task": "task_20260929_153109_1479235100",
+  "boundary_status": "PASS",
+  "production_ast_matches_candidate": [
+    "decode_csa.py",
+    "decode_compressor_ratio4.py",
+    "decode_indexer_compressor.py"
+  ],
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "csa_change_pct": -0.7281868133339087,
+      "mean_us": {
+        "baseline": 972.9639947414398,
+        "candidate": 965.8789992332458
+      },
+      "p95_us": {
+        "baseline": 984.8600029945374,
+        "candidate": 986.840009689331
+      },
+      "p95_over_p50": {
+        "baseline": 1.0132617376866386,
+        "candidate": 1.0241391447211743
+      },
+      "above_p50_5pct": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "kernel_change_pct": {
+        "score_aic": 4.462969279908879,
+        "score_aiv": 4.393870225452057,
+        "sparse_aic": -2.73975889162118,
+        "sparse_aiv": -2.9046356713400834
+      }
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "csa_change_pct": -1.8717059205966446,
+      "mean_us": {
+        "baseline": 935.0830018520355,
+        "candidate": 917.5809979438782
+      },
+      "p95_us": {
+        "baseline": 965.2000069618225,
+        "candidate": 933.7599873542786
+      },
+      "p95_over_p50": {
+        "baseline": 1.0287127430070424,
+        "candidate": 1.0184991221350088
+      },
+      "above_p50_5pct": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "kernel_change_pct": {
+        "score_aic": -3.3912313028398033,
+        "score_aiv": -6.598755891345753,
+        "sparse_aic": -3.9373563995134364,
+        "sparse_aiv": -3.867761118282431
+      }
+    }
+  ],
+  "limitations": [
+    "长B16 P95增加1.980微秒，未将本轮正常样本当成EP16尾部关闭证据",
+    "长B16 DFX Score AIC/AIV约增加4.4%，本项为完整CSA调度收益，不宣称incore算术加速",
+    "尚未更新完整七档、精度版或CANN9.2下模型token/DSpark/forward验收"
+  ],
+  "next": "复用同源码两代表档，补其余五档PTO计时/四窗及最新Native对照，统一打包七份泳道"
+}

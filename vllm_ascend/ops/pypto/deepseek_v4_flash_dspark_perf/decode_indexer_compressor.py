@@ -127,10 +127,11 @@ def indexer_compressor_project(
     t_matmul = ((bs + MM_B_TILE - 1) // MM_B_TILE) * MM_B_TILE
     x_flat = x
 
-    # Caller-ordered KV and score projections.
+    # 各生产者允许消费者预派发，计算开始仍由原tensor和TaskId依赖保护。
     with pl.spmd(
         KV_SCORE_WORKERS,
         name_hint="kv_score_proj",
+        allow_early_resolve=True,
         deps=[late_dep, chain_dep],
     ) as _kv_score_tid:
         kv_worker = pl.tile.get_block_idx()
@@ -186,7 +187,8 @@ def indexer_compressor_pool_projected(
 
     # Ratio-4 pooling reads Native historical state and current projections.
     pool_workers = pl.min(b_dim, POOL_WORKERS)
-    with pl.spmd(pool_workers, name_hint="scatter_softmax_pool", deps=[_kv_score_tid]) as pool_tid:
+    with pl.spmd(pool_workers, name_hint="scatter_softmax_pool",
+                 allow_early_resolve=True, deps=[_kv_score_tid]) as pool_tid:
         pool_worker = pl.tile.get_block_idx()
         for c_idx in pl.range(pool_worker, b_dim, pool_workers):
             first_pos_b = pl.read(position_ids, [c_idx * s_dim])
@@ -290,14 +292,16 @@ def indexer_compressor_pool_projected(
     norm_w_2d = pl.reshape(norm_w, [1, HEAD_DIM])
     # S=6 intervals can close one or two compression groups. Reserve the
     # maximum per request, and initialize unused rows before Hadamard reads.
-    with pl.spmd(b_dim, name_hint="indexer_boundary_init", deps=[pool_tid]) as boundary_init_tid:
+    with pl.spmd(b_dim, name_hint="indexer_boundary_init",
+                 allow_early_resolve=True, deps=[pool_tid]) as boundary_init_tid:
         init_request = pl.tile.get_block_idx()
         compact_begin = init_request * BOUNDARY_ROWS_PER_REQUEST
         normed_kv[compact_begin : compact_begin + BOUNDARY_ROWS_PER_REQUEST, :] = pl.full(
             [BOUNDARY_ROWS_PER_REQUEST, HEAD_DIM], dtype=pl.BF16, value=0.0
         )
     rms_workers = pl.min(rms_blocks, RMS_WORKERS)
-    with pl.spmd(rms_workers, name_hint="rmsnorm_rope", deps=[pool_tid, boundary_init_tid]) as rms_tid:
+    with pl.spmd(rms_workers, name_hint="rmsnorm_rope",
+                 allow_early_resolve=True, deps=[pool_tid, boundary_init_tid]) as rms_tid:
         rms_worker = pl.tile.get_block_idx()
         rope_ones = pl.full([RMS_PAD_TILE, ROPE_HEAD_DIM], dtype=pl.FP32, value=1.0)
         rope_index = pl.arange(0, [1, ROPE_HEAD_DIM], dtype=pl.INT32)
@@ -423,6 +427,7 @@ def indexer_compressor_write(
     with pl.at(
         level=pl.Level.CORE_GROUP,
         name_hint="kv_hadamard",
+        allow_early_resolve=True,
         deps=[rms_tid, hadamard_dep],
     ) as hadamard_tid:
         # Hadamard column tiles.

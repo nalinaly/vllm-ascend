@@ -121,6 +121,7 @@ def compressor_ratio4_project(
     with pl.spmd(
         KV_SCORE_WORKERS,
         name_hint="kv_score_proj",
+        allow_early_resolve=True,
         deps=[late_dep],
     ) as _kv_score_tid:
         kv_worker = pl.tile.get_block_idx()
@@ -229,14 +230,20 @@ def compressor_ratio4_pool_projected(
                                         + state_half + h0
                                     )
                                     value = pl.load(compress_state, [history_page, history_column], [1, POOL_HEAD_TILE])
-                                    score = pl.load(compress_state, [history_page, history_column + OUT_DIM], [1, POOL_HEAD_TILE])
+                                    score = pl.load(
+                                        compress_state, [history_page, history_column + OUT_DIM], [1, POOL_HEAD_TILE]
+                                    )
                             if logical_pos >= first_pos_b:
                                 if logical_pos <= token_pos:
                                     overlay_token = c_idx * s_dim + logical_pos - first_pos_b
                                     ape_row = pl.cast(logical_pos % COMPRESS_RATIO, target_type=pl.INDEX)
-                                    value = pl.load(cmp4_kv_proj_pad, [overlay_token, state_half + h0], [1, POOL_HEAD_TILE])
+                                    value = pl.load(
+                                        cmp4_kv_proj_pad, [overlay_token, state_half + h0], [1, POOL_HEAD_TILE]
+                                    )
                                     score = pl.add(
-                                        pl.load(cmp4_score_proj_pad, [overlay_token, state_half + h0], [1, POOL_HEAD_TILE]),
+                                        pl.load(
+                                            cmp4_score_proj_pad, [overlay_token, state_half + h0], [1, POOL_HEAD_TILE]
+                                        ),
                                         pl.load(ape, [ape_row, state_half + h0], [1, POOL_HEAD_TILE]),
                                     )
                             mi_next = pl.maximum(mi, score)
@@ -413,7 +420,9 @@ def compressor_ratio4_cache_write(
                     cache_row = pl.cast(cache_page, pl.INDEX) * BLOCK_SIZE + cache_offset
                     kv_row_fp32 = normed_kv[token : token + 1, 0:HEAD_DIM]
                     kv_flat[token : token + 1, :] = kv_row_fp32
-                    cmp_kv_cache_flat[cache_row : cache_row + 1, :] = pl.cast(kv_row_fp32, target_type=pl.BF16, mode="rint")
+                    cmp_kv_cache_flat[cache_row : cache_row + 1, :] = pl.cast(
+                        kv_row_fp32, target_type=pl.BF16, mode="rint"
+                    )
 
     return cache_write_tid
 

@@ -308,7 +308,8 @@ def _decode_csa_tp1_layer(
     # 原先两件事共用一个 CORE_GROUP 任务，整段被前缀和拖成串行——泳道实测
     # csa_rope_sign count=1、Exec 13.42us 却独占一个串行窗口。拆成两个任务，
     # 符号那段走 SPMD，靠 deps 保证偏移先算好。
-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets") as offsets_tid:
+    # 元数据也是RMS/cache消费者的实际前置，必须允许其参与预派发资格判定。
+    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets", allow_early_resolve=True) as offsets_tid:
         build_compact_row_offsets(cmp_query_start_loc, cmp_seq_lens, cmp_row_offsets)
         build_compact_row_offsets(idx_query_start_loc, kv_seq_lens, idx_row_offsets)
 

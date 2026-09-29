@@ -124,7 +124,10 @@ CPU完整编译通过，15:00正常auto提交task_20260929_150040_348018519899�
 用户指出HCA补齐16处early标志，已完成[源码与现有八窗审查](results/csa_hca_early_review_20260929/README.md)，未新增占卡。
 CSA的Indexer Compressor五处、Attention projection和row offsets形成待验证的七处完整生产链；
 现有消费者确实没有预派发。[独立七处候选](results/csa_indexer_early_chain_20260929/README.md)已冻结、CPU编译/load通过，
-15:19正常auto提交task_20260929_151902_390858217467，确认running；保留长档Score尾部限制，不叠加Sparse候选。
+15:19正常auto提交task_20260929_151902_390858217467，已退出0；保留长档Score尾部限制，不叠加Sparse候选。
+长B16/短B24完整CSA−0.728%/−1.872%，8:2−0.957%；八类状态、16窗覆盖及H127/B3/padding通过，
+七处标志已移入性能版三个文件，生产两入口解析和已测候选AST对应通过。长档P95增加1.980μs单列，未复现异常尾部；
+长档DFX Score核时约+4.4%，本项不能宣称incore加速。阶段出口复用这两档，补其余五档并汇集新版七份泳道。
 HCA约20μs为其单项实测，不能当成CSA收益；Q_B worker 24→20另列候选。
 
 | 顺序 | 近期工作 | 完成证据/判据 |

@@ -121,7 +121,13 @@ O_A/O_B各64份工作由24个AIC多波处理，Q_B/Indexer投影也有资源交�
    八类跨版本状态、16窗官方覆盖、尾行/padding与共享HC入口通过，已移入生产；两档设备1，不混入上方设备0七档。
    融合任务的最后前置FIN→首start仍不足1μs。此项改变核内分工、移除GM交接和一级任务，
    不表述为关闭early或消除长ready等待的收益；首版T8/N512多行融合已因核内+144.494%否定。
-5. 当前精度版迁移、CANN9.2/新B24真实EP16 token/DSpark与10步forward未完成且后置。
+5. 后续[HCA early生产链借鉴](results/csa_indexer_early_chain_20260929/README.md)已采用七处标志：
+   完整CSA长B16−0.728%、短B24−1.872%，8:2−0.957%，八类状态、16窗及H127/B3/padding通过。
+   长档P95+1.980μs明确保留；DFX Score核时约+4.4%，所以该项只记调度的正式CSA收益，不能记incore加速。
+   Indexer cache提交提前约39.5μs而Score启动几乎不变，剩余瓶颈指向query链；Q_B仍存在多波占核。
+   两版Sparse计划提前均已否定，复用RoPE版8:2 +0.257%，不以短B24单档改善外推全部短档。
+   下一阶段出口复用最新两代表档、补其余五档；本页七档仍为2ed8ae2e，不混入新版本局部结果。
+6. 当前精度版迁移、CANN9.2/新B24真实EP16 token/DSpark与10步forward未完成且后置。
    单根改变同分分段规则，已测状态零差异不能覆盖任意输入；异常P95不能用均值收益抵消。
 
 [有效策略与失败记录](DSV4_FLASH_CSA_VALIDATION_LOG.md)、[最新AscendC参考](DSV4_FLASH_CSA_ASCENDC_REFERENCES.md)。

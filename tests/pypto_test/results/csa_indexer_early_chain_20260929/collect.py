@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -45,8 +46,22 @@ def schedule_window(path, expected_workers, helper, worker):
                       "untimed_producers": missing,
                       "non_early_producers": [names.get(p, p) for p in preds
                                               if not helper._early_producer(p, analysis)]})
+    qproj = [tid for tid in analysis.rows_by_task if names[tid] == "qproj_matmul"]
+    if len(qproj) != 1:
+        raise ValueError("Expected one Q_B dispatch")
+    qid = qproj[0]
+    qrows = analysis.rows_by_task[qid]
+    first = starts[qid]
+    busy = [r for tid, rows in analysis.rows_by_task.items() if tid != qid for r in rows
+            if r["core_type"] == "aic" and float(r["start_time_us"]) <= first < float(r["end_time_us"])]
+    occupancy = {"logical_blocks": len(qrows),
+                 "blocks_per_physical_core": dict(Counter(r["core_id"] for r in qrows)),
+                 "start_spread_us": max(float(r["start_time_us"]) for r in qrows) - first,
+                 "other_executing_aic_cores_at_first_start": len({r["core_id"] for r in busy}),
+                 "other_executing_tasks": dict(Counter(names[str(r["task_id"])] for r in busy)),
+                 "scope": "观察首Q_B start时仍在执行的其他AIC kernel；不把未执行/pending槽误认成空闲核"}
     return {"path": str(path), "joined_rows": len(analysis.rows), "tasks": summary["tasks"],
-            "worker_span_us": summary["worker_span_us"], "chain": chain}
+            "worker_span_us": summary["worker_span_us"], "chain": chain, "qproj_occupancy": occupancy}
 
 
 def main():
@@ -71,7 +86,8 @@ def main():
     chain = {"task": evidence["task"], "cases": []}
     for case in evidence["cases"]:
         chain["cases"].append({"history": case["history"], "batch": case["batch"],
-                               "sides": {s: [{"path": w["path"], "chain": w["chain"]} for w in v["windows"]]
+                               "sides": {s: [{"path": w["path"], "chain": w["chain"],
+                                              "qproj_occupancy": w["qproj_occupancy"]} for w in v["windows"]]
                                          for s, v in case["sides"].items()}})
     (ROOT / "chain.json").write_text(json.dumps(chain, ensure_ascii=False, indent=2) + "\n")
     report = ROOT / "RESULTS.md"
