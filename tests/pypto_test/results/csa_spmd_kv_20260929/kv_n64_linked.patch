@@ -1,0 +1,46 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -104,12 +104,14 @@
+ 
+ KV_FIXED_SMALL_ROWS = 128
+ 
+-KV_N_TILE = 128  # kv_proj HEAD_DIM (N) per matmul
++KV_N_TILE = 128 if ATOMIC_ADD else 64  # kv_proj HEAD_DIM (N) per matmul
+ 
+ KV_K_TILE = 256 if ATOMIC_ADD else 512  # Fixed-K: fewer L1 transfers; atomic path unchanged.
+ 
+ # A single split keeps a fixed K accumulation order.
+ KV_OK = 8 if ATOMIC_ADD else 1
++
++KV_SYNC_START = ATOMIC_ADD == 0
+ 
+ KV_OM = 3  # maximum kv_proj split-M factor
+ 
+@@ -807,6 +809,7 @@
+     with pl.spmd(
+         (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
+         name_hint="kv_proj_matmul",
++        sync_start=KV_SYNC_START,
+         deps=[late_dep],
+     ) as _kv_tid:
+         pl.set_cache_policy(wkv, pl.CachePolicy.BYPASS)
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_compressor_ratio4.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_compressor_ratio4.py
+@@ -121,6 +121,7 @@
+     with pl.spmd(
+         KV_SCORE_WORKERS,
+         name_hint="kv_score_proj",
++        sync_start=True,
+         allow_early_resolve=True,
+         deps=[late_dep],
+     ) as _kv_score_tid:
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_indexer_compressor.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_indexer_compressor.py
+@@ -131,6 +131,7 @@
+     with pl.spmd(
+         KV_SCORE_WORKERS,
+         name_hint="kv_score_proj",
++        sync_start=True,
+         allow_early_resolve=True,
+         deps=[late_dep, chain_dep],
+     ) as _kv_score_tid:

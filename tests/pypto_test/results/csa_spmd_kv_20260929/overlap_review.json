@@ -1,0 +1,209 @@
+{
+  "scope": "Previous 46cec3a0 early projection region; final O post differs in current HEAD. Overlap is with KV group envelope, not proof of same-core simultaneous execution.",
+  "name_mapping": {
+    "kv_score_proj_0": "Indexer Compressor",
+    "kv_score_proj": "Attention Compressor"
+  },
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_post_balanced_20260929/h131072_b16/swimlane/baseline_start/dfx/merged_swimlane.json",
+          "kv_start_us": 117.12,
+          "kv_end_us": 142.52,
+          "neighbors": {
+            "kv_score_proj_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 6,
+              "overlap_core_us": 34.36000000000004,
+              "kernel_max_us": 39.16,
+              "kernel_min_us": 9.419999999999987,
+              "kernel_mean_us": 22.77916666666667
+            },
+            "kv_score_proj_0_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 22,
+              "overlap_core_us": 182.83999999999995,
+              "kernel_max_us": 15.920000000000016,
+              "kernel_min_us": 9.340000000000003,
+              "kernel_mean_us": 12.925833333333335
+            },
+            "qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 17.28,
+              "kernel_min_us": 14.5,
+              "kernel_mean_us": 16.180833333333336
+            },
+            "qproj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 46.58000000000001,
+              "kernel_min_us": 30.95999999999998,
+              "kernel_mean_us": 38.61583333333333
+            },
+            "idx_qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 6,
+              "overlap_core_us": 61.88000000000008,
+              "kernel_max_us": 26.5,
+              "kernel_min_us": 6.8799999999999955,
+              "kernel_mean_us": 15.152500000000002
+            }
+          }
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_post_balanced_20260929/h131072_b16/swimlane/baseline_start/dfx/window_1/merged_swimlane.json",
+          "kv_start_us": 116.62,
+          "kv_end_us": 141.5,
+          "neighbors": {
+            "kv_score_proj_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 10,
+              "overlap_core_us": 139.39999999999995,
+              "kernel_max_us": 35.72,
+              "kernel_min_us": 9.780000000000001,
+              "kernel_mean_us": 20.93333333333333
+            },
+            "kv_score_proj_0_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 24,
+              "overlap_core_us": 187.36000000000004,
+              "kernel_max_us": 15.099999999999994,
+              "kernel_min_us": 9.23999999999998,
+              "kernel_mean_us": 12.745000000000003
+            },
+            "qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 17.66000000000001,
+              "kernel_min_us": 15.159999999999997,
+              "kernel_mean_us": 16.555833333333332
+            },
+            "qproj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 49.920000000000016,
+              "kernel_min_us": 31.24000000000001,
+              "kernel_mean_us": 41.83166666666666
+            },
+            "idx_qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 35.5,
+              "kernel_min_us": 6.5400000000000205,
+              "kernel_mean_us": 15.128333333333336
+            }
+          }
+        }
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_post_balanced_20260929/h8192_b24/swimlane/baseline_start/dfx/merged_swimlane.json",
+          "kv_start_us": 154.14,
+          "kv_end_us": 206.35999999999999,
+          "neighbors": {
+            "kv_score_proj_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 23,
+              "overlap_core_us": 674.1799999999998,
+              "kernel_max_us": 40.579999999999984,
+              "kernel_min_us": 18.879999999999967,
+              "kernel_mean_us": 31.887499999999996
+            },
+            "kv_score_proj_0_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 22,
+              "overlap_core_us": 59.90000000000015,
+              "kernel_max_us": 22.439999999999998,
+              "kernel_min_us": 16.04000000000002,
+              "kernel_mean_us": 19.044166666666666
+            },
+            "qr_proj_matmul_0_spmd": {
+              "workers": 16,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 23.47999999999999,
+              "kernel_min_us": 14.620000000000005,
+              "kernel_mean_us": 19.147499999999994
+            },
+            "qproj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 60.32000000000005,
+              "kernel_min_us": 41.01999999999998,
+              "kernel_mean_us": 50.52166666666667
+            },
+            "idx_qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 14,
+              "overlap_core_us": 118.67999999999986,
+              "kernel_max_us": 25.159999999999997,
+              "kernel_min_us": 8.719999999999999,
+              "kernel_mean_us": 15.78
+            }
+          }
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_post_balanced_20260929/h8192_b24/swimlane/baseline_start/dfx/window_1/merged_swimlane.json",
+          "kv_start_us": 148.5,
+          "kv_end_us": 199.88000000000002,
+          "neighbors": {
+            "kv_score_proj_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 21,
+              "overlap_core_us": 682.4400000000002,
+              "kernel_max_us": 42.76000000000002,
+              "kernel_min_us": 18.620000000000005,
+              "kernel_mean_us": 33.04833333333333
+            },
+            "kv_score_proj_0_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 21,
+              "overlap_core_us": 53.740000000000265,
+              "kernel_max_us": 20.480000000000018,
+              "kernel_min_us": 15.879999999999995,
+              "kernel_mean_us": 18.54916666666667
+            },
+            "qr_proj_matmul_0_spmd": {
+              "workers": 16,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 23.52000000000001,
+              "kernel_min_us": 14.340000000000003,
+              "kernel_mean_us": 18.965000000000003
+            },
+            "qproj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 0,
+              "overlap_core_us": 0,
+              "kernel_max_us": 59.25999999999999,
+              "kernel_min_us": 41.25999999999999,
+              "kernel_mean_us": 51.12333333333333
+            },
+            "idx_qr_proj_matmul_spmd": {
+              "workers": 24,
+              "workers_overlapping_kv_envelope": 15,
+              "overlap_core_us": 93.52000000000015,
+              "kernel_max_us": 24.599999999999994,
+              "kernel_min_us": 9.900000000000006,
+              "kernel_mean_us": 15.48833333333333
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
