@@ -136,10 +136,15 @@ def main():
                         help="只供对照测试：指定已冻结的 ops/pypto 源码目录")
     parser.add_argument("--weight-nz-mode", type=int, default=2)
     parser.add_argument("--aic-metrics", choices=("PipeUtilization", "L2Cache", "MemoryAccess",
-                                                 "ArithmeticUtilization", "MemoryUB", "MemoryL0"),
+                                                 "ArithmeticUtilization", "MemoryUB", "MemoryL0",
+                                                 "ResourceConflictRatio"),
                         help="给 profiler 指定 AI Core 指标：PipeUtilization 给每个 kernel 的 "
                              "mte1/mte2/mte3/cube/vec 占比，用于判定受哪条 pipe 限制；"
-                             "L2Cache 给 L2 命中率，用于判定交接缓冲是否走 HBM")
+                             "L2Cache 给 L2 命中率，用于判定交接缓冲是否走 HBM；"
+                             "ResourceConflictRatio 给资源冲突导致的停顿占比——"
+                             "PipeUtilization 的 scalar_ratio 分不出'标量指令在执行'与"
+                             "'标量单元在等'，而 387 μs 的 AIC scalar 究竟是哪一种，"
+                             "决定优化该减指令还是该减等待（见 LOG 第 92.4 节）")
     # 单次 profiled 重放的 span 方差太大（实测本不该受影响的档位摆了 44 μs），
     # 分辨不了 20 μs 量级的改动；在同一个 profiler 窗口里连采多次、取中位数。
     parser.add_argument("--profile-replays", type=int, default=9)

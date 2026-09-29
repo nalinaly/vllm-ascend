@@ -5788,3 +5788,76 @@ for qk_k in pl.unroll(HEAD_DIM // QK_K_TILE):          # 编译期展开，无�
 均摊无热点、mac/scalar 是 Native 的 0.55 倍。**这 387 μs 的构成仍未查明。**
 下一轮不要再从"某个构造导致 scalar"出发猜，要么拿到真正的 PMU stall 分解
 （区分标量指令执行 vs 等待），要么接受当前分解并把目标重新校准。
+
+## 93. 工具链到顶：profiler 无法拆开 AIC 的 387 μs scalar（2026-09-29）
+
+第 92.4 节要求"拿到真正的 PMU stall 分解（区分标量指令执行 vs 等待）"。
+把 `torch_npu.profiler.AiCMetrics` 的模式全试过了，结论是**做不到**。
+
+### 93.1 `ResourceConflictRatio` 只覆盖 AIV
+
+`AiCMetrics` 的全部取值：`AiCoreNone`、`ArithmeticUtilization`、`L2Cache`、
+`Memory`、`MemoryAccess`、`MemoryL0`、`MemoryUB`、`PipeUtilization`、
+`ResourceConflictRatio`。其中只有最后一个与"停顿"相关，但它给出的列是：
+
+```
+aiv_vec_bankgroup_cflt_ratio
+aiv_vec_bank_cflt_ratio
+aiv_vec_resc_cflt_ratio
+```
+
+**三列全是 `aiv_` 前缀，没有任何 AIC 列。** 实测值（128K/B16 同卡两侧）：
+
+| 侧 | bankgroup | bank | resc |
+| --- | --- | --- | --- |
+| PTO `aicore_kernel_mode_0` | 3.70% | 1.80% | 0.00% |
+| Native `SparseAttnSharedkv` | 2.90% | 1.10% | 0.00% |
+
+AIV 的冲突率本身就很低（< 4%）且两侧接近，**不是瓶颈**；而要查的 AIC 侧无数据。
+
+### 93.2 因此 387 μs 在当前工具下不可再分
+
+`PipeUtilization` 的 `aic_scalar_ratio` 是"标量单元非空闲的时间占比"，
+它把**指令执行**与**等待**合在一起。要拆开需要：
+
+- msprof 的原始 PMU 事件计数（超出本项目脚本的常规用法），或
+- incore 模拟器的周期级 trace（`pypto` 的 `incore-profiling` 技能，
+  但 HCA 算子需要 vllm 运行时，本机不具备）。
+
+两者都不是当前工具链的常规路径。**在拿到其中之一之前，
+任何"AIC scalar 由某构造导致"的说法都只能是假设**——
+本轮已经有三个这样的假设（GM 带宽、L1 布局、同步数）先后被自己的取证或
+实验推翻，不应再产生第四个。
+
+### 93.3 本轮最终状态
+
+| | |
+| --- | --- |
+| 七档加权 | **1.117**（目标 0.80，差 0.317），**未改进** |
+| 候选 | **6 个全否**：`wkv`/`cmp_wkv`/`cmp_wgate` → NZ、`gather_full`、`gather_pipe`、`qk_manual` |
+| 被推翻的根因假设 | **3 个**：GM 带宽（第 58 节←第 90 节）、L1 布局（第 90.10 节←第 90.11 节）、同步数（第 91 节←第 92 节） |
+| 口径更正 | **7 次**（详见第 91.9 节末） |
+
+确定的现象层事实（未被推翻）：
+
+- AIC scalar 占 59.2%（平均单核 387 μs / 654 μs 墙钟），**均摊在 134 行循环体 ×
+  144 次执行上、无单一热点**；
+- 两侧 scalar 占比几乎相同（PTO 59.2% / Native 59.4%），而 Native 的 mac 是
+  1.8 倍（26.7% / 14.9%）——**同样的标量预算推进了更多 MAC**；
+- 已排除：GM 带宽（PTO mte2 仅 29.9%，Native 91.4%）、L1 容量与利用率
+  （PTO 90.6% > Native 87.5%）、并行度、软流水、取模（0.5%）、
+  AIV 资源冲突（< 4%）。
+
+### 93.4 给下一轮的判断
+
+在"算子侧 + 当前工具链 + 不改 PyPTO"这三个约束下，**0.80 没有可执行路径**：
+六个候选、三个根因、以及本节的工具上限共同说明，剩下的差距落在
+PyPTO 为这个循环生成的标量序列上，而那既看不见（工具不给分解）
+也动不了（codegen 属"不做大修改"的范围）。
+
+需要外部决策的两件事：
+
+1. **放开改 PyPTO codegen**（同步插入／标量序列生成），并配套拿到周期级验证手段；
+2. **重新校准 0.80** ——若差距主体是 DSL 生成对手写 AscendC 的固有差，
+   该目标可能不在算子调优的可达范围内。第 63.3 节记的 `ops-transformer` 配方
+   是手写实现，把它的绝对耗时当 PTO 的目标，前提是两者的代码生成质量可比。
