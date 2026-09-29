@@ -13884,3 +13884,61 @@ SuperKernel 对 launch 的摊薄在大 batch 上收益更大，而 PTO 拿不到
 （128K 四档合计约 120 μs）的结构性改动**，只能走第 495.3 节那两条：
 让部分 AIC 工作脱离那条 AIV 单链（跨层重叠或拆前置计算），
 或降低 AIC 绝对工作量（核内 tiling / cache 策略）。
+
+## 500. 两条结构性方向的可行性核验：都在当前形态下被堵死（2026-09-30）
+
+第 495.3 节提出的两条方向，逐条核验到源码层：
+
+### 500.1 ✗ 让 indexer 的 cube 半边脱离那条 AIV 单链——系数是 cube 左操作数
+
+8K/B16 上 AIC 空闲最大的一段是 253–325（72 μs），成因是
+`qr_hadamard_quant` → `qproj_dequant_rms_nope_rope` → `indexer_head_coefficients`
+这条纯 AIV 链跑完（321），`indexer_score_topk_native_pair` 的 AIC 半边才起跑。
+
+设想是把「score matmul」与「系数缩放」拆开，让 matmul 在
+`qr_hadamard_i8` 就绪（~304）时就起跑。**核验源码后否掉**：
+
+```python
+buf_coefficients_l1 = pl.load(coefficients, ...)
+buf_coefficient_pair = pl.tile.move(buf_coefficients_l1, target_memory=pl.MemorySpace.Left)
+```
+
+系数被搬进 **cube 的左操作数**，直接参与 QK 矩阵乘——这正是
+`native_pair` 这个命名的含义（query 与 head 系数在矩阵乘里融在一起，
+复刻 Native 的算式）。**AIC 半边结构上不可能早于系数就绪。**
+
+要拆就得改成「先算裸 QK、再逐元素缩放」，那会改变运算次序与舍入，
+破坏与 Native 的逐 bit 一致（本项目的验收要求 `exact_comparison_required=True`）。
+
+### 500.2 ✗ 降 AIC 绝对工作量——最大两项是权重带宽受限且与 Native 共有
+
+8K/B16 要把 span 从 704.8 压到 606.0，若靠减 AIC 工作量、打包率维持 67%，
+需要削掉约 **1581 核·μs（AIC 总量 11 345 的 14%）**。而 AIC 的前两大消费者：
+
+| 任务 | 核·μs | 性质 |
+| --- | ---: | --- |
+| `qk_pv_aic` | 2 998 | attention 主体 |
+| `proj_a_mm` | 2 137 | O 投影 A：`wo_a` 每层 64 MiB，`CachePolicy.BYPASS` 流式读 |
+
+`proj_a_mm` 的 24 核下限 87.7 μs 对应约 730 GB/s 的权重带宽——**是带宽受限，
+不是算术效率问题**，而同一份 `wo_a` Native 也要读。这两项没有 PTO 侧可削的空间。
+
+### 500.3 收尾
+
+| | |
+| --- | --- |
+| 落地 | 第 492 节 early3 三处 `allow_early_resolve`（`9a983dae`），生产源码共 8 行 |
+| 七档验收 | 第 498.3 节：同卡 ABBA、Native 开 SuperKernel、按 p50 **0.8194**（min **0.8052**） |
+| 已达标 | 128K/B8 0.773、128K/B16 0.776 |
+| 缺口 | 0.019（p50），集中在 128K/B24 0.864 与三个短档 0.866~0.885 |
+| 候选 | 15 个，仅 early3 有效；最大未采用单项 `nzcmpkv` 0.44%（加权 −0.0008） |
+| 方法产出 | 第 499 节四次交替 A/B，可分辨下限 20 μs → 约 5 μs |
+
+**缺口的性质（第 498.1 + 499.3 节）**：SuperKernel 对 Native 值 6.6%~12.7%
+（短档 12% 上下），PTO 结构上开不了；按 token 的边际成本在 B16→B24 之间
+由「PTO 更优」反转为「Native 更优」，反转点正是 SuperKernel 摊薄 launch 的
+收益随 batch 变大之处；而 PTO 在 B24 的打包效率（75.5%）反而高于 B16（71.8%）。
+**即在 Native 开 SuperKernel 的口径下，缺口里有约 7%~12% 不是算子差距。**
+
+下一步需要先确认的前提：目标「Native 的 80% 以内」是按 Native 开 SuperKernel 算，
+还是把该项贡献扣除后只比算子本身。两者对应的剩余工作量差一个数量级。
