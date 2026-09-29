@@ -1,0 +1,83 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_o_proj.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_o_proj.py
+@@ -104,6 +104,7 @@
+ PROJ_B_ACT_T_TILE = 1
+ 
+ PROJ_B_ACT_TASK_T_TILE = 4  # proj_b_act token block per task
++PROJ_B_ACT_WORKERS = 48  # A3 AIV capacity; use only the measured T=96 strategy.
+ 
+ O_A_T_TILE = 128
+ 
+@@ -384,10 +385,15 @@
+     heads_dep: pl.Scalar[pl.TASK_ID],
+     ROW_TILE: pl.constexpr,
+     A_COL_TILE: pl.constexpr,
++    POST_SYNC: pl.constexpr,
+ ):
+     """Project local-token, full-group attention heads into BF16 hidden rows."""
+     t_dim = pl.tensor.dim(x_out, 0)
+-    act_t_blks = (t_dim + PROJ_B_ACT_TASK_T_TILE - 1) // PROJ_B_ACT_TASK_T_TILE
++    if POST_SYNC:
++        act_row_step = (t_dim + PROJ_B_ACT_WORKERS - 1) // PROJ_B_ACT_WORKERS
++    else:
++        act_row_step = PROJ_B_ACT_TASK_T_TILE
++    act_t_blks = (t_dim + act_row_step - 1) // act_row_step
+     proj_a_rows = (t_dim + PROJ_A_ROW_TILE - 1) // PROJ_A_ROW_TILE
+     proj_b_t_rows = (t_dim + ROW_TILE - 1) // ROW_TILE
+     proj_b_padded_rows = proj_b_t_rows * ROW_TILE
+@@ -462,15 +468,16 @@
+         name_hint="proj_b_act_hc_post",
+         deps=[proj_b_tids[i] for i in range(O_GROUPS)],
+         allow_early_resolve=True,
++        sync_start=POST_SYNC,
+     ) as _act_tid:
+         act_idx = pl.tile.get_block_idx()
+         tblk = act_idx // (D // PROJ_B_ACT_N_TILE)  # token block outermost
+         nreg = act_idx - tblk * (D // PROJ_B_ACT_N_TILE)
+         ob_n0 = nreg * PROJ_B_ACT_N_TILE
+-        t0 = tblk * PROJ_B_ACT_TASK_T_TILE
++        t0 = tblk * act_row_step
+         wb_scale = wo_b_scale[ob_n0 : ob_n0 + PROJ_B_ACT_N_TILE]
+         wb_scale_chunk = pl.reshape(wb_scale, [1, PROJ_B_ACT_N_TILE])
+-        for b_tb in pl.range(t0, pl.min(t0 + PROJ_B_ACT_TASK_T_TILE, t_dim), PROJ_B_ACT_T_TILE):
++        for b_tb in pl.range(t0, pl.min(t0 + act_row_step, t_dim), PROJ_B_ACT_T_TILE):
+             # 每个 group 先按自己的 token 标度反量化到 FP32 再相加（上游写法）。
+             acc = pl.full([PROJ_B_ACT_T_TILE, PROJ_B_ACT_N_TILE], dtype=pl.FP32, value=0.0)
+             for act_g in pl.pipeline(O_GROUPS, stage=2):
+@@ -480,6 +487,8 @@
+                 p_g_f32 = pl.cast(p_g, target_type=pl.FP32, mode="none")
+                 acc = pl.add(acc, pl.mul(p_g_f32, g_scale_scalar))
+             out_t = pl.col_expand_mul(acc, wb_scale_chunk)
++            # Keep local Tensor metadata for the inline HC helper. The following
++            # cast replaces this declaration; generated kernels have no GM temporary.
+             out_bf16 = pl.create_tensor([PROJ_B_ACT_T_TILE, PROJ_B_ACT_N_TILE], dtype=pl.BF16)
+             out_bf16 = pl.cast(out_t, target_type=pl.BF16, mode="rint")
+             output_rows = pl.min(PROJ_B_ACT_T_TILE, t_dim - b_tb)
+@@ -508,16 +517,24 @@
+     if t_dim <= PROJ_B_SMALL_T_TILE:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_SMALL_T_TILE, PROJ_A_MM_N_TILE,
++            PROJ_B_SMALL_T_TILE, PROJ_A_MM_N_TILE, False,
++        )
++    elif t_dim == PROJ_B_MEDIUM_T_TILE:
++        # T=96: 24x4 -> 48x2 real tokens. Keep the 1xD tile, stage=2
++        # group dequantization, residual reuse and rounding unchanged.
++        # T=144 regressed with 48x3 + sync, so do not extend this by threshold.
++        x_out = _decode_o_proj_tp1_tiled(
++            o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
++            PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE, True,
+         )
+     elif t_dim <= PROJ_B_MEDIUM_T_TILE:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE,
++            PROJ_B_MEDIUM_T_TILE, PROJ_A_MM_N_TILE, False,
+         )
+     else:
+         x_out = _decode_o_proj_tp1_tiled(
+             o_packed, wo_a, wo_b, wo_b_scale, residual, post, comb, x_out, heads_dep,
+-            PROJ_B_MM_T_TILE, PROJ_A_LARGE_N_TILE,
++            PROJ_B_MM_T_TILE, PROJ_A_LARGE_N_TILE, False,
+         )
+     return x_out

@@ -1,0 +1,37 @@
+{
+  "production": "46cec3a0",
+  "record_head": "89ad9565",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-rope-early-revisit-46cec3a0-v1-baseline",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-pipeline-sync-46cec3a0-v1",
+  "variant": "pkg:dsv4_csa_spmd_pipeline_sync_46cec3a0_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "metrics": [
+    "max_us",
+    "min_us",
+    "mean_us"
+  ],
+  "variants": [
+    {
+      "name": "baseline",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-pipeline-sync-46cec3a0-v1-baseline"
+    },
+    {
+      "name": "o_post_balanced",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-pipeline-sync-46cec3a0-v1-o_post_balanced"
+    },
+    {
+      "name": "o_post_balanced_sync",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-spmd-pipeline-sync-46cec3a0-v1-o_post_balanced_sync"
+    }
+  ],
+  "scope": "仅O收尾逐token均衡：保持内层算术、残差复用与实际循环体，先24/36→48 AIV，再单独叠加sync_start；没有关联无并发关系的KV"
+}

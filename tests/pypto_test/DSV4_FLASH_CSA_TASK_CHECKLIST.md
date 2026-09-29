@@ -3,6 +3,19 @@
 更新：2026-09-29。本文件保留当前合同、有效证据和待办；过程与旧版本结论见[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)和Git。
 
 **执行优先级（用户最新补充）**：以128K为主，先优化incore task，再优化CSA内部调度；整网性能排后。
+2026-09-29晚追加：逐项检查SPMD的有效用核和`sync_start`，允许按关键链组合调整；
+进一步明确：**有效用满核＋不损害核内流水＋叠加sync_start**，逐项修改，真实并发任务联动。
+禁止以全路径直接开sync_start代替此项；也不靠空worker或更多padding计算凑核数。
+核内检查包括每worker实际工作、MTE/Cube/Vector流水、缓冲复用、重复加载与资源竞争。
+一个任务独立退化不直接否定多个任务共同扩核的组合，避免仅据局部竞争作结论。
+先按当前性能版的真实依赖和硬件容量试验，扩大worker须有实际工作、保持完整覆盖及独占写区；
+整组启动单组不得超过24 AIC/48 AIV，不能把跨多组的泳道总worker数当单组大小。
+**后续耗时主表统一报告最大值、最小值、平均值**；无profiler完整CSA与独立DFX核时分别统计，
+全部正式样本保留，不剔除慢点；既有P95仍作为历史证据，不再替代新的三项主口径。
+先做128K/B16与8K/B24，按8:2判断完整CSA；组合有收益后拆解贡献并检查精度，再覆盖受影响档位。
+当前首项见[O收尾逐任务验证](results/csa_spmd_post_balanced_20260929/README.md)：T=96保留有效48核+sync；
+T=144两候选核内退化，维持原4-token分工。两代表档八类状态逐bit通过，完整CSA受前后基线漂移影响，未宣称稳定收益。
+其余SPMD仍按[基底源码清点](results/csa_spmd_post_balanced_20260929/BASELINE_INVENTORY.md)逐项审查，不能标成全部完成。
 近期依据单卡核内耗时、Score/Sparse包络、完整CSA与P95推进，不为每个局部候选追加EP16。
 已经完成的模型数据保留；B8持续入场迟到、FFN等待和额外rank profile解析暂缓，待CSA阶段取得收益后再回到模型验收。
 
@@ -74,7 +87,7 @@ Indexer采用后H4095/B3 Native残留max_abs=0.0234375、Top-K集合替换39项�
 
 | 顺序 | 待办 | 当前证据与下一步 |
 | --- | --- | --- |
-| 1 | Indexer query整块Gather已保留 | [独立pkg](results/csa_indexer_rope_flat_gather_20260929/README.md)已通过CPU编译并提交task_20260929_201500_22994431416；从连续8×128输入按绝对索引Gather，避免带stride切片直接展平。两档性能后及H4095/B3真实筛选/尾行/padding八类状态精确；目标核时8:2−15.193%、CSA+0.240%单列，已按核内收益规则接入性能版。下一项转调度，完整七档仍632dd00a |
+| 1 | SPMD有效用核、保持流水、再叠加sync | [O收尾首项](results/csa_spmd_post_balanced_20260929/README.md)已采用T96的48×2+sync，核时均值27.273→22.607μs；T144的48×3退化，保留原36×4。两档八类状态及最终分支集成通过；完整CSA有基线漂移，不宣称稳定加速。下一项KV N向分工先审查重复加载/流水及真实并发者，再联动；其余SPMD未完成 |
 | 2 | 128K关键链的调度优化 | [RoPE early复核](results/csa_rope_early_revisit_20260929/RESULTS.md)：局部交接变快，完整CSA 8:2首轮−0.467%、反序+0.338%，不全局采用；性能后八类状态零差异。短B24两轮获益，同T=144的128K/B24控制档也−0.538%、八类状态零差异；仅T144分支两档+0.659%/+3.165%、8:2+1.160%，不采用；FP32按上游HC_pre组织的两档实测−1.519%/−3.269%、8:2−1.869%，保留私有候选；首调用回舍/状态及连续自身图通过，但后续Top-K改变，待模型token/DSpark验收；不把O投影必要多波当纯调度开销 |
 | 3 | 保留核内热点 | 当前长B24融合Sparse核时已接近Native独立Sparse，短B16/B32差距仍在；短B32 Score也是后续分支入口。先查最新AscendC适用策略，失败候选无新依据不重复 |
 | 4 | 精度版迁移 | HC共享优化已迁入；Q/Sparse及其他数值中性优化待迁移，保留精度版累计softmax、舍入、atomic默认和原规约，不能套性能版算术 |
@@ -82,7 +95,7 @@ Indexer采用后H4095/B3 Native残留max_abs=0.0234375、Top-K集合替换39项�
 
 有效策略及其独立证据见[核内差距](DSV4_FLASH_CSA_INCORE_NATIVE_GAP.md)和[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)。
 当前已保留：长S6 Key复用、独立L1预取、单根/均衡leaf/四路Top-K、系数优化、Sparse末块发布、
-HC残差常驻、O-B AL1复用、整行融合收尾、七处early、Q/Sparse/Indexer整块Gather。Native cache布局不改。
+HC残差常驻、O-B AL1复用、整行融合收尾、七处early、Q/Sparse/Indexer整块Gather、T96收尾48核+sync。Native cache布局不改。
 
 近期已否定、不原样重试：Score分段UB、矩阵scale广播、固定query系数驻留、系数融合Score，
 纯去dummy和真实准入组合、旧短Score/Sparse/query sync_start组合、Sparse计划提前/首PV特化、

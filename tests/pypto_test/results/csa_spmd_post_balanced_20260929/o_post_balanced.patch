@@ -1,0 +1,25 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_o_proj.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_o_proj.py
+@@ -387,7 +387,8 @@
+ ):
+     """Project local-token, full-group attention heads into BF16 hidden rows."""
+     t_dim = pl.tensor.dim(x_out, 0)
+-    act_t_blks = (t_dim + PROJ_B_ACT_TASK_T_TILE - 1) // PROJ_B_ACT_TASK_T_TILE
++    act_row_step = (t_dim + 47) // 48
++    act_t_blks = (t_dim + act_row_step - 1) // act_row_step
+     proj_a_rows = (t_dim + PROJ_A_ROW_TILE - 1) // PROJ_A_ROW_TILE
+     proj_b_t_rows = (t_dim + ROW_TILE - 1) // ROW_TILE
+     proj_b_padded_rows = proj_b_t_rows * ROW_TILE
+@@ -467,10 +468,10 @@
+         tblk = act_idx // (D // PROJ_B_ACT_N_TILE)  # token block outermost
+         nreg = act_idx - tblk * (D // PROJ_B_ACT_N_TILE)
+         ob_n0 = nreg * PROJ_B_ACT_N_TILE
+-        t0 = tblk * PROJ_B_ACT_TASK_T_TILE
++        t0 = tblk * act_row_step
+         wb_scale = wo_b_scale[ob_n0 : ob_n0 + PROJ_B_ACT_N_TILE]
+         wb_scale_chunk = pl.reshape(wb_scale, [1, PROJ_B_ACT_N_TILE])
+-        for b_tb in pl.range(t0, pl.min(t0 + PROJ_B_ACT_TASK_T_TILE, t_dim), PROJ_B_ACT_T_TILE):
++        for b_tb in pl.range(t0, pl.min(t0 + act_row_step, t_dim), PROJ_B_ACT_T_TILE):
+             # 每个 group 先按自己的 token 标度反量化到 FP32 再相加（上游写法）。
+             acc = pl.full([PROJ_B_ACT_T_TILE, PROJ_B_ACT_N_TILE], dtype=pl.FP32, value=0.0)
+             for act_g in pl.pipeline(O_GROUPS, stage=2):
