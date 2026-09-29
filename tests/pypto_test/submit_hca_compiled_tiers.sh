@@ -23,11 +23,14 @@ for tier in 131072:4 131072:8 131072:16 131072:24 8192:16 8192:24 8192:32; do
   history="${tier%%:*}"
   batch="${tier##*:}"
   for side in native pto; do
+    # 验收口径：Native 开 SuperKernel（它最好的形态），PTO 结构上开不了，恒为 0。
+    # 关掉 Native 的 SuperKernel 只用于 incore task 细分对比，靠 SK_NATIVE=0 覆盖。
+    if [ "$side" = native ]; then sk="${SK_NATIVE:-1}"; else sk=0; fi
     for round in $(seq 0 $((repeats - 1))); do
       target="$output/h${history}_b${batch}/${side}_r${round}"
       mkdir -p "$target"
       id="$(task-submit --device auto --max-time 7200 \
-        "bash $tests_dir/run_hca_compiled_case.sh $target $side --history $history --batch $batch $*" \
+        "bash $tests_dir/run_hca_compiled_case.sh $target $side --history $history --batch $batch --super-kernel $sk $*" \
         2>&1 | tail -n 1)"
       [ "$first" -eq 1 ] || printf ',\n' >>"$tasks"
       first=0

@@ -32,7 +32,7 @@ import torch  # noqa: E402
 import torch_npu  # noqa: E402
 from dsv4_csa_native_case import native_session  # noqa: E402
 from dsv4_csa_single_layer import guard_checks, make_fixture, make_layer, restore  # noqa: E402
-from dsv4_hca_compiled_measure import collect_state, measure_graph_interval  # noqa: E402
+from dsv4_hca_compiled_measure import collect_state, device_interval, measure_graph_interval  # noqa: E402
 from vllm.compilation.decorators import support_torch_compile  # noqa: E402
 from vllm.engine.arg_utils import EngineArgs  # noqa: E402
 from vllm.platforms import current_platform  # noqa: E402
@@ -327,10 +327,18 @@ def main():
                 # observe_static 已逐次核对过，这里兜一道总检查（没触发静态编译时为空集）。
                 if any(flag != bool(args.super_kernel) for flag in static_super_flags):
                     raise RuntimeError(f"SuperKernel 标记与请求不一致：{report['compiler']}")
+                # profiler 一律采：验收口径是**纯设备耗时**，
+                # 图外 NPU Event 的区间里含每次迭代的主机派发，不能当验收数字。
+                profile_dir = args.output / "profile"
                 report["timing"] = measure_graph_interval(
                     fixture, compiled_call, output, reference,
                     iters=args.iters, warmup=args.warmup, require_exact=runtime is not None,
-                    profile_dir=args.output / "profile" if args.profile else None)
+                    profile_dir=profile_dir)
+                # 不要用 report["device"]：那个键已经是卡号。
+                report["device_profile"] = device_interval(profile_dir)
+                if not report["device_profile"].get("available"):
+                    raise RuntimeError(f"拿不到纯设备耗时：{report['device_profile']}")
+                report["device_span_us"] = report["device_profile"]["span_us"]
                 if args.swimlane:
                     # 光在 pypto.torch.init 里开 enable_chip_swimlane 不会落盘，
                     # 必须显式 begin_dfx/end_dfx 包住一次调用，再导出成带真实任务名的泳道。
@@ -363,7 +371,7 @@ def main():
         raise
     finally:
         (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
-        fields = ("status", "side", "batch", "history", "us_p50", "us_mean", "compiler", "error")
+        fields = ("status", "side", "batch", "history", "device_span_us", "us_p50", "compiler", "error")
         print(json.dumps({k: report[k] for k in fields if k in report}, ensure_ascii=False), flush=True)
 
 

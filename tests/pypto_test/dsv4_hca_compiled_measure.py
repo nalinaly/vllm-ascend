@@ -17,6 +17,45 @@ from dsv4_csa_single_layer import guard_checks
 from dsv4_csa_validation import compare_tensor
 
 
+def device_interval(profile_dir):
+    """从 profiler 的 kernel_details.csv 算出这一次重放的**纯设备**耗时。
+
+    验收口径只算纯 device 耗时：图外 NPU Event 的区间里含每次迭代的主机派发
+    （`acl_graph_replay`、`TorchDynamo Cache Lookup`、`npu_fx_compiler inference` 等），
+    那些在生产里被 FULL_DECODE_ONLY 的整步图重放摊掉，不该计入。
+
+    返回的 `span_us` 是第一个 kernel 开始到最后一个 kernel 结束，**这是可跨侧比较的量**。
+    `busy_us` 只作诊断：PTO 侧的 AICPU 调度器 kernel 与 AICore kernel 并发，
+    忙时相加没有意义。
+    """
+    import csv
+    import glob
+    import os
+
+    hits = glob.glob(os.path.join(str(profile_dir), "*", "ASCEND_PROFILER_OUTPUT", "kernel_details.csv"))
+    if not hits:
+        return {"available": False, "reason": "未找到 kernel_details.csv"}
+    rows = list(csv.DictReader(open(hits[0])))
+    if not rows:
+        return {"available": False, "reason": "kernel_details.csv 为空"}
+    start = [float(r["Start Time(us)"]) for r in rows]
+    dur = [float(r["Duration(us)"]) for r in rows]
+    by_type = {}
+    for r in rows:
+        by_type.setdefault(r["Name"], [0, 0.0])
+        by_type[r["Name"]][0] += 1
+        by_type[r["Name"]][1] += float(r["Duration(us)"])
+    return {
+        "available": True,
+        "kernels": len(rows),
+        "span_us": max(s + d for s, d in zip(start, dur)) - min(start),
+        "busy_us": sum(dur),
+        "top": sorted(({"name": k, "count": v[0], "total_us": v[1]} for k, v in by_type.items()),
+                      key=lambda x: -x["total_us"])[:12],
+        "note": "span_us 为纯设备跨度，可跨侧比较；busy_us 仅诊断（PTO 的 AICPU/AICore 并发）",
+    }
+
+
 def collect_state(fixture, output):
     """HCA 的状态快照：输出，加三组 allocation 的每个 view。"""
     state = {"x_out": output.detach().cpu()}
