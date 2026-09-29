@@ -4508,3 +4508,64 @@ PTOAS 的 slot 分配比复制路径保守，同样的代码在 PYPTO 下装得�
    `tile.move`** 两步走（`AutoTileMatmulL0` 文档里的 "Vec 左操作数预存" 就是
    `tile.move(lhs, target_memory=Mat)`，说明 Vec→Mat 这一跳是支持的）。
    代价是 `[128, 512]` BF16 = 128 KB 过一次 UB，要看 UB 预算是否还够。
+
+---
+
+## 82. PTOAS 路线推进到最后 1 个阻塞项，并确认它卡在哪（2026-09-29）
+
+### 82.1 阻塞项 8 → 1
+
+| 迭代 | 改动 | 修掉 | 剩余 |
+|---|---|---|---:|
+| 0 | 只换 `memory_planner=PTOAS` | — | 8 |
+| 1 | `A_K_TILE`、`QR_K_TILE` 256→128 | proj_a_mm、proj_a_mm_0、qr_proj_matmul、qr_proj_matmul_0 | 4 |
+| 2 | `PROJ_A_LARGE_N_TILE` 256→128 | proj_a_mm_1 | 3 |
+| 3 | `qr_rms_norm_quant` 改用 `pl.store(tile, off, out, [valid_rows, 1])` | qr_rms_norm_quant | 2 |
+| 4 | 强制只走长路径（仅取证，8K 短路径先排除） | hca_short_attention_pack | **1** |
+
+变体链：`ptoas` → `ptoas_k128` → `ptoas_k128b` → `ptoas_k128c` → `ptoas_long`。
+
+### 82.2 最后一个：`hca_unified_attention` 的 KV 入 L1
+
+报错是 `'pto.tmov' op expects a supported tmov address-space pair`，
+位置在 `pl.gather_row(kv_l1, raw_kv / cmp_work_kv, ...)`。三次探查：
+
+1. **不是子区域偏移的问题。** 把 `QK_PRE_LAUNCH` 置 0（槽数变 1、目标偏移恒为 0、
+   写的是整片），**仍然同样报错**。所以 PTOAS 拒的是 `gather_row` 这种
+   **DPS 形式的 GM→Mat 写**本身。
+2. **不是 GM→Mat 本身不行。** 同一段里 `query = pl.load(q_flat, ...,
+   target_memory=pl.MemorySpace.Mat)` 在 PTOAS 下是通过的。区别在
+   `pl.load` 新建 tile，而 `gather_row` 往已有 tile 里写。
+3. **`pl.tile.assemble`（Mat→Mat 子区域）也不行**，同样的 tmov 报错。
+
+于是尝试把 Mat 环形缓冲换成 `pl.range(..., init_values=...)` 的**移位寄存器**
+（`QK_PRE_LAUNCH=2` 意味着 PV 在第 t 拍消费第 t−2 拍的数据，只需携带 2 个值），
+结果 `Verification failed after 'ConvertToSSA'`，6 条
+`Variable '...' used outside its defining scope`，点名的是 `kv_p2`（iter_arg）
+与 `kv_seed`（`pl.create_tile(..., target_memory=Mat)`）。
+
+对照同一函数里**能工作**的 tile 携带例子（`for vec_tick, (m_iter, l_iter,
+left_iter, right_iter) in pl.range(..., init_values=(...))`，
+`decode_sparse_attn_hca.py:1233`）：它携带的全是 **Vec** tile。
+**结论：Mat 驻留的 tile 不能作为循环携带值**——它的生命期绑在定义作用域上。
+而 `pl.matmul` 的 B 操作数又必须是 Mat（`AutoTileMatmulL0` 文档：
+"对于自动 tiling，右（B）操作数必须是 Mat"），所以这条路封死。
+
+### 82.3 结论
+
+**`hca_unified_attention` 要在 PTOAS 下编过，只有两条路，都超出"改算子"的范畴：**
+
+1. 重新设计 KV 进 L1 的机制，不用持久的 Mat 缓冲——但那个缓冲正是 attention 的
+   手写软流水（QK 写第 t 槽、PV 读第 t−2 槽），§66.1 里说它是 PTO attention
+   比 Native 快 25 μs 的原因。改掉它等于放弃这个优势去换 L0 ping-pong，
+   净收益未知。
+2. 让 PTOAS 支持 `gather_row` 的 GM→Mat 下降（PyPTO 改动，按用户
+   2026-09-29 的要求需要先商量）。
+
+**PTOAS 路线到此为止：非 attention 的部分全部就绪，attention 这一个函数挡住了整体。**
+由于 planner 是整个 kernel 编译级的设置，一个函数编不过就整体编不过，
+所以拿不到"其余任务在 PTOAS 下变快多少"的数字。
+
+变体全部留在 `tests/pypto_test/variants_planner_20260929/`
+（`ptoas_k128c` 是非 attention 部分全部修好的版本，`ptoas_long` 再叠加强制长路径，
+`ptoas_shift` 是移位寄存器的失败尝试）。
