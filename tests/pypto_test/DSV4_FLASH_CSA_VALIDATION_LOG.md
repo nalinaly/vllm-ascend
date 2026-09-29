@@ -12083,3 +12083,29 @@ P95长994.720→985.400、短950.860→942.820；max长996.720→987.100、短95
 [对照与四窗](results/csa_qrope_flat_gather_20260929/RESULTS.md)、
 [边界](results/csa_qrope_flat_gather_20260929/boundary/summary.json)、
 [采用决定](results/csa_qrope_flat_gather_20260929/decision.json)。
+
+## 454. 按形状分支扩大NZ O-A L1面板，CPU通过后排队（2026-09-29）
+
+用户再次明确seqlen/batch_size需要不同策略时在同一套算子内分支，已补入当前清单。
+本次O-A与历史KV长度无关，实际按token行数T及N分块选择；后续仍按长短8:2和尾部约束取舍。
+参考ops-nn19614968的TransposeBatchMatMulBaseTiling::DoCommonTiling：按L1容量计算
+双缓冲depthA1/depthB1和stepKa/stepKb，将多个L0 baseK块合并到一次L1面板。
+NZ入口走Matmul IterateAll/MM_CFG_K_SHIFT；本候选只借鉴L1粒度，不引入改变浮点次序的K轮转。
+
+从369ad2c1对应已测整包复制私有baseline/candidate，保持已采用整块Gather。
+只在性能版decode_o_proj.py增加明确constexpr面板参数：T≤96/N128使用K512，T>96/N256使用K256；
+ND仍用原K256。全部任务、64份工作、依赖/early、量化、精度版及工具链保持。
+旧§115的K512发生在CANN9.0、WO_A ND、atomic1的单短档；本项是当前Native NZ原地址上的双档对照。
+
+完整PTOAS/CCE/link/load与两入口依赖解析通过，N128 Mat最大末端262144→524288字节，
+L0仍K128双缓冲、Left/Right各65536、Acc65536，无TMOV；未降低容量检查。
+每输出块4096K的面板16→8、两路逻辑GM→L1调用32→16，总传输字节数保持；静态调用点仍8个。
+N256规范化SSA名称/源码位置后的PTO IR与基线一致，Mat保持393216；没有扩大大档L1占用。
+这些是生成码依据，不提前断言性能或逐元素状态通过。PyPTO88f60598、Simplera54c05095未变。
+
+17:08正常auto提交task_20260929_170813_2046519748，确认设备3上running，max-time7200。
+长128K/B16和短8K/B16均覆盖T96受影响分支；反序同卡5预热20正式事件、独立四窗及八类完整状态。
+有收益后再补小档/大档/ND兼容和padding，不先重复Native、七档或16卡。
+私有源码/运行入口冻结只读。分析收集器只新增proj_a_mm的64份覆盖计数，既有检查保持。
+定向Ruff/shell/diff通过，统一format.sh ci因缺pre-commit退出1；生产尚未采用。
+[来源、分支规则、补丁和编译证据](results/csa_oa_l1k512_20260929/README.md)。

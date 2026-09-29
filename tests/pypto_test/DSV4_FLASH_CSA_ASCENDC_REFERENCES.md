@@ -394,3 +394,12 @@ TransposeBatchMatMulKernel与MM_CFG_K_SHIFT；其InnerProcess调用Matmul Iterat
 `mat_mul_v3_common.h:78`，下一步应沿此配置追实际L1/L0分块与重排条件，再核对PTO生成码。
 当前PTO NZ O-A依次累加K256块；若引入K轮转会改变浮点归约顺序，必须单列算术差异，
 不能按无损搬运采用。这里只记录已核实的源码入口区别，未新增候选或设备测试。
+
+随后继续核实同仓`transpose_batch_mat_mul_base_tiling.cpp:299`的DoCommonTiling：
+按L1容量计算depthA1/depthB1，stepKa/stepKb为其双缓冲半深度，step×baseK决定L1加载面板。
+据此隔离候选：实际T≤96/N128时PTO L1 K256→512，T>96/N256保持K256，ND同样保持；
+大档若也扩大K会超L1预算，因此按实际形状分支。未复制K轮转，逐输出元素K累加顺序保持。
+完整CPU编译/load通过，N128 Mat262144→524288字节、L0仍K128双缓冲，N256规范化IR不变。
+与pypto-lib固定K256的区别是按L1容量合并加载；不是减少总GM字节数或任务数。
+两代表档选择长短B16以覆盖受影响T96分支，按8:2、完整状态/核内/CSA/P95决定；生产尚未采用。
+[来源、边界规则与排队入口](results/csa_oa_l1k512_20260929/README.md)。

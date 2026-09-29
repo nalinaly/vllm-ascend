@@ -111,4 +111,9 @@ Q_B的24份工作与Compressor/Indexer投影争用AIC，不能据此认为20份�
 7. 精度版迁移、CANN9.2/新B24真实EP16 token/DSpark及10步forward仍未完成且后置。
    本页累计七档不是early单项效果，也不是EP16性能证明。
 
+下一项[NZ O-A按形状扩大L1面板](results/csa_oa_l1k512_20260929/README.md)已冻结并正常auto排队：
+参考最新ops-nn的L1 depth/step选择，仅T≤96/N128改K512，T>96/N256与ND保留K256。
+L0仍K128双缓冲、任务/worker及K顺序保持；CPU完整编译通过，N256规范化IR与基线相同。
+本轮长短各B16覆盖受影响分支，先按8:2、完整状态/目标核/CSA/P95决定，生产尚未改。
+
 [有效策略与失败记录](DSV4_FLASH_CSA_VALIDATION_LOG.md)、[AscendC源码参考](DSV4_FLASH_CSA_ASCENDC_REFERENCES.md)。

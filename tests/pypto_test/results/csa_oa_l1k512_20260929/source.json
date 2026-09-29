@@ -1,0 +1,21 @@
+{
+  "baseline": "369ad2c1",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-oa-l1k512-369ad2c1-v1",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-qrope-flat-gather-f4861832-v2-candidate",
+  "variant": "pkg:dsv4_csa_oa_l1k512_369ad2c1_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      16
+    ]
+  ],
+  "change": "NZ O-A实际T<=96/N128时L1 K256→512；N256和ND保持K256，L0与状态另验",
+  "reference": "ops-nn19614968/transpose_batch_mat_mul_base_tiling.cpp:DoCommonTiling depthA1/depthB1",
+  "not_changed": "任务/worker/依赖/early、O-B/量化、原K序、精度版及工具链",
+  "scope": "两代表档均B16以覆盖受影响T96；大档在算子内选择原策略，CPU核对N256生成码",
+  "historical_difference": "旧§115是CANN9.0/WO_A ND/atomic1整层单档；本轮仅当前Native NZ原地址路径"
+}
