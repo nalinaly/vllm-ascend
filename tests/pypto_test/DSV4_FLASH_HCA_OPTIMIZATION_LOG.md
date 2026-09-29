@@ -4460,3 +4460,51 @@ PTOAS **强制**每个 L0 片只占容量的一半，这样 2 个 slot 才装得
 **这是目前唯一一条既有明确机制、又不需要改 PyPTO、也不影响 CSA 调试 session 的路线。**
 变体留在 `tests/pypto_test/variants_planner_20260929/ptoas_k128b`，
 从那里接着修剩下 3 个函数即可。
+
+### 81.5 阻塞项推进到 2 个（8 → 4 → 3 → 2）
+
+| 迭代 | 改动 | 修掉的函数 | 剩余 |
+|---|---|---|---:|
+| 0 | 只换 planner | — | 8 |
+| 1 | `A_K_TILE` 256→128、`QR_K_TILE` 256→128 | proj_a_mm、proj_a_mm_0、qr_proj_matmul、qr_proj_matmul_0 | 4 |
+| 2 | `PROJ_A_LARGE_N_TILE` 256→128 | proj_a_mm_1 | 3 |
+| 3 | `qr_rms_norm_quant` 改用 `pl.store(tile, off, out, [valid_rows, 1])` | qr_rms_norm_quant | **2** |
+
+第 3 步值得单记：`pl.store` 的第三个位置参数 `shapes` 可以直接限定写入范围，
+**根本不需要给 tile 打 valid 标记**。原来的
+`pl.set_validshape(view, ...)` 在 PTOAS 下被拒（视图的 valid 写在类型里），
+改成在切片处收窄又 `failed to legalize`，而 `pl.store(..., shapes=)` 一次通过。
+
+变体：`tests/pypto_test/variants_planner_20260929/ptoas_k128c`。
+
+### 81.6 最后 2 个阻塞项：都要动最热的代码
+
+**`hca_unified_attention`** —— `'pto.tmov' op expects a supported tmov address-space
+pair`，位置 `decode_sparse_attn_hca.py:1194`。那里是
+`pl.gather_row(kv_l1, raw_kv / cmp_work_kv, ...)`，`kv_l1` 是
+`pl.create_tile(..., target_memory=pl.MemorySpace.Mat)` 的**环形缓冲**
+（`QK_TRANSFER_SLOTS` 个槽），两个分支都走 GM→Mat 的 `gather_row`。
+`pl.gather_row` 的文档写明它"always reads from global memory"，
+PYPTO planner 能把它降到 Mat，PTOAS 的 tmov 不支持这个地址空间对。
+
+绕开它意味着换掉整个 KV 入 L1 的机制——而那个环形缓冲正是 attention 的手写软流水
+（配合 `QK_PRE_LAUNCH` 的错拍，§66.1 里说这是 PTO attention 快于 Native 的原因）。
+**这是一次对最热代码的结构性重构，不能顺手做。**
+
+**`hca_short_attention_pack`** —— `vec overflow, requires 1832960 bits while
+1572864 bits available`（229 KB > 192 KB UB）。8K 短路径的 UB 占用要缩约 37 KB。
+PTOAS 的 slot 分配比复制路径保守，同样的代码在 PYPTO 下装得下。
+
+### 81.7 续做指引
+
+从 `variants_planner_20260929/ptoas_k128c` 接着改。两个建议：
+
+1. 先只让 **128K 路径**（`_long_sparse_attn_hca_tp1`）在 PTOAS 下通过——
+   `hca_short_attention_pack` 属于 8K 短路径，可以先用一个编译期开关把短路径
+   排除在 PTOAS 之外（两条路径在 `sparse_attn_hca_tp1` 里由
+   `pl.tensor.dim(cmp_block_table, 1) <= CMP_PAGES_PER_WORK` 分派），
+   拿到 128K 档的数字再回头处理 8K。
+2. `gather_row` 那处，先确认 PTOAS 是否支持 **GM→Vec 的 gather_row + Vec→Mat 的
+   `tile.move`** 两步走（`AutoTileMatmulL0` 文档里的 "Vec 左操作数预存" 就是
+   `tile.move(lhs, target_memory=Mat)`，说明 Vec→Mat 这一跳是支持的）。
+   代价是 `[128, 512]` BF16 = 128 KB 过一次 UB，要看 UB 预算是否还够。
