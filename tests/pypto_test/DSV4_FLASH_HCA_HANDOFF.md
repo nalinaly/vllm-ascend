@@ -4,35 +4,25 @@
 > （与 CSA 侧的 `DSV4_FLASH_CSA_VALIDATION_LOG.md` 对等）。本文件只保留接入合同、
 > 验收状态与剩余事项；逐轮的实测数据、口径纠正与候选取舍以该 LOG 为准。
 
-## ⚡ 性能优化的当前入口（2026-09-29 更新）
+## 性能优化的当前入口（2026-09-30 接手）
 
-七档加权 **1.117**（目标 0.80）。**不要再从调块数／tiling／预取／布局入手**——
-那个空间已被穷举：本轮 5 个候选、LOG 第 58 节 6 个候选、以及第 90.6~90.8 的三次
-数量级否决，全部为否，原因在第 91.2 节。
+目标保持各档领先同配置Native 20%以上，不因已有候选失败而缩小目标。
+后续交替推进incore与调度；128K优先、8K守护，候选按8:2衡量，最终覆盖支持档位。
+先单卡，再整机token验证；耗时报告min/max/mean，并保留既有P50，不能把各pass中位数的max冒充单次重放max。
 
-**根因已取证（LOG 第 91 节）**：AIC 的 scalar 占 59.2%（平均单核 387 μs / 654 μs
-墙钟），其主体是**流水同步等待**，不是指令执行、不是搬运、不是并行度。
-生成的 AscendC 里，`hca_unified_attention_aic.cpp` 的最内层 tick 循环体有
-**82 个同步原语**（全文件 `wait_flag` 86 + `set_flag` 83 + `pipe_barrier` 79）。
+历史七档加权1.117属于第77节的源码和环境，未达目标；新轮采用CANN9.2、mode2、atomic0，
+Native使用npugraph_ex dynamic=False、inplace/static开启，正式对照开SuperKernel，细化incore时关SuperKernel。
 
-**关键工具变化**：PTO 的编译产物里就有生成的 AscendC 源码，不必重新编译也不必上设备：
+此前本节把第91节的“同步原语计数”当作已证实根因，但第92节已用实验撤回该推论。
+“算子侧穷尽”“所有sync_start有害”也超出已测候选的证据范围，不能据此关闭优化方向。
+保留失败候选的源码与边界，优先从最新ops-transformer的实际实现寻找数据复用或流水差距。
 
-```
-results/hca_swimlane_v2_20260929/h131072_b16/build_output/
-  _jit__decode_hca_tp1_layer_<hash>/kernels/{aic,aiv}/*.cpp
-```
-
-于是**同步原语数成了可直接计数的指标**。这很重要：本批卡的 base 单卡极差可达
-58 μs、σ 约 25，6 样本只够分辨 10 μs 量级（LOG 第 88.13 节），低于此的效应用
-同卡 ABBA 只会得到随机符号（`cmp_wgate` 四轮 −8.0/−13/−10.5/+2.75 即是例证）。
-**改一版数一版同步数，比赌测量可靠。**
-
-下一步两层（LOG 第 91.3 节）：
-
-1. **算子侧**（无需新授权）：减少 tick 循环体内的 tile 操作数量——每个都会引入
-   同步；`TASSIGN` 全文件 198 次说明临时 tile 赋值很多。
-2. **PyPTO 侧**（按约定需先商量）：同步插入策略。79 次 `pipe_barrier` 是全流水
-   屏障，若能换成针对具体 pipe 的 flag 对或合并相邻屏障，代价会显著下降。
+当前第一项是mHC post residual常驻UB：参考A3 `MhcPostKernel::ComputeCopyOutAllX`，
+把每个row tile的residual加载/转FP32由16次改为4次，复用四份输入；
+分工、依赖、逐输出加法顺序和BF16舍入点不变。基线与候选均已显式CPU解析/编译通过。
+私有冻结包实验见[hca_residual_reuse_20260930](hca_residual_reuse_20260930/README.md)。
+128K/B16与8K/B24完整状态逐bit一致，post核内mean分别下降26.01%/6.85%，已保留实现。
+整层mean分别+2.72%/−0.82%，max均增加，尚未证明整层收益；接下来检查投影与attention的调度联动。
 
 ## 目标与分支
 

@@ -1,0 +1,981 @@
+{
+  "source": {
+    "baseline_commit": "c6792787",
+    "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-residual-c6792787-20260930/base",
+    "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-residual-c6792787-20260930/reuse",
+    "source_reference": "ops-transformer/mhc/mhc_post/op_kernel/arch22/mhc_post_arch22.h USE_PERMANENT_X",
+    "change": "four residual loads/casts per row tile instead of sixteen; same output accumulation and rounding",
+    "limits": "extra UB residency must fit; no performance or numerical claim until device validation"
+  },
+  "case": [
+    8192,
+    24
+  ],
+  "passes": [
+    {
+      "directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/abba/p1_base",
+      "side": "base",
+      "device": 2,
+      "span_samples_us": [
+        646.5,
+        644.5,
+        633.5,
+        626.0,
+        629.5,
+        616.5,
+        626.0,
+        633.75,
+        620.5
+      ],
+      "device_span": {
+        "count": 9,
+        "min_us": 616.5,
+        "max_us": 646.5,
+        "mean_us": 630.75,
+        "p50_us": 629.5
+      },
+      "event_samples_us": [
+        877.6999711990356,
+        863.8799786567688,
+        862.2199892997742,
+        856.000006198883,
+        863.2199764251709,
+        871.2000250816345,
+        868.5200214385986,
+        848.5000133514404,
+        859.1799736022949,
+        874.5599985122681,
+        877.2199749946594,
+        874.019980430603,
+        841.7800068855286,
+        872.0999956130981,
+        852.8000116348267,
+        877.2199749946594,
+        876.8799901008606,
+        847.8599786758423,
+        874.7199773788452,
+        849.9799966812134
+      ],
+      "event": {
+        "count": 20,
+        "min_us": 841.7800068855286,
+        "max_us": 877.6999711990356,
+        "mean_us": 864.4779920578003,
+        "p50_us": 866.2000000476837
+      },
+      "state_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_pass": true,
+      "replay_checks": {
+        "x_out": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS"
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      }
+    },
+    {
+      "directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/abba/p2_reuse",
+      "side": "reuse",
+      "device": 2,
+      "span_samples_us": [
+        662.5,
+        610.25,
+        616.5,
+        611.75,
+        614.75,
+        616.25,
+        612.25,
+        614.75,
+        614.5
+      ],
+      "device_span": {
+        "count": 9,
+        "min_us": 610.25,
+        "max_us": 662.5,
+        "mean_us": 619.2777777777778,
+        "p50_us": 614.75
+      },
+      "event_samples_us": [
+        923.7599968910217,
+        905.6800007820129,
+        904.0600061416626,
+        907.7000021934509,
+        908.7799787521362,
+        882.6799988746643,
+        888.8400197029114,
+        899.4399905204773,
+        887.660026550293,
+        876.259982585907,
+        878.7199854850769,
+        898.7399935722351,
+        888.979971408844,
+        885.5800032615662,
+        907.5999855995178,
+        901.1399745941162,
+        890.9800052642822,
+        864.0000224113464,
+        887.1399760246277,
+        887.4800205230713
+      ],
+      "event": {
+        "count": 20,
+        "min_us": 864.0000224113464,
+        "max_us": 923.7599968910217,
+        "mean_us": 893.7609970569611,
+        "p50_us": 889.9799883365631
+      },
+      "state_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_pass": true,
+      "replay_checks": {
+        "x_out": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS"
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      }
+    },
+    {
+      "directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/abba/p3_reuse",
+      "side": "reuse",
+      "device": 2,
+      "span_samples_us": [
+        653.75,
+        626.0,
+        624.0,
+        620.0,
+        620.0,
+        603.25,
+        609.5,
+        617.0,
+        614.5
+      ],
+      "device_span": {
+        "count": 9,
+        "min_us": 603.25,
+        "max_us": 653.75,
+        "mean_us": 620.8888888888889,
+        "p50_us": 620.0
+      },
+      "event_samples_us": [
+        889.020025730133,
+        874.3399977684021,
+        890.2199864387512,
+        910.0000262260437,
+        892.2799825668335,
+        909.6999764442444,
+        899.2999792098999,
+        864.359974861145,
+        904.3999910354614,
+        891.3400173187256,
+        874.8199939727783,
+        876.7600059509277,
+        877.3999810218811,
+        896.1799740791321,
+        889.9000287055969,
+        887.7800107002258,
+        898.9999890327454,
+        876.9999742507935,
+        878.7000179290771,
+        920.9799766540527
+      ],
+      "event": {
+        "count": 20,
+        "min_us": 864.359974861145,
+        "max_us": 920.9799766540527,
+        "mean_us": 890.1739954948425,
+        "p50_us": 890.0600075721741
+      },
+      "state_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_pass": true,
+      "replay_checks": {
+        "x_out": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS"
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      }
+    },
+    {
+      "directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/abba/p4_base",
+      "side": "base",
+      "device": 2,
+      "span_samples_us": [
+        645.0,
+        621.5,
+        604.5,
+        619.75,
+        612.75,
+        610.25,
+        613.0,
+        612.25,
+        637.5
+      ],
+      "device_span": {
+        "count": 9,
+        "min_us": 604.5,
+        "max_us": 645.0,
+        "mean_us": 619.6111111111111,
+        "p50_us": 613.0
+      },
+      "event_samples_us": [
+        885.9400153160095,
+        869.2399859428406,
+        861.0399961471558,
+        859.7599864006042,
+        857.9999804496765,
+        873.6199736595154,
+        870.5599904060364,
+        872.9400038719177,
+        864.2799854278564,
+        876.039981842041,
+        855.4199934005737,
+        873.4599947929382,
+        863.9000058174133,
+        869.8199987411499,
+        868.0999875068665,
+        867.5400018692017,
+        849.9799966812134,
+        858.240008354187,
+        863.6999726295471,
+        851.7000079154968
+      ],
+      "event": {
+        "count": 20,
+        "min_us": 849.9799966812134,
+        "max_us": 885.9400153160095,
+        "mean_us": 865.6639933586121,
+        "p50_us": 865.909993648529
+      },
+      "state_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_pass": true,
+      "replay_checks": {
+        "x_out": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS"
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      }
+    }
+  ],
+  "summary": {
+    "base": {
+      "all_device_replays": {
+        "count": 18,
+        "min_us": 604.5,
+        "max_us": 646.5,
+        "mean_us": 625.1805555555555,
+        "p50_us": 623.75
+      },
+      "pass_medians": {
+        "count": 2,
+        "min_us": 613.0,
+        "max_us": 629.5,
+        "mean_us": 621.25,
+        "p50_us": 621.25
+      },
+      "all_event_replays": {
+        "count": 40,
+        "min_us": 841.7800068855286,
+        "max_us": 885.9400153160095,
+        "mean_us": 865.0709927082062,
+        "p50_us": 865.909993648529
+      }
+    },
+    "reuse": {
+      "all_device_replays": {
+        "count": 18,
+        "min_us": 603.25,
+        "max_us": 662.5,
+        "mean_us": 620.0833333333334,
+        "p50_us": 615.5
+      },
+      "pass_medians": {
+        "count": 2,
+        "min_us": 614.75,
+        "max_us": 620.0,
+        "mean_us": 617.375,
+        "p50_us": 617.375
+      },
+      "all_event_replays": {
+        "count": 40,
+        "min_us": 864.0000224113464,
+        "max_us": 923.7599968910217,
+        "mean_us": 891.9674962759018,
+        "p50_us": 890.0600075721741
+      }
+    }
+  },
+  "limits": "single-card ABBA screen; no stable small-effect or model/Native acceptance claim; event includes host gap",
+  "incore": {
+    "base": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/swimlane_base/dfx/merged_swimlane.json",
+      "tasks": {
+        "hca_hc_widen_rms_spmd": {
+          "count": 18,
+          "min_us": 24.860000000000014,
+          "max_us": 26.299999999999997,
+          "mean_us": 25.56777777777778,
+          "p50_us": 25.54,
+          "first_start_us": 1.6399999999999935,
+          "last_end_us": 31.159999999999997,
+          "envelope_us": 29.520000000000003
+        },
+        "hca_warm_kv_weights_spmd": {
+          "count": 8,
+          "min_us": 34.58,
+          "max_us": 35.81999999999999,
+          "mean_us": 35.42,
+          "p50_us": 35.62000000000001,
+          "first_start_us": 47.0,
+          "last_end_us": 83.03999999999999,
+          "envelope_us": 36.03999999999999
+        },
+        "hc_pre_linear_spmd": {
+          "count": 24,
+          "min_us": 11.519999999999996,
+          "max_us": 30.760000000000005,
+          "mean_us": 17.797500000000003,
+          "p50_us": 16.290000000000006,
+          "first_start_us": 43.17999999999999,
+          "last_end_us": 75.78,
+          "envelope_us": 32.60000000000001
+        },
+        "comb_sinkhorn_spmd": {
+          "count": 18,
+          "min_us": 33.08000000000001,
+          "max_us": 35.900000000000006,
+          "mean_us": 34.60333333333334,
+          "p50_us": 34.629999999999995,
+          "first_start_us": 79.22,
+          "last_end_us": 115.34,
+          "envelope_us": 36.120000000000005
+        },
+        "mix_x_rms_norm_spmd": {
+          "count": 18,
+          "min_us": 37.160000000000025,
+          "max_us": 40.58000000000001,
+          "mean_us": 39.214444444444446,
+          "p50_us": 39.21000000000001,
+          "first_start_us": 78.16,
+          "last_end_us": 118.84,
+          "envelope_us": 40.68000000000001
+        },
+        "q_rope_prepare_spmd": {
+          "count": 18,
+          "min_us": 2.0400000000000063,
+          "max_us": 2.9599999999999937,
+          "mean_us": 2.445555555555556,
+          "p50_us": 2.4399999999999977,
+          "first_start_us": 21.739999999999995,
+          "last_end_us": 26.739999999999995,
+          "envelope_us": 5.0
+        },
+        "hca_raw_cache_write_spmd": {
+          "count": 8,
+          "min_us": 9.720000000000027,
+          "max_us": 10.279999999999973,
+          "mean_us": 9.974999999999994,
+          "p50_us": 9.890000000000015,
+          "first_start_us": 197.18,
+          "last_end_us": 207.68,
+          "envelope_us": 10.5
+        },
+        "hca_compact_offsets": {
+          "count": 1,
+          "min_us": 2.460000000000008,
+          "max_us": 2.460000000000008,
+          "mean_us": 2.460000000000008,
+          "p50_us": 2.460000000000008,
+          "first_start_us": 44.03999999999999,
+          "last_end_us": 46.5,
+          "envelope_us": 2.460000000000008
+        },
+        "hca_kv_score_proj_spmd": {
+          "count": 24,
+          "min_us": 19.67999999999998,
+          "max_us": 26.900000000000034,
+          "mean_us": 23.854166666666664,
+          "p50_us": 25.00999999999999,
+          "first_start_us": 171.0,
+          "last_end_us": 198.54000000000002,
+          "envelope_us": 27.54000000000002
+        },
+        "hca_softmax_pool_spmd": {
+          "count": 16,
+          "min_us": 2.3799999999999955,
+          "max_us": 3.519999999999982,
+          "mean_us": 2.870000000000001,
+          "p50_us": 2.799999999999983,
+          "first_start_us": 209.5,
+          "last_end_us": 213.12,
+          "envelope_us": 3.6200000000000045
+        },
+        "hca_state_commit_spmd": {
+          "count": 16,
+          "min_us": 6.8799999999999955,
+          "max_us": 15.519999999999982,
+          "mean_us": 10.983749999999997,
+          "p50_us": 10.090000000000003,
+          "first_start_us": 246.68,
+          "last_end_us": 266.0,
+          "envelope_us": 19.319999999999993
+        },
+        "hca_norm_rope_write_spmd": {
+          "count": 16,
+          "min_us": 1.32000000000005,
+          "max_us": 3.7800000000000296,
+          "mean_us": 2.646250000000009,
+          "p50_us": 2.670000000000016,
+          "first_start_us": 240.7,
+          "last_end_us": 250.48000000000002,
+          "envelope_us": 9.78000000000003
+        },
+        "hca_gather_kv_spmd": {
+          "count": 24,
+          "min_us": 9.720000000000027,
+          "max_us": 14.800000000000011,
+          "mean_us": 12.114999999999993,
+          "p50_us": 11.969999999999999,
+          "first_start_us": 229.38,
+          "last_end_us": 248.01999999999998,
+          "envelope_us": 18.639999999999986
+        },
+        "hca_raw_valid_spmd": {
+          "count": 18,
+          "min_us": 3.420000000000016,
+          "max_us": 6.260000000000048,
+          "mean_us": 4.372222222222228,
+          "p50_us": 4.150000000000006,
+          "first_start_us": 222.2,
+          "last_end_us": 228.60000000000002,
+          "envelope_us": 6.400000000000034
+        },
+        "hca_inverse_rope_sign_spmd": {
+          "count": 24,
+          "min_us": 1.9399999999999977,
+          "max_us": 5.300000000000011,
+          "mean_us": 3.6333333333333258,
+          "p50_us": 3.319999999999993,
+          "first_start_us": 214.62,
+          "last_end_us": 220.33999999999997,
+          "envelope_us": 5.71999999999997
+        },
+        "hca_cmp_work_gather_spmd": {
+          "count": 24,
+          "min_us": 5.699999999999989,
+          "max_us": 11.5,
+          "mean_us": 8.829166666666671,
+          "p50_us": 8.930000000000007,
+          "first_start_us": 261.56,
+          "last_end_us": 273.18,
+          "envelope_us": 11.620000000000005
+        },
+        "hca_short_attention_pack_aic_spmd": {
+          "count": 24,
+          "min_us": 81.77999999999997,
+          "max_us": 86.42000000000002,
+          "mean_us": 83.76750000000001,
+          "p50_us": 83.61000000000001,
+          "first_start_us": 399.1,
+          "last_end_us": 486.0,
+          "envelope_us": 86.89999999999998
+        },
+        "hca_short_attention_pack_aiv_spmd": {
+          "count": 48,
+          "min_us": 85.13999999999993,
+          "max_us": 89.60000000000008,
+          "mean_us": 87.24625,
+          "p50_us": 87.22,
+          "first_start_us": 399.4,
+          "last_end_us": 490.06000000000006,
+          "envelope_us": 90.66000000000008
+        },
+        "qr_proj_matmul_0_spmd": {
+          "count": 16,
+          "min_us": 23.220000000000027,
+          "max_us": 42.20000000000002,
+          "mean_us": 32.736250000000005,
+          "p50_us": 32.56,
+          "first_start_us": 126.24000000000001,
+          "last_end_us": 168.58,
+          "envelope_us": 42.34
+        },
+        "qr_rms_norm_quant_spmd": {
+          "count": 16,
+          "min_us": 9.199999999999989,
+          "max_us": 17.460000000000008,
+          "mean_us": 11.26,
+          "p50_us": 10.579999999999998,
+          "first_start_us": 172.14,
+          "last_end_us": 189.62,
+          "envelope_us": 17.480000000000018
+        },
+        "qproj_matmul_spmd": {
+          "count": 20,
+          "min_us": 98.13999999999999,
+          "max_us": 119.92000000000002,
+          "mean_us": 107.59,
+          "p50_us": 103.09,
+          "first_start_us": 195.08,
+          "last_end_us": 317.62,
+          "envelope_us": 122.53999999999999
+        },
+        "qproj_dequant_rms_nope_rope_spmd": {
+          "count": 48,
+          "min_us": 63.21999999999997,
+          "max_us": 68.30000000000001,
+          "mean_us": 64.98958333333333,
+          "p50_us": 64.57000000000002,
+          "first_start_us": 323.96,
+          "last_end_us": 394.38,
+          "envelope_us": 70.42000000000002
+        },
+        "kv_proj_matmul_0_spmd": {
+          "count": 8,
+          "min_us": 26.039999999999992,
+          "max_us": 44.39999999999998,
+          "mean_us": 34.515,
+          "p50_us": 34.19,
+          "first_start_us": 129.02,
+          "last_end_us": 173.48,
+          "envelope_us": 44.45999999999998
+        },
+        "kv_rms_norm_rope_spmd": {
+          "count": 5,
+          "min_us": 12.180000000000007,
+          "max_us": 14.719999999999999,
+          "mean_us": 14.148000000000001,
+          "p50_us": 14.580000000000013,
+          "first_start_us": 178.42,
+          "last_end_us": 193.18,
+          "envelope_us": 14.76000000000002
+        },
+        "hca_oproj_hc_post_1_spmd": {
+          "count": 72,
+          "min_us": 18.720000000000027,
+          "max_us": 42.440000000000055,
+          "mean_us": 31.92555555555556,
+          "p50_us": 37.120000000000005,
+          "first_start_us": 661.82,
+          "last_end_us": 724.12,
+          "envelope_us": 62.299999999999955
+        },
+        "proj_a_mm_1_spmd": {
+          "count": 64,
+          "min_us": 14.840000000000032,
+          "max_us": 52.039999999999964,
+          "mean_us": 33.65562499999999,
+          "p50_us": 32.860000000000014,
+          "first_start_us": 496.08000000000004,
+          "last_end_us": 610.12,
+          "envelope_us": 114.03999999999996
+        },
+        "quant_1_spmd": {
+          "count": 40,
+          "min_us": 5.7000000000000455,
+          "max_us": 13.919999999999959,
+          "mean_us": 8.2315,
+          "p50_us": 7.720000000000027,
+          "first_start_us": 534.0600000000001,
+          "last_end_us": 622.8,
+          "envelope_us": 88.7399999999999
+        },
+        "_proj_b_mm_nz_kernel__3_spmd": {
+          "count": 64,
+          "min_us": 17.940000000000055,
+          "max_us": 22.980000000000018,
+          "mean_us": 20.075312500000003,
+          "p50_us": 19.930000000000064,
+          "first_start_us": 572.22,
+          "last_end_us": 655.14,
+          "envelope_us": 82.91999999999996
+        }
+      }
+    },
+    "reuse": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_residual_reuse_20260930/h8192_b24/swimlane_reuse/dfx/merged_swimlane.json",
+      "tasks": {
+        "hca_hc_widen_rms_spmd": {
+          "count": 18,
+          "min_us": 24.520000000000003,
+          "max_us": 25.680000000000007,
+          "mean_us": 25.09111111111111,
+          "p50_us": 25.099999999999998,
+          "first_start_us": 1.7800000000000011,
+          "last_end_us": 31.680000000000007,
+          "envelope_us": 29.900000000000006
+        },
+        "hca_warm_kv_weights_spmd": {
+          "count": 8,
+          "min_us": 21.700000000000003,
+          "max_us": 30.060000000000002,
+          "mean_us": 26.645,
+          "p50_us": 26.43,
+          "first_start_us": 44.120000000000005,
+          "last_end_us": 74.60000000000001,
+          "envelope_us": 30.480000000000004
+        },
+        "hc_pre_linear_spmd": {
+          "count": 24,
+          "min_us": 14.879999999999995,
+          "max_us": 27.659999999999997,
+          "mean_us": 20.895,
+          "p50_us": 21.1,
+          "first_start_us": 43.06,
+          "last_end_us": 72.24,
+          "envelope_us": 29.179999999999993
+        },
+        "comb_sinkhorn_spmd": {
+          "count": 18,
+          "min_us": 33.98000000000002,
+          "max_us": 37.120000000000005,
+          "mean_us": 35.39222222222223,
+          "p50_us": 35.42,
+          "first_start_us": 78.32000000000001,
+          "last_end_us": 115.56000000000002,
+          "envelope_us": 37.24000000000001
+        },
+        "mix_x_rms_norm_spmd": {
+          "count": 18,
+          "min_us": 36.94,
+          "max_us": 39.81999999999999,
+          "mean_us": 38.626666666666665,
+          "p50_us": 38.640000000000015,
+          "first_start_us": 77.26,
+          "last_end_us": 117.38000000000001,
+          "envelope_us": 40.120000000000005
+        },
+        "q_rope_prepare_spmd": {
+          "count": 18,
+          "min_us": 2.0,
+          "max_us": 2.4799999999999898,
+          "mean_us": 2.1977777777777763,
+          "p50_us": 2.1999999999999886,
+          "first_start_us": 20.200000000000003,
+          "last_end_us": 27.14,
+          "envelope_us": 6.939999999999998
+        },
+        "hca_raw_cache_write_spmd": {
+          "count": 8,
+          "min_us": 9.679999999999978,
+          "max_us": 10.800000000000011,
+          "mean_us": 9.937500000000004,
+          "p50_us": 9.769999999999982,
+          "first_start_us": 197.57999999999998,
+          "last_end_us": 208.54000000000002,
+          "envelope_us": 10.960000000000036
+        },
+        "hca_compact_offsets": {
+          "count": 1,
+          "min_us": 2.3799999999999955,
+          "max_us": 2.3799999999999955,
+          "mean_us": 2.3799999999999955,
+          "p50_us": 2.3799999999999955,
+          "first_start_us": 40.96000000000001,
+          "last_end_us": 43.34,
+          "envelope_us": 2.3799999999999955
+        },
+        "hca_kv_score_proj_spmd": {
+          "count": 24,
+          "min_us": 21.02000000000001,
+          "max_us": 27.620000000000005,
+          "mean_us": 24.735,
+          "p50_us": 26.0,
+          "first_start_us": 169.92000000000002,
+          "last_end_us": 198.16000000000003,
+          "envelope_us": 28.24000000000001
+        },
+        "hca_softmax_pool_spmd": {
+          "count": 16,
+          "min_us": 2.0200000000000387,
+          "max_us": 4.720000000000027,
+          "mean_us": 3.358749999999997,
+          "p50_us": 3.4499999999999886,
+          "first_start_us": 208.02000000000004,
+          "last_end_us": 212.84000000000003,
+          "envelope_us": 4.819999999999993
+        },
+        "hca_state_commit_spmd": {
+          "count": 16,
+          "min_us": 7.860000000000014,
+          "max_us": 14.799999999999955,
+          "mean_us": 11.407500000000002,
+          "p50_us": 11.48999999999998,
+          "first_start_us": 237.64000000000004,
+          "last_end_us": 258.64000000000004,
+          "envelope_us": 21.0
+        },
+        "hca_norm_rope_write_spmd": {
+          "count": 16,
+          "min_us": 1.3199999999999932,
+          "max_us": 3.900000000000034,
+          "mean_us": 2.5987499999999955,
+          "p50_us": 2.7600000000000193,
+          "first_start_us": 228.32000000000005,
+          "last_end_us": 241.64000000000004,
+          "envelope_us": 13.319999999999993
+        },
+        "hca_gather_kv_spmd": {
+          "count": 24,
+          "min_us": 9.879999999999995,
+          "max_us": 13.619999999999948,
+          "mean_us": 12.034999999999998,
+          "p50_us": 12.069999999999993,
+          "first_start_us": 244.22000000000003,
+          "last_end_us": 271.92,
+          "envelope_us": 27.69999999999999
+        },
+        "hca_raw_valid_spmd": {
+          "count": 18,
+          "min_us": 3.2199999999999704,
+          "max_us": 6.5,
+          "mean_us": 4.39555555555555,
+          "p50_us": 3.909999999999968,
+          "first_start_us": 221.36,
+          "last_end_us": 232.26000000000005,
+          "envelope_us": 10.900000000000034
+        },
+        "hca_inverse_rope_sign_spmd": {
+          "count": 24,
+          "min_us": 2.5400000000000205,
+          "max_us": 5.480000000000018,
+          "mean_us": 3.7950000000000017,
+          "p50_us": 3.469999999999999,
+          "first_start_us": 220.22000000000003,
+          "last_end_us": 225.86,
+          "envelope_us": 5.639999999999986
+        },
+        "hca_cmp_work_gather_spmd": {
+          "count": 24,
+          "min_us": 5.1200000000000045,
+          "max_us": 9.28000000000003,
+          "mean_us": 7.420000000000004,
+          "p50_us": 7.260000000000019,
+          "first_start_us": 256.86,
+          "last_end_us": 266.82000000000005,
+          "envelope_us": 9.960000000000036
+        },
+        "hca_short_attention_pack_aic_spmd": {
+          "count": 24,
+          "min_us": 80.82,
+          "max_us": 85.38000000000005,
+          "mean_us": 83.59666666666666,
+          "p50_us": 83.80000000000001,
+          "first_start_us": 400.66,
+          "last_end_us": 486.24000000000007,
+          "envelope_us": 85.58000000000004
+        },
+        "hca_short_attention_pack_aiv_spmd": {
+          "count": 48,
+          "min_us": 84.16000000000003,
+          "max_us": 89.00000000000006,
+          "mean_us": 86.93041666666666,
+          "p50_us": 87.29999999999995,
+          "first_start_us": 400.78000000000003,
+          "last_end_us": 489.9800000000001,
+          "envelope_us": 89.20000000000005
+        },
+        "qr_proj_matmul_0_spmd": {
+          "count": 16,
+          "min_us": 23.439999999999998,
+          "max_us": 42.41999999999999,
+          "mean_us": 32.66625,
+          "p50_us": 32.64,
+          "first_start_us": 124.98,
+          "last_end_us": 167.42000000000002,
+          "envelope_us": 42.44000000000001
+        },
+        "qr_rms_norm_quant_spmd": {
+          "count": 16,
+          "min_us": 9.579999999999984,
+          "max_us": 17.939999999999998,
+          "mean_us": 11.558750000000003,
+          "p50_us": 11.090000000000003,
+          "first_start_us": 171.14,
+          "last_end_us": 189.26,
+          "envelope_us": 18.120000000000005
+        },
+        "qproj_matmul_spmd": {
+          "count": 20,
+          "min_us": 99.01999999999998,
+          "max_us": 117.16000000000003,
+          "mean_us": 106.26100000000001,
+          "p50_us": 101.02999999999997,
+          "first_start_us": 196.24,
+          "last_end_us": 317.54,
+          "envelope_us": 121.30000000000001
+        },
+        "qproj_dequant_rms_nope_rope_spmd": {
+          "count": 48,
+          "min_us": 63.079999999999984,
+          "max_us": 68.68,
+          "mean_us": 65.57041666666666,
+          "p50_us": 65.32,
+          "first_start_us": 323.24,
+          "last_end_us": 395.92,
+          "envelope_us": 72.68
+        },
+        "kv_proj_matmul_0_spmd": {
+          "count": 8,
+          "min_us": 25.120000000000005,
+          "max_us": 42.72,
+          "mean_us": 33.8375,
+          "p50_us": 33.64,
+          "first_start_us": 127.58,
+          "last_end_us": 170.36,
+          "envelope_us": 42.780000000000015
+        },
+        "kv_rms_norm_rope_spmd": {
+          "count": 5,
+          "min_us": 12.879999999999995,
+          "max_us": 13.439999999999998,
+          "mean_us": 13.248000000000001,
+          "p50_us": 13.360000000000014,
+          "first_start_us": 178.26,
+          "last_end_us": 191.78000000000003,
+          "envelope_us": 13.520000000000039
+        },
+        "hca_oproj_hc_post_1_spmd": {
+          "count": 72,
+          "min_us": 17.700000000000045,
+          "max_us": 38.59999999999991,
+          "mean_us": 29.738888888888884,
+          "p50_us": 34.53000000000003,
+          "first_start_us": 659.3,
+          "last_end_us": 717.4599999999999,
+          "envelope_us": 58.15999999999997
+        },
+        "proj_a_mm_1_spmd": {
+          "count": 64,
+          "min_us": 14.720000000000027,
+          "max_us": 46.54000000000008,
+          "mean_us": 31.170624999999998,
+          "p50_us": 32.64999999999998,
+          "first_start_us": 495.88000000000005,
+          "last_end_us": 606.06,
+          "envelope_us": 110.1799999999999
+        },
+        "quant_1_spmd": {
+          "count": 40,
+          "min_us": 5.6200000000000045,
+          "max_us": 11.919999999999959,
+          "mean_us": 7.118500000000003,
+          "p50_us": 6.870000000000061,
+          "first_start_us": 537.12,
+          "last_end_us": 621.0799999999999,
+          "envelope_us": 83.95999999999992
+        },
+        "_proj_b_mm_nz_kernel__3_spmd": {
+          "count": 64,
+          "min_us": 16.840000000000032,
+          "max_us": 21.91999999999996,
+          "mean_us": 19.8009375,
+          "p50_us": 19.799999999999955,
+          "first_start_us": 560.1999999999999,
+          "last_end_us": 652.68,
+          "envelope_us": 92.48000000000002
+        }
+      }
+    }
+  }
+}
