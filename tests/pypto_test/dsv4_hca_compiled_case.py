@@ -132,6 +132,8 @@ def main():
     # 那只能靠重复整轮来压。
     parser.add_argument("--iters", type=int, default=100)
     parser.add_argument("--warmup", type=int, default=10)
+    parser.add_argument("--operator-source", type=Path,
+                        help="只供对照测试：指定已冻结的 ops/pypto 源码目录")
     parser.add_argument("--weight-nz-mode", type=int, default=2)
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--swimlane", action="store_true",
@@ -150,6 +152,14 @@ def main():
     preexisting = list((Path(os.environ["ASCEND_OPP_PATH"]) / "static_kernel").glob("**/binary_info_config.json"))
     if preexisting:
         raise RuntimeError(f"本侧需要干净的 OPP static_kernel 目录，实到 {len(preexisting)} 份已装包")
+    if args.operator_source:
+        # 与 dsv4_hca_single_layer.py 同法：把算子包的 __path__ 指到冻结快照。
+        import vllm_ascend.ops.pypto as operator_package
+
+        source = args.operator_source.resolve()
+        if not (source / "deepseek_v4_flash_hca/decode_hca.py").is_file():
+            raise ValueError(f"无效的 HCA 源码目录：{source}")
+        operator_package.__path__ = [str(source)]
     tokens = args.batch * 6
     report = {
         "status": "RUNNING", "side": args.side, "batch": args.batch, "history": args.history,
@@ -160,6 +170,7 @@ def main():
         "cann": os.environ.get("ASCEND_HOME_PATH"), "opp": os.environ.get("ASCEND_OPP_PATH"),
         "custom_opp": os.environ.get("ASCEND_CUSTOM_OPP_PATH"),
         "weight_nz_mode": args.weight_nz_mode,
+        "operator_source": str(args.operator_source.resolve()) if args.operator_source else "当前 worktree",
         "scope": "单层 attention 半边，正式第 3 层权重，合成历史；不代表整机验收",
     }
     try:
