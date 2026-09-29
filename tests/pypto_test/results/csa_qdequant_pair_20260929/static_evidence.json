@@ -9,6 +9,16 @@
       "TROWSUM": 4
     }
   },
-  "candidate": "reshape复用地址；3处TCONCAT仅为循环外cos/sin/index复制，满行输出不再TCONCAT；原gather逐行TMOV仍在。全kernel静态计数含pipeline展开，不据此声称动态指令减半。",
-  "scope": "CPU生成码；baseline来自Q_B20实验编译中未变的Q反量化任务；计数含尾行/双缓冲展开，不是动态指令数"
+  "scope": "CPU生成码；baseline来自Q_B20实验编译中未变的Q反量化任务；计数含尾行/双缓冲展开，不是动态指令数",
+  "candidate_notes": "reshape复用地址；3处TCONCAT仅为循环外cos/sin/index复制，满行输出不再TCONCAT；原gather逐行TMOV仍在。全kernel静态计数含pipeline展开，不据此声称动态指令减半。",
+  "candidate": {
+    "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_qdequant_pair_20260929/compiled_v2/candidate",
+    "max_vec_end_bytes": 148000,
+    "whole_kernel_static_calls": {
+      "TMOV": 3,
+      "TCONCAT": 3,
+      "TSTORE": 14,
+      "TROWSUM": 4
+    }
+  }
 }
