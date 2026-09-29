@@ -287,7 +287,7 @@ def _decode_csa_tp1_layer(
     # 上游 csa_rope_interleave 用的 t_dim // 4 会丢掉尾行（batch=1 时 t_dim=6 只覆盖 0~3）。
     rope_sign_blocks = (t_dim + CSA_ROPE_SIGN_T_TILE - 1) // CSA_ROPE_SIGN_T_TILE
     with pl.spmd(pl.min(rope_sign_blocks, CSA_ROPE_WORKERS), name_hint="csa_rope_sign",
-                 deps=[offsets_tid]) as rope_tid:
+                 deps=[offsets_tid], allow_early_resolve=True) as rope_tid:
         for rope_rb in pl.range(pl.tile.get_block_idx(), rope_sign_blocks,
                                 pl.min(rope_sign_blocks, CSA_ROPE_WORKERS)):
             rope_t0 = rope_rb * CSA_ROPE_SIGN_T_TILE
@@ -334,7 +334,7 @@ def _decode_csa_tp1_layer(
 
         ori_block_num = pl.tensor.dim(kv_cache, 0)
         kv_cache_flat = pl.reshape(kv_cache, [ori_block_num * BLOCK_SIZE, HEAD_DIM])
-        with pl.spmd(TP1_CSA_WB_WORKERS, name_hint="csa_cache_writeback"):
+        with pl.spmd(TP1_CSA_WB_WORKERS, name_hint="csa_cache_writeback", allow_early_resolve=True):
             wb_worker = pl.tile.get_block_idx()
             for wb_blk in pl.range(wb_worker, wb_blocks, TP1_CSA_WB_WORKERS):
                 wb_t0 = wb_blk * CSA_WB_TOKEN_TILE

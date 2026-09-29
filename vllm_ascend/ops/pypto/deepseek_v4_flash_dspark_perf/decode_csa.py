@@ -259,7 +259,10 @@ def _decode_csa_tp1_layer(
     hc_padded_rows = ((t_dim + LINEAR_T_TILE - 1) // LINEAR_T_TILE) * LINEAR_T_TILE
     inv_rms = pl.create_tensor([hc_padded_rows, 1], dtype=pl.FP32)
     widen_tail = pl.create_tensor([HC_WIDEN_T_TILE, HC_MULT * D], dtype=pl.FP32)
-    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_widen_rms") as _widen_tid:
+    # 这是 hc_pre 前段串行链的第一个任务，原本缺 allow_early_resolve，
+    # 后继任务要等它整组完成才获得派发资格。理由与下面 csa_row_offsets 的注释相同。
+    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_widen_rms",
+                 allow_early_resolve=True) as _widen_tid:
         for widen_blk in pl.range(pl.tile.get_block_idx(), widen_rows,
                                   pl.min(widen_rows, HC_WIDEN_WORKERS)):
             w_t0 = widen_blk * HC_WIDEN_T_TILE
@@ -317,7 +320,7 @@ def _decode_csa_tp1_layer(
     # 上游 csa_rope_interleave 用的 t_dim // 4 会丢掉尾行（batch=1 时 t_dim=6 只覆盖 0~3）。
     rope_sign_blocks = (t_dim + CSA_ROPE_SIGN_T_TILE - 1) // CSA_ROPE_SIGN_T_TILE
     with pl.spmd(pl.min(rope_sign_blocks, CSA_ROPE_WORKERS), name_hint="csa_rope_sign",
-                 deps=[offsets_tid]) as rope_tid:
+                 deps=[offsets_tid], allow_early_resolve=True) as rope_tid:
         for rope_rb in pl.range(pl.tile.get_block_idx(), rope_sign_blocks,
                                 pl.min(rope_sign_blocks, CSA_ROPE_WORKERS)):
             rope_t0 = rope_rb * CSA_ROPE_SIGN_T_TILE
@@ -361,7 +364,7 @@ def _decode_csa_tp1_layer(
 
         ori_block_num = pl.tensor.dim(kv_cache, 0)
         kv_cache_flat = pl.reshape(kv_cache, [ori_block_num * BLOCK_SIZE, HEAD_DIM])
-        with pl.spmd(TP1_CSA_WB_WORKERS, name_hint="csa_cache_writeback"):
+        with pl.spmd(TP1_CSA_WB_WORKERS, name_hint="csa_cache_writeback", allow_early_resolve=True):
             wb_worker = pl.tile.get_block_idx()
             for wb_blk in pl.range(wb_worker, wb_blocks, TP1_CSA_WB_WORKERS):
                 wb_t0 = wb_blk * CSA_WB_TOKEN_TILE
