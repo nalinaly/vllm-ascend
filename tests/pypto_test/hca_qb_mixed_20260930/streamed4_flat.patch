@@ -1,0 +1,44 @@
+--- a/deepseek_v4_flash_hca/decode_hca.py
++++ b/deepseek_v4_flash_hca/decode_hca.py
+@@ -149 +149 @@
+-    q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16, manual_dep=True)
++    q = pl.create_tensor([tokens, H * HEAD_DIM], dtype=pl.BF16, manual_dep=True)
+--- a/deepseek_v4_flash_hca/qkv_mixed.py
++++ b/deepseek_v4_flash_hca/qkv_mixed.py
+@@ -36 +36 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -75 +75 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -25 +25 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -34 +34 @@
+-    q_flat = pl.reshape(q, [t_dim, H * HEAD_DIM])
++    q_flat = q
+@@ -215 +215 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -120 +120 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -131 +131 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -650 +650 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -754 +754 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -1026 +1026 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
+@@ -1408 +1408 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],

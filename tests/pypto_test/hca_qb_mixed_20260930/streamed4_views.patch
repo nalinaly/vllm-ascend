@@ -1,0 +1,49 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -25 +25 @@
+-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
++    q_view: pl.Tensor[[T_DYN, STREAM_HEADS * HEAD_DIM], pl.BF16],
+@@ -33,2 +33 @@
+-    t_dim = pl.tensor.dim(q, 0)
+-    q_flat = pl.reshape(q, [t_dim, H * HEAD_DIM])
++    q_flat = q_view
+@@ -97 +96 @@
+-                    q_flat[out_tg : out_tg + Q_ROPE_T_TILE, h0 : h0 + NOPE_DIM] = q_nope_bf16
++                    q_flat[out_tg : out_tg + Q_ROPE_T_TILE, source_h0 : source_h0 + NOPE_DIM] = q_nope_bf16
+@@ -106 +105 @@
+-                    q_flat[out_tg : out_tg + Q_ROPE_T_TILE, h0 + NOPE_DIM : h0 + HEAD_DIM] = q_rope_bf16
++                    q_flat[out_tg : out_tg + Q_ROPE_T_TILE, source_h0 + NOPE_DIM : source_h0 + HEAD_DIM] = q_rope_bf16
+@@ -190 +189 @@
+-                    pl.store(q_nope_valid, [out_tg, h0_tail], q_flat)
++                    pl.store(q_nope_valid, [out_tg, source_h0_tail], q_flat)
+@@ -203,2 +202,2 @@
+-                    pl.store(q_rope_valid, [out_tg, h0_tail + NOPE_DIM], q_flat)
+-    return q
++                    pl.store(q_rope_valid, [out_tg, source_h0_tail + NOPE_DIM], q_flat)
++    return q_view
+@@ -219,0 +219 @@
++    q_flat = pl.reshape(q, [t_dim, H * HEAD_DIM])
+@@ -244,0 +245,2 @@
++            q_group_view = pl.slice(q_flat, [t_dim, STREAM_HEADS * HEAD_DIM],
++                                    [0, head_base * HEAD_DIM])
+@@ -246 +248 @@
+-                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q,
++                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q_group_view,
+@@ -270,0 +273,2 @@
++            q_group_view = pl.slice(q_flat, [t_dim, STREAM_HEADS * HEAD_DIM],
++                                    [0, head_base * HEAD_DIM])
+@@ -272 +276 @@
+-                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q,
++                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q_group_view,
+@@ -296,0 +301,2 @@
++            q_group_view = pl.slice(q_flat, [t_dim, STREAM_HEADS * HEAD_DIM],
++                                    [0, head_base * HEAD_DIM])
+@@ -298 +304 @@
+-                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q,
++                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q_group_view,
+@@ -322,0 +329,2 @@
++            q_group_view = pl.slice(q_flat, [t_dim, STREAM_HEADS * HEAD_DIM],
++                                    [0, head_base * HEAD_DIM])
+@@ -324 +332 @@
+-                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q,
++                wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx, q_group_view,
