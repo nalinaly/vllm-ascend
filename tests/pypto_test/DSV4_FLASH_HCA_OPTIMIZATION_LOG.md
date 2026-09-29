@@ -4376,3 +4376,87 @@ base 的 5 个），而边际候选（|Δ| < 1.5σ）在加样本后无一例外
 按 §62.3 的 pipe 数据，PTO 的 AIC 忙时里只有 56% 有 mte2 在跑（Native 是 77%），
 这 21 个百分点正对应搬运与计算无法重叠。AIC 总量 10353.8 核·μs 若能降到
 Native 的 8981，B16 的资源下限从 431.4 降到 374，比值下限从 0.792 到 **0.686**。
+
+---
+
+## 81. ★★★★★ 真正的出路：换 `memory_planner=PTOAS`，而且不用改 PyPTO（2026-09-29）
+
+§80 的结论是"PH-MR-001 在算子层无法规避，需要改 PyPTO"。**那个结论是错的。**
+`LowerPipelineToSlots`（pypto 文档 30）写得很清楚：
+
+> `pl.pipeline(N, stage=F)` 表达的是乒乓缓冲的诉求。`LowerPipelineLoops` 用**复制**
+> 来兑现……本 pass 用 `pl.MemRef(name, slots=F)` 表达同一个意图，循环只保留**一份**
+> 循环体……**而且该流水线本就跳过 MemoryReuse。**
+> ……**自门控于 `memory_planner=PTOAS`。**
+
+也就是说：**PTOAS planner 下根本不会产生 `pipeline_membership`，
+也就不会有"多个 group 争 L0"的 PH-MR-001**，而且文档还说
+"`DSA_RP` 与 `PTOAS` 已按实际生命周期放置缓冲"、"dbC=2 是自动的"
+（正是 §67.1 里 Native 有、PTO 没有的 L0C 双缓冲）。
+
+### 81.1 怎么切：一个调用点参数，不碰 PyPTO
+
+`pypto.torch.register(kernel, name, *, constexpr=None, config: CompileOptions | None)`，
+而 `CompileOptions` 有 `memory_planner: MemoryPlanner | None`。
+所以在 `native_adapter.py` 的 register 处加一个 config 即可：
+
+```python
+return cls(pypto.torch.register(
+    decode_hca_tp1_layer_test, "dsv4_hca::attention",
+    config=CompileOptions(platform="a2a3", memory_planner=MemoryPlanner.PTOAS),
+))
+```
+
+⚠ **`CompileOptions.platform` 默认是 `"a2a3sim"`（模拟器），必须显式写 `"a2a3"`。**
+（另一条等价路径是 `with PassContext([], memory_planner=...)` 包住编译调用，
+但 PassContext 是编译期动态作用域，register 这条更稳。）
+
+**`DSA_RP` 直接不可用**：`DSA-RP could not find a placement for 'proj_a_mm'
+within the on-chip memory capacities: canonical greedy found no capacity-fitting placement`。
+
+### 81.2 PTOAS 的阻塞项：8 → 3，且修法就是 Native 的配方
+
+首次切 PTOAS 有 **8 个函数编不过**。三次迭代后降到 3 个：
+
+| 迭代 | 改动 | 修掉的函数 |
+|---|---|---|
+| 初始 | 仅换 planner | — （8 个失败） |
+| 1 | `A_K_TILE` 256→128、`QR_K_TILE` 256→128 | `proj_a_mm`、`proj_a_mm_0`、`qr_proj_matmul`、`qr_proj_matmul_0` |
+| 2 | `PROJ_A_LARGE_N_TILE` 256→128 | `proj_a_mm_1` |
+| 剩余 | — | `qr_rms_norm_quant`、`hca_short_attention_pack`、`hca_unified_attention` |
+
+**报错本身就说明了方向是对的**：
+
+```
+proj_a_mm      : left  overflow, requires 1048576 bits (128 KiB) while 524288 (64 KiB)
+qr_proj_matmul : right overflow, requires  786432 bits ( 96 KiB) while 524288 (64 KiB)
+proj_a_mm_1    : right overflow, requires 1048576 bits (128 KiB) while 524288 (64 KiB)
+```
+
+PTOAS **强制**每个 L0 片只占容量的一半，这样 2 个 slot 才装得下——
+**这正是 Native 的 `L0A_PP_SIZE = L0B_PP_SIZE = 32 KiB`（§66.1）**。
+换句话说：PTOAS 在逼着 kernel 用 Native 的分块，而 PYPTO planner 只是
+默默把 ping-pong 削掉、报一条 perf hint 就算了。
+
+注意 `A_K_TILE=128` 在 PYPTO planner 下是**硬错误**
+（§67.2 的 `ak128`：`Right buffer usage 131072 > 65536`，根因是旧 allocator
+不细分已释放区域），**在 PTOAS 下却是正解**——两个 planner 对同一个分块的判断相反。
+
+### 81.3 剩余 3 个阻塞项与修法方向
+
+| 函数 | 错误 | 方向 |
+|---|---|---|
+| `qr_rms_norm_quant` | `pl.set_validshape cannot narrow a tile view`；改成 `pl.tile.slice(..., valid_shape=)` 后变成 `failed to legalize` | `qkv_proj_rope.py:488` 的 `qr_tile_scale_dq` 是 `pl.reshape` 出来的视图。应当在**源** tile（`qr_scale_quant_row`，形状 `[1, T_TILE]`）上先收窄再 reshape |
+| `hca_short_attention_pack` | `vec overflow, requires 1832960 bits while 1572864 bits available`（229 KB > 192 KB UB） | 8K 短路径的 UB 占用要缩；PTOAS 的 slot 分配比复制路径更保守 |
+| `hca_unified_attention` | `'pto.tmov' op expects a supported tmov address-space pair`，位置 `decode_sparse_attn_hca.py:1194` | 该行附近有一处 PTOAS 不支持的跨内存空间 move，需要换等价写法 |
+
+### 81.4 预期收益
+
+按 §62.3 的 pipe 数据：PTO 的 AIC 忙时里只有 **56%** 有 mte2 在跑，Native 是 **77%**——
+这 21 个百分点正是搬运与计算无法重叠。若 AIC 总量从 10353.8 降到 Native 的
+8981 核·μs，128K/B16 的资源下限从 431.4 降到 374，**比值下限从 0.792 到 0.686**。
+再叠加 PTOAS 自动开的 L0C dbC=2（Native 有、PTO 现在没有），还有额外空间。
+
+**这是目前唯一一条既有明确机制、又不需要改 PyPTO、也不影响 CSA 调试 session 的路线。**
+变体留在 `tests/pypto_test/variants_planner_20260929/ptoas_k128b`，
+从那里接着修剩下 3 个函数即可。
