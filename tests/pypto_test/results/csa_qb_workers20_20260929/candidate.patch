@@ -1,0 +1,96 @@
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/q_projection.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/q_projection.py
+@@ -43,6 +43,7 @@
+     q_proj_i32: pl.Tensor[[QPROJ_MM_T_DYN, H * HEAD_DIM], pl.INT32],
+     tile_rows: pl.Scalar[pl.INDEX],
+     qproj_dep: pl.Scalar[pl.TASK_ID],
++    qproj_workers: pl.constexpr,
+ ):
+     """ND 版：N 索引直接用 `pl.range` 的循环变量，与上游同形。
+ 
+@@ -51,7 +52,7 @@
+     qproj_t_matmul = pl.tensor.dim(q_proj_i32, 0)
+     qproj_full_rows = qproj_t_matmul  # 调用方已按 QPROJ_M_TILE 取整
+     with pl.spmd(
+-        QPROJ_WORKERS,
++        qproj_workers,
+         name_hint="qproj_matmul",
+         deps=[qproj_dep],
+     ) as qproj_tid:
+@@ -61,7 +62,7 @@
+         for qproj_n_idx in pl.range(
+             qproj_worker,
+             QPROJ_N_BLOCKS,
+-            QPROJ_WORKERS,
++            qproj_workers,
+         ):
+             w_col0 = qproj_n_idx * QPROJ_MM_N_TILE
+             # ND retains the split-K pipeline and its existing padded row path.
+@@ -86,17 +87,18 @@
+     q_proj_i32: pl.Tensor[[QPROJ_MM_T_DYN, H * HEAD_DIM], pl.INT32],
+     tile_rows: pl.Scalar[pl.INDEX],
+     qproj_dep: pl.Scalar[pl.TASK_ID],
++    qproj_workers: pl.constexpr,
+ ):
+     """Use upstream's full-K resident weight and compact tail matmul on Native NZ."""
+     qproj_t_matmul = pl.tensor.dim(q_proj_i32, 0)
+     qproj_full_rows = (tile_rows // QPROJ_M_TILE) * QPROJ_M_TILE
+-    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
++    with pl.spmd(qproj_workers, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
+         # Match upstream weight streaming; arithmetic is unchanged.
+         pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+         qproj_worker = pl.tile.get_block_idx()
+         # Keep the column offset provably nonnegative after NZ outlining.
+-        for qproj_round in pl.range(0, (QPROJ_N_BLOCKS - qproj_worker + QPROJ_WORKERS - 1) // QPROJ_WORKERS):
+-            qproj_n_idx = qproj_worker + qproj_round * QPROJ_WORKERS
++        for qproj_round in pl.range(0, (QPROJ_N_BLOCKS - qproj_worker + qproj_workers - 1) // qproj_workers):
++            qproj_n_idx = qproj_worker + qproj_round * qproj_workers
+             w_col0 = qproj_n_idx * QPROJ_MM_N_TILE
+             wq_full = wq_b[0:Q_LORA, w_col0 : w_col0 + QPROJ_MM_N_TILE]
+             for t0 in pl.range(0, qproj_full_rows, QPROJ_M_TILE):
+@@ -113,4 +115,18 @@
+     return q_proj_i32, qproj_tid
+ 
+ 
+-q_proj_q_matmul = _q_proj_q_matmul_nz if QUANT_WEIGHT_NZ else _q_proj_q_matmul_nd
++q_proj_q_matmul_with_workers = _q_proj_q_matmul_nz if QUANT_WEIGHT_NZ else _q_proj_q_matmul_nd
++
++
++@pl.jit.inline(auto_scope=False)
++def q_proj_q_matmul(
++    wq_b: pl.Tensor[[Q_LORA, H * HEAD_DIM], pl.INT8, QUANT_WEIGHT_LAYOUT],
++    qr_i8_matmul: pl.Tensor[[QPROJ_T_PAD, Q_LORA], pl.INT8],
++    q_proj_i32: pl.Tensor[[QPROJ_MM_T_DYN, H * HEAD_DIM], pl.INT32],
++    tile_rows: pl.Scalar[pl.INDEX],
++    qproj_dep: pl.Scalar[pl.TASK_ID],
++):
++    q_proj_i32, qproj_task = q_proj_q_matmul_with_workers(
++        wq_b, qr_i8_matmul, q_proj_i32, tile_rows, qproj_dep, QPROJ_WORKERS,
++    )
++    return q_proj_i32, qproj_task
+--- a/vllm_ascend/ops/pypto/dsv4_csa_qb_workers20_f4861832_v3/qkv_proj_rope.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_qb_workers20_f4861832_v3/qkv_proj_rope.py
+@@ -18,7 +18,7 @@
+     QPROJ_MM_T_DYN,
+     QPROJ_T_PAD,
+     QPROJ_TAIL_M_TILE,
+-    q_proj_q_matmul,
++    q_proj_q_matmul_with_workers,
+ )
+ from ..deepseek_v4_flash_dspark.reduction import ATOMIC_ADD, STORE_ATOMIC
+ from .config import (
+@@ -704,12 +704,13 @@
+             # ND computes the padded INT8 rows. Dequant reads tile_rows only.
+             qproj_t_matmul = ((tile_rows + QPROJ_M_TILE - 1) // QPROJ_M_TILE) * QPROJ_M_TILE
+             q_proj_i32 = pl.create_tensor([qproj_t_matmul, H * HEAD_DIM], dtype=pl.INT32)
+-            q_proj_i32, _qproj_tid = q_proj_q_matmul(
++            q_proj_i32, _qproj_tid = q_proj_q_matmul_with_workers(
+                 wq_b,
+                 qr_i8_matmul,
+                 q_proj_i32,
+                 tile_rows,
+                 qproj_dep,
++                20,
+             )
+             q_proj_q_dequant(
+                 wq_b_scale,

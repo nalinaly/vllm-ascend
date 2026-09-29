@@ -11938,3 +11938,50 @@ Native最新标准七档直接复用。PTO每档5预热20次正式事件、独�
 七档采齐后统一复制window_3原始泳道命名打包；当前仅排队，不外推结果或提前发布下载包。
 CPU Ruff/shell通过；不重新测试Native或整模型，不把七档自回放当成七档跨版本状态验收。
 [阶段目录和复现入口](results/csa_early_chain_seven_20260929/README.md)。
+
+## 447. f4861832七档已齐：长档−11.508%、短档+0.015%，8:2−9.203%（2026-09-29）
+
+task_20260929_154347_45284811883已完成退出0，auto设备0，补128K B4/B8/B24和8K B16/B32。
+复用同一冻结源码主任务151902的长B16/短B24；Native继续复用095651最新标准，不重新占卡。
+CANN9.2/mode2/atomic0/det0，完整HC_pre+norm+CSA+HC_post，5预热20次正式设备事件。
+Native显式npugraph_ex、dynamic=False/fullgraph=True/inplace/static/SuperKernel，诊断只关闭SuperKernel。
+
+| 档位 | Native均值μs | PTO均值μs | PTO耗时变化 | PTO P95μs |
+| --- | ---: | ---: | ---: | ---: |
+| 128K/B4 | 748.298 | 642.806 | −14.098% | 656.580 |
+| 128K/B8 | 859.563 | 738.032 | −14.139% | 748.320 |
+| 128K/B16 | 1130.853 | 965.879 | −14.588% | 986.840 |
+| 128K/B24 | 1281.888 | 1240.775 | −3.207% | 1262.700 |
+| 8K/B16 | 757.482 | 753.921 | −0.470% | 769.420 |
+| 8K/B24 | 915.371 | 917.581 | +0.241% | 933.760 |
+| 8K/B32 | 1062.079 | 1064.999 | +0.275% | 1088.760 |
+
+各上下文内batch等权，再长短8:2；均为设备0但不同任务，不把累计结果归因early单项。
+PTO P95/P50为1.0154–1.0259、max/P50最高1.0405，0/140超过各档P50的105%；
+短档P95仍高于Native，不以当前无大尖峰关闭历史长尾/EP16问题。
+七档自回放八类状态、保护区、28窗官方join及worker覆盖通过；跨版本状态仍依据两档/尾行，
+不是Native/PTO逐元素、模型token/DSpark或EP16 forward验收，精度版迁移仍后置。
+
+收集器补齐融合收尾编译特化后缀归一化，逐档确认proj_b_act_hc_post worker为ceil(T/4)，
+避免把旧hc_post消失当成没有收尾工作。新版核内差距文档与清单已更新，保留Native/PTO不同计时边界。
+七份window_3原始泳道已汇集、编号且按f4861832命名；不改事件、不挑快窗。
+下载包PTO_CSA_7cases_f4861832_20260929.zip，来源清单保留原始四窗、PyTorch JSON和任务。
+[完整报告](results/csa_early_chain_seven_20260929/RESULTS.md)、
+[核内细分](results/csa_early_chain_seven_20260929/TASKS.md)、
+[泳道目录](results/csa_early_chain_seven_20260929/download_pto_swimlanes/README.md)。
+
+## 448. 独立Q_B 24→20候选完成CPU兼容检查，正常排队长B16/短B24（2026-09-29）
+
+参考HCA的独立worker实验，但CSA多波占核来源不同，不能直接外推HCA收益。
+从f4861832已测包复制baseline/candidate，仅共享helper增加显式constexpr分工，性能入口传20；
+保留原五参数入口显式传24，避免影响精度版默认行为。ND/NZ列覆盖均一次，算术/依赖/early保持。
+PyPTO嵌套dep不读取constexpr默认值、inline tuple需解包后返回，两项CPU失败已记录并修正；
+都未占卡。v3完整性能编译/load和两版入口解析通过，ND/NZ旧调用分别CPU编译/load确认仍派发24。
+生成AICPU代码确认候选Q_B为20；这不是精度版整模型或设备验收。
+
+16:04以auto提交task_20260929_160457_135068517850，确认设备0上running，max-time7200。
+只做长B16/短B24反序同卡两侧5预热20次正式事件及四窗，八类状态零容差/图/保护区先过。
+worker份数改变，按全部Q_B总核时、跨度、query→Score链与完整CSA/P95判断，不直接比较单worker均值。
+共享旧入口不变、生产仍f4861832；不叠加KV链early，不重新测Native/七档/整模型。
+私有源码只读，CPU Ruff/shell/diff通过；统一format.sh ci仍因缺pre-commit未运行。尚无设备收益结论。
+[候选与复现入口](results/csa_qb_workers20_20260929/README.md)。

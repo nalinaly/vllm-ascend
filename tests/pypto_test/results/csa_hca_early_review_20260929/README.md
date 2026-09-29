@@ -85,3 +85,11 @@ KV 链和 Q_B worker 数分别对照，不与这项或当前 Sparse 计划候选
 本次尚未进行这些设备对照，不能声称 CSA 已获得 HCA 的约 20 μs 收益。
 
 [只读分析入口](analyze.py)、[八窗逐任务前置/标志/时戳与原始路径](existing_windows.json)。
+
+## 后续结论
+
+本页上文是设备对照前的只读审查。之后七处Indexer链标志已在CSA验证并采用（f4861832）：
+长B16/短B24完整CSA−0.728%/−1.872%，8:2−0.957%；长档P95+1.980μs单列。
+[独立A/B及边界](../csa_indexer_early_chain_20260929/README.md)、
+[包含后续已采用策略的七档实测](../csa_early_chain_seven_20260929/RESULTS.md)。
+Q_B 24→20为[另一个独立候选](../csa_qb_workers20_20260929/README.md)，尚无设备收益结论。

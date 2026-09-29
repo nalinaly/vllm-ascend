@@ -1,0 +1,45 @@
+{
+  "baseline": "f4861832",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-indexer-early-chain-7b296153-candidate",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-qb-workers20-f4861832-v3",
+  "variant": "pkg:dsv4_csa_qb_workers20_f4861832_v3",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "性能Q_B派发24→20；共享ND/NZ显式constexpr，原五参数wrapper显式传24保护精度调用",
+  "column_coverage": {
+    "64": {
+      "24": {
+        "total_columns": 64,
+        "min_tiles": 2,
+        "max_tiles": 3
+      },
+      "20": {
+        "total_columns": 64,
+        "min_tiles": 3,
+        "max_tiles": 4
+      }
+    },
+    "128": {
+      "24": {
+        "total_columns": 128,
+        "min_tiles": 5,
+        "max_tiles": 6
+      },
+      "20": {
+        "total_columns": 128,
+        "min_tiles": 6,
+        "max_tiles": 7
+      }
+    }
+  },
+  "scope": "独立私有候选；不叠加Q_B early、dequant worker或其他算术/任务/依赖改动",
+  "comparison_scope": "Q_B工作份数改变，必须看整组总核时/跨度与完整CSA，不能只比单worker均值"
+}

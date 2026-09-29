@@ -9,7 +9,7 @@
 七档：128K B4/B8/B16/B24、8K B16/B24/B32，B40继续退役。
 本轮复用[已完成的128K/B16和8K/B24](../csa_indexer_early_chain_20260929/RESULTS.md)，
 主任务task_20260929_151902_390858217467在auto设备0完成，含各四窗与PyTorch profile。
-只补其余五档，15:43正常auto提交task_20260929_154347_45284811883，当前确认设备0上running。
+只补其余五档，15:43正常auto提交task_20260929_154347_45284811883，已在设备0完成退出0。
 本轮不是优化候选重复筛选，而是三项已采用策略的同源码阶段覆盖。
 
 沿用CANN9.2、NZ mode2、atomic0/det0、同一真实第二个CSA层权重/合成历史，EPLB关闭。
@@ -25,7 +25,13 @@ npugraph_ex、dynamic=False、inplace/static/SuperKernel开启；核内诊断只
 采齐后收集完整CSA/P95、Indexer与Sparse核内及调度明细，补充新融合收尾任务的工作量，
 防止沿用旧报表时漏掉已不存在的独立hc_post。统一复制window_3原始JSON并按七档命名打包，
 不挑最快窗口，不更改事件，来源清单保留每份PyTorch profile和原始四窗路径。
-当前未完成七档，不提供拼接版本的性能表或下载包。
+七档已齐：长档均值变化−11.508%、短档+0.015%，8:2−9.203%；PTO的140次采样均未超过各档P50的105%。
+短档P95高于Native，当前正常样本不关闭EP16或历史间歇长尾。
+
+[正式结果与P95](RESULTS.md)、[全部任务及融合收尾](TASKS.md)、[精简证据](summary.json)。
+[七份泳道目录](download_pto_swimlanes/README.md)，压缩包：
+`PTO_CSA_7cases_f4861832_20260929.zip`。固定window_3，文件内事件未改；原始PyTorch profile路径在SOURCES.tsv。
+报表新增融合收尾时补齐了编译特化后缀归一化，实际worker数逐档验证，不把缺失任务当0。
 
 [来源](source.json)、[五档排队入口](run.sh)、[每档入口](run_side.sh)、
 [收集与融合收尾明细](collect.py)、[固定窗口汇集](bundle.py)。

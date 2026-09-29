@@ -1,6 +1,7 @@
 """复用最新early双档，补五档；沿用Native七档与原报告口径，增加融合收尾明细。"""
 
 import importlib.util
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -50,6 +51,10 @@ def main():
 
     def with_fused_tail(name, path):
         module = original_load(name, path)
+        if path.parent.name == "upstream_725":
+            canonical = module.canonical
+            module.canonical = lambda task: ("proj_b_act_hc_post" if re.fullmatch(
+                r"proj_b_act_hc_post(?:_\d+)?", canonical(task)) else canonical(task))
         if path.parent.name == "csa_native_inplace_seven_20260929":
             original_write = module.write_task_details
 
