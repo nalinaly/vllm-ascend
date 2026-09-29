@@ -12186,3 +12186,35 @@ P95长973.800→987.600、短777.160→781.500；max长974.080→995.620、短79
 KV Native NZ仍是独立排队候选，不叠加这个失败分支。
 [两档及四窗](results/csa_oa_short_branch_20260929/RESULTS.md)、
 [取舍](results/csa_oa_short_branch_20260929/decision.json)。
+
+## 459. 主KV直接读取Native NZ的核内收益成立，并补审其余权重覆盖（2026-09-29）
+
+task_20260929_174400_225474124825在auto设备1完成退出0，CANN9.2/mode2/atomic0/det0。
+八类跨版本完整状态零容差、图重放保护区与16个官方DFX窗口通过。
+两档wkv均为Native/PTO format29、逻辑[512,4096]、物理[256,32,16,16]且data_ptr相同。
+它是attention.wkv主投影，将4096维隐藏状态映射到512维KV表示，随后归一化和RoPE；不是cache。
+
+同工作量KV核时长128K/B16 23.320→12.498μs（−46.408%）、短8K/B24 37.961→19.221（−49.367%），
+8:2为−47.000%，两档四窗范围均完全分离。完整CSA分别969.455→970.119（+0.068%）与
+919.268→913.069（−0.674%），8:2仅−0.080%；不能将KV核时收益等同完整区间收益。
+P95长981.240→983.280、短934.060→929.320；max长984.480→993.680、短936.520→939.260。
+四组均0/20超过各自P50的105%，但保留长P95及两档max上升的事实，不宣称所有尾部消失。
+按用户要求保留明确核内收益；生产尚未接入，先补旧快照双向迁移、ND/atomic及尾行兼容。
+
+本次审查确认，已提交PTO的NZ只覆盖四张Q/O，mode=2没有失效，但PTO接入范围不完整。
+主wkv、Indexer的wq_b和weights_proj在Native为NZ，旧PTO适配器却按ND准备；
+其中主wkv和weights_proj还需要转置。加载副本只影响加载阶段和驻留显存，不计入每步CSA事件。
+Compressor的wkv/wgate是不同权重：Native融合接口显式要求keep_weight_nd，两个Compressor共四张应保留ND。
+清单增加C5/C6，避免再把“四张目标矩阵已NZ”当成“全部矩阵已NZ”。
+随后按用户要求把静态matmul B全部审查：再增加两个Compressor的四张BF16投影和共享Hadamard，
+共八张仍以ND进入生产PTO，KV已测，其余七张待做；清单补C7/C8。
+纠正前述容易误解的边界：Native要求Compressor原权重ND，不等于PTO必须ND，
+PTO可在初始化另备NZ而保留Native路径。四张原始NZ数据合计20MiB/CSA层，需记录驻留成本。
+HC的FP32 B单列，不能为布局擅自降精度；运行时Score/Attention B不列入静态初始化转换。
+
+KV私有v2兼容副本的旧快照双向迁移/拒绝错误元数据等12项CPU检查通过。
+首次三个真实根签名子进程从生产cwd误导入旧源码而失败；切到私有副本cwd后仅重跑这3项，
+mode0/1/2全部通过。未把首轮失败隐去，也未重跑已通过的12项；设备ND/atomic/尾行仍待验证。
+[两档结果](results/csa_kv_native_nz_20260929/RESULTS.md)、
+[Native原地址证据](results/csa_kv_native_nz_20260929/bindings.json)、
+[阶段取舍](results/csa_kv_native_nz_20260929/decision.json)。

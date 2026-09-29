@@ -671,7 +671,7 @@ PTO 的 Top-K 及六类 cache/state 均不变。外部保护检查不能替代�
 功能缺陷已关闭；剩余浮点误差仍为测量结果，不放宽容差或自动标数值验收通过。
 迁移后精度版整模型 token/DSpark 看护已通过；性能版128K/8K矩阵及六档profiling/泳道已完成。
 
-### C NZ 四张权重与 ND 保留
+### C Native NZ 权重复用与 ND 保留
 
 建议结构：根入口具有明确布局签名，准备权重、根签名、回放共同使用同一布局配置；
 内部需要不同写法的 matmul 拆 ND/NZ 子函数。避免在最外层复制整套适配实现，
@@ -683,12 +683,38 @@ PTO 的 Top-K 及六类 cache/state 均不变。外部保护检查不能替代�
 | C2 | wo_b 保留 Native 二维 NZ 存储，解决组偏移证明，保留 ND 函数 | 不改变逻辑权重；根 ABI、适配、回放同时修改；CPU 编译和受影响代表场景通过，实测收益 | C1 | 进行中 |
 | C3 | wq_a 的 NZ 偏移可证性、分块与归约方案 | 先查当前/上游能力，算子侧解法优先；不为编译通过丢失累加同步；必要编译器修复按依赖边界执行 | C1、B1 | 进行中 |
 | C4 | 同配置比较 mode=0/1/2，选正式主口径 | mode=1/2 都有真实生效证据；比较完整区间、整模型和显存后选定，ND 可回归；无收益项如实记录 | C1～C3、B2/B3 | 进行中 |
+| C5 | 补齐主 KV 投影的 Native NZ 原地址读取 | 保留已测核内收益；补旧快照双向迁移、ND/atomic 与尾行兼容后接入性能版；精度版数学顺序保持 | C1、B1 | 两档设备通过，兼容收尾中，尚未接生产 |
+| C6 | Indexer Q 投影和 head 加权投影的 NZ 入口 | 分别核对 Native 实际格式、矩阵方向和生成码；使用 Native 原地址；只补受影响的代表档位与状态检查 | C5 | 待做，当前两张仍被适配为 ND |
+| C7 | 两个 Compressor 的四张 BF16 投影权重使用 NZ | PTO 初始化时准备 NZ；保留 Native 融合接口所需 ND；核内读取、根签名及回放同步适配，记录额外驻留显存与核时收益 | C5、C6 | 待做，不能因 Native 接口要求 ND 就跳过 PTO NZ 优化 |
+| C8 | Q/K 共用 Hadamard 矩阵使用 NZ | 初始化时准备一次并供两条路径复用；保持矩阵方向与缩放顺序，只对比受影响核时和状态 | C5 | 待做，当前 BF16 [128,128] ND |
+
+#### 2026-09-29 覆盖审查
+
+当前 CANN 9.2、mode=2 下，Native 的主 `attention.wkv` 为 BF16 NZ，逻辑形状
+`[512,4096]`，将隐藏状态投影为 512 维 KV 表示；它不是 KV cache，也不是 Compressor 的 `wkv`。
+已提交生产 PTO 仍要求该权重为 `[4096,512]` ND，加载时解包并转置成私有副本。
+KV 候选已在长 B16、短 B24 确认 format29 和 Native 原地址；核时分别下降 46.408%/49.367%，
+完整 CSA 变化为 +0.068%/−0.674%，不能把核内收益或一次性加载转换直接当作完整 CSA 收益。
+
+mode=2 已接通的四张 Q/O 权重不能代表全部投影权重已经使用 NZ。剩余明确缺口还有
+`indexer.wq_b`（PTO 名 `idx_wq_b`）和 `indexer.weights_proj`，Native profile 为 NZ 输入，
+当前 PTO 根签名和适配器仍按 ND 处理；后者还转置方向。此前 NZ 覆盖审查不完整。
+主/Indexer Compressor 的四张 `wkv/wgate` 则由 Native 显式 `keep_weight_nd=True`，
+Native 原权重应保持 ND，但 PTO 的两个实现都以 Cube matmul 消费它们，适合单独准备 NZ；
+不改变 Native 融合接口，新增显存也必须记录。`hadamard_idx` 同样是 BF16 静态 matmul B，
+应纳入初始化 NZ 范围，供 Indexer Q 和压缩 K 两条路径共用。
+因此当前生产共有八张 BF16/INT8 静态矩阵仍以 ND 进入 matmul，KV 候选已测，其余七张待做。
+`hc_attn_fn` 虽也是 matmul B，但为 FP32，不直接套用当前 BF16/INT8 NZ 接入策略，
+不为改布局擅自降精度；运行期产生的 Score/Attention B 及 scale/norm 向量也不属于初始化权重转换。
+证据见 [KV 原地址记录](results/csa_kv_native_nz_20260929/bindings.json)、
+[Native 各任务实际输入形状](results/csa_early_chain_seven_20260929/TASKS.md)。
 
 #### C1～C3 当前实现与下一步
 
 - PyPTO `712adef8` 移植上游 `8a944cf2`、`1d7890e9`、`0c8a2753` 与必要的 slice 布局传播，
   保留调试分支 kernel ABI；114 项 NZ/layout/dispatch/formal Out CPU 回归通过。
-- 两版相同根布局：mode=0 全 ND，mode=1 为 `wq_b/wo_b` NZ，mode=2 四张全 NZ。
+- 此处仅指两版四张 Q/O 根权重：mode=0 四张 ND，mode=1 为 `wq_b/wo_b` NZ，mode=2 四张 NZ；
+  不代表 KV 和 Indexer 投影已经接上 NZ，剩余范围见 C5/C6。
   四张根几何与 Native 相同：`wq_a=[1024,4096]`、`wq_b=[1024,32768]`、
   `wo_a=[8,4096,1024]`、`wo_b=[8192,4096]`。不沿用上游私有转置/分组缓冲。
 - `wo_b` 的 host 范围在 Simplify 后 outlining 时丢失；NZ matmul 使用独立 incore 函数，
