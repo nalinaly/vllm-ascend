@@ -100,8 +100,10 @@ Q_B的24份工作与Compressor/Indexer投影争用AIC，不能据此认为20份�
    随后[Q反量化双head合批](results/csa_qdequant_pair_20260929/README.md)也不采用：
    目标核长+12.492%、短+20.088%，8:2 +14.012%；CSA 8:2 +1.179%，八类状态/16窗通过。
    原gather仍逐行处理，去掉内层TCONCAT和减少循环次数并未带来设备收益。
-   当前[整块Gather候选](results/csa_qrope_flat_gather_20260929/README.md)保持单head和48-worker，
-   参考AscendC整块索引，将8×64变为一次1×512 tile.gather；CPU确认无逐行TMOV，双档设备对照在跑。
+   [整块Gather](results/csa_qrope_flat_gather_20260929/README.md)已采用，保持单head和48-worker：
+   参考AscendC整块索引，将8×64变为一次1×512 tile.gather；CPU确认无逐行TMOV。
+   目标核长−3.980%、短−1.821%，8:2 −3.548%，但四窗范围重叠；CSA 8:2 −0.754%，P95/max均降。
+   八类完整状态、16窗及H127/B3/padding通过，仅性能版单文件。本页七档表尚未包含此最新局部改动。
 5. 保留长小batch Score、长B24与短档Sparse的核内入口；128K优先、长短8:2，真实核内收益保留，
    明显场景分化在同一算子内部按输入选择。两版Sparse计划提前已否定，不能只凭少GM/少dummy推断收益。
 6. [上游725μs泳道](results/csa_scheduling_20260927/upstream_725/README.md)缺完整版本/Scheduler View且输入FP32，

@@ -379,5 +379,18 @@ A3低层Gather又按validRow循环。独立候选保持逐head，先给原有局
 显式Tile的rsqrt通过同形FP32 scratch生成三参数TRSQRT，与原高精度实现一致。
 CPU完整编译/load通过，满行三个展开调用均为1×512，整核TMOV三处降为零、无TCONCAT，
 Vec末端105504→106592字节。源代码差异源于消除实际lowering中的逐行搬运，不改变vLLM cache或NZ布局。
-正常auto单卡只测长B16/短B24，完整状态、目标核/CSA/P95待结果。
+正常auto单卡长B16/短B24已完成：八类跨版本状态零差异、16窗官方覆盖通过；
+目标核−3.980%/−1.821%，8:2 −3.548%，四窗范围仍重叠；CSA 8:2 −0.754%、P95/max均下降。
+H127/B3/T18与active-B 3/2/1/3边界通过后已保留性能版单文件，生产两入口解析通过。
+精度版/工具链/调度未改，最新完整七档仍对应此前f4861832，不外推本项局部收益。
 [候选和编译依据](results/csa_qrope_flat_gather_20260929/README.md)。
+
+## 9. 下一步O-A研究须区分NZ与ND入口
+
+本地ops-nn19614968的`transpose_batch_mat_mul.cpp:73`起在FORMAT_X2=NZ时实例化
+TransposeBatchMatMulKernel与MM_CFG_K_SHIFT；其InnerProcess调用Matmul IterateAll。
+`pp_matmul_ein_sum_kernel.h`虽然有跨输出块预读和K轮转，当前cpp中的该模板实例化处位于ND分支，
+不能把Pp的手写双缓冲直接称作当前NZ O-A的实际路径。MM_CFG_K_SHIFT定义在
+`mat_mul_v3_common.h:78`，下一步应沿此配置追实际L1/L0分块与重排条件，再核对PTO生成码。
+当前PTO NZ O-A依次累加K256块；若引入K轮转会改变浮点归约顺序，必须单列算术差异，
+不能按无损搬运采用。这里只记录已核实的源码入口区别，未新增候选或设备测试。
