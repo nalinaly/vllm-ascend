@@ -29,3 +29,12 @@ Native和PTO的KV工作分工分别不同，不能把各自单核均值直接相
 
 [补丁](candidate.patch)、[冻结来源](source.json)、[CPU编译](compile_candidate.json)、
 [生成码类型与指令证据](static_evidence.json)、[准备入口](prepare.py)。
+
+## 若设备收益成立，再做的兼容工作
+
+旧快照的weight_layouts仅记录四张根权重，但tensors.wkv已记录ND/layout与source_format。
+迁移应核对该显式元数据及已知[4096,512] BF16几何、连续存储，不能只凭shape猜来源；
+其他缺失/未知布局仍拒绝。还需验证新性能版NZ快照回放到旧方向精度版，不能只覆盖旧→新。
+接入时两版根布局元数据都应包含wkv，矩阵方向由真实根签名决定；精度版数学接口与ND准备行为保持。
+两种方向转换继续要求独占只读存储，保留同布局同形状的零转换分支。
+复用现有test_csa_replay.py与test_csa_nz_config.py补受影响项即可，无需重跑无关测试。
