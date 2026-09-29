@@ -130,6 +130,10 @@ CSA的Indexer Compressor五处、Attention projection和row offsets形成待验�
 长档DFX Score核时约+4.4%，本项不能宣称incore加速。阶段出口复用这两档，补其余五档并汇集新版七份泳道。
 HCA约20μs为其单项实测，不能当成CSA收益；Q_B worker 24→20另列候选。
 
+阶段出口[最新同源码七档](results/csa_early_chain_seven_20260929/README.md)复用f4861832对应冻结副本与已测两档，
+15:43正常auto提交task_20260929_154347_45284811883，确认设备0上running，只补其余五档PTO。
+Native沿用已有标准，不重测；采齐后给完整七档性能/核内/P95及统一window_3泳道包，暂不发布未齐表格。
+
 | 顺序 | 近期工作 | 完成证据/判据 |
 | --- | --- | --- |
 | 1 | Native新标准七档已完成 | dynamic=False/inplace=True/static+superkernel、显式named backend自管图；[七档实测](results/csa_native_inplace_seven_20260929/NATIVE_RESULTS.md)与八类同图状态通过，PTO配套采集不阻塞发布，不再试开关 |
