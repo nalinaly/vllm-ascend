@@ -1,0 +1,51 @@
+--- a/deepseek_v4_flash_dspark/q_projection.py
++++ b/deepseek_v4_flash_dspark/q_projection.py
+@@ -27 +27 @@
+-QPROJ_MM_N_TILE = 256 if QUANT_WEIGHT_NZ else 512
++QPROJ_MM_N_TILE = 128 if QUANT_WEIGHT_NZ else 512
+@@ -104,17 +104,28 @@
+-        # Keep the column offset provably nonnegative after NZ outlining.
+-        for qproj_round in pl.range(0, (QPROJ_N_BLOCKS - qproj_worker + QPROJ_WORKERS - 1) // QPROJ_WORKERS):
+-            qproj_n_idx = qproj_worker + qproj_round * QPROJ_WORKERS
+-            w_col0 = qproj_n_idx * QPROJ_MM_N_TILE
+-            for t0 in pl.range(0, qproj_t_matmul, QPROJ_PIPE_M_TILE):
+-                m_rows = pl.min(QPROJ_PIPE_M_TILE, tile_rows - t0)
+-                qr_first = pl.slice(qr_i8_matmul, [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE], [t0, 0],
+-                                    valid_shape=[m_rows, QPROJ_PIPE_K_TILE])
+-                wq_first = wq_b[0:QPROJ_PIPE_K_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE]
+-                # 首段由 matmul 生成累加器，携带有效行的 compact 形态。
+-                col_acc = pl.matmul(qr_first, wq_first, out_dtype=pl.INT32)
+-                for k0 in pl.pipeline(QPROJ_PIPE_K_TILE, Q_LORA, QPROJ_PIPE_K_TILE, stage=2):
+-                    qr_chunk = pl.slice(qr_i8_matmul, [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE], [t0, k0],
+-                                        valid_shape=[m_rows, QPROJ_PIPE_K_TILE])
+-                    wq_chunk = wq_b[k0 : k0 + QPROJ_PIPE_K_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE]
+-                    col_acc = pl.matmul_acc(col_acc, qr_chunk, wq_chunk)
+-                q_proj_i32[t0 : t0 + QPROJ_PIPE_M_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE] = col_acc
++        for t0 in pl.range(0, qproj_t_matmul, QPROJ_PIPE_M_TILE):
++            m_rows = pl.min(QPROJ_PIPE_M_TILE, tile_rows - t0)
++            # Retain four independent Mat tiles: L0 can use the baseline TMOV.
++            a0 = pl.load(qr_i8_matmul, [t0, 0], [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE],
++                         valid_shape=[m_rows, QPROJ_PIPE_K_TILE], target_memory=pl.MemorySpace.Mat)
++            a1 = pl.load(qr_i8_matmul, [t0, QPROJ_PIPE_K_TILE], [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE],
++                         valid_shape=[m_rows, QPROJ_PIPE_K_TILE], target_memory=pl.MemorySpace.Mat)
++            a2 = pl.load(qr_i8_matmul, [t0, 2 * QPROJ_PIPE_K_TILE], [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE],
++                         valid_shape=[m_rows, QPROJ_PIPE_K_TILE], target_memory=pl.MemorySpace.Mat)
++            a3 = pl.load(qr_i8_matmul, [t0, 3 * QPROJ_PIPE_K_TILE], [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE],
++                         valid_shape=[m_rows, QPROJ_PIPE_K_TILE], target_memory=pl.MemorySpace.Mat)
++            for qproj_round in pl.pipeline(
++                0, (QPROJ_N_BLOCKS - qproj_worker + QPROJ_WORKERS - 1) // QPROJ_WORKERS, stage=2,
++            ):
++                w_col0 = (qproj_worker + qproj_round * QPROJ_WORKERS) * QPROJ_MM_N_TILE
++                w0 = pl.load(wq_b, [0, w_col0], [QPROJ_PIPE_K_TILE, QPROJ_MM_N_TILE],
++                             target_memory=pl.MemorySpace.Mat)
++                w1 = pl.load(wq_b, [QPROJ_PIPE_K_TILE, w_col0], [QPROJ_PIPE_K_TILE, QPROJ_MM_N_TILE],
++                             target_memory=pl.MemorySpace.Mat)
++                col_acc = pl.tile.matmul(a0, w0)
++                w2 = pl.load(wq_b, [2 * QPROJ_PIPE_K_TILE, w_col0], [QPROJ_PIPE_K_TILE, QPROJ_MM_N_TILE],
++                             target_memory=pl.MemorySpace.Mat)
++                col_acc = pl.tile.matmul_acc(col_acc, a1, w1)
++                w3 = pl.load(wq_b, [3 * QPROJ_PIPE_K_TILE, w_col0], [QPROJ_PIPE_K_TILE, QPROJ_MM_N_TILE],
++                             target_memory=pl.MemorySpace.Mat)
++                col_acc = pl.tile.matmul_acc(col_acc, a2, w2)
++                col_acc = pl.tile.matmul_acc(col_acc, a3, w3)
++                pl.store(col_acc, [t0, w_col0], q_proj_i32)

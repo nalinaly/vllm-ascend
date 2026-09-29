@@ -1,0 +1,200 @@
+{
+  "source": {
+    "baseline_commit": "a7a9f314",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/base",
+      "late_dq": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/late_dq",
+      "early_q_late_dq": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/early_q_late_dq"
+    },
+    "change": "disable Q dequant early resolution; separately combine with early Q projection",
+    "invariants": "same arithmetic, worker counts, tiling and task dependencies; no toolchain edits"
+  },
+  "pairs": {
+    "late_dq": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/late_dq"
+      },
+      "device": 4,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "case": [
+        131072,
+        16
+      ],
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 547.25,
+          "max_us": 592.5,
+          "mean_us": 562.6,
+          "p50_us": 559.5
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 561.0,
+          "max_us": 600.25,
+          "mean_us": 582.85,
+          "p50_us": 582.625
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 579.25,
+          "candidate_us": 580.625
+        },
+        {
+          "base_us": 558.25,
+          "candidate_us": 581.0
+        },
+        {
+          "base_us": 558.75,
+          "candidate_us": 574.625
+        },
+        {
+          "base_us": 557.625,
+          "candidate_us": 598.125
+        },
+        {
+          "base_us": 559.125,
+          "candidate_us": 579.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qresolve_20260930/pair_late_dq_h131072_b16/report.json"
+    },
+    "early_q_late_dq": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qresolve-a7a9f314-20260930/early_q_late_dq"
+      },
+      "device": 4,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "case": [
+        131072,
+        16
+      ],
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 587.5,
+          "max_us": 634.0,
+          "mean_us": 602.725,
+          "p50_us": 596.625
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 583.25,
+          "max_us": 622.75,
+          "mean_us": 603.9,
+          "p50_us": 602.125
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 631.375,
+          "candidate_us": 602.125
+        },
+        {
+          "base_us": 591.75,
+          "candidate_us": 620.0
+        },
+        {
+          "base_us": 600.125,
+          "candidate_us": 592.875
+        },
+        {
+          "base_us": 596.5,
+          "candidate_us": 603.375
+        },
+        {
+          "base_us": 593.875,
+          "candidate_us": 601.125
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qresolve_20260930/pair_early_q_late_dq_h131072_b16/report.json"
+    }
+  },
+  "decision": "not adopted: late_dq mean regresses; combination mean neutral, lower sampled max retained as a lead, not ruled out",
+  "limits": "10 actual replays per side, single-card screening; no new Native or full-model claim"
+}

@@ -1,0 +1,2220 @@
+{
+  "status": "MEASURED",
+  "baseline_commit": "a7a9f314",
+  "case": [
+    131072,
+    16
+  ],
+  "passes": [
+    {
+      "pass": "p1_native",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_anchor_20260930/h131072_b16_compatible/p1_native/report.json",
+      "side": "native",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1",
+      "operator_source": "当前 worktree",
+      "samples_us": [
+        542.75,
+        537.5,
+        553.75,
+        548.5,
+        559.0,
+        554.5,
+        552.25,
+        550.75,
+        534.75
+      ],
+      "statistics": {
+        "count": 9,
+        "min_us": 534.75,
+        "max_us": 559.0,
+        "mean_us": 548.1944444444445,
+        "p50_us": 550.75
+      },
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          true
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "backend_options": {
+        "force_eager": false,
+        "inplace_pass": true,
+        "clone_input": false,
+        "clone_output": false,
+        "static_kernel_compile": true,
+        "super_kernel_optimize": true
+      },
+      "eager_comparison": {
+        "x_out": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.00025832636810872354,
+          "mismatches": 15814,
+          "first_mismatches": [
+            [
+              4,
+              0,
+              10
+            ],
+            [
+              4,
+              0,
+              23
+            ],
+            [
+              4,
+              0,
+              38
+            ],
+            [
+              4,
+              0,
+              51
+            ],
+            [
+              4,
+              0,
+              60
+            ],
+            [
+              4,
+              0,
+              63
+            ],
+            [
+              4,
+              0,
+              65
+            ],
+            [
+              4,
+              0,
+              66
+            ]
+          ]
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0078125,
+          "rmse": 5.198251420362164e-06,
+          "mismatches": 9,
+          "first_mismatches": [
+            [
+              35,
+              0,
+              0,
+              215
+            ],
+            [
+              53,
+              2,
+              0,
+              281
+            ],
+            [
+              53,
+              5,
+              0,
+              123
+            ],
+            [
+              71,
+              5,
+              0,
+              179
+            ],
+            [
+              80,
+              5,
+              0,
+              333
+            ],
+            [
+              98,
+              1,
+              0,
+              261
+            ],
+            [
+              98,
+              2,
+              0,
+              286
+            ],
+            [
+              116,
+              4,
+              0,
+              68
+            ]
+          ]
+        },
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 8929280,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2367488,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "guards": {
+        "swa": {
+          "status": "PASS",
+          "changed_bytes": 89486,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "compressed": {
+          "status": "PASS",
+          "changed_bytes": 0,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "state": {
+          "status": "PASS",
+          "changed_bytes": 383936,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "metadata.positions": {
+          "status": "PASS",
+          "shape": [
+            96
+          ],
+          "dtype": "torch.int64",
+          "expected_shape": [
+            96
+          ],
+          "expected_dtype": "torch.int64",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 96,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            4098
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            4098
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 65568,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            34
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            34
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 544,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            16386
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            16386
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 262176,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.compact_slots": {
+          "status": "PASS",
+          "shape": [
+            16,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 32,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      }
+    },
+    {
+      "pass": "p2_pto",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_anchor_20260930/h131072_b16_compatible/p2_pto/report.json",
+      "side": "pto",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-al1-slices-a7a9f314-20260930/base",
+      "samples_us": [
+        646.5,
+        640.5,
+        610.5,
+        598.0,
+        607.25,
+        622.5,
+        612.5,
+        599.5,
+        601.75
+      ],
+      "statistics": {
+        "count": 9,
+        "min_us": 598.0,
+        "max_us": 646.5,
+        "mean_us": 615.4444444444445,
+        "p50_us": 610.5
+      },
+      "compiler": {
+        "static_compile_results": [],
+        "static_super_flags": [],
+        "installed_static_packages": 0,
+        "pto_dispatch_calls": 3,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "backend_options": {
+        "force_eager": false,
+        "inplace_pass": true,
+        "clone_input": false,
+        "clone_output": false,
+        "static_kernel_compile": true,
+        "super_kernel_optimize": false
+      },
+      "eager_comparison": {
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 8929280,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2367488,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "guards": {
+        "swa": {
+          "status": "PASS",
+          "changed_bytes": 89489,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "compressed": {
+          "status": "PASS",
+          "changed_bytes": 0,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "state": {
+          "status": "PASS",
+          "changed_bytes": 383976,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "metadata.positions": {
+          "status": "PASS",
+          "shape": [
+            96
+          ],
+          "dtype": "torch.int64",
+          "expected_shape": [
+            96
+          ],
+          "expected_dtype": "torch.int64",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 96,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            4098
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            4098
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 65568,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            34
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            34
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 544,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            16386
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            16386
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 262176,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.compact_slots": {
+          "status": "PASS",
+          "shape": [
+            16,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 32,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      }
+    },
+    {
+      "pass": "p3_pto",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_anchor_20260930/h131072_b16_compatible/p3_pto/report.json",
+      "side": "pto",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1",
+      "operator_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-al1-slices-a7a9f314-20260930/base",
+      "samples_us": [
+        636.25,
+        619.75,
+        600.5,
+        590.75,
+        603.75,
+        640.5,
+        608.5,
+        605.75,
+        624.25
+      ],
+      "statistics": {
+        "count": 9,
+        "min_us": 590.75,
+        "max_us": 640.5,
+        "mean_us": 614.4444444444445,
+        "p50_us": 608.5
+      },
+      "compiler": {
+        "static_compile_results": [],
+        "static_super_flags": [],
+        "installed_static_packages": 0,
+        "pto_dispatch_calls": 3,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "backend_options": {
+        "force_eager": false,
+        "inplace_pass": true,
+        "clone_input": false,
+        "clone_output": false,
+        "static_kernel_compile": true,
+        "super_kernel_optimize": false
+      },
+      "eager_comparison": {
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 8929280,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2367488,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "guards": {
+        "swa": {
+          "status": "PASS",
+          "changed_bytes": 89489,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "compressed": {
+          "status": "PASS",
+          "changed_bytes": 0,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "state": {
+          "status": "PASS",
+          "changed_bytes": 383976,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "metadata.positions": {
+          "status": "PASS",
+          "shape": [
+            96
+          ],
+          "dtype": "torch.int64",
+          "expected_shape": [
+            96
+          ],
+          "expected_dtype": "torch.int64",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 96,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            4098
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            4098
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 65568,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            34
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            34
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 544,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            16386
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            16386
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 262176,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.compact_slots": {
+          "status": "PASS",
+          "shape": [
+            16,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 32,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      }
+    },
+    {
+      "pass": "p4_native",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_anchor_20260930/h131072_b16_compatible/p4_native/report.json",
+      "side": "native",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1",
+      "operator_source": "当前 worktree",
+      "samples_us": [
+        562.25,
+        543.25,
+        535.5,
+        537.0,
+        540.25,
+        538.25,
+        533.25,
+        536.5,
+        538.25
+      ],
+      "statistics": {
+        "count": 9,
+        "min_us": 533.25,
+        "max_us": 562.25,
+        "mean_us": 540.5,
+        "p50_us": 538.25
+      },
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          true
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "backend_options": {
+        "force_eager": false,
+        "inplace_pass": true,
+        "clone_input": false,
+        "clone_output": false,
+        "static_kernel_compile": true,
+        "super_kernel_optimize": true
+      },
+      "eager_comparison": {
+        "x_out": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.00025832636810872354,
+          "mismatches": 15814,
+          "first_mismatches": [
+            [
+              4,
+              0,
+              10
+            ],
+            [
+              4,
+              0,
+              23
+            ],
+            [
+              4,
+              0,
+              38
+            ],
+            [
+              4,
+              0,
+              51
+            ],
+            [
+              4,
+              0,
+              60
+            ],
+            [
+              4,
+              0,
+              63
+            ],
+            [
+              4,
+              0,
+              65
+            ],
+            [
+              4,
+              0,
+              66
+            ]
+          ]
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0078125,
+          "rmse": 5.198251420362164e-06,
+          "mismatches": 9,
+          "first_mismatches": [
+            [
+              35,
+              0,
+              0,
+              215
+            ],
+            [
+              53,
+              2,
+              0,
+              281
+            ],
+            [
+              53,
+              5,
+              0,
+              123
+            ],
+            [
+              71,
+              5,
+              0,
+              179
+            ],
+            [
+              80,
+              5,
+              0,
+              333
+            ],
+            [
+              98,
+              1,
+              0,
+              261
+            ],
+            [
+              98,
+              2,
+              0,
+              286
+            ],
+            [
+              116,
+              4,
+              0,
+              68
+            ]
+          ]
+        },
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            545,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 8929280,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            289,
+            8,
+            1,
+            1024
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2367488,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "guards": {
+        "swa": {
+          "status": "PASS",
+          "changed_bytes": 89486,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "compressed": {
+          "status": "PASS",
+          "changed_bytes": 0,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "state": {
+          "status": "PASS",
+          "changed_bytes": 383936,
+          "outside_slot_bytes": 0,
+          "first_outside": []
+        },
+        "metadata.positions": {
+          "status": "PASS",
+          "shape": [
+            96
+          ],
+          "dtype": "torch.int64",
+          "expected_shape": [
+            96
+          ],
+          "expected_dtype": "torch.int64",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 96,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            4098
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            4098
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 65568,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.swa.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            34
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            34
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 544,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.query_start_loc": {
+          "status": "PASS",
+          "shape": [
+            17
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            17
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 17,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.seq_lens": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.block_table": {
+          "status": "PASS",
+          "shape": [
+            16,
+            16386
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            16386
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 262176,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.slot_mapping": {
+          "status": "PASS",
+          "shape": [
+            96,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 192,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.state.start_pos": {
+          "status": "PASS",
+          "shape": [
+            16
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 16,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "metadata.compressed.compact_slots": {
+          "status": "PASS",
+          "shape": [
+            16,
+            2
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            16,
+            2
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 32,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      }
+    }
+  ],
+  "summary": {
+    "native": {
+      "count": 18,
+      "min_us": 533.25,
+      "max_us": 562.25,
+      "mean_us": 544.3472222222222,
+      "p50_us": 541.5
+    },
+    "pto": {
+      "count": 18,
+      "min_us": 590.75,
+      "max_us": 646.5,
+      "mean_us": 614.9444444444445,
+      "p50_us": 609.5
+    }
+  },
+  "pto_over_native": {
+    "mean_us": 1.1296915265481082,
+    "p50_us": 1.1255771006463526
+  },
+  "target_p50_us": 433.20000000000005,
+  "timing_target_satisfied_this_case": false,
+  "scope": "real layer3 weights, mHC pre/norm/HCA/O/post, single card, 18 actual spans per side",
+  "limits": "no new seven-tier or full-model/token acceptance; Native/PTO cross-implementation elementwise accuracy is not checked by this timing runner",
+  "native_eager_diagnostic": "both Native passes differ from eager at zero tolerance: x_out max_abs=0.015625, 15814 elements; swa max_abs=0.0078125, 9 elements. No nonfinite or guard failure; not promoted to accuracy acceptance",
+  "failed_attempt": "task_20260930_032122_216888230045: p2_pto SK1 failed 107017 invalid funcHandle; old p1_native excluded, complete ABBA rerun with PTO SK0"
+}

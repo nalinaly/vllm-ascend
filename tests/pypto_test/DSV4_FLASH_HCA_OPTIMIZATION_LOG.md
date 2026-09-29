@@ -6984,3 +6984,63 @@ B2第一次在满档2/2报错，旧base同样复现：三份完整状态、输�
 生产代码与已验证私有包仅注释/换行不同，AST一致；新增脚本Ruff、shell/diff检查通过，
 attention历史60条I001/E501未增加。完整format.sh ci仍因环境缺pre-commit未通过。
 当前领先Native20%的目标尚未达成，后续继续核内与调度交替推进，优先核对多query复用和其调度影响。
+
+## 108. Q生产者/消费者提前解析联动：均值未获益，保留削峰线索（2026-09-30）
+
+基线a7a9f314；CANN9.2、NZ2、atomic0、det0、正式第3层权重。
+两版分别关闭Q反量化allow_early_resolve，以及同时开启Q投影allow_early_resolve。
+保持核数、tiling、任务依赖与算术，私有包CPU显式编译通过后同卡ABBA。
+128K/B16每侧10次真实span，μs，min/max/mean：
+
+- late_dq：base 547.25/592.50/562.60 → 候选561.00/600.25/582.85。
+- early_q_late_dq：base 587.50/634.00/602.73 → 候选583.25/622.75/603.90。
+
+单关消费者退化；联动mean基本持平，max减少11.25μs，按要求保留削峰线索而非一概否定。
+尚不修改生产路径；不把两个独立轮次的绝对值混为候选排序。
+四类完整输出/cache/state逐bit、自身图重放与保护区通过。
+[脚本、两侧报告与边界](hca_qresolve_20260930/README.md)。无新整机或七档验收。
+
+## 109. Q激活常驻L1的三个核内候选：生成流水与多task时序都必须看（2026-09-30）
+
+参考本地ops-nn19614968的MatmulBaseKernelAL1FullLoad，不声称安装Native本形状使用此模板。
+基线与配置同108，先整K1024 A常驻，再四个K256独立A常驻，最后叠加N128外层stage2。
+所有版本保持INT8整数累加顺序、20workers、task依赖；仅NZ分支修改。
+完整CPU解析/编译/加载及生成内存分配检查通过。每候选128K/B16同卡ABBA各10次，μs：
+
+| 版本 | base min/max/mean | 候选 min/max/mean |
+| --- | --- | --- |
+| 整K1024常驻 | 543.00/591.25/564.28 | 566.75/598.50/577.18 |
+| 四独立K256常驻 | 566.75/606.25/579.65 | 582.50/603.25/593.20 |
+| 四块+N128 stage2 | 555.00/628.00/567.10 | 562.00/593.25/570.93 |
+
+整块版Left由Null/TMOV变Normal/TEXTRACT，Q核内mean 59.057→64.055μs，故不接入。
+纠正最初冻结注释：原版本和候选L0均为K256，不是K128；prepare脚本已更正，不篡改已测包。
+四独立块恢复TMOV，Q核内mean 61.03→59.60，但组跨度73.72→121.60，反量化更晚。
+保留局部复用实现和证据，尚不能称稳定核内/整段收益。
+N128实际Left/Right双槽各32KiB，Acc只有一个64KiB槽，Mat384KiB；stage2不等于L0C双缓冲。
+其Q核内mean 61.03→74.49，Attention/post却同时变快，不能把整段max降低归因于Q更快。
+三版完整输出/cache/state逐bit、自身图重放与保护区通过；不扩展未获益候选的七档或整机测试。
+[完整结果、任务组起止、源码与泳道路径](hca_q_activation_20260930/README.md)。
+
+下一步已定位Q RoPE逐行Gather的重复标量循环，尝试整块flat Gather；同时重取当前版本与
+Native static/SuperKernel的长档同卡ABBA，防止持续只报PTO前后优化而失去20%目标分母。
+
+## 110. 重取Native static/SuperKernel基线：当前PTO仍慢12.97%（2026-09-30）
+
+task_20260930_032530_227722523167在同卡1完成Native/PTO/PTO/Native四pass，
+每侧18次实际设备span。a7a9f314冻结生产包，CANN9.2、NZ2、atomic0、det0、正式第3层权重。
+两侧npugraph_ex dynamic=False、inplace/static开启；Native的SK实际静态编译/装包均核实。
+PTO保持SK关闭：上一任务032122_216888230045在PTO SK1图优化报107017无效funcHandle，
+故完整ABBA重跑，没有混入失败轮的Native计时。未修改公共工具链或Native执行流程。
+
+| 实现 | min | max | mean | P50 |
+| --- | ---: | ---: | ---: | ---: |
+| Native static + SK | 533.25 | 562.25 | 544.35 | 541.50 |
+| PTO a7a9f314 | 590.75 | 646.50 | 614.94 | 609.50 |
+
+单位μs；PTO mean慢12.97%、P50慢12.56%。本档20%目标为P50≤433.20，还需减少176.30μs。
+前面PTO自身优化不等同达到Native目标，旧版Native分母不能挪用；本档也不代替新七档/整机验收。
+保护区和有限值通过，PTO自身图重放精确；Native编译图与eager零容差比较的输出/SWA有差异，
+两pass均为15814/9个元素，max_abs分别0.015625/0.0078125；compressed/state精确。
+保留该诊断，不宣称Native/PTO跨实现精度或token已通过，也未把小浮点差异直接定为功能失败。
+[完整配置、原始样本与复现](hca_native_anchor_20260930/README.md)。
