@@ -1,0 +1,11 @@
+{
+  "baseline_commit": "0742f07c",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "online": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online"
+  },
+  "invariants": "long-only; unchanged QK/PV Cube, three-slot ring, cross-query pipeline, masking and cache",
+  "arithmetic_change": "cumulative maximum before probability BF16 cast; one PV scaling instead of two",
+  "coupling": "softmax producer max resets per query independently of delayed PV consumer state",
+  "acceptance": "diagnostic only until independent numerical reference and model token acceptance"
+}

@@ -1,0 +1,38 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -240,7 +240,7 @@
+         with pl.scope():
+             head_base = 0
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]], allow_early_resolve=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -275,7 +275,7 @@
+         with pl.scope():
+             head_base = 16
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]], allow_early_resolve=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -310,7 +310,7 @@
+         with pl.scope():
+             head_base = 32
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]], allow_early_resolve=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -345,7 +345,7 @@
+         with pl.scope():
+             head_base = 48
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]], allow_early_resolve=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N

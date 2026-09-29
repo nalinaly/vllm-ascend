@@ -1,0 +1,81 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1264,9 +1264,10 @@
+                     vec_extra = pl.yield_(QK_PRE_LAUNCH)
+                 else:
+                     vec_extra = pl.yield_(0)
+-                for vec_tick, (m_iter, l_iter, left_iter, right_iter, max_ring, sum_ring) in pl.range(
++                softmax_seed = pl.load(sink_col, [head0, 0], [H // 2, 1])
++                for vec_tick, (m_iter, l_iter, left_iter, right_iter, max_ring, sum_ring, softmax_m_iter) in pl.range(
+                     work_count + vec_extra,
+-                    init_values=(m_query, l_query, left_query, right_query, max_query, sum_query),
++                    init_values=(m_query, l_query, left_query, right_query, max_query, sum_query, softmax_seed),
+                 ):
+                     vec_global = vec_offset + vec_tick
+                     if vec_tick < work_count:
+@@ -1277,7 +1278,8 @@
+                             raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
+                             raw_bias = pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF)
+                             raw_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), raw_bias)
+-                            raw_m = pl.row_max(raw_scaled, reduce_tmp)
++                            raw_block_m = pl.row_max(raw_scaled, reduce_tmp)
++                            raw_m = pl.maximum(softmax_m_iter, raw_block_m)
+                             raw_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(raw_scaled, raw_m)), raw_mask)
+                             maximum, exponent = pl.yield_(raw_m, raw_exp)
+                         else:
+@@ -1289,7 +1291,8 @@
+                             valid_rows = pl.min(ATTN_K_TILE, cmp_rows - cmp_work * ATTN_K_TILE)
+                             cmp_shaped = pl.set_validshape(cmp_scaled, H // 2, valid_rows)
+                             cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
+-                            cmp_m = pl.row_max(cmp_masked, reduce_tmp)
++                            cmp_block_m = pl.row_max(cmp_masked, reduce_tmp)
++                            cmp_m = pl.maximum(softmax_m_iter, cmp_block_m)
+                             cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
+                             maximum, exponent = pl.yield_(cmp_m, cmp_exp)
+                         total = pl.row_sum(exponent, reduce_tmp)
+@@ -1307,9 +1310,9 @@
+                         pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 2],
+                                       pl.cast(work_count - vec_tick - 1, pl.INT32))
+                         pl.system.sync_set(1, pipe=pl.PipeType.MTE3, ffts_mode=2, core_type=pl.KernelType.AIV)
+-                        updated_max_ring, updated_sum_ring = pl.yield_(next_max_ring, next_sum_ring)
++                        updated_max_ring, updated_sum_ring, softmax_m_after = pl.yield_(next_max_ring, next_sum_ring, maximum)
+                     else:
+-                        updated_max_ring, updated_sum_ring = pl.yield_(max_ring, sum_ring)
++                        updated_max_ring, updated_sum_ring, softmax_m_after = pl.yield_(max_ring, sum_ring, softmax_m_iter)
+                     if vec_global >= QK_PRE_LAUNCH:
+                         out_work = vec_global - QK_PRE_LAUNCH
+                         out_row = (worker * QK_TRANSFER_SLOTS + out_work % QK_TRANSFER_SLOTS) * H + head0
+@@ -1337,17 +1340,16 @@
+                             )
+                         # 长历史的 running_m 从 sink 开始，只增不减；最后 raw 合并不需要另设分支。
+                         # 归约状态跟随PV消费的query；QK提前进入下一query不改变这里的归约顺序。
+-                        next_m = pl.maximum(current_m, out_m)
++                        # 概率已按累计max缩放；PV可直接加入，只缩放旧累积。
++                        next_m = out_m
+                         alpha = pl.exp(pl.sub(current_m, next_m))
+-                        beta = pl.exp(pl.sub(out_m, next_m))
+-                        next_l = pl.add(pl.mul(alpha, current_l), pl.mul(beta, out_l))
+-                        # 两个乘积先各自舍入为 FP32；有限值加法两侧交换不改变结果。
++                        next_l = pl.add(pl.mul(alpha, current_l), out_l)
+                         pv_left = pl.load(values, [out_row, 0], [H // 2, HEAD_DIM // 2])
+                         next_left = pl.add(pl.row_expand_mul(current_left, alpha),
+-                                           pl.row_expand_mul(pv_left, beta))
++                                           pv_left)
+                         pv_right = pl.load(values, [out_row, HEAD_DIM // 2], [H // 2, HEAD_DIM // 2])
+                         next_right = pl.add(pl.row_expand_mul(current_right, alpha),
+-                                            pl.row_expand_mul(pv_right, beta))
++                                            pv_right)
+                         remaining = pl.tile.read(query_ring, [out_work % QK_TRANSFER_SLOTS, 2])
+                         if remaining == 0:
+                             publish_token = pl.cast(pl.tile.read(
+@@ -1393,8 +1395,8 @@
+                         )
+                     else:
+                         m_after, l_after, left_after, right_after = pl.yield_(m_iter, l_iter, left_iter, right_iter)
+-                    running_m, running_l, running_left, running_right, max_ring_done, sum_ring_done = pl.yield_(
+-                        m_after, l_after, left_after, right_after, updated_max_ring, updated_sum_ring,
++                    running_m, running_l, running_left, running_right, max_ring_done, sum_ring_done, softmax_m_done = pl.yield_(
++                        m_after, l_after, left_after, right_after, updated_max_ring, updated_sum_ring, softmax_m_after,
+                     )
+                 offset_done, m_done, l_done, left_done, right_done, max_done, sum_done = pl.yield_(
+                     vec_offset + work_count, running_m, running_l, running_left, running_right,

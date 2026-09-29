@@ -1,0 +1,11 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+    "cube_early": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early",
+    "cube_early_dq_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early_dq_late"
+  },
+  "baseline": "0742f07c + frozen online-softmax candidate (not production)",
+  "invariants": "four x4 Cube/x12 AIV, unchanged arithmetic, tiling, sync and TaskId",
+  "hypothesis": "publish Q completion early; DQ reservation may compete with compressed gather/Attention",
+  "limits": "same-window combined increment; never sum separate experiments' deltas"
+}
