@@ -1,0 +1,502 @@
+{
+  "method": "Worker View body intervals, grouped by complete name including task ID; active cores exclude local_setup",
+  "limits": "observed execution overlap only; no proof of bandwidth contention, ready time, or causality",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "side": "baseline_start",
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/balanced_baseline_start/dfx/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 152.7,
+              "last_end_us": 164.24,
+              "envelope_us": 11.54000000000002,
+              "kernel_min_us": 7.339999999999975,
+              "kernel_max_us": 11.420000000000016,
+              "kernel_mean_us": 8.827499999999997,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.19064124783362,
+                "AIV": 12.239168110918518
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 16
+              },
+              "other_tasks_overlap_core_us": {
+                "kv_score_proj_spmd(r1t18)": 164.8400000000002,
+                "idx_qr_proj_matmul_spmd(r2t10)": 55.3000000000001,
+                "kv_proj_matmul_spmd(r2t7)": 47.48000000000019
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 8,
+              "physical_cores": 8,
+              "first_start_us": 191.06,
+              "last_end_us": 201.74,
+              "envelope_us": 10.680000000000007,
+              "kernel_min_us": 5.0400000000000205,
+              "kernel_max_us": 10.560000000000002,
+              "kernel_mean_us": 7.7575,
+              "all_tasks_active_cores_mean": {
+                "AIC": 22.09925093632959,
+                "AIV": 16.730337078651687
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 23
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 217.06000000000014,
+                "compress_state_commit_0_spmd(r1t24)": 116.62000000000012,
+                "idx_qr_proj_matmul_spmd(r2t10)": 11.860000000000014,
+                "kv_score_proj_spmd(r1t18)": 7.100000000000023
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 205.28,
+              "last_end_us": 220.0,
+              "envelope_us": 14.719999999999999,
+              "kernel_min_us": 6.759999999999991,
+              "kernel_max_us": 11.060000000000002,
+              "kernel_mean_us": 9.315,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.15896739130435,
+                "AIV": 11.32336956521739
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 19
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 248.95999999999998,
+                "idx_qr_proj_matmul_spmd(r2t10)": 91.94000000000003,
+                "rmsnorm_rope_spmd(r1t26)": 16.19999999999999,
+                "kv_touch(r1t30)": 1.3400000000000034,
+                "compress_state_commit_0_spmd(r1t24)": 0.09999999999999432
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/balanced_baseline_start/dfx/window_1/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 151.73999999999998,
+              "last_end_us": 163.82,
+              "envelope_us": 12.080000000000013,
+              "kernel_min_us": 8.819999999999993,
+              "kernel_max_us": 11.699999999999989,
+              "kernel_mean_us": 10.224999999999996,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.240066225165567,
+                "AIV": 15.311258278145678
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 18
+              },
+              "other_tasks_overlap_core_us": {
+                "idx_qr_proj_matmul_spmd(r2t10)": 151.74000000000015,
+                "kv_score_proj_spmd(r1t18)": 115.00000000000014,
+                "csa_cache_writeback_spmd(r1t16)": 16.32000000000002,
+                "qproj_matmul_spmd(r2t4)": 14.000000000000028,
+                "kv_rms_norm_rope_spmd(r2t8)": 5.0400000000000205
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 8,
+              "physical_cores": 8,
+              "first_start_us": 161.6,
+              "last_end_us": 169.7,
+              "envelope_us": 8.099999999999994,
+              "kernel_min_us": 3.8400000000000034,
+              "kernel_max_us": 8.099999999999994,
+              "kernel_mean_us": 5.824999999999999,
+              "all_tasks_active_cores_mean": {
+                "AIC": 22.98024691358025,
+                "AIV": 7.279012345679015
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 18
+              },
+              "other_tasks_overlap_core_us": {
+                "idx_qr_proj_matmul_spmd(r2t10)": 79.49999999999991,
+                "kv_score_proj_spmd(r1t18)": 60.039999999999964,
+                "qproj_matmul_spmd(r2t4)": 46.599999999999994,
+                "scatter_softmax_pool_0_spmd(r1t23)": 12.359999999999985
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 195.48,
+              "last_end_us": 205.16,
+              "envelope_us": 9.680000000000007,
+              "kernel_min_us": 7.719999999999999,
+              "kernel_max_us": 9.539999999999992,
+              "kernel_mean_us": 8.497499999999999,
+              "all_tasks_active_cores_mean": {
+                "AIC": 17.797520661157023,
+                "AIV": 15.55371900826445
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 18,
+                "AIV": 18
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 172.2800000000001,
+                "rmsnorm_rope_spmd(r1t26)": 14.599999999999994
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "history": 131072,
+      "batch": 16,
+      "side": "wb16_sync",
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_sync/dfx/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 139.8,
+              "last_end_us": 153.36,
+              "envelope_us": 13.560000000000002,
+              "kernel_min_us": 9.04000000000002,
+              "kernel_max_us": 13.439999999999998,
+              "kernel_mean_us": 10.675000000000004,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.15339233038348,
+                "AIV": 12.595870206489678
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 16
+              },
+              "other_tasks_overlap_core_us": {
+                "kv_score_proj_spmd(r1t18)": 113.36000000000004,
+                "idx_qr_proj_matmul_spmd(r2t10)": 99.42000000000004,
+                "kv_proj_matmul_spmd(r2t7)": 85.55999999999989,
+                "qproj_matmul_spmd(r2t4)": 15.620000000000005
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 183.24,
+              "last_end_us": 189.52,
+              "envelope_us": 6.280000000000001,
+              "kernel_min_us": 2.799999999999983,
+              "kernel_max_us": 6.180000000000007,
+              "kernel_mean_us": 4.491249999999999,
+              "all_tasks_active_cores_mean": {
+                "AIC": 22.19108280254777,
+                "AIV": 13.442675159235664
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 18
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 82.40000000000003,
+                "kv_score_proj_spmd(r1t18)": 32.35999999999996,
+                "idx_qr_proj_matmul_spmd(r2t10)": 24.600000000000023,
+                "rmsnorm_rope_spmd(r1t26)": 12.560000000000002
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 205.14000000000001,
+              "last_end_us": 215.86,
+              "envelope_us": 10.719999999999999,
+              "kernel_min_us": 9.0,
+              "kernel_max_us": 10.099999999999994,
+              "kernel_mean_us": 9.716249999999997,
+              "all_tasks_active_cores_mean": {
+                "AIC": 15.128731343283581,
+                "AIV": 14.811567164179104
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 16,
+                "AIV": 17
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 159.48,
+                "kv_hadamard(r1t27)": 2.6999999999999886,
+                "kv_touch(r1t30)": 2.0800000000000125,
+                "kv_and_cache_write_spmd(r1t28)": 1.240000000000009
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_sync/dfx/window_1/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 149.92000000000002,
+              "last_end_us": 164.72,
+              "envelope_us": 14.799999999999983,
+              "kernel_min_us": 11.719999999999999,
+              "kernel_max_us": 14.039999999999992,
+              "kernel_mean_us": 12.623750000000005,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.521621621621623,
+                "AIV": 15.700000000000022
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 19
+              },
+              "other_tasks_overlap_core_us": {
+                "kv_score_proj_spmd(r1t18)": 177.71999999999989,
+                "qproj_matmul_spmd(r2t4)": 103.59999999999988,
+                "idx_qr_proj_matmul_spmd(r2t10)": 66.79999999999987,
+                "kv_rms_norm_rope_spmd(r2t8)": 30.379999999999995
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 176.66000000000003,
+              "last_end_us": 182.08,
+              "envelope_us": 5.4199999999999875,
+              "kernel_min_us": 3.140000000000015,
+              "kernel_max_us": 5.02000000000001,
+              "kernel_mean_us": 4.016250000000008,
+              "all_tasks_active_cores_mean": {
+                "AIC": 19.789667896678964,
+                "AIV": 11.856088560885661
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 23,
+                "AIV": 16
+              },
+              "other_tasks_overlap_core_us": {
+                "idx_qr_proj_matmul_spmd(r2t10)": 47.63999999999987,
+                "qproj_matmul_spmd(r2t4)": 43.3599999999999,
+                "kv_score_proj_spmd(r1t18)": 16.259999999999962
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 218.84,
+              "last_end_us": 229.24,
+              "envelope_us": 10.400000000000006,
+              "kernel_min_us": 8.340000000000003,
+              "kernel_max_us": 10.120000000000005,
+              "kernel_mean_us": 8.87625,
+              "all_tasks_active_cores_mean": {
+                "AIC": 14.27692307692308,
+                "AIV": 43.54999999999997
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 15,
+                "AIV": 48
+              },
+              "other_tasks_overlap_core_us": {
+                "idx_qr_dequant_rope_spmd(r2t11)": 310.9,
+                "qproj_matmul_spmd(r2t4)": 144.5600000000001,
+                "kv_hadamard(r1t27)": 3.920000000000016
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "history": 131072,
+      "batch": 16,
+      "side": "wb16_pool_sync",
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_pool_sync/dfx/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 148.82,
+              "last_end_us": 163.08,
+              "envelope_us": 14.26000000000002,
+              "kernel_min_us": 10.659999999999997,
+              "kernel_max_us": 14.02000000000001,
+              "kernel_mean_us": 12.61,
+              "all_tasks_active_cores_mean": {
+                "AIC": 21.35203366058906,
+                "AIV": 15.950911640953697
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 19
+              },
+              "other_tasks_overlap_core_us": {
+                "kv_score_proj_spmd(r1t18)": 170.56000000000023,
+                "idx_qr_proj_matmul_spmd(r2t10)": 129.9400000000001,
+                "kv_rms_norm_rope_spmd(r2t8)": 25.700000000000045,
+                "qproj_matmul_spmd(r2t4)": 3.980000000000018
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 169.56,
+              "last_end_us": 175.5,
+              "envelope_us": 5.939999999999998,
+              "kernel_min_us": 3.3799999999999955,
+              "kernel_max_us": 5.740000000000009,
+              "kernel_mean_us": 4.309999999999999,
+              "all_tasks_active_cores_mean": {
+                "AIC": 22.717171717171716,
+                "AIV": 11.60942760942761
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 16
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 76.19999999999993,
+                "kv_score_proj_spmd(r1t18)": 33.099999999999994,
+                "idx_qr_proj_matmul_spmd(r2t10)": 25.640000000000015
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 241.90000000000003,
+              "last_end_us": 250.51999999999998,
+              "envelope_us": 8.619999999999948,
+              "kernel_min_us": 6.680000000000007,
+              "kernel_max_us": 8.619999999999948,
+              "kernel_mean_us": 7.383750000000003,
+              "all_tasks_active_cores_mean": {
+                "AIC": 4.851508120649655,
+                "AIV": 43.0904872389792
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 8,
+                "AIV": 48
+              },
+              "other_tasks_overlap_core_us": {
+                "idx_qr_dequant_rope_spmd(r2t11)": 253.29999999999842,
+                "qproj_matmul_spmd(r2t4)": 39.099999999999795,
+                "kv_hadamard(r1t27)": 2.7199999999999704
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_pool_sync/dfx/window_1/merged_swimlane.json",
+          "groups": [
+            {
+              "task": "scatter_softmax_pool_0_spmd(r1t23)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 143.22000000000003,
+              "last_end_us": 157.16000000000003,
+              "envelope_us": 13.939999999999998,
+              "kernel_min_us": 11.359999999999985,
+              "kernel_max_us": 13.800000000000011,
+              "kernel_mean_us": 12.507500000000004,
+              "all_tasks_active_cores_mean": {
+                "AIC": 23.341463414634134,
+                "AIV": 14.819225251076045
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 24,
+                "AIV": 17
+              },
+              "other_tasks_overlap_core_us": {
+                "kv_score_proj_spmd(r1t18)": 189.4799999999999,
+                "idx_qr_proj_matmul_spmd(r2t10)": 124.34000000000003,
+                "kv_proj_matmul_spmd(r2t7)": 11.419999999999789,
+                "kv_rms_norm_rope_spmd(r2t8)": 6.460000000000036,
+                "qproj_matmul_spmd(r2t4)": 0.1400000000000432
+              }
+            },
+            {
+              "task": "csa_cache_writeback_spmd(r1t16)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 177.39999999999998,
+              "last_end_us": 183.64,
+              "envelope_us": 6.240000000000009,
+              "kernel_min_us": 3.280000000000001,
+              "kernel_max_us": 5.760000000000019,
+              "kernel_mean_us": 4.647500000000008,
+              "all_tasks_active_cores_mean": {
+                "AIC": 19.714743589743584,
+                "AIV": 11.916666666666679
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 22,
+                "AIV": 16
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 100.96000000000004,
+                "idx_qr_proj_matmul_spmd(r2t10)": 15.71999999999997,
+                "kv_score_proj_spmd(r1t18)": 6.3400000000001455
+              }
+            },
+            {
+              "task": "scatter_softmax_pool_spmd(r1t19)",
+              "workers": 16,
+              "physical_cores": 16,
+              "first_start_us": 196.14,
+              "last_end_us": 209.39999999999998,
+              "envelope_us": 13.259999999999991,
+              "kernel_min_us": 9.73999999999998,
+              "kernel_max_us": 13.060000000000002,
+              "kernel_mean_us": 11.048749999999995,
+              "all_tasks_active_cores_mean": {
+                "AIC": 17.88084464555053,
+                "AIV": 18.17496229260939
+              },
+              "all_tasks_active_cores_peak": {
+                "AIC": 18,
+                "AIV": 32
+              },
+              "other_tasks_overlap_core_us": {
+                "qproj_matmul_spmd(r2t4)": 237.09999999999985,
+                "compress_state_commit_0_spmd(r1t24)": 42.10000000000025,
+                "rmsnorm_rope_spmd(r1t26)": 20.260000000000048,
+                "kv_touch(r1t30)": 1.8599999999999568
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

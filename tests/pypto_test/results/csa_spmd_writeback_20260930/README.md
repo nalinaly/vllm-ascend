@@ -74,5 +74,67 @@ sync能够收拢启动，48核无sync则两档执行跨度都变长。每窗累�
 
 全局采用无sync方案的8:2均值对前/后基线−0.416%/+0.133%，同步方案+2.227%/+2.780%。
 因此没有统一切到48核；保留局部核时收益的私有候选和源码，下一步优先解决用户要求的长档。
-128K/B16的KV改沿M16分工、保持N128/L0 K128正在独立试验，不与本轮写回改动叠加。
+128K/B16的KV改沿M16分工、保持N128/L0 K128独立试验已结束，完整CSA无收益，未采用。
 未扩测七档或整模型。定向Ruff、shell和diff检查通过；全仓format.sh ci因缺pre-commit未完成。
+
+## 多task联动：16核写回及两pool同步
+
+用户再次要求注意多task联动，先从既有泳道量化全局drain，而非把全部退化归因内存带宽。
+`analyze_drain.py`只对AICPU Scheduler的phase=drain跨线程取时间并集，
+不重复累加prepare/publish；同时记录同一时间轴的派发任务和设备执行任务。
+[汇总](drain_review.md)、[逐段原始来源及重叠任务](drain_review.json)。
+128K/B16写回48核sync的平均drain并集19.15→37.92μs；
+M16 KV sync对应18.65→29.85μs。写回同步两窗分别存在48份写回派发所在的14.70/12.68μs区间。
+这些是DFX协调区间，不等于设备空闲或无profiler CSA净损失，也不足以证明唯一根因。
+实现依据是Simpler a54c05095的tensormap_and_ringbuffer runtime：
+`docs/RUNTIME_LOGIC.md`的local Case A/global Case B，以及
+`runtime/scheduler/scheduler_completion.cpp`的enter_drain_mode/stage_sync_start_cores。
+单owner能容纳整组时可本地暂存，否则走全局协调；小组仍可能全局fallback，不能承诺16核完全无drain。
+
+下一候选按B16实际并发量分配：写回16份，每份6行；两pool各16请求，三组最多48 AIV。
+比较只写回16核+sync，以及在此前提下两个pool联动+sync。
+每行写回仍1×512 BF16，slot保护不变；pool按请求内6个token顺序执行，不拆有状态顺序，
+不增加权重加载，不修改现有early-resolve或task依赖。不同投影完成时间决定三组能否真的重叠，不能仅相加worker数认定满核。
+两候选CPU解析/编译/加载通过；生成核写回均一处TLOAD/TSTORE，pool均8处TLOAD/2处TSTORE，Tile类型不变。
+冻结来源与diff见balanced_source.json、wb16_sync.patch、wb16_pool_sync.patch；
+task_20260930_004629_397366718955在auto设备2完成退出0，同卡前后基线、20事件及独立两窗。
+性能后两候选八类完整状态逐bit一致，自身图重放与保护区通过。
+
+
+`analyze_groups.py`按完整task ID区分真实SPMD组，统计写回和pool的组跨度，以及该区间所有任务实际活跃的AIC/AIV均值与峰值。
+计算排除local_setup，只描述已观测到的执行重叠；不把这些数字直接解释为带宽竞争或消费者就绪时间。
+O投影审查还发现每个group是8个AIC，泳道64个worker是8个任务的总数；后续应联动A/B投影，
+不能误当单个64核组去加sync。前置pool候选完成后再推进，避免混合改动归因。
+
+## 16核与pool联动完成结果
+
+完整CSA单位μs，按最新问询的min/max/mean顺序；各20个正式样本全部保留：
+
+| 配置 | min | max | mean |
+| --- | ---: | ---: | ---: |
+| 前基线 | 961.340 | 985.260 | 972.020 |
+| 写回16核+sync | 967.100 | 1008.580 | 983.727 |
+| 写回16核+两pool联动sync | 961.920 | 998.240 | 975.581 |
+| 后基线 | 964.580 | 996.980 | 977.094 |
+
+写回16核单独同步整组跨度均值9.390→5.850μs，最大核时10.560→6.180，
+联动候选分别6.090、5.760。真实任务跨度下降，保留两种实现与证据用于后续组合；
+不把工作量减半后的单worker均值下降当作唯一收益。写回每窗core-us54.330→68.060/71.660仍增加。
+联动候选CSA均值介于两基线之间，max高于两基线；无稳定整体收益，不统一接入。
+
+联动策略中的两个pool和写回并未三组同时就绪。两窗联动候选（相同worker起点归零）：
+Indexer pool 148.82–163.08 / 143.22–157.16，写回169.56–175.50 / 177.40–183.64，
+Attention pool 241.90–250.52 / 196.14–209.40μs；因此16+16+16不能当成已实现48核并发。
+Attention pool第一窗的活跃AIV均值43.09/峰值48包含其他任务，必须按task ID区分。
+Indexer pool核时均值9.526→11.649/12.559，跨度11.810→14.180/14.100；
+原16-request分工已保留核内顺序，加同步本轮未改善它的组耗时，不保留为默认配置。
+
+长Score AIC均值221.014→228.616/225.737，Q_B跨度88.840→119.310/94.240，
+说明要同时审查前后链路；两窗数据不足以把所有变化归因特定竞争或频率。
+drain均值20.130→26.340/26.300，16核仍可能全局fallback；仅减组大小不保证走本地同步。
+[完整CSA、各任务、状态](balanced_long.md)、[原始样本](balanced_long.json)、
+[drain](balanced_drain.md)、[按task ID的实际并发](balanced_groups.json)。
+
+没有新增短档、七档或模型验收。长档未证明整体收益，暂不为本候选增加短档设备测试；
+保留局部写回候选，下一项转向真实交叠的O_A/O_B多group任务，核内流水先保持原样。
+定向Ruff、shell和diff通过；format.sh ci仍因缺pre-commit未执行完整检查。

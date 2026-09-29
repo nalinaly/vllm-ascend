@@ -1,0 +1,375 @@
+{
+  "method": "union of AICPU Scheduler phase=drain across threads; nested prepare/publish excluded",
+  "limits": "DFX-only wall intervals, not device idle or isolated overhead; connected intervals are not protocol rounds; timestamp association does not prove task attribution",
+  "cases": [
+    {
+      "summary": "tests/pypto_test/results/csa_spmd_writeback_20260930/balanced_long.json",
+      "history": 131072,
+      "batch": 16,
+      "side": "baseline_start",
+      "mean_drain_union_us": 20.129999999999995,
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/balanced_baseline_start/dfx/merged_swimlane.json",
+          "origin_worker_ts_us": 35.06,
+          "drain_union_us": 19.160000000000025,
+          "drain_connected_intervals": 2,
+          "phase_records": 6,
+          "intervals": [
+            {
+              "start_us": 329.42,
+              "end_us": 340.86,
+              "duration_us": 11.439999999999998,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {
+                "indexer_score_topk_native_pair_aic_spmd": 13,
+                "indexer_score_topk_native_pair_aiv_spmd": 20
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 890.9000000000001,
+              "end_us": 898.6200000000001,
+              "duration_us": 7.720000000000027,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 13
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/balanced_baseline_start/dfx/window_1/merged_swimlane.json",
+          "origin_worker_ts_us": 23.8,
+          "drain_union_us": 21.099999999999966,
+          "drain_connected_intervals": 2,
+          "phase_records": 6,
+          "intervals": [
+            {
+              "start_us": 305.5,
+              "end_us": 318.21999999999997,
+              "duration_us": 12.71999999999997,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {
+                "indexer_head_coefficients_spmd": 10
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 879.46,
+              "end_us": 887.84,
+              "duration_us": 8.379999999999995,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 17
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "summary": "tests/pypto_test/results/csa_spmd_writeback_20260930/balanced_long.json",
+      "history": 131072,
+      "batch": 16,
+      "side": "wb16_sync",
+      "mean_drain_union_us": 26.340000000000003,
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_sync/dfx/merged_swimlane.json",
+          "origin_worker_ts_us": 29.94,
+          "drain_union_us": 20.21999999999997,
+          "drain_connected_intervals": 2,
+          "phase_records": 6,
+          "intervals": [
+            {
+              "start_us": 317.52,
+              "end_us": 329.68,
+              "duration_us": 12.160000000000025,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {
+                "indexer_score_topk_native_pair_aic_spmd": 14,
+                "indexer_score_topk_native_pair_aiv_spmd": 26
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 888.66,
+              "end_us": 896.7199999999999,
+              "duration_us": 8.059999999999945,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 16
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_sync/dfx/window_1/merged_swimlane.json",
+          "origin_worker_ts_us": 22.76,
+          "drain_union_us": 32.460000000000036,
+          "drain_connected_intervals": 3,
+          "phase_records": 9,
+          "intervals": [
+            {
+              "start_us": 163.86,
+              "end_us": 177.3,
+              "duration_us": 13.439999999999998,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 16,
+              "overlapping_worker_counts": {
+                "csa_cache_writeback_spmd": 8,
+                "kv_score_proj_spmd": 8,
+                "scatter_softmax_pool_0_spmd": 1,
+                "qproj_matmul_spmd": 8,
+                "idx_qr_proj_matmul_spmd": 17
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "csa_cache_writeback_spmd": 16
+              }
+            },
+            {
+              "start_us": 308.86,
+              "end_us": 320.40000000000003,
+              "duration_us": 11.54000000000002,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {
+                "indexer_score_topk_native_pair_aic_spmd": 13,
+                "indexer_score_topk_native_pair_aiv_spmd": 5
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 866.28,
+              "end_us": 873.76,
+              "duration_us": 7.480000000000018,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 24
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "summary": "tests/pypto_test/results/csa_spmd_writeback_20260930/balanced_long.json",
+      "history": 131072,
+      "batch": 16,
+      "side": "wb16_pool_sync",
+      "mean_drain_union_us": 26.300000000000068,
+      "windows": [
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_pool_sync/dfx/merged_swimlane.json",
+          "origin_worker_ts_us": 42.44,
+          "drain_union_us": 32.520000000000095,
+          "drain_connected_intervals": 4,
+          "phase_records": 12,
+          "intervals": [
+            {
+              "start_us": 123.1,
+              "end_us": 130.62,
+              "duration_us": 7.52000000000001,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 16,
+              "overlapping_worker_counts": {
+                "kv_score_proj_0_spmd": 15,
+                "qr_rms_norm_quant_spmd": 12,
+                "kv_proj_matmul_spmd": 12,
+                "weights_proj_reduce_spmd": 6
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "scatter_softmax_pool_0_spmd": 16
+              }
+            },
+            {
+              "start_us": 163.26000000000002,
+              "end_us": 170.48000000000002,
+              "duration_us": 7.219999999999999,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 16,
+              "overlapping_worker_counts": {
+                "csa_cache_writeback_spmd": 10,
+                "kv_score_proj_spmd": 11,
+                "qproj_matmul_spmd": 9,
+                "idx_qr_proj_matmul_spmd": 14
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "csa_cache_writeback_spmd": 16
+              }
+            },
+            {
+              "start_us": 322.86,
+              "end_us": 333.46000000000004,
+              "duration_us": 10.600000000000023,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {
+                "indexer_score_topk_native_pair_aic_spmd": 6,
+                "indexer_score_topk_native_pair_aiv_spmd": 5
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 880.2,
+              "end_us": 887.3800000000001,
+              "duration_us": 7.180000000000064,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 16
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        },
+        {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_spmd_writeback_20260930/h131072_b16/swimlane/wb16_pool_sync/dfx/window_1/merged_swimlane.json",
+          "origin_worker_ts_us": 21.64,
+          "drain_union_us": 20.08000000000004,
+          "drain_connected_intervals": 2,
+          "phase_records": 6,
+          "intervals": [
+            {
+              "start_us": 303.84000000000003,
+              "end_us": 315.22,
+              "duration_us": 11.379999999999995,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 24,
+              "overlapping_worker_counts": {},
+              "dispatches_with_timestamp_in_interval": {
+                "indexer_score_topk_native_pair_aic_spmd": 24,
+                "indexer_score_topk_native_pair_aiv_spmd": 48
+              }
+            },
+            {
+              "start_us": 860.1,
+              "end_us": 868.8000000000001,
+              "duration_us": 8.700000000000045,
+              "scheduler_threads": [
+                30000,
+                30010,
+                30020
+              ],
+              "phase_records": 3,
+              "tasks_processed": 48,
+              "overlapping_worker_counts": {
+                "_proj_b_mm_nz_kernel__2_spmd": 12
+              },
+              "dispatches_with_timestamp_in_interval": {
+                "proj_b_act_hc_post_0_spmd": 48
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

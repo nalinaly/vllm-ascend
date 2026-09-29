@@ -100,19 +100,32 @@ def combined_stats(windows, name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--partial", action="store_true")
+    parser.add_argument("--case", type=int, nargs=2, metavar=("HISTORY", "BATCH"))
+    parser.add_argument("--names", nargs="+", choices=(*NAMES, "wb16_sync", "wb16_pool_sync"), default=NAMES)
+    parser.add_argument("--baseline-prefix", default="")
+    parser.add_argument("--output-name", default="summary")
     args = parser.parse_args()
+    if Path(args.output_name).name != args.output_name:
+        parser.error("--output-name must be a filename stem")
     source = json.loads((ROOT / "source.json").read_text())
     if not args.partial:
         import torch
 
         torch.set_num_threads(4)
-    result = {"source": source, "scope": "same-card per shape; no seven-case/model acceptance", "cases": []}
-    for history, batch in source["cases"]:
+    requested_cases = [args.case] if args.case else source["cases"]
+    result = {
+        "source": source,
+        "requested_cases": requested_cases,
+        "scope": "same-card per shape; no seven-case/model acceptance",
+        "cases": [],
+    }
+    for history, batch in requested_cases:
         folder = ROOT / f"h{history}_b{batch}"
         sides = {}
         reference = None
-        for name in NAMES:
-            path = folder / "timing" / name / "report.json"
+        for name in args.names:
+            directory = args.baseline_prefix + name if name.startswith("baseline_") else name
+            path = folder / "timing" / directory / "report.json"
             if args.partial and not path.exists():
                 continue
             report = json.loads(path.read_text())
@@ -133,7 +146,9 @@ def main():
             if not args.partial and name not in ("baseline_start", "baseline_end"):
                 if reference is None:
                     reference = torch.load(
-                        folder / "timing/baseline_start/states.pt", map_location="cpu", weights_only=True
+                        folder / f"timing/{args.baseline_prefix}baseline_start/states.pt",
+                        map_location="cpu",
+                        weights_only=True,
                     )
                 actual = torch.load(path.parent / "states.pt", map_location="cpu", weights_only=True)
                 assert len(actual) == 8 and set(actual) == set(reference)
@@ -141,7 +156,7 @@ def main():
                 del actual
                 # Record numerical failures as evidence; never silently accept them.
                 side["state_pass"] = all(side["state_exact"].values())
-            dfx_path = folder / "swimlane" / name / "report.json"
+            dfx_path = folder / "swimlane" / directory / "report.json"
             if dfx_path.exists():
                 dfx = json.loads(dfx_path.read_text())
                 side["dfx_self"] = passed(dfx["pto_self"])
@@ -187,10 +202,10 @@ def main():
                 for control in ("start", "end")
                 if all(f"delta_max_{control}_pct" in c["variants"][name] for c in result["cases"])
             }
-    filename = "partial.json" if args.partial else "summary.json"
+    filename = args.output_name + ("_partial.json" if args.partial else ".json")
     (ROOT / filename).write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     if not args.partial:
-        write_markdown(result)
+        write_markdown(result, "RESULTS.md" if args.output_name == "summary" else args.output_name + ".md")
     print(
         json.dumps(
             {
@@ -212,9 +227,9 @@ def main():
     )
 
 
-def write_markdown(result):
+def write_markdown(result, filename):
     lines = [
-        "# Cache写回有效48核与整组启动结果",
+        "# Cache写回分工及并发任务同步结果",
         "",
         "单位μs；最大/最小/平均，全部正式事件保留。",
         "每档内部同卡配对，开始/结束基线分别报告；独立DFX核时不与无profiler事件相减。",
@@ -242,7 +257,7 @@ def write_markdown(result):
         ]
         for name, side in case["variants"].items():
             lines += [f"| {name} | {side['delta_max_start_pct']:+.3f}% | {side['delta_max_end_pct']:+.3f}% |"]
-        for key in ("Writeback", "qproj_matmul", "Compressor", "scatter_softmax_pool"):
+        for key in ("Writeback", "qproj_matmul", "Compressor", "scatter_softmax_pool", "scatter_softmax_pool_0"):
             lines += [
                 "",
                 f"### {key}",
@@ -262,14 +277,16 @@ def write_markdown(result):
                     f"| {task['core_us_per_window']:.3f} | {workers} |"
                 ]
         lines.append("")
-    lines += ["8:2完整CSA对开始/结束基线：", ""]
+    if result["weighted_8_2_pct"]:
+        lines += ["8:2完整CSA对开始/结束基线：", ""]
     for name, values in result["weighted_8_2_pct"].items():
         lines += [f"- {name}: {values['start']:+.3f}% / {values['end']:+.3f}%"]
-    lines += ["", "8:2最大值变化对开始/结束基线（与均值分别计算，不混合评分）：", ""]
+    if result["weighted_max_8_2_pct"]:
+        lines += ["", "8:2最大值变化对开始/结束基线（与均值分别计算，不混合评分）：", ""]
     for name, values in result["weighted_max_8_2_pct"].items():
         lines += [f"- {name}: {values['start']:+.3f}% / {values['end']:+.3f}%"]
     lines += ["", "状态通过仅覆盖本轮单卡真实层权重与合成历史、图重放和保护区；没有新增整模型token/DSpark验收。"]
-    (ROOT / "RESULTS.md").write_text("\n".join(lines) + "\n")
+    (ROOT / filename).write_text("\n".join(lines) + "\n")
 
 
 if __name__ == "__main__":
