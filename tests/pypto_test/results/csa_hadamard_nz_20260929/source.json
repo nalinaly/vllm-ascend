@@ -1,0 +1,19 @@
+{
+  "baseline": "369ad2c1",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hadamard-nz-369ad2c1-v1",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1-baseline",
+  "variant": "pkg:dsv4_csa_hadamard_nz_369ad2c1_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "仅Q/K共享Hadamard的BF16 B按NZ读取，初始化准备一次NZ并供Q/K路径共享，保留既有矩阵方向与缩放；矩阵方向/K顺序/任务数/依赖保持",
+  "acceptance": "先看完整CSA绝对时间与P95，8:2；性能后核对全部状态，未证实整体收益不接生产",
+  "not_included": "独立对照，不叠加KV候选；旧快照/ND/atomic/尾行按收益决定后续受影响检查"
+}

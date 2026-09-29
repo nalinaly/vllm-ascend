@@ -1,0 +1,20 @@
+{
+  "baseline": "369ad2c1",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-idx-weights-nz-369ad2c1-v1",
+  "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1-baseline",
+  "variant": "pkg:dsv4_csa_idx_weights_nz_369ad2c1_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "change": "仅Indexer head投影的BF16 B按NZ读取，Native原地址；使用Native[64,4096]方向和b_trans=True；K顺序/任务数/依赖保持",
+  "acceptance": "先看完整CSA绝对时间与P95，8:2；性能后核对全部状态，未证实整体收益不接生产",
+  "not_included": "独立对照，不叠加KV候选；旧快照/ND/atomic/尾行按收益决定后续受影响检查",
+  "nz_offset_proof": "将w_unit - (w_unit//4)*4改写为等价w_unit%4，向NZ校验保留非负事实；K分块及累加顺序不变。"
+}

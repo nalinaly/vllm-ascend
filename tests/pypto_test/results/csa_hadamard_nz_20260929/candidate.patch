@@ -1,0 +1,111 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_indexer.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_indexer.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_indexer.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .config import (
+     BLOCK_SIZE,
+@@ -1755,7 +1757,7 @@
+ def indexer_qr_hadamard_mm(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+     qr_bf16: pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.BF16],
+-    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
++    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     qr_hadamard_i8: pl.Out[pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8]],
+     qr_hadamard_scale_dq: pl.Out[pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32]],
+     qh_mm_dep: pl.Scalar[pl.TASK_ID],
+@@ -1822,7 +1824,7 @@
+     wq_b_scale: pl.Tensor[[IDX_N_HEADS * IDX_HEAD_DIM], pl.FP32],
+     cos: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+     sin: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+-    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
++    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     qr_hadamard_i8: pl.Out[pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8]],
+     qr_hadamard_scale_dq: pl.Out[pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32]],
+ ):
+@@ -1951,7 +1953,7 @@
+     weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
+     cos: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+     sin: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+-    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
++    hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     idx_native_kv_cache: pl.Tensor[[IDX_NATIVE_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
+     idx_block_table: pl.Tensor[[B_DYN, INDEXER_TABLE_COLUMNS_DYN], pl.INT32],
+     topk_scores: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.FP32]],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_indexer_compressor.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_indexer_compressor.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_indexer_compressor.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .compact_metadata import ROPE_TILE_ROWS, load_compact_rope_rows
+ from .config import (
+@@ -402,7 +404,7 @@
+ def indexer_compressor_write(
+     kv: pl.Tensor[[T_DYN, HEAD_DIM], pl.FP32],
+     normed_kv: pl.Tensor[[BS_PAD, HEAD_DIM], pl.BF16],
+-    hadamard: pl.Tensor[[HEAD_DIM, HEAD_DIM], pl.BF16],
++    hadamard: pl.Tensor[[HEAD_DIM, HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     idx_native_kv_cache: pl.Tensor[[IDX_NATIVE_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
+     idx_slot_mapping: pl.Tensor[[INDEXER_ROWS_DYN, 2], pl.INT32],
+     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
+@@ -564,7 +566,7 @@
+     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+     sin: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+     compact_offsets: pl.Tensor[[B_DYN], pl.INT32],
+-    hadamard: pl.Tensor[[HEAD_DIM, HEAD_DIM], pl.BF16],
++    hadamard: pl.Tensor[[HEAD_DIM, HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     idx_native_kv_cache: pl.Tensor[[IDX_NATIVE_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
+     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+     seq_lens: pl.Tensor[[B_DYN], pl.INT32],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_hadamard_nz_369ad2c1_v1/decode_csa.py
+@@ -158,7 +158,7 @@
+     idx_wq_b: pl.Tensor[[Q_LORA, IDX_N_HEADS * IDX_HEAD_DIM], pl.INT8],
+     idx_wq_b_scale: pl.Tensor[[IDX_N_HEADS * IDX_HEAD_DIM], pl.FP32],
+     weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
+-    hadamard_idx: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
++    hadamard_idx: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16, BF16_WEIGHT_LAYOUT],
+     inner_wkv: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+     inner_wgate: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+     inner_ape: pl.Tensor[[COMPRESS_RATIO, INNER_OUT_DIM], pl.FP32],
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
+@@ -90,7 +90,7 @@
+     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
+     params = inspect.signature(root_function).parameters
+     result = {}
+-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
++    for name in ("wq_a", "wq_b", "wo_a", "wo_b", "hadamard_idx"):
+         layout = params[name].annotation.layout
+         if layout is None:
+             result[name] = "ND"
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -164,6 +164,10 @@
+         if transpose:
+             value = value.transpose(-1, -2)
+         return _base_weight_format(value.contiguous())
++
++    def hadamard_weight(value):
++        value = value.detach().T.to(torch.bfloat16).contiguous()
++        return torch_npu.npu_format_cast(value, 29) if layouts["hadamard_idx"] == "NZ" else value
+ 
+     def scale(module, width):
+         result = module.weight_scale.detach().reshape(-1)
+@@ -202,7 +206,7 @@
+         "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
+         "idx_wq_b_scale": scale(indexer.wq_b, 8192),
+         "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
+-        **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
++        **({"hadamard_idx": hadamard_weight(hadamard)} if hadamard is not None else {}),
+         "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
+         "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
+         "inner_ape": inner.ape.detach().float().contiguous(),

@@ -1,0 +1,94 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_inner_wgate_nz_369ad2c1_v1/decode_indexer_compressor.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_inner_wgate_nz_369ad2c1_v1/decode_indexer_compressor.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_indexer_compressor.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .compact_metadata import ROPE_TILE_ROWS, load_compact_rope_rows
+ from .config import (
+@@ -116,7 +118,7 @@
+ def indexer_compressor_project(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     kv_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+     score_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+     late_dep: pl.Scalar[pl.TASK_ID],
+@@ -353,7 +355,7 @@
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, INNER_STATE_TABLE_COLUMNS_DYN], pl.INT32],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+@@ -558,7 +560,7 @@
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, INNER_STATE_TABLE_COLUMNS_DYN], pl.INT32],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+     cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_inner_wgate_nz_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_inner_wgate_nz_369ad2c1_v1/decode_csa.py
+@@ -160,7 +160,7 @@
+     weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
+     hadamard_idx: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
+     inner_wkv: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+-    inner_wgate: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
++    inner_wgate: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     inner_ape: pl.Tensor[[COMPRESS_RATIO, INNER_OUT_DIM], pl.FP32],
+     inner_norm_w: pl.Tensor[[IDX_HEAD_DIM], pl.BF16],
+     inner_compress_state: pl.InOut[pl.Tensor[[INNER_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32]],
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
+@@ -90,7 +90,7 @@
+     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
+     params = inspect.signature(root_function).parameters
+     result = {}
+-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
++    for name in ("wq_a", "wq_b", "wo_a", "wo_b", "inner_wgate"):
+         layout = params[name].annotation.layout
+         if layout is None:
+             result[name] = "ND"
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -141,14 +141,19 @@
+         )
+         return torch_npu.npu_format_cast(value, target)
+ 
+-    def root_weight(name, shape, dtype):
++    def root_weight(name, shape, dtype, module=None):
+         # 根矩阵方向与 Native 相同。格式已匹配时借用原存储，禁止解包、转置或重新打包。
+-        value = getattr(attention, name).weight.detach()
++        value = (getattr(attention, name) if module is None else module).weight.detach()
+         if tuple(value.shape) != shape or value.dtype != dtype or not value.is_contiguous():
+             raise ValueError(f"Unexpected Native {name} weight: {value.shape}/{value.dtype}")
+         current = int(torch_npu.get_npu_format(value))
+         if layouts[name] == "NZ":
+-            return value if current == 29 else _recast(name, value, current, 29)
++            if current == 29:
++                return value
++            if module is not None:
++                logger.info("PTO_CSA_WEIGHT_INIT_NZ %s: PTO专用NZ副本，Native原权重保留", name)
++                return torch_npu.npu_format_cast(value, 29)
++            return _recast(name, value, current, 29)
+         if current in (_ACL_FORMAT_NCHW, _ACL_FORMAT_ND):
+             return value
+         return _recast(name, value, current, _ACL_FORMAT_ND)
+@@ -204,7 +209,7 @@
+         "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
+         **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
+         "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
+-        "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
++        "inner_wgate": root_weight("inner_wgate", (256, 4096), bf16, inner.wgate),
+         "inner_ape": inner.ape.detach().float().contiguous(),
+         "inner_norm_w": weight(inner.norm, (128,), bf16),
+         "attn_sink": attention.attn_sink.detach().contiguous(),

@@ -1,0 +1,626 @@
+{
+  "task": "task_20260929_181748_282880223162",
+  "task_status": "completed (exit=0)",
+  "source": {
+    "baseline": "369ad2c1",
+    "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-idx-q-nz-369ad2c1-v1",
+    "base_source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-kv-native-nz-369ad2c1-v1-baseline",
+    "variant": "pkg:dsv4_csa_idx_q_nz_369ad2c1_v1",
+    "cases": [
+      [
+        131072,
+        16
+      ],
+      [
+        8192,
+        24
+      ]
+    ],
+    "change": "仅Indexer Q的INT8 B按NZ读取，Native原地址；矩阵方向/K顺序/任务数/依赖保持",
+    "acceptance": "先看完整CSA绝对时间与P95，8:2；性能后核对全部状态，未证实整体收益不接生产",
+    "not_included": "独立对照，不叠加KV候选；旧快照/ND/atomic/尾行按收益决定后续受影响检查"
+  },
+  "state_status": "PASS",
+  "weighted_8_2_csa_pct": 1.1142875521874318,
+  "weighted_8_2_kernel_pct": {
+    "idx_q": -22.267748417820993
+  },
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "state_checks": {
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 268976128,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "idx_topk": {
+          "status": "PASS",
+          "shape": [
+            96,
+            512
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            96,
+            512
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 49152,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.0": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            128
+          ],
+          "expected_dtype": "torch.int8",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 67244032,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.1": {
+          "status": "PASS",
+          "shape": [
+            16417,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "expected_shape": [
+            16417,
+            32,
+            1,
+            1
+          ],
+          "expected_dtype": "torch.float16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 525344,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer_state.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            145,
+            2,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 148480,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            145,
+            2,
+            1,
+            2048
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 593920,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            145,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2375680,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "csa_change_pct": 0.9677865396246821,
+      "kernel_change_pct": {
+        "idx_q": -22.051853479393568
+      },
+      "sides": {
+        "baseline": {
+          "mean_us": 957.0299953222275,
+          "us_p50": 957.5400054454803,
+          "us_p95": 967.8599834442139,
+          "us_max": 975.5200147628784,
+          "samples_us": [
+            975.5200147628784,
+            958.079993724823,
+            959.4600200653076,
+            957.2399854660034,
+            966.759979724884,
+            951.1799812316895,
+            963.0799889564514,
+            957.8400254249573,
+            960.2199792861938,
+            945.5199837684631,
+            960.3800177574158,
+            946.619987487793,
+            957.2200179100037,
+            967.8599834442139,
+            946.2400078773499,
+            958.8599801063538,
+            952.4199962615967,
+            952.0999789237976,
+            955.3999900817871,
+            948.5999941825867
+          ],
+          "kernel_us": {
+            "idx_q": [
+              14.130833333333328,
+              13.123333333333333,
+              13.4325,
+              12.411666666666667
+            ]
+          },
+          "p95_over_p50": 1.01077759460706,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_idx_q_nz_20260929/h131072_b16/timing/baseline/profile/liteserver-hps-365a-00001_2828973_20260929181922558_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json"
+        },
+        "candidate": {
+          "mean_us": 966.2920027971268,
+          "us_p50": 966.4199948310852,
+          "us_p95": 979.2400002479553,
+          "us_max": 987.8000020980835,
+          "samples_us": [
+            966.8200016021729,
+            987.8000020980835,
+            958.3600163459778,
+            963.6800289154053,
+            967.739999294281,
+            970.740020275116,
+            957.3000073432922,
+            965.2199745178223,
+            971.019983291626,
+            979.2400002479553,
+            949.7600197792053,
+            970.0199961662292,
+            966.0199880599976,
+            957.7599763870239,
+            969.3400263786316,
+            953.9600014686584,
+            965.2000069618225,
+            963.7799859046936,
+            966.8200016021729,
+            975.2600193023682
+          ],
+          "kernel_us": {
+            "idx_q": [
+              11.316666666666665,
+              10.206666666666667,
+              9.448333333333332,
+              10.417500000000002
+            ]
+          },
+          "p95_over_p50": 1.0132654596194597,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_idx_q_nz_20260929/h131072_b16/timing/candidate/profile/liteserver-hps-365a-00001_2841571_20260929182106508_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json"
+        }
+      }
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "state_checks": {
+        "compressed.0": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 25968640,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "idx_topk": {
+          "status": "PASS",
+          "shape": [
+            144,
+            512
+          ],
+          "dtype": "torch.int32",
+          "expected_shape": [
+            144,
+            512
+          ],
+          "expected_dtype": "torch.int32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 73728,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.0": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            128
+          ],
+          "expected_dtype": "torch.int8",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 6492160,
+          "comparison": "exact",
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer.1": {
+          "status": "PASS",
+          "shape": [
+            1585,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "expected_shape": [
+            1585,
+            32,
+            1,
+            1
+          ],
+          "expected_dtype": "torch.float16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 50720,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "indexer_state.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            217,
+            2,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 222208,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "state.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            217,
+            2,
+            1,
+            2048
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 888832,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "swa.0": {
+          "status": "PASS",
+          "shape": [
+            217,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            217,
+            32,
+            1,
+            512
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 3555328,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        },
+        "x_out": {
+          "status": "PASS",
+          "shape": [
+            144,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            144,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 2359296,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "csa_change_pct": 1.7002916024384307,
+      "kernel_change_pct": {
+        "idx_q": -23.131328171530676
+      },
+      "sides": {
+        "baseline": {
+          "mean_us": 919.4890052080154,
+          "us_p50": 919.1700220108032,
+          "us_p95": 933.9799880981445,
+          "us_max": 939.2399787902832,
+          "samples_us": [
+            917.0600175857544,
+            928.1200170516968,
+            922.5599765777588,
+            933.9799880981445,
+            911.9200110435486,
+            915.7800078392029,
+            913.9800071716309,
+            913.8799905776978,
+            908.1400036811829,
+            927.7999997138977,
+            921.6200113296509,
+            925.8999824523926,
+            913.1799936294556,
+            917.4200296401978,
+            939.2399787902832,
+            920.9200143814087,
+            926.3200163841248,
+            900.7400274276733,
+            922.0200181007385,
+            909.2000126838684
+          ],
+          "kernel_us": {
+            "idx_q": [
+              16.6325,
+              16.095833333333335,
+              16.109166666666667,
+              18.322499999999994
+            ]
+          },
+          "p95_over_p50": 1.0161123249591437,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_idx_q_nz_20260929/h8192_b24/timing/baseline/profile/liteserver-hps-365a-00001_2935214_20260929182801385_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json"
+        },
+        "candidate": {
+          "mean_us": 935.122999548912,
+          "us_p50": 936.5299940109253,
+          "us_p95": 959.3200087547302,
+          "us_max": 960.319995880127,
+          "samples_us": [
+            927.2800087928772,
+            915.4999852180481,
+            920.520007610321,
+            959.3200087547302,
+            936.5400075912476,
+            930.6399822235107,
+            960.319995880127,
+            945.900022983551,
+            950.9999752044678,
+            946.6000199317932,
+            945.1000094413757,
+            928.3199906349182,
+            942.520022392273,
+            922.3999977111816,
+            949.3600130081177,
+            936.519980430603,
+            911.6600155830383,
+            949.6399760246277,
+            895.7399725914001,
+            927.5799989700317
+          ],
+          "kernel_us": {
+            "idx_q": [
+              13.552500000000002,
+              12.823333333333334,
+              12.743333333333334,
+              12.505833333333332
+            ]
+          },
+          "p95_over_p50": 1.0243345273398035,
+          "over_p50_5pct": 0,
+          "guards": {
+            "PASS": 31
+          },
+          "profile_json": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_idx_q_nz_20260929/h8192_b24/timing/candidate/profile/liteserver-hps-365a-00001_2908427_20260929182619398_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json"
+        }
+      }
+    }
+  ]
+}

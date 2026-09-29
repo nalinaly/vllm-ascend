@@ -1,0 +1,114 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_idx_weights_nz_369ad2c1_v1/decode_indexer.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_idx_weights_nz_369ad2c1_v1/decode_indexer.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_indexer.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .config import (
+     BLOCK_SIZE,
+@@ -1852,7 +1854,7 @@
+ @pl.jit.inline(auto_scope=False)
+ def indexer_weights_project(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+-    weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
++    weights_proj: pl.Tensor[[IDX_N_HEADS, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     weights_gate_dep: pl.Scalar[pl.TASK_ID],
+     weights_workers: pl.Scalar[pl.INDEX],
+ ) -> tuple[pl.Tensor[[T_PAD, IDX_N_HEADS], pl.FP32], pl.Scalar[pl.TASK_ID]]:
+@@ -1870,7 +1872,7 @@
+         w_worker = pl.tile.get_block_idx()
+         for w_unit in pl.range(w_worker, WEIGHTS_OK * row_blocks, weights_workers):
+             w_rb = w_unit // WEIGHTS_OK  # row block outermost
+-            kb = w_unit - w_rb * WEIGHTS_OK
++            kb = w_unit % WEIGHTS_OK
+             w_r0 = w_rb * MM_ROW_TILE
+             w_rows = pl.min(MM_ROW_TILE, bs - w_r0)
+             k_base = kb * WEIGHTS_K_TILE
+@@ -1882,8 +1884,8 @@
+             for db in pl.range(WEIGHTS_K_TILE // D_TILE):
+                 d0 = k_base + db * D_TILE
+                 x_tile = pl.slice(x_flat, [MM_ROW_TILE, D_TILE], [w_r0, d0], valid_shape=[w_rows, D_TILE])
+-                weights_proj_tile = weights_proj[d0 : d0 + D_TILE, :]
+-                weights_acc = pl.matmul_acc(weights_acc, x_tile, weights_proj_tile, init_cond=(db == 0))
++                weights_proj_tile = weights_proj[:, d0 : d0 + D_TILE]
++                weights_acc = pl.matmul_acc(weights_acc, x_tile, weights_proj_tile, b_trans=True, init_cond=(db == 0))
+             weights_partial[kb * T_PAD + w_r0 : kb * T_PAD + w_r0 + MM_ROW_TILE, :] = weights_acc
+ 
+     with pl.spmd(
+@@ -1907,7 +1909,7 @@
+ @pl.jit.inline(auto_scope=False)
+ def indexer_weights_score(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+-    weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
++    weights_proj: pl.Tensor[[IDX_N_HEADS, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     qr_hadamard_i8: pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8],
+     qr_hadamard_scale_dq: pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32],
+     idx_native_kv_cache: pl.Tensor[[IDX_NATIVE_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
+@@ -1948,7 +1950,7 @@
+     qr_scale: pl.Tensor[[T_DYN, 1], pl.FP32],
+     wq_b: pl.Tensor[[Q_LORA, IDX_N_HEADS * IDX_HEAD_DIM], pl.INT8],
+     wq_b_scale: pl.Tensor[[IDX_N_HEADS * IDX_HEAD_DIM], pl.FP32],
+-    weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
++    weights_proj: pl.Tensor[[IDX_N_HEADS, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     cos: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+     sin: pl.Tensor[[T_DYN, ROPE_HEAD_DIM], pl.FP32],
+     hadamard: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_idx_weights_nz_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_idx_weights_nz_369ad2c1_v1/decode_csa.py
+@@ -157,7 +157,7 @@
+     state_block_table: pl.Tensor[[B_DYN, STATE_TABLE_COLUMNS_DYN], pl.INT32],
+     idx_wq_b: pl.Tensor[[Q_LORA, IDX_N_HEADS * IDX_HEAD_DIM], pl.INT8],
+     idx_wq_b_scale: pl.Tensor[[IDX_N_HEADS * IDX_HEAD_DIM], pl.FP32],
+-    weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
++    weights_proj: pl.Tensor[[IDX_N_HEADS, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     hadamard_idx: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
+     inner_wkv: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+     inner_wgate: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
+@@ -90,7 +90,7 @@
+     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
+     params = inspect.signature(root_function).parameters
+     result = {}
+-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
++    for name in ("wq_a", "wq_b", "wo_a", "wo_b", "weights_proj"):
+         layout = params[name].annotation.layout
+         if layout is None:
+             result[name] = "ND"
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -14,7 +14,7 @@
+ from .config import DECODE_BATCH
+ from .decode_csa import _decode_csa_tp1_layer, decode_csa_tp1_layer_test
+ from .native_storage import indexer_storage, physical_pages, table_storage
+-from .nz_mode import root_weight_layouts
++from .nz_mode import root_weight_layouts, root_weight_shapes
+ 
+ _NZ_C0_BYTES = 32
+ _NZ_FRACTAL_ROWS = 16
+@@ -141,9 +141,9 @@
+         )
+         return torch_npu.npu_format_cast(value, target)
+ 
+-    def root_weight(name, shape, dtype):
++    def root_weight(name, shape, dtype, module=None):
+         # 根矩阵方向与 Native 相同。格式已匹配时借用原存储，禁止解包、转置或重新打包。
+-        value = getattr(attention, name).weight.detach()
++        value = (getattr(attention, name) if module is None else module).weight.detach()
+         if tuple(value.shape) != shape or value.dtype != dtype or not value.is_contiguous():
+             raise ValueError(f"Unexpected Native {name} weight: {value.shape}/{value.dtype}")
+         current = int(torch_npu.get_npu_format(value))
+@@ -201,7 +201,9 @@
+         "cmp_norm_w": weight(main.norm, (512,), bf16),
+         "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
+         "idx_wq_b_scale": scale(indexer.wq_b, 8192),
+-        "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
++        "weights_proj": (root_weight("weights_proj", (64, 4096), bf16, indexer.weights_proj)
++                         if root_weight_shapes(root_function)["weights_proj"] == (64, 4096)
++                         else weight(indexer.weights_proj, (64, 4096), bf16, True)),
+         **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
+         "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
+         "inner_wgate": weight(inner.wgate, (256, 4096), bf16),

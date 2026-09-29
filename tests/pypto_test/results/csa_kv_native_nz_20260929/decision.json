@@ -1,11 +1,14 @@
 {
-  "decision": "RETAIN_INCORE_GAIN_PENDING_COMPATIBILITY",
+  "decision": "HOLD_PENDING_CLEAR_CSA_TIME_GAIN",
   "task": "task_20260929_174400_225474124825",
   "task_status": "completed (exit=0)",
   "state_status": "PASS",
   "weighted_8_2_csa_pct": -0.08007423233093336,
   "weighted_8_2_kv_pct": -46.99965487005248,
-  "reason": "长短同工作量KV核时均改善且四窗范围完全分离，八类状态零差异、Native原地址绑定通过；按用户要求保留核内收益",
-  "remaining": "旧快照双向方向迁移、ND/atomic/尾行兼容后再接生产；生产尚未修改",
-  "limitations": "完整CSA仅-0.080%，长档+0.068%、P95+2.040μs单列；未改Score/Sparse的波动不归因为KV算术收益，不外推七档/模型"
+  "reason": "最新验收以完整CSA绝对时间下降为准；现有加权-0.080%不能确认收益，因此只保留候选，不接生产。",
+  "remaining": "继续逐项测试其他ND静态B；只有完整CSA收益成立的候选再做采用所需兼容验证。",
+  "limitations": "完整CSA仅-0.080%，长档+0.068%、P95+2.040μs单列；未改Score/Sparse的波动不归因为KV算术收益，不外推七档/模型",
+  "previous_decision": "RETAIN_INCORE_GAIN_PENDING_COMPATIBILITY",
+  "latest_user_criterion": "2026-09-29：逐项测试NZ，以完整CSA绝对时间下降决定接入；性能后检查精度。当前加权CSA仅-0.080%，核内-47.000%不足以直接采用。",
+  "previous_reason": "长短同工作量KV核时均改善且四窗范围完全分离，八类状态零差异、Native原地址绑定通过；按用户要求保留核内收益"
 }
