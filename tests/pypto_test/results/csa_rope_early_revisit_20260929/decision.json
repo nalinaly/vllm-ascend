@@ -1,0 +1,146 @@
+{
+  "status": "DO_NOT_ADOPT_GLOBAL",
+  "production_operator": "46cec3a0",
+  "production_changed": false,
+  "reason": "首轮8:2小收益在一次反序复核中翻转；不全局启用。短B24两轮获益保留为分支依据，未推广至全部短档。",
+  "rounds": [
+    {
+      "label": "首轮",
+      "task": "task_20260929_205536_77084524209",
+      "task_status": "completed (exit=0)",
+      "weighted_8_2_csa_pct": -0.4668312679183262,
+      "cases": [
+        {
+          "history": 131072,
+          "batch": 16,
+          "csa_change_pct": -0.4124771026017049,
+          "sides": {
+            "baseline": {
+              "device": 1,
+              "mean_us": 973.1449991464615,
+              "us_p50": 973.9499986171722,
+              "us_p95": 990.559995174408,
+              "us_max": 993.0999875068665,
+              "over_p50_5pct": 0
+            },
+            "candidate": {
+              "device": 1,
+              "mean_us": 969.1309988498688,
+              "us_p50": 970.5399870872498,
+              "us_p95": 977.8000116348267,
+              "us_max": 980.7999730110168,
+              "over_p50_5pct": 0
+            }
+          }
+        },
+        {
+          "history": 8192,
+          "batch": 24,
+          "csa_change_pct": -0.6842479291848114,
+          "sides": {
+            "baseline": {
+              "device": 1,
+              "mean_us": 923.4949916601181,
+              "us_p50": 927.9600083827972,
+              "us_p95": 953.6799788475037,
+              "us_max": 959.6800208091736,
+              "over_p50_5pct": 0
+            },
+            "candidate": {
+              "device": 1,
+              "mean_us": 917.1759963035583,
+              "us_p50": 920.3299880027771,
+              "us_p95": 940.1000142097473,
+              "us_max": 951.3800144195557,
+              "over_p50_5pct": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "label": "反序",
+      "task": "task_20260929_211053_95322323274",
+      "task_status": "completed (exit=0)",
+      "weighted_8_2_csa_pct": 0.3384417174981147,
+      "cases": [
+        {
+          "history": 131072,
+          "batch": 16,
+          "csa_change_pct": 0.7088608655674955,
+          "sides": {
+            "baseline": {
+              "device": 0,
+              "mean_us": 964.5049959421158,
+              "us_p50": 962.6199901103973,
+              "us_p95": 973.6199975013733,
+              "us_max": 978.879988193512,
+              "over_p50_5pct": 0
+            },
+            "candidate": {
+              "device": 0,
+              "mean_us": 971.3419944047928,
+              "us_p50": 971.4800119400024,
+              "us_p95": 989.3800020217896,
+              "us_max": 991.6200041770935,
+              "over_p50_5pct": 0
+            }
+          }
+        },
+        {
+          "history": 8192,
+          "batch": 24,
+          "csa_change_pct": -1.1432348747794085,
+          "sides": {
+            "baseline": {
+              "device": 0,
+              "mean_us": 927.3680001497269,
+              "us_p50": 930.0499856472015,
+              "us_p95": 945.1799988746643,
+              "us_max": 957.1200013160706,
+              "over_p50_5pct": 0
+            },
+            "candidate": {
+              "device": 0,
+              "mean_us": 916.7660057544708,
+              "us_p50": 916.489988565445,
+              "us_p95": 933.0000281333923,
+              "us_max": 937.5,
+              "over_p50_5pct": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accuracy": {
+    "cross_version_full_states": "PASS, exact, eight states per case after first-round timing",
+    "graph_guards": "PASS in both rounds; first-round four-window DFX self/guards also PASS",
+    "native_model_acceptance": "NOT_CLAIMED",
+    "native_residual": [
+      {
+        "history": 131072,
+        "batch": 16,
+        "baseline_candidate_metrics_equal": true,
+        "output_max_abs": 0.03125,
+        "output_rmse": 0.004007664225190057,
+        "topk_replaced_indices": 603
+      },
+      {
+        "history": 8192,
+        "batch": 24,
+        "baseline_candidate_metrics_equal": true,
+        "output_max_abs": 0.03125,
+        "output_rmse": 0.003213393171772828,
+        "topk_replaced_indices": 500
+      }
+    ]
+  },
+  "next_step": "优先在128K/B24做同卡A/B，保持与8K/B24相同T=144以区分batch和长度影响；据工作量选择算子内部策略，不用测试脚本切版本拼结果。",
+  "limits": [
+    "首轮auto卡1、反序auto卡0，每轮内部同卡；方向翻转不能仅归因先后顺序。",
+    "单次设备样本在同一进程内，不将20次重复当20个独立实验；不声称统计显著性。",
+    "DFX与正式事件独立采集，不相减、拼接或用窗口推算正式事件收益。",
+    "本轮未增加七档/边界/EP16，不改精度版、Native、cache或工具链。"
+  ]
+}

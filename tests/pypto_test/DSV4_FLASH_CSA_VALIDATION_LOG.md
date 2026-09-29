@@ -12484,3 +12484,80 @@ task_20260929_203245_4337637856完成退出0，H4095/B3/T18、det1/atomic0/mode2
 [采用结果](results/csa_indexer_rope_flat_gather_20260929/RESULTS.md)、
 [边界](results/csa_indexer_rope_flat_gather_20260929/boundary_selective/summary.json)、
 [Native残留](results/csa_indexer_rope_flat_gather_20260929/native_reference_residual.json)。
+
+## 472. 用当前真实fanin复核RoPE提前派发，只筛两代表档（2026-09-29）
+
+先解析46cec3a0基底的长B16/短B24各四窗，未增加设备采样。所有窗的融合收尾派发
+都晚于最后quant结束，排除其提前占AIV拖住量化的具体猜测；O-A/O-B各64份任务在24个AIC上
+仍需多波，不把全部启动分散称作纯软件开销。Indexer反量化八窗均无实际early，
+其真实fanin有csa_rope_sign，生产者标志False；其余计时生产者idx投影/QR归一化为True。
+Simpler当前fanin资格检查要求生产者标志，不因该小任务先完成就可假定开关无关。
+
+历史§214已在2dd51f15/atomic1/8K B16试过RoPE标志无收益，未遗漏或删除失败证据。
+当前已变为CANN9.2/atomic0，七处early与Q/Sparse/Indexer Gather改变了前置链，
+旧试验未覆盖128K；因此只在新冻结pkg上给一次长B16/短B24复核，不机械全开。
+唯一源码差异是csa_rope_sign增加allow_early_resolve=True，真实前置、块数及算术保持。
+生产仍46cec3a0；Native、精度版、cache与工具链未改。
+
+两侧两入口解析、候选完整CPU/PTOAS/CCE/link/load及Ruff/shell通过，私有Python源冻结。
+20:55正常auto提交task_20260929_205536_77084524209，已running；5预热20事件/侧，
+四窗独立DFX。按用户要求先性能再比输出、Top-K和cache/state八类完整张量，零容差判断新增差异。
+以完整CSA/P95的8:2决定，纯调度波动不能当作独立incore收益。有效才补尾行/padding。
+[依据与入口](results/csa_rope_early_revisit_20260929/README.md)、
+[原八窗](results/csa_rope_early_revisit_20260929/existing_handoff.json)。
+
+## 473. RoPE提前派发实际生效、性能后精度无新增差异；小收益做一次反序确认（2026-09-29）
+
+首轮task_20260929_205536_77084524209在auto设备1完成退出0。交互等待曾到600秒，
+daemon继续执行并正常结束，没有因观察超时重启任务。两档性能后八类完整状态零容差、
+各自图重放/保护区/Top-K结构及16窗官方raw join/worker覆盖全部通过。
+
+| 档位 | CSA μs | 变化 | P95 μs | 最大值 μs |
+| --- | ---: | ---: | ---: | ---: |
+| 128K/B16 | 973.145→969.131 | −0.412% | 990.560→977.800 | 993.100→980.800 |
+| 8K/B24 | 923.495→917.176 | −0.684% | 953.680→940.100 | 959.680→951.380 |
+
+8:2正式CSA −0.467%，四组均0/20超过各自P50的105%。均值差只有4.014/6.319μs，
+基线/候选标准差分别9.668/6.630和18.895/17.734μs，单轮小差值不能自动解释为稳定收益。
+Index反量化实际early从八窗none变为长partial/partial/partial/full、短四窗partial；
+最晚真实前置FIN→首start长8.215→0.650、短5.570→0.580μs，交接减少已确认。
+但独立DFX长档Index投影末end191.660→209.800、Score末end552.000→559.830μs，
+整Worker窗口910.925→917.900；短Score末end439.405→437.685，窗口868.445→864.170。
+不能拿DFX与正式计时相减，也不能把这两个不同范围的结果合成一个性能指标。
+Index反量化核时11.667→15.896、15.834→19.246，算术未改，包含竞争/等待，非新增核内优化。
+
+本轮DFX已包含Native诊断，不另测：输出两档max_abs均0.03125，RMSE分别0.004007664/0.003213393；
+Top-K集合替换603/500项。旧/新PTO对应Native的完整误差和选择指标相同，是无新增回退，
+不是Native逐元素、逐token/DSpark或当前EP16验收通过。
+
+为判断0.467%小收益是否随先后顺序翻转，只追加一次反序正式计时：
+task_20260929_211053_95322323274，原冻结包、CANN9.2、两代表档各20事件；
+不再采DFX或保存完整state，复用已通过精度证据，测试入口继续自身图/保护区检查。
+生产仍46cec3a0，尚未移入该标志；不扩大七档、边界或模型。
+[首轮正式结果](results/csa_rope_early_revisit_20260929/RESULTS.md)、
+[真实前置](results/csa_rope_early_revisit_20260929/handoff.json)、
+[Native残留](results/csa_rope_early_revisit_20260929/native_reference_residual.json)。
+
+## 474. RoPE全局early反序收益翻转，不合入；保留B24分支线索和精度结论（2026-09-29）
+
+反序task_20260929_211053_95322323274已完成退出0，auto设备0；首轮auto设备1，
+每轮内部同卡。两档顺序均反转，但卡也变化，不能仅归因先后顺序或跨卡混算绝对μs。
+反序长B16：964.505→971.342μs（+0.709%），P95 973.620→989.380，最大978.880→991.620；
+短B24：927.368→916.766（−1.143%），P95 945.180→933.000，最大957.120→937.500。
+8:2 +0.338%，没有复现首轮−0.467%的全局收益。八组160事件均0次超过自身P50的105%，
+没有据此关闭EP16历史长尾。此纯调度候选不以局部交接减少代替完整CSA验收，未合入。
+
+性能后精度已检查：首轮两档输出、Top-K和六类cache/state完整张量逐元素零差异；
+首轮DFX自身图/保护区/16窗覆盖及两轮计时自身图/保护区均通过。
+复用DFX的Native诊断，新旧PTO对应Native的全部误差/Top-K指标相同；输出max_abs仍0.03125，
+Top-K集合替换603/500项。不把无新增回退称为Native或新CANN9.2/EP16模型验收完成。
+
+另解析原16窗，Hadamard接收全部晚于Indexer投影最后FIN，无证据称其提前占AIC拖住该投影；
+它在主Q_B完成前被接收与阻塞Q_B不是同一结论，保留因果边界。
+短B24两轮−0.684%/−1.143%均有收益，不丢弃有用证据；但长B16与短B24同时改变batch和长度，
+下一步优先128K/B24同T=144的A/B，以确定按工作量还是长度区分，不能直接推广全部8K。
+本全局候选不再补第三次重复、边界、七档或整机；未改生产46cec3a0、精度版、Native、cache或工具链。
+两个任务均释放设备。定向Ruff/shell/diff通过；format.sh ci因缺pre-commit未完成。
+[完整双轮结果](results/csa_rope_early_revisit_20260929/RESULTS.md)、
+[取舍与待办](results/csa_rope_early_revisit_20260929/decision.json)、
+[反序原样本](results/csa_rope_early_revisit_20260929/reverse/summary.json)。

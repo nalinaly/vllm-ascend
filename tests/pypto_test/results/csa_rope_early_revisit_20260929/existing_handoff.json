@@ -1,0 +1,1972 @@
+{
+  "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929",
+  "origin": "每窗首个Worker start；μs",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 16,
+      "sides": {
+        "candidate": {
+          "windows": [
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h131072_b16/swimlane/candidate/dfx/merged_swimlane.json",
+              "window": 0,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 142.6,
+                  "last_end_us": 194.32,
+                  "end_to_finish_us": 4.0400000000000205,
+                  "pred_finish_to_dispatch_us": 5.060000000000002,
+                  "pred_finish_to_start_us": 6.0,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 168.20000000000002,
+                  "last_end_us": 252.90000000000003,
+                  "end_to_finish_us": 3.0,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 252.12,
+                  "last_end_us": 258.24,
+                  "end_to_finish_us": 15.839999999999975,
+                  "pred_finish_to_dispatch_us": -13.420000000000016,
+                  "pred_finish_to_start_us": 0.7599999999999909,
+                  "early": "partial",
+                  "early_rows": 23,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": false,
+                  "first_start_us": 320.92,
+                  "last_end_us": 548.94,
+                  "end_to_finish_us": 4.079999999999927,
+                  "pred_finish_to_dispatch_us": 6.579999999999984,
+                  "pred_finish_to_start_us": 8.639999999999986,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 262.32,
+                  "last_end_us": 292.86,
+                  "end_to_finish_us": 5.3799999999999955,
+                  "pred_finish_to_dispatch_us": 5.539999999999964,
+                  "pred_finish_to_start_us": 6.419999999999959,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 304.8,
+                  "last_end_us": 308.54,
+                  "end_to_finish_us": 3.740000000000009,
+                  "pred_finish_to_dispatch_us": -11.720000000000027,
+                  "pred_finish_to_start_us": 1.0199999999999818,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 208.8,
+                  "last_end_us": 245.62,
+                  "end_to_finish_us": 5.740000000000009,
+                  "pred_finish_to_dispatch_us": 8.73999999999998,
+                  "pred_finish_to_start_us": 10.439999999999998,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 282.96,
+                  "last_end_us": 298.3,
+                  "end_to_finish_us": 5.480000000000018,
+                  "pred_finish_to_dispatch_us": 5.980000000000018,
+                  "pred_finish_to_start_us": 8.879999999999995,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 13.04,
+                  "last_end_us": 17.800000000000004,
+                  "end_to_finish_us": 13.719999999999992,
+                  "pred_finish_to_dispatch_us": -2.8200000000000003,
+                  "pred_finish_to_start_us": 2.219999999999999,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 24
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h131072_b16/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+              "window": 1,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 135.32000000000002,
+                  "last_end_us": 220.52,
+                  "end_to_finish_us": 2.8799999999999955,
+                  "pred_finish_to_dispatch_us": -17.620000000000005,
+                  "pred_finish_to_start_us": 0.7199999999999989,
+                  "early": "partial",
+                  "early_rows": 4,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 269.28000000000003,
+                  "last_end_us": 280.46000000000004,
+                  "end_to_finish_us": 7.859999999999957,
+                  "pred_finish_to_dispatch_us": -18.879999999999995,
+                  "pred_finish_to_start_us": 0.6200000000000045,
+                  "early": "partial",
+                  "early_rows": 16,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": false,
+                  "first_start_us": 330.72,
+                  "last_end_us": 563.12,
+                  "end_to_finish_us": 2.599999999999909,
+                  "pred_finish_to_dispatch_us": 8.199999999999989,
+                  "pred_finish_to_start_us": 10.0,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 149.42000000000002,
+                  "last_end_us": 246.34000000000003,
+                  "end_to_finish_us": 3.6999999999999886,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 226.46,
+                  "last_end_us": 259.94,
+                  "end_to_finish_us": 8.720000000000027,
+                  "pred_finish_to_dispatch_us": 2.1200000000000045,
+                  "pred_finish_to_start_us": 3.0600000000000023,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 256.02000000000004,
+                  "last_end_us": 292.28000000000003,
+                  "end_to_finish_us": 3.359999999999957,
+                  "pred_finish_to_dispatch_us": 5.240000000000009,
+                  "pred_finish_to_start_us": 5.980000000000018,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 289.1,
+                  "last_end_us": 307.52000000000004,
+                  "end_to_finish_us": 4.819999999999993,
+                  "pred_finish_to_dispatch_us": -12.5,
+                  "pred_finish_to_start_us": 0.7800000000000296,
+                  "early": "full",
+                  "early_rows": 48,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 17.72,
+                  "last_end_us": 23.18,
+                  "end_to_finish_us": 7.439999999999998,
+                  "pred_finish_to_dispatch_us": -3.780000000000001,
+                  "pred_finish_to_start_us": 0.6599999999999966,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 313.12,
+                  "last_end_us": 316.48,
+                  "end_to_finish_us": 4.240000000000009,
+                  "pred_finish_to_dispatch_us": -20.52000000000004,
+                  "pred_finish_to_start_us": 0.7799999999999727,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 24
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h131072_b16/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+              "window": 2,
+              "tasks": {
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 148.72,
+                  "last_end_us": 233.3,
+                  "end_to_finish_us": 1.579999999999984,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 137.08,
+                  "last_end_us": 232.96000000000004,
+                  "end_to_finish_us": 9.299999999999955,
+                  "pred_finish_to_dispatch_us": 1.4399999999999977,
+                  "pred_finish_to_start_us": 2.819999999999993,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 293.78000000000003,
+                  "last_end_us": 299.48,
+                  "end_to_finish_us": 6.319999999999993,
+                  "pred_finish_to_dispatch_us": -30.620000000000005,
+                  "pred_finish_to_start_us": 0.8000000000000114,
+                  "early": "full",
+                  "early_rows": 24,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": false,
+                  "first_start_us": 349.68,
+                  "last_end_us": 578.32,
+                  "end_to_finish_us": 3.839999999999918,
+                  "pred_finish_to_dispatch_us": -3.240000000000009,
+                  "pred_finish_to_start_us": 1.079999999999984,
+                  "early": "full",
+                  "early_rows": 72,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 19.98,
+                  "last_end_us": 25.06,
+                  "end_to_finish_us": 13.880000000000003,
+                  "pred_finish_to_dispatch_us": -2.019999999999996,
+                  "pred_finish_to_start_us": 3.480000000000004,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 240.84000000000003,
+                  "last_end_us": 285.66,
+                  "end_to_finish_us": 0.8799999999999955,
+                  "pred_finish_to_dispatch_us": 4.960000000000036,
+                  "pred_finish_to_start_us": 5.960000000000036,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 255.94,
+                  "last_end_us": 289.96000000000004,
+                  "end_to_finish_us": 3.019999999999982,
+                  "pred_finish_to_dispatch_us": 12.640000000000043,
+                  "pred_finish_to_start_us": 13.680000000000007,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 306.62,
+                  "last_end_us": 325.22,
+                  "end_to_finish_us": 5.21999999999997,
+                  "pred_finish_to_dispatch_us": -7.860000000000014,
+                  "pred_finish_to_start_us": 0.8199999999999932,
+                  "early": "full",
+                  "early_rows": 48,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 331.08000000000004,
+                  "last_end_us": 334.66,
+                  "end_to_finish_us": 13.939999999999998,
+                  "pred_finish_to_dispatch_us": -21.71999999999997,
+                  "pred_finish_to_start_us": 0.6400000000000432,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 24
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h131072_b16/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+              "window": 3,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 153.64,
+                  "last_end_us": 215.94,
+                  "end_to_finish_us": 3.5800000000000125,
+                  "pred_finish_to_dispatch_us": -9.620000000000005,
+                  "pred_finish_to_start_us": 8.47999999999999,
+                  "early": "partial",
+                  "early_rows": 11,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 164.56,
+                  "last_end_us": 247.84,
+                  "end_to_finish_us": 2.1999999999999886,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 256.6,
+                  "last_end_us": 273.72,
+                  "end_to_finish_us": 6.439999999999998,
+                  "pred_finish_to_dispatch_us": -21.26000000000002,
+                  "pred_finish_to_start_us": 0.839999999999975,
+                  "early": "partial",
+                  "early_rows": 20,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": false,
+                  "first_start_us": 323.52000000000004,
+                  "last_end_us": 554.84,
+                  "end_to_finish_us": 3.2199999999999136,
+                  "pred_finish_to_dispatch_us": -4.980000000000018,
+                  "pred_finish_to_start_us": 1.079999999999984,
+                  "early": "full",
+                  "early_rows": 72,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 225.8,
+                  "last_end_us": 250.76000000000002,
+                  "end_to_finish_us": 5.0,
+                  "pred_finish_to_dispatch_us": 5.560000000000002,
+                  "pred_finish_to_start_us": 6.280000000000001,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 255.50000000000003,
+                  "last_end_us": 286.90000000000003,
+                  "end_to_finish_us": 4.899999999999977,
+                  "pred_finish_to_dispatch_us": 4.680000000000007,
+                  "pred_finish_to_start_us": 5.460000000000036,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 280.78000000000003,
+                  "last_end_us": 304.1,
+                  "end_to_finish_us": 0.07999999999998408,
+                  "pred_finish_to_dispatch_us": -9.920000000000016,
+                  "pred_finish_to_start_us": 0.6200000000000045,
+                  "early": "partial",
+                  "early_rows": 47,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 16.2,
+                  "last_end_us": 20.3,
+                  "end_to_finish_us": 7.259999999999998,
+                  "pred_finish_to_dispatch_us": -2.8599999999999994,
+                  "pred_finish_to_start_us": 1.6400000000000006,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 304.76000000000005,
+                  "last_end_us": 308.08000000000004,
+                  "end_to_finish_us": 14.360000000000014,
+                  "pred_finish_to_dispatch_us": -19.019999999999982,
+                  "pred_finish_to_start_us": 0.5800000000000409,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 24
+            }
+          ],
+          "mean_us": {
+            "csa_rope_sign": {
+              "first_start_us": 16.735,
+              "last_end_us": 21.585,
+              "end_to_finish_us": 10.574999999999998
+            },
+            "idx_qr_proj_matmul": {
+              "first_start_us": 142.16,
+              "last_end_us": 215.935,
+              "end_to_finish_us": 4.949999999999996
+            },
+            "idx_qr_dequant_rope": {
+              "first_start_us": 229.25,
+              "last_end_us": 261.57,
+              "end_to_finish_us": 5.6200000000000045
+            },
+            "qr_hadamard_matmul": {
+              "first_start_us": 267.94500000000005,
+              "last_end_us": 277.975,
+              "end_to_finish_us": 9.11499999999998
+            },
+            "qr_hadamard_quant": {
+              "first_start_us": 289.865,
+              "last_end_us": 308.785,
+              "end_to_finish_us": 3.8999999999999915
+            },
+            "indexer_head_coefficients": {
+              "first_start_us": 313.44000000000005,
+              "last_end_us": 316.94000000000005,
+              "end_to_finish_us": 9.070000000000007
+            },
+            "indexer_score_topk_native_pair_aic": {
+              "first_start_us": 331.21000000000004,
+              "last_end_us": 561.3050000000001,
+              "end_to_finish_us": 3.434999999999917
+            },
+            "qproj_matmul": {
+              "first_start_us": 157.72500000000002,
+              "last_end_us": 245.09500000000003,
+              "end_to_finish_us": 2.6199999999999903
+            },
+            "qproj_dequant_rms_nope_rope": {
+              "first_start_us": 253.67000000000002,
+              "last_end_us": 289.425,
+              "end_to_finish_us": 3.6299999999999812
+            }
+          },
+          "idx_dequant_early_windows": [
+            "none",
+            "none",
+            "none",
+            "none"
+          ]
+        }
+      }
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "sides": {
+        "candidate": {
+          "windows": [
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h8192_b24/swimlane/candidate/dfx/merged_swimlane.json",
+              "window": 0,
+              "tasks": {
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 203.44,
+                  "last_end_us": 306.94,
+                  "end_to_finish_us": 6.300000000000011,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 298.52,
+                  "last_end_us": 312.34,
+                  "end_to_finish_us": 0.9000000000000341,
+                  "pred_finish_to_dispatch_us": -13.759999999999991,
+                  "pred_finish_to_start_us": 0.7200000000000273,
+                  "early": "full",
+                  "early_rows": 24,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": true,
+                  "first_start_us": 376.12,
+                  "last_end_us": 438.02,
+                  "end_to_finish_us": 1.579999999999984,
+                  "pred_finish_to_dispatch_us": -26.25999999999999,
+                  "pred_finish_to_start_us": 0.660000000000025,
+                  "early": "partial",
+                  "early_rows": 30,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 159.78,
+                  "last_end_us": 224.26000000000002,
+                  "end_to_finish_us": 10.360000000000014,
+                  "pred_finish_to_dispatch_us": -12.059999999999974,
+                  "pred_finish_to_start_us": 0.6800000000000068,
+                  "early": "partial",
+                  "early_rows": 8,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 249.94000000000003,
+                  "last_end_us": 297.78,
+                  "end_to_finish_us": 0.01999999999998181,
+                  "pred_finish_to_dispatch_us": 14.639999999999986,
+                  "pred_finish_to_start_us": 15.319999999999993,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 313.91999999999996,
+                  "last_end_us": 332.91999999999996,
+                  "end_to_finish_us": 13.400000000000034,
+                  "pred_finish_to_dispatch_us": -10.400000000000034,
+                  "pred_finish_to_start_us": 0.67999999999995,
+                  "early": "full",
+                  "early_rows": 48,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 330.09999999999997,
+                  "last_end_us": 368.9,
+                  "end_to_finish_us": 6.560000000000002,
+                  "pred_finish_to_dispatch_us": 4.019999999999982,
+                  "pred_finish_to_start_us": 16.859999999999957,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 10.839999999999996,
+                  "last_end_us": 17.04,
+                  "end_to_finish_us": 14.319999999999993,
+                  "pred_finish_to_dispatch_us": -5.660000000000004,
+                  "pred_finish_to_start_us": 0.8999999999999986,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 361.97999999999996,
+                  "last_end_us": 370.64,
+                  "end_to_finish_us": 4.819999999999993,
+                  "pred_finish_to_dispatch_us": -5.220000000000027,
+                  "pred_finish_to_start_us": 15.659999999999968,
+                  "early": "full",
+                  "early_rows": 24,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 36
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h8192_b24/swimlane/candidate/dfx/window_1/merged_swimlane.json",
+              "window": 1,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 189.3,
+                  "last_end_us": 226.06000000000003,
+                  "end_to_finish_us": 14.93999999999997,
+                  "pred_finish_to_dispatch_us": -19.039999999999992,
+                  "pred_finish_to_start_us": 16.539999999999992,
+                  "early": "partial",
+                  "early_rows": 12,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 205.58,
+                  "last_end_us": 306.42,
+                  "end_to_finish_us": 6.720000000000027,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 291.42,
+                  "last_end_us": 312.24,
+                  "end_to_finish_us": 1.6399999999999864,
+                  "pred_finish_to_dispatch_us": -2.2799999999999727,
+                  "pred_finish_to_start_us": 0.6000000000000227,
+                  "early": "partial",
+                  "early_rows": 10,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": true,
+                  "first_start_us": 371.70000000000005,
+                  "last_end_us": 448.56,
+                  "end_to_finish_us": 1.9399999999999977,
+                  "pred_finish_to_dispatch_us": -13.919999999999959,
+                  "pred_finish_to_start_us": 0.5800000000000409,
+                  "early": "partial",
+                  "early_rows": 36,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 17.7,
+                  "last_end_us": 22.960000000000004,
+                  "end_to_finish_us": 8.96,
+                  "pred_finish_to_dispatch_us": -2.5,
+                  "pred_finish_to_start_us": 3.0999999999999943,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 246.12,
+                  "last_end_us": 283.66,
+                  "end_to_finish_us": 7.159999999999968,
+                  "pred_finish_to_dispatch_us": 4.360000000000014,
+                  "pred_finish_to_start_us": 5.1200000000000045,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 314.66,
+                  "last_end_us": 332.82,
+                  "end_to_finish_us": 10.520000000000039,
+                  "pred_finish_to_dispatch_us": -12.539999999999964,
+                  "pred_finish_to_start_us": 0.7800000000000296,
+                  "early": "full",
+                  "early_rows": 48,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 330.88,
+                  "last_end_us": 390.20000000000005,
+                  "end_to_finish_us": 4.7999999999999545,
+                  "pred_finish_to_dispatch_us": 7.439999999999998,
+                  "pred_finish_to_start_us": 17.739999999999952,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 344.02000000000004,
+                  "last_end_us": 365.90000000000003,
+                  "end_to_finish_us": 5.21999999999997,
+                  "pred_finish_to_dispatch_us": -25.24000000000001,
+                  "pred_finish_to_start_us": 0.6800000000000068,
+                  "early": "partial",
+                  "early_rows": 15,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 36
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h8192_b24/swimlane/candidate/dfx/window_2/merged_swimlane.json",
+              "window": 2,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 185.92000000000002,
+                  "last_end_us": 219.14000000000001,
+                  "end_to_finish_us": 13.319999999999965,
+                  "pred_finish_to_dispatch_us": -19.799999999999983,
+                  "pred_finish_to_start_us": 13.26000000000002,
+                  "early": "partial",
+                  "early_rows": 14,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 201.56,
+                  "last_end_us": 301.32,
+                  "end_to_finish_us": 3.1200000000000045,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 286.74,
+                  "last_end_us": 301.96,
+                  "end_to_finish_us": 0.6200000000000045,
+                  "pred_finish_to_dispatch_us": -6.300000000000011,
+                  "pred_finish_to_start_us": 0.6200000000000045,
+                  "early": "partial",
+                  "early_rows": 22,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": true,
+                  "first_start_us": 366.34000000000003,
+                  "last_end_us": 427.62,
+                  "end_to_finish_us": 1.5600000000000023,
+                  "pred_finish_to_dispatch_us": -26.620000000000005,
+                  "pred_finish_to_start_us": 0.5400000000000205,
+                  "early": "partial",
+                  "early_rows": 42,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 303.96,
+                  "last_end_us": 324.8,
+                  "end_to_finish_us": 12.279999999999973,
+                  "pred_finish_to_dispatch_us": -4.6200000000000045,
+                  "pred_finish_to_start_us": 1.3799999999999955,
+                  "early": "partial",
+                  "early_rows": 47,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 319.76,
+                  "last_end_us": 357.54,
+                  "end_to_finish_us": 25.420000000000016,
+                  "pred_finish_to_dispatch_us": 5.319999999999993,
+                  "pred_finish_to_start_us": 15.319999999999993,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 351.28000000000003,
+                  "last_end_us": 359.86,
+                  "end_to_finish_us": 5.939999999999998,
+                  "pred_finish_to_dispatch_us": -12.339999999999975,
+                  "pred_finish_to_start_us": 14.200000000000045,
+                  "early": "full",
+                  "early_rows": 24,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 241.24,
+                  "last_end_us": 274.86,
+                  "end_to_finish_us": 11.259999999999991,
+                  "pred_finish_to_dispatch_us": 7.800000000000011,
+                  "pred_finish_to_start_us": 8.78000000000003,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 21.340000000000003,
+                  "last_end_us": 26.42,
+                  "end_to_finish_us": 8.579999999999998,
+                  "pred_finish_to_dispatch_us": -1.9399999999999977,
+                  "pred_finish_to_start_us": 3.1600000000000037,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 36
+            },
+            {
+              "path": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_indexer_rope_flat_gather_20260929/h8192_b24/swimlane/candidate/dfx/window_3/merged_swimlane.json",
+              "window": 3,
+              "tasks": {
+                "idx_qr_proj_matmul": {
+                  "task_id": "8589934602",
+                  "producer_early_flag": true,
+                  "first_start_us": 185.5,
+                  "last_end_us": 229.66,
+                  "end_to_finish_us": 8.380000000000024,
+                  "pred_finish_to_dispatch_us": -3.4399999999999977,
+                  "pred_finish_to_start_us": 22.340000000000003,
+                  "early": "partial",
+                  "early_rows": 8,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_matmul": {
+                  "task_id": "8589934596",
+                  "producer_early_flag": false,
+                  "first_start_us": 210.84,
+                  "last_end_us": 306.78000000000003,
+                  "end_to_finish_us": 7.579999999999984,
+                  "pred_finish_to_dispatch_us": null,
+                  "pred_finish_to_start_us": null,
+                  "early": "unverifiable",
+                  "early_rows": 0,
+                  "total_rows": 24,
+                  "untimed_predecessors": [
+                    "4294967311"
+                  ],
+                  "predecessors": [
+                    {
+                      "id": "4294967311",
+                      "name": "4294967311",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_matmul": {
+                  "task_id": "8589934605",
+                  "producer_early_flag": true,
+                  "first_start_us": 286.96000000000004,
+                  "last_end_us": 309.24,
+                  "end_to_finish_us": 2.7799999999999727,
+                  "pred_finish_to_dispatch_us": -12.600000000000023,
+                  "pred_finish_to_start_us": 0.5400000000000205,
+                  "early": "partial",
+                  "early_rows": 7,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934603",
+                      "name": "idx_qr_dequant_rope",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_score_topk_native_pair_aic": {
+                  "task_id": "8589934612",
+                  "producer_early_flag": true,
+                  "first_start_us": 376.04,
+                  "last_end_us": 441.40000000000003,
+                  "end_to_finish_us": 0.8999999999999773,
+                  "pred_finish_to_dispatch_us": -25.680000000000007,
+                  "pred_finish_to_start_us": 0.6000000000000227,
+                  "early": "partial",
+                  "early_rows": 69,
+                  "total_rows": 72,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4294967325",
+                      "name": "idx_kv_scale_commit",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934611",
+                      "name": "indexer_head_coefficients",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "csa_rope_sign": {
+                  "task_id": "4",
+                  "producer_early_flag": false,
+                  "first_start_us": 16.959999999999997,
+                  "last_end_us": 22.580000000000002,
+                  "end_to_finish_us": 8.579999999999998,
+                  "pred_finish_to_dispatch_us": -3.460000000000001,
+                  "pred_finish_to_start_us": 2.0999999999999943,
+                  "early": "full",
+                  "early_rows": 16,
+                  "total_rows": 16,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "3",
+                      "name": "csa_row_offsets",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "idx_qr_dequant_rope": {
+                  "task_id": "8589934603",
+                  "producer_early_flag": true,
+                  "first_start_us": 243.01999999999998,
+                  "last_end_us": 281.06,
+                  "end_to_finish_us": 5.360000000000014,
+                  "pred_finish_to_dispatch_us": 3.5399999999999636,
+                  "pred_finish_to_start_us": 4.979999999999961,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "4",
+                      "name": "csa_rope_sign",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "8589934602",
+                      "name": "idx_qr_proj_matmul",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934594",
+                      "name": "qr_rms_norm_quant",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qr_hadamard_quant": {
+                  "task_id": "8589934606",
+                  "producer_early_flag": true,
+                  "first_start_us": 312.62,
+                  "last_end_us": 339.32,
+                  "end_to_finish_us": 6.319999999999993,
+                  "pred_finish_to_dispatch_us": -7.0,
+                  "pred_finish_to_start_us": 0.6000000000000227,
+                  "early": "partial",
+                  "early_rows": 44,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934605",
+                      "name": "qr_hadamard_matmul",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "qproj_dequant_rms_nope_rope": {
+                  "task_id": "8589934597",
+                  "producer_early_flag": true,
+                  "first_start_us": 317.44,
+                  "last_end_us": 378.06,
+                  "end_to_finish_us": 5.560000000000002,
+                  "pred_finish_to_dispatch_us": 2.319999999999993,
+                  "pred_finish_to_start_us": 3.079999999999984,
+                  "early": "none",
+                  "early_rows": 0,
+                  "total_rows": 48,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934596",
+                      "name": "qproj_matmul",
+                      "producer_early_flag": false
+                    },
+                    {
+                      "id": "4294967310",
+                      "name": "q_rope_prepare",
+                      "producer_early_flag": true
+                    }
+                  ]
+                },
+                "indexer_head_coefficients": {
+                  "task_id": "8589934611",
+                  "producer_early_flag": true,
+                  "first_start_us": 346.3,
+                  "last_end_us": 367.1,
+                  "end_to_finish_us": 8.339999999999975,
+                  "pred_finish_to_dispatch_us": -5.0,
+                  "pred_finish_to_start_us": 0.660000000000025,
+                  "early": "full",
+                  "early_rows": 24,
+                  "total_rows": 24,
+                  "untimed_predecessors": [],
+                  "predecessors": [
+                    {
+                      "id": "8589934606",
+                      "name": "qr_hadamard_quant",
+                      "producer_early_flag": true
+                    },
+                    {
+                      "id": "8589934609",
+                      "name": "weights_proj_reduce",
+                      "producer_early_flag": true
+                    }
+                  ]
+                }
+              },
+              "final_dispatched_before_last_quant_end": 0,
+              "final_workers": 36
+            }
+          ],
+          "mean_us": {
+            "csa_rope_sign": {
+              "first_start_us": 16.71,
+              "last_end_us": 22.25,
+              "end_to_finish_us": 10.109999999999998
+            },
+            "idx_qr_proj_matmul": {
+              "first_start_us": 180.125,
+              "last_end_us": 224.78000000000003,
+              "end_to_finish_us": 11.749999999999993
+            },
+            "idx_qr_dequant_rope": {
+              "first_start_us": 245.08,
+              "last_end_us": 284.34000000000003,
+              "end_to_finish_us": 5.949999999999989
+            },
+            "qr_hadamard_matmul": {
+              "first_start_us": 290.91,
+              "last_end_us": 308.945,
+              "end_to_finish_us": 1.4849999999999994
+            },
+            "qr_hadamard_quant": {
+              "first_start_us": 311.28999999999996,
+              "last_end_us": 332.465,
+              "end_to_finish_us": 10.63000000000001
+            },
+            "indexer_head_coefficients": {
+              "first_start_us": 350.895,
+              "last_end_us": 365.875,
+              "end_to_finish_us": 6.079999999999984
+            },
+            "indexer_score_topk_native_pair_aic": {
+              "first_start_us": 372.55,
+              "last_end_us": 438.9,
+              "end_to_finish_us": 1.4949999999999903
+            },
+            "qproj_matmul": {
+              "first_start_us": 205.35500000000002,
+              "last_end_us": 305.365,
+              "end_to_finish_us": 5.930000000000007
+            },
+            "qproj_dequant_rms_nope_rope": {
+              "first_start_us": 324.54499999999996,
+              "last_end_us": 373.675,
+              "end_to_finish_us": 10.584999999999994
+            }
+          },
+          "idx_dequant_early_windows": [
+            "none",
+            "none",
+            "none",
+            "none"
+          ]
+        }
+      }
+    }
+  ]
+}
