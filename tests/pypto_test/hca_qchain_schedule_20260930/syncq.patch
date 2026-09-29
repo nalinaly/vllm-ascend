@@ -1,0 +1,11 @@
+--- a/deepseek_v4_flash_dspark/q_projection.py
++++ b/deepseek_v4_flash_dspark/q_projection.py
+@@ -97,7 +97,7 @@
+     按 K 顺序 matmul_acc。INT8×INT8→INT32 累加精确，分块不改变结果。
+     """
+     qproj_t_matmul = pl.tensor.dim(q_proj_i32, 0)
+-    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
++    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep], sync_start=True) as qproj_tid:
+         # Match upstream weight streaming; arithmetic is unchanged.
+         pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+         qproj_worker = pl.tile.get_block_idx()

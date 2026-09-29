@@ -1,0 +1,21 @@
+--- a/deepseek_v4_flash_dspark/q_projection.py
++++ b/deepseek_v4_flash_dspark/q_projection.py
+@@ -97,7 +97,7 @@
+     按 K 顺序 matmul_acc。INT8×INT8→INT32 累加精确，分块不改变结果。
+     """
+     qproj_t_matmul = pl.tensor.dim(q_proj_i32, 0)
+-    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
++    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep], sync_start=True) as qproj_tid:
+         # Match upstream weight streaming; arithmetic is unchanged.
+         pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+         qproj_worker = pl.tile.get_block_idx()
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -531,6 +531,7 @@
+         Q_DEQUANT_WORKERS,
+         name_hint="qproj_dequant_rms_nope_rope",
+         allow_early_resolve=True,
++        sync_start=True,
+     ):
+         # 按本档位的 token 数自适应放大 head 块（上游写法）。恒用 Q_ROPE_H_TILE=4 时
+         # Vector 块太小、指令条数多，in-core 实测 VECTOR 占 82%。生产档位 tile_rows=96
