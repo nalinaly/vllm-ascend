@@ -5933,3 +5933,63 @@ HCA 包共 68 处 `pl.read`（compressor 15、hc_pre 6、decode_hca 3、sparse_a
 教训：**说"穷举了"之前，先把配置面的每一层都列出来**——
 `PassContext` 之外还有 `pypto.torch.init`，`init` 之外还有 `RunOptions`／
 `CompileOptions`（第 08-entry-points.md 文档有完整清单）。
+
+### 94.4 ✗ `aicpu_thread_num=4` 补测后符号翻转
+
+3 样本时 −11.00 μs，补到 4 样本后 **+5.00 μs**
+（base 中位数 576.75，`at4` 581.75）。与 `cmp_wgate`（第 88.12 节）同一形态，
+效应在噪声带内，**不可用**。
+
+### 94.5 ✗ `runtime="host_build_graph"`：三个阻塞全解开，但慢 157 倍
+
+阻塞链（每一步都零接口改动）：
+
+| 阻塞 | 位置 | 修法 |
+| --- | --- | --- |
+| `PassContext` 改不了 runtime | — | 改到 `pypto.torch.init` 传 |
+| Host orchestration 不能 `tensor.read` | `hc_pre_fused.py:113`（`hc_pre_norm`） | 三个值只在各自 spmd 体内用 → **read 下移进 spmd** |
+| 同上 | `hc_pre_fused.py:60`（`_hc_pre_partials`） | 查出是**死代码**（定义后从未使用）→ 删除 |
+
+编译终于通过，但实测：
+
+| 侧 | span |
+| --- | --- |
+| Native | 548.75 / 534.50 |
+| **PTO（HBG）** | **90 923.5 / 94 586.0** |
+
+**慢约 157 倍**，不是 −29 μs。
+
+原因：HBG 文档写 "required for **Graph Execution**"，那指的是 **PyPTO 自己的
+graph 模式**（`pl.graph` / `@pl.jit.graph`，见 pass 08「outline_graph_scopes」），
+**不是 torch_npu 的 NPUGraph**。本项目的计时口径是把 PTO 调用捕获进 NPUGraph
+再重放（`measure_graph_interval`），在这条路径上 HBG 拿不到它需要的 host 端图，
+于是退化成每次调用重建整张任务图——90 ms 正是那个量级。
+
+**`host_build_graph` 与当前 NPUGraph 回放口径不兼容，否决。**
+
+顺带的收获：HBG 的 Host-orchestration 检查暴露了 `_hc_pre_partials` 里三行
+死代码（读了 `hc_scale` 却从不使用）。这处**可以独立清理**，与 HBG 无关。
+
+### 94.6 本轮最终账：9 个候选全否
+
+| 轴 | 候选 | 结果 |
+| --- | --- | --- |
+| 布局 | `wkv` / `cmp_wkv` / `cmp_wgate` → NZ | +14.75 / +20.25 / 符号不稳 ✗ |
+| 核间流水 | `gather_full` | +19.00 ✗ |
+| 核间流水 | `gather_pipe` | +10.25 ✗ |
+| 核内 | `qk_manual`（手工 split-K） | +12.88 ✗ |
+| 运行时 | `aicpu_thread_num` 2 / 5 | 崩溃 / 初始化失败 ✗ |
+| 运行时 | `aicpu_thread_num` 4 | −11.00 → **+5.00** 符号翻转 ✗ |
+| 运行时 | `runtime=host_build_graph` | 编译通了但 **慢 157 倍** ✗ |
+
+**七档加权仍 1.117，本轮零改进。**
+
+三个被推翻的根因假设（GM 带宽、L1 布局、同步数）+ 九次判断错误
+（七次口径、一次搜索范围、一次把 PyPTO 的 graph 当成 NPUGraph）。
+
+现在可以说的是：**算子侧调参、布局、并行度、软流水、以及 `init`／`PassContext`
+两层的运行时参数都已实测穷举**（这次是真的把配置面列完了：
+`docs/zh/dev/08-entry-points.md` 的 `RunOptions`／`CompileOptions`／`DfxOptions`
+三张表 + `init` 签名 + `PassContext` 签名）。剩下的差距落在 PyPTO
+为这个 kernel 生成的代码质量上，而那既缺乏可测手段（第 93 节：profiler
+分不出标量执行与等待），也属"不做大修改"的范围。
