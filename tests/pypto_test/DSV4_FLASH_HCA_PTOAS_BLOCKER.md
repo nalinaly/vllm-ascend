@@ -257,6 +257,17 @@ for vec_tick, (m_iter, l_iter, left_iter, right_iter) in pl.range(
 位置是编译器内部生成的 move，最可能是 `pl.yield_` 合并两个分支的 Mat 片时
 发出的 phi move。
 
+**⑥ 再去掉分支：把 raw 块剥出循环**
+
+`work_count = 1 + cmp_blocks`，raw 块恒为最后一拍，所以可以把它剥出循环——
+循环体内就没有分支，也不会产生合并两个 Mat 片的 phi。
+→ **仍然是 `non-mat tmov to use matching src/dst shapes`。**
+
+说明 ⑤ 的失败也不是 phi 造成的：这段代码在 PTOAS 下还有别的构造会生成非法 move
+（报错位置是编译器内部的 `ast_parser.py:3837`，看不出对应源码里的哪一条；
+可疑的是 `pl.tile.move(probability, target_memory=Left)` 与
+`pl.tile.extract(kv_new, ..., target_memory=Right)` 这两类跨空间搬运）。
+
 ### 为什么不能把环形缓冲放 Vec
 
 Vec 片是可以被携带的（见上面 1233 行的例子）。但容量不够：
@@ -267,7 +278,7 @@ Vec 片是可以被携带的（见上面 1233 行的例子）。但容量不够�
 
 ## 四、结论与可选出路
 
-四种写法、四种拒绝，说的是同一件事：
+六次重写、五种不同的编译器拒绝（②与①同错），说的是同一件事：
 **PTOAS 对 Mat 的限制远比默认 planner 严格**——
 不能对 Mat 做 DPS 写、Mat 片不能跨迭代存活、Mat 片的分支合并也受限。
 而 `hca_unified_attention` 重度依赖 Mat：KV 环形缓冲、`query`、`probability`

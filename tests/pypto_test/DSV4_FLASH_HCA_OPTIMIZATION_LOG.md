@@ -4666,3 +4666,23 @@ Check failed: limit == 0 || used <= limit
 
 **七档加权 1.117，距 0.80 差 0.317。在不改 PyPTO、不重写 attention 软流水的前提下，
 没有找到进一步的路径。**
+
+### 83.4 ✗ 第六次重写 attention：剥出 raw 块也不行
+
+§82.4 的 `ptoas_flat` 死在 `pl.yield_` 合并两个 Mat 片的 phi 上。
+注意到 `work_count = 1 + cmp_blocks`、raw 块恒为最后一拍，于是把它**剥出循环**，
+循环体内不再有分支、也就没有 Mat phi（变体 `ptoas_peel`）。
+
+**仍然是 `'pto.tmov' op expects A2/A3 non-mat tmov to use matching src/dst shapes`。**
+
+所以上一版的失败也不是 phi 造成的。这段代码在 PTOAS 下还有别的构造会生成非法 move，
+报错位置是编译器内部的 `pypto/python/pypto/language/parser/ast_parser.py:3837`，
+无法对应到源码的具体哪一行；可疑的是
+`pl.tile.move(probability, target_memory=Left)` 与
+`pl.tile.extract(kv_new, ..., target_memory=Right)` 这两类跨空间搬运——
+而它们是 PV 矩阵乘取操作数的必经之路，不是可以绕开的写法。
+
+**对 `hca_unified_attention` 的六次重写、五种不同的编译器拒绝
+（gather_row 的地址空间对 ×2、tile.assemble 同错、Mat 片不能跨迭代、
+non-mat tmov 形状不匹配 ×2），已经足以判定：
+这个函数在 PTOAS 下的问题不是某一处写法，而是它整体依赖 Mat 的方式。**
