@@ -5557,3 +5557,49 @@ AscendC，同步点由人按数据流合并；PyPTO 为每个 tile 操作保守�
 ⚠ 尚未量化冗余比例。可行的取证：对照 `kernels/aiv/hca_unified_attention_aiv.cpp`
 的同步密度，以及用 `compare-codegen` 比较不同写法下的同步数变化——
 **这是第一次有了可以直接计数的指标，不必再靠 ABBA 的 10 μs 分辨力去猜。**
+
+### 91.4 ⚠ 更正 91.1：那 82 个同步大部分属于 AIV 半边，不是 AIC 的
+
+两个信号说明 91.1 的归因错了：
+
+| 文件 | 行数 | `wait_flag` | `set_flag` | `pipe_barrier` |
+| --- | --- | --- | --- | --- |
+| `hca_unified_attention_aic.cpp` | 3213 | 86 | 83 | 79 |
+| `hca_unified_attention_aiv.cpp` | 3216 | 86 | 83 | 79 |
+
+1. **两个 lane 的计数完全相同** —— 它们是同一份 MIX kernel 源码的两个编译产物
+   （`if ASCEND_IS_AIC` / `if ASCEND_IS_AIV` 结构），不是各自独立的代码。
+   所以在 aic 文件里数出的同步数**不等于** AIC 实际执行的同步数。
+2. **按 pipe 分类，79 个 barrier 里 64 个是 `pipe_barrier(PIPE_V)`**：
+
+| pipe | 次数 | 归属 |
+| --- | --- | --- |
+| `PIPE_V` | **64** | 向量流水——**AIC 不跑向量指令**，属 AIV 半边 |
+| `PIPE_FIX` | 5 | AIC |
+| `PIPE_M` | 4 | AIC |
+| `PIPE_MTE3` | 2 | 主要 AIV |
+| `PIPE_MTE1` | 2 | AIC |
+| `PIPE_ALL` | 2 | 两者 |
+
+AIC 半边实际只有约 **15 个 barrier**（FIX 5 + M 4 + MTE1 2 + MTE3 2 + ALL 2）。
+
+**所以"AIC 每 tick 82 个同步原语导致 387 μs scalar"这条归因不成立，撤回。**
+91.2 那张"解释了所有否决"的表也失去依据——那些候选为什么否，回到未解释状态。
+
+### 91.5 仍然成立的部分，与下一步该怎么取证
+
+没有被推翻的：
+
+- AIC 的 scalar 确实是最大 pipe（59.2%，平均单核 387 μs / 654 μs 墙钟，第 90 节）；
+- scalar 均摊在 134 行循环体 × 144 次执行上、无单一热点（第 90.9 节）；
+- 取模只占 0.5%（第 90.8 节）、L1 已用 90.6% 高于 Native（第 90.11 节）、
+  mac/scalar 是 Native 0.45 / PTO 0.25（第 90.2 节）。
+
+要把 scalar 落到具体构造上，必须**先按 `ASCEND_IS_AIC` 分支切出 AIC 半边再统计**，
+而不是对整个 `.cpp` 计数。`wait_flag` 86 / `set_flag` 83 也要同样区分：
+其中跨核交接（`PIPE_M`↔`PIPE_MTE1`、cross-core flag）才属 AIC 的等待。
+
+教训：**生成的 MIX kernel 源码里两个 lane 的代码共存，按文件名当成单 lane 统计会
+把另一半的同步算到自己头上。** 这是本轮第五次更正（前四次：两次小样本当效应、
+一次漏算 L1 占用、一次误读 Native 流水级数），也是"用两个不同口径的数相减／
+相认就下结论"这类错误的又一次，与第 41、50、84、88.7 节同类。
