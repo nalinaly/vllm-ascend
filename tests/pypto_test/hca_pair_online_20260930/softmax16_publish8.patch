@@ -1,0 +1,109 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1250 +1250 @@
+-            reduce_tmp = pl.create_tile([H, ATTN_K_TILE], dtype=pl.FP32)
++            reduce_tmp = pl.create_tile([H_TILE, ATTN_K_TILE], dtype=pl.FP32)
+@@ -1282,27 +1282,38 @@
+-                            score = pl.load(scores, [vec_row, 0], [H, ATTN_K_TILE])
+-                            if vec_tick >= cmp_blocks:
+-                                raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
+-                                raw_bias = pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF)
+-                                raw_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), raw_bias)
+-                                raw_block_m = pl.row_max(raw_scaled, reduce_tmp)
+-                                raw_m = pl.maximum(softmax_m_iter, raw_block_m)
+-                                raw_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(raw_scaled, raw_m)), raw_mask)
+-                                maximum, exponent = pl.yield_(raw_m, raw_exp)
+-                            else:
+-                                cmp_mask = pl.load(cmp_work_valid, [request * cmp_work_count + vec_tick, 0],
+-                                                   [1, ATTN_K_TILE])
+-                                cmp_bias = pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF)
+-                                cmp_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), cmp_bias)
+-                                valid_rows = pl.min(ATTN_K_TILE, cmp_rows - vec_tick * ATTN_K_TILE)
+-                                cmp_shaped = pl.set_validshape(cmp_scaled, H, valid_rows)
+-                                cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
+-                                cmp_block_m = pl.row_max(cmp_masked, reduce_tmp)
+-                                cmp_m = pl.maximum(softmax_m_iter, cmp_block_m)
+-                                cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
+-                                maximum, exponent = pl.yield_(cmp_m, cmp_exp)
+-                            total = pl.row_sum(exponent, reduce_tmp)
+-                            probability = pl.cast(exponent, pl.BF16, mode="rint")
+-                            pl.store(probability, [vec_row, 0], probs)
+-                            next_max = pl.tile.assemble(max_ring, pl.reshape(maximum, [1, H]), [vec_tick % 2, 0])
+-                            next_sum = pl.tile.assemble(sum_ring, pl.reshape(total, [1, H]), [vec_tick % 2, 0])
+-                            ready_max, ready_sum, ready_softmax = pl.yield_(next_max, next_sum, maximum)
++                            for softmax_part, (head_max_ring, head_sum_ring) in pl.range(
++                                H // H_TILE, init_values=(max_ring, sum_ring),
++                            ):
++                                softmax_head = softmax_part * H_TILE
++                                previous_head_max = pl.tile.slice(softmax_m_iter, [H_TILE, 1], [softmax_head, 0])
++                                score = pl.load(scores, [vec_row + softmax_head, 0], [H_TILE, ATTN_K_TILE])
++                                if vec_tick >= cmp_blocks:
++                                    raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
++                                    raw_bias = pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF)
++                                    raw_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), raw_bias)
++                                    raw_block_m = pl.row_max(raw_scaled, reduce_tmp)
++                                    raw_m = pl.maximum(previous_head_max, raw_block_m)
++                                    raw_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(raw_scaled, raw_m)), raw_mask)
++                                    maximum, exponent = pl.yield_(raw_m, raw_exp)
++                                else:
++                                    cmp_mask = pl.load(cmp_work_valid, [request * cmp_work_count + vec_tick, 0],
++                                                       [1, ATTN_K_TILE])
++                                    cmp_bias = pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF)
++                                    cmp_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), cmp_bias)
++                                    valid_rows = pl.min(ATTN_K_TILE, cmp_rows - vec_tick * ATTN_K_TILE)
++                                    cmp_shaped = pl.set_validshape(cmp_scaled, H_TILE, valid_rows)
++                                    cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
++                                    cmp_block_m = pl.row_max(cmp_masked, reduce_tmp)
++                                    cmp_m = pl.maximum(previous_head_max, cmp_block_m)
++                                    cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
++                                    maximum, exponent = pl.yield_(cmp_m, cmp_exp)
++                                total = pl.row_sum(exponent, reduce_tmp)
++                                probability = pl.cast(exponent, pl.BF16, mode="rint")
++                                pl.store(probability, [vec_row + softmax_head, 0], probs)
++                                next_max = pl.tile.assemble(head_max_ring, pl.reshape(maximum, [1, H_TILE]), [vec_tick % 2, softmax_head])
++                                next_sum = pl.tile.assemble(head_sum_ring, pl.reshape(total, [1, H_TILE]), [vec_tick % 2, softmax_head])
++                                head_max_done, head_sum_done = pl.yield_(next_max, next_sum)
++                            softmax_complete = pl.reshape(pl.tile.extract(
++                                head_max_done, vec_tick % 2, 0, [1, H], target_memory=pl.MemorySpace.Vec,
++                            ), [H, 1])
++                            ready_max, ready_sum, ready_softmax = pl.yield_(
++                                head_max_done, head_sum_done, softmax_complete,
++                            )
+@@ -1351 +1362 @@
+-                                swap_grid = pl.col_expand_add(pl.tile.full([H_TILE, ROPE_DIM], dtype=pl.FP32, value=0.0),
++                                swap_grid = pl.col_expand_add(pl.tile.full([HEADS_PER_GROUP, ROPE_DIM], dtype=pl.FP32, value=0.0),
+@@ -1353 +1364 @@
+-                                row_ids = pl.cast(pl.tile.arange(0, [1, H_TILE], dtype=pl.INT32), pl.FP32)
++                                row_ids = pl.cast(pl.tile.arange(0, [1, HEADS_PER_GROUP], dtype=pl.INT32), pl.FP32)
+@@ -1355,4 +1366,4 @@
+-                                                                                            [H_TILE, 1])), pl.INT32)
+-                                gather_tmp = pl.create_tile([H_TILE, ROPE_DIM], dtype=pl.INT32)
+-                                for head_part in pl.unroll(H // H_TILE):
+-                                    head = head_part * H_TILE
++                                                                                            [HEADS_PER_GROUP, 1])), pl.INT32)
++                                gather_tmp = pl.create_tile([HEADS_PER_GROUP, ROPE_DIM], dtype=pl.INT32)
++                                for head_part in pl.unroll(H // HEADS_PER_GROUP):
++                                    head = head_part * HEADS_PER_GROUP
+@@ -1360,2 +1371,2 @@
+-                                        pl.tile.slice(next_out0, [H_TILE, PV_N_TILE], [head, 0]),
+-                                        pl.tile.slice(next_out1, [H_TILE, PV_N_TILE], [head, 0]),
++                                        pl.tile.slice(next_out0, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
++                                        pl.tile.slice(next_out1, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
+@@ -1364,2 +1375,2 @@
+-                                        pl.tile.slice(next_out2, [H_TILE, PV_N_TILE], [head, 0]),
+-                                        pl.tile.slice(next_out3, [H_TILE, PV_N_TILE], [head, 0]),
++                                        pl.tile.slice(next_out2, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
++                                        pl.tile.slice(next_out3, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
+@@ -1368 +1379 @@
+-                                    normalized = pl.row_expand_div(merged, pl.tile.slice(denominator, [H_TILE, 1], [head, 0]))
++                                    normalized = pl.row_expand_div(merged, pl.tile.slice(denominator, [HEADS_PER_GROUP, 1], [head, 0]))
+@@ -1370 +1381 @@
+-                                    rope = normalized[0:H_TILE, NOPE_DIM:HEAD_DIM]
++                                    rope = normalized[0:HEADS_PER_GROUP, NOPE_DIM:HEAD_DIM]
+@@ -1374,2 +1385,2 @@
+-                                    full = pl.concat(bf16[0:H_TILE, 0:NOPE_DIM], rope_bf16)
+-                                    groups = pl.reshape(full, [PUBLISH_GROUPS, O_GROUP_IN])
++                                    full = pl.concat(bf16[0:HEADS_PER_GROUP, 0:NOPE_DIM], rope_bf16)
++                                    groups = pl.reshape(full, [1, O_GROUP_IN])
+@@ -1378 +1388,0 @@
+-                                    pl.store(groups[1:2, :], [packed_row + T_PAD, 0], o_packed_heads)

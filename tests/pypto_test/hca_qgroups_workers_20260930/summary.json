@@ -1,0 +1,238 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+      "q24": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24",
+      "q24_gather24": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24_gather24",
+      "q24_cube_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24_cube_sync"
+    },
+    "baseline": "0742f07c production operator, recorded at e8bd858e",
+    "invariants": "four Q groups x16 heads; M128/N256/K256 stage2; same arithmetic/TaskId/early; sync changes only in q24_cube_sync",
+    "hypothesis": "shorten late Q groups; compressed gather at 24 AIV may overlap Q dequant with less reservation",
+    "constraints": "measure concurrent compressor/gather and whole HCA; group worker count is not utilization proof",
+    "parent_by_candidate": {
+      "q24": "base",
+      "q24_gather24": "base",
+      "q24_cube_sync": "q24"
+    }
+  },
+  "reports": {
+    "q24_gather24_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24_gather24"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 2,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 561.5,
+          "max_us": 612.25,
+          "mean_us": 578.125,
+          "p50_us": 573.625
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 568.5,
+          "max_us": 588.0,
+          "mean_us": 578.35,
+          "p50_us": 579.0
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qgroups_workers_20260930/q24_gather24_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "q24_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 564.75,
+          "max_us": 609.75,
+          "mean_us": 587.275,
+          "p50_us": 587.625
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 581.25,
+          "max_us": 606.0,
+          "mean_us": 590.45,
+          "p50_us": 589.125
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qgroups_workers_20260930/q24_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "q24_sync_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24_cube_sync"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 562.5,
+          "max_us": 591.5,
+          "mean_us": 574.6,
+          "p50_us": 574.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 569.5,
+          "max_us": 595.0,
+          "mean_us": 580.325,
+          "p50_us": 581.875
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qgroups_workers_20260930/q24_sync_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

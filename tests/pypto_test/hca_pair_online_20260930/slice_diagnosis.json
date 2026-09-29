@@ -1,0 +1,24 @@
+{
+  "problem": "dynamic previous_head_max head offset absent from generated code in rings variant",
+  "workaround": "reshape [64,1] as [4,16], tile.extract dynamic full row, reshape [16,1]",
+  "semantics_check": "head_extract exact versus single-query online at 128K/B16; rings has output mismatches",
+  "probe_identity": {
+    "base": "single-query online",
+    "online": "rejected softmax16_publish8_n64_rings"
+  },
+  "probe_conclusion": "small errors against FP64 do not justify a known violation of cumulative-max semantics",
+  "evidence": [
+    {
+      "variant": "softmax16_publish8_n64_rings",
+      "source": "compiled/softmax16_publish8_n64_rings/passes_dump/38_after_AllocateMemoryAddr.py",
+      "first_line": 4885,
+      "snippet": "                        for softmax_part_inline3384__idx_v0, (head_max_ring, head_sum_ring) in pl.range(4, init_values=(max_ring, sum_ring)):\n                            reduce_tmp_inline3403__ssa_v0: pl.Tile[[16, 128], pl.FP32, pl.MemRef(mem_vec_58, pl.const(154368, pl.INT64), 8192), pl.Mem.Vec] = pl.tile.create(\n                                [16, 128], dtype=pl.FP32, target_memory=pl.Mem.Vec\n                            )\n                            softmax_head_inline3466__ssa_v0: pl.Scalar[pl.INDEX] = softmax_part_inline3384__idx_v0 * 16\n                            previous_head_max_inline3386__ssa_v0: pl.Tile[[16, 1], pl.FP32, pl.MemRef(mem_vec_16, pl.const(13312, pl.INT64), 64), pl.Mem.Vec] = pl.tile.slice(\n                                softmax_m_iter, [16, 1], [softmax_head_inline3466__ssa_v0, 0]"
+    },
+    {
+      "variant": "head_extract",
+      "source": "compiled/head_extract/passes_dump/38_after_AllocateMemoryAddr.py",
+      "first_line": 4889,
+      "snippet": "                            softmax_head_inline3415__ssa_v0: pl.Scalar[pl.INDEX] = softmax_part_inline3406__idx_v0 * 16\n                            t__tmp_v427: pl.Tile[[4, 16], pl.FP32, pl.MemRef(mem_vec_16, pl.const(13312, pl.INT64), 256), pl.Mem.Vec] = pl.tile.reshape(softmax_m_iter, [4, 16])\n                            t__tmp_v428: pl.Tile[[1, 16], pl.FP32, pl.MemRef(mem_vec_123, pl.const(768, pl.INT64), 64), pl.Mem.Vec] = pl.tile.extract(\n                                t__tmp_v427, softmax_part_inline3406__idx_v0, 0, [1, 16], target_memory=pl.Mem.Vec\n                            )\n                            previous_head_max_inline3414__ssa_v0: pl.Tile[[16, 1], pl.FP32, pl.MemRef(mem_vec_123, pl.const(768, pl.INT64), 64), pl.Mem.Vec] = pl.tile.reshape(t__tmp_v428, [16, 1])\n                            score_inline3316__ssa_v0: pl.Tile[[16, 128], pl.FP32, pl.MemRef(mem_vec_73, pl.const(171264, pl.INT64), 8192), pl.Mem.Vec] = pl.tile.load("
+    }
+  ]
+}

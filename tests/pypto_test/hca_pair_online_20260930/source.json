@@ -1,0 +1,24 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+    "full_ub": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/full_ub",
+    "softmax16": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/softmax16",
+    "softmax16_publish8": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/softmax16_publish8",
+    "softmax16_publish8_n64": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/softmax16_publish8_n64",
+    "softmax16_publish8_n64_rings": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/softmax16_publish8_n64_rings",
+    "static_heads": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/static_heads",
+    "head_extract": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/head_extract"
+  },
+  "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+  "baseline": "e8bd858e recorded online candidate; not production",
+  "change": "two query M128 compressed QK/PV, two L1 KV slots, four FP32 N128 accumulator tiles in UB",
+  "invariants": "same per-query online softmax, masks, BF16 rounding, cache and q_ready dependencies",
+  "hypothesis": "remove beta/PV scaling temporary lifetimes to fit full UB and avoid prior GM accumulator traffic",
+  "limitations": "CPU capacity required first; two-slot pipeline drains per pair unlike single-query baseline",
+  "candidate_status": {
+    "softmax16_publish8_n64_rings": "rejected functional bug: dynamic head slice lost offset",
+    "static_heads": "compile SSA failure",
+    "head_extract": "correct versus single-query online at 128K/B16; full HCA slower; not adopted"
+  },
+  "final_layout": "head_extract: 8x[64,64] FP32 UB accumulators, H16 softmax, H8 publish, dynamic row extract"
+}

@@ -1,0 +1,8 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1290 +1290,4 @@
+-                                previous_head_max = pl.tile.slice(softmax_m_iter, [H_TILE, 1], [softmax_head, 0])
++                                previous_head_max = pl.reshape(pl.tile.extract(
++                                    pl.reshape(softmax_m_iter, [H // H_TILE, H_TILE]),
++                                    softmax_part, 0, [1, H_TILE], target_memory=pl.MemorySpace.Vec,
++                                ), [H_TILE, 1])

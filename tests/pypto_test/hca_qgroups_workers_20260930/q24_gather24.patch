@@ -1,0 +1,10 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -26 +26 @@
+-STREAM_CUBE_WORKERS = 16 // STREAM_GROUPS
++STREAM_CUBE_WORKERS = 24 // STREAM_GROUPS
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -83 +83 @@
+-CMP_GATHER_AIV_WAVE = 48  # 一个 AIV 波的块数；长档 gather 的块数按它反推
++CMP_GATHER_AIV_WAVE = 24  # 一个 AIV 波的块数；长档 gather 的块数按它反推

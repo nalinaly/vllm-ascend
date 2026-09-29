@@ -1,0 +1,15 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1285,3 +1285,5 @@
+-                            for softmax_part, (head_max_ring, head_sum_ring) in pl.range(
+-                                H // H_TILE, init_values=(max_ring, sum_ring),
+-                            ):
++                            head_max_done = max_ring
++                            head_sum_done = sum_ring
++                            for softmax_part in pl.unroll(H // H_TILE):
++                                head_max_ring = head_max_done
++                                head_sum_ring = head_sum_done
+@@ -1317 +1319,2 @@
+-                                head_max_done, head_sum_done = pl.yield_(next_max, next_sum)
++                                head_max_done = next_max
++                                head_sum_done = next_sum

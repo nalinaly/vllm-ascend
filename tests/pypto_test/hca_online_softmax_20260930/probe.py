@@ -15,11 +15,13 @@ from dsv4_csa_env import activate  # noqa: E402
 activate()
 
 
-def prepare():
-    manifest = json.loads((ROOT / "source.json").read_text())
+def prepare(root, baseline=None, candidate=None):
+    manifest = json.loads((root / "source.json").read_text())
+    if baseline is not None and candidate is not None:
+        manifest["sources"] = {"base": str(baseline.resolve()), "online": str(candidate.resolve())}
     paths = {}
     for side, source in manifest["sources"].items():
-        dest = Path(source).parent / (side + "_probe")
+        dest = Path(source).parent / (side + "_" + root.name + "_probe")
         assert not dest.exists()
         shutil.copytree(source, dest)
         original = (dest / "deepseek_v4_flash_hca/decode_sparse_attn_hca.py").read_text()
@@ -59,7 +61,7 @@ def prepare():
         target.write_text(imports + header + "):\n" + body)
         target.chmod(0o444)
         paths[side] = str(dest)
-    (ROOT / "probe_sources.json").write_text(json.dumps(paths, indent=2) + "\n")
+    (root / "probe_sources.json").write_text(json.dumps(paths, indent=2) + "\n")
 
 
 def load(side, path):
@@ -144,14 +146,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--prepare", action="store_true")
     parser.add_argument("--compile-only", action="store_true")
+    parser.add_argument("--experiment-root", type=Path, default=ROOT)
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--candidate", type=Path)
     parser.add_argument("--device", type=int, default=int(os.environ.get("TASK_DEVICE", "-1")))
-    parser.add_argument("--output", type=Path, default=ROOT / "probe_result.json")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if (args.baseline is None) != (args.candidate is None):
+        parser.error("baseline和candidate必须同时指定")
+    root = args.experiment_root.resolve()
+    if args.output is None:
+        args.output = root / "probe_result.json"
     if args.prepare:
-        prepare()
+        prepare(root, args.baseline, args.candidate)
         return
     os.environ.update(VLLM_ASCEND_ENABLE_NZ="2", VLLM_ASCEND_PTO_CSA_ATOMIC_ADD="0")
-    paths = json.loads((ROOT / "probe_sources.json").read_text())
+    paths = json.loads((root / "probe_sources.json").read_text())
     modules = {side: load(side, path) for side, path in paths.items()}
     if args.compile_only:
         from pypto.runtime import RunConfig

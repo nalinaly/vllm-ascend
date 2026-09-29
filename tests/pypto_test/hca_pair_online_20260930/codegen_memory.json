@@ -1,0 +1,52 @@
+{
+  "full_ub": {
+    "compile_pass": false,
+    "required_vec": 241152,
+    "limit_vec": 188416,
+    "device_submitted": false
+  },
+  "softmax16": {
+    "compile_pass": false,
+    "required_vec": 236800,
+    "limit_vec": 188416,
+    "device_submitted": false
+  },
+  "softmax16_publish8": {
+    "compile_pass": false,
+    "required_vec": 222464,
+    "limit_vec": 188416,
+    "device_submitted": false
+  },
+  "softmax16_publish8_n64": {
+    "compile_pass": false,
+    "aiv_vec_end_bytes": 187648,
+    "aic_mat_end_bytes": 425984,
+    "aic_acc_end_bytes": 131072,
+    "aic_left_end_bytes": 65536,
+    "aic_right_end_bytes": 65536,
+    "error": "PTOAS A3 non-mat tmov shape mismatch: narrow-column tile assemble"
+  },
+  "softmax16_publish8_n64_rings": {
+    "compile_pass": true,
+    "aiv_vec_end_bytes": 187648,
+    "aic_mat_end_bytes": 425984,
+    "aic_acc_end_bytes": 131072,
+    "aic_left_end_bytes": 65536,
+    "aic_right_end_bytes": 65536,
+    "device_correctness": "FAIL: dynamic previous-head-max slice lost offset; do not accept FP64 tolerance as a fix"
+  },
+  "static_heads": {
+    "compile_pass": false,
+    "device_submitted": false,
+    "error": "SSA scope errors for softmax_m_iter/softmax_seed after static unroll"
+  },
+  "head_extract": {
+    "compile_pass": true,
+    "aiv_vec_end_bytes": 187648,
+    "aic_mat_end_bytes": 425984,
+    "aic_acc_end_bytes": 131072,
+    "aic_left_end_bytes": 65536,
+    "aic_right_end_bytes": 65536,
+    "device_correctness": "128K/B16 complete x_out/cache/state bit exact versus single-query online candidate; own graph and guards pass"
+  }
+}
