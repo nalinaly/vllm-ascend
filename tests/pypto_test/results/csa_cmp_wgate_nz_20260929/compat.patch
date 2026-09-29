@@ -1,0 +1,97 @@
+--- a/tests/pypto_test/dsv4_csa_replay.py
++++ b/tests/pypto_test/dsv4_csa_replay.py
+@@ -128,9 +128,19 @@
+     """来源布局/形状相同则不动字节；只转换独占的只读权重。"""
+     from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import repack_weights
+ 
++    source_layouts = dict(meta["weight_layouts"])
++    # 旧schema=2没有把Compressor权重列入根布局名单，但张量级记录已明确ND。
++    # 限定已知几何、dtype和基础物理格式，不能从元素数推测来源或覆盖未知布局。
++    if "cmp_wgate" in target_layouts and "cmp_wgate" not in source_layouts:
++        spec, value = meta["tensors"]["cmp_wgate"], tensors["cmp_wgate"]
++        if (meta.get("schema_version") == SCHEMA_VERSION and spec.get("layout") == "ND"
++                and spec.get("source_format") in (0, 2) and spec["shape"] == [1024, 4096]
++                and spec["dtype"] == "torch.bfloat16" and str(value.dtype) == "torch.bfloat16"
++                and tuple(value.shape) == (1024, 4096) and value.is_contiguous()):
++            source_layouts["cmp_wgate"] = "ND"
+     converted = []
+     for name, target in target_layouts.items():
+-        source = meta["weight_layouts"].get(name)
++        source = source_layouts.get(name)
+         if source not in ("ND", "NZ") or target not in ("ND", "NZ"):
+             raise ValueError(f"未知权重布局：{name} {source} -> {target}")
+         shape_matches = target_shapes is None or tuple(tensors[name].shape) == tuple(target_shapes[name])
+@@ -142,7 +152,7 @@
+         if len(meta["storages"][spec["storage"]]["parameters"]) != 1:
+             raise ValueError(f"布局转换会破坏共享存储：{name}，需先明确整组别名的转换方式")
+         converted.append(name)
+-    return repack_weights(tensors, meta["weight_layouts"], target_layouts, target_shapes), converted
++    return repack_weights(tensors, source_layouts, target_layouts, target_shapes), converted
+ 
+ 
+ def restore_mutable_storages(meta, initial, backings):
+--- a/tests/pypto_test/test_csa_replay.py
++++ b/tests/pypto_test/test_csa_replay.py
+@@ -169,3 +169,45 @@
+     assert before["state"].tolist() == [0, 0]
+     assert reference["state"].tolist() == [1, 1]
+     assert reference["out"].tolist() == [2, 2]
++
++
++@pytest.mark.parametrize("target_layout", ["ND", "NZ"])
++def test_legacy_compressor_gate_snapshot_migrates_both_ways(target_layout):
++    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import _unpack_nz
++
++    gate = (torch.arange(1024 * 4096).reshape(1024, 4096) % 97).to(torch.bfloat16)
++    roles, source = {"cmp_wgate": "in"}, {"state_timing": "before_call"}
++    meta, payload = capture_tensors({"cmp_wgate": gate}, roles, {}, source)
++    values, _ = materialize(meta, payload)
++    shapes = {"cmp_wgate": (1024, 4096)}
++    converted, names = convert_weight_layouts(values, meta, {"cmp_wgate": target_layout}, shapes)
++    assert names == (["cmp_wgate"] if target_layout == "NZ" else [])
++    actual = _unpack_nz(converted["cmp_wgate"]) if target_layout == "NZ" else converted["cmp_wgate"]
++    assert torch.equal(actual, gate)
++    if target_layout == "ND":
++        assert converted["cmp_wgate"] is values["cmp_wgate"]
++    new_meta, new_payload = capture_tensors(converted, roles, {"cmp_wgate": target_layout}, source)
++    new_values, _ = materialize(new_meta, new_payload)
++    unchanged, names = convert_weight_layouts(new_values, new_meta, {"cmp_wgate": target_layout}, shapes)
++    assert names == [] and unchanged["cmp_wgate"] is new_values["cmp_wgate"]
++    precision, names = convert_weight_layouts(new_values, new_meta, {"cmp_wgate": "ND"}, shapes)
++    assert torch.equal(precision["cmp_wgate"], gate)
++
++
++def test_legacy_compressor_gate_requires_explicit_nd_and_exclusive_input():
++    gate = torch.zeros((1024, 4096), dtype=torch.bfloat16)
++    source, shapes = {"state_timing": "before_call"}, {"cmp_wgate": (1024, 4096)}
++    for field, value in (("source_format", 29), ("layout", "NZ")):
++        meta, _ = capture_tensors({"cmp_wgate": gate}, {"cmp_wgate": "in"}, {}, source)
++        meta["tensors"]["cmp_wgate"][field] = value
++        with pytest.raises(ValueError, match="未知权重布局"):
++            convert_weight_layouts({"cmp_wgate": gate}, meta, {"cmp_wgate": "NZ"}, shapes)
++    meta, _ = capture_tensors({"cmp_wgate": gate}, {"cmp_wgate": "in"}, {"cmp_wgate": "unknown"}, source)
++    with pytest.raises(ValueError, match="未知权重布局"):
++        convert_weight_layouts({"cmp_wgate": gate}, meta, {"cmp_wgate": "NZ"}, shapes)
++    for aliased in (False, True):
++        tensors = {"cmp_wgate": gate, "alias": gate.view(-1)} if aliased else {"cmp_wgate": gate}
++        roles = {name: "in" for name in tensors} if aliased else {"cmp_wgate": "inout"}
++        meta, _ = capture_tensors(tensors, roles, {}, source)
++        with pytest.raises(ValueError, match="共享存储" if aliased else "只读权重"):
++            convert_weight_layouts(tensors, meta, {"cmp_wgate": "NZ"}, shapes)
+--- a/tests/pypto_test/test_csa_nz_config.py
++++ b/tests/pypto_test/test_csa_nz_config.py
+@@ -135,11 +135,13 @@
+     expected_nz = ({"wq_a", "wo_a"} if mode == 2 else set())
+     if mode >= 1:
+         expected_nz.update(("wq_b", "wo_b"))
++    if suffix == "_perf" and mode == 2:
++        expected_nz.add("cmp_wgate")
+     layouts = nz_mode.root_weight_layouts(root)
+     assert {key for key, value in layouts.items() if value == "NZ"} == expected_nz
+     assert nz_mode.root_weight_shapes(root) == {
+         "wq_a": (1024, 4096), "wq_b": (1024, 32768),
+-        "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096),
++        "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096), "cmp_wgate": (1024, 4096),
+     }
+ 
+ try:

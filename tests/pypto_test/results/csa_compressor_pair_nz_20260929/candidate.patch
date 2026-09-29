@@ -1,0 +1,250 @@
+--- a/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_csa.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_csa.py
+@@ -150,7 +150,7 @@
+     inner_freqs_cos: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+     inner_freqs_sin: pl.Tensor[[INDEXER_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
+     cmp_wkv: pl.Tensor[[MAIN_OUT_DIM, D], pl.BF16],
+-    cmp_wgate: pl.Tensor[[MAIN_OUT_DIM, D], pl.BF16],
++    cmp_wgate: pl.Tensor[[MAIN_OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     cmp_ape: pl.Tensor[[COMPRESS_RATIO, MAIN_OUT_DIM], pl.FP32],
+     cmp_norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+     compress_state: pl.InOut[pl.Tensor[[MAIN_STATE_BLOCK_NUM_DYN, STATE_PAGE_ELEMENTS_DYN], pl.FP32]],
+@@ -159,7 +159,7 @@
+     idx_wq_b_scale: pl.Tensor[[IDX_N_HEADS * IDX_HEAD_DIM], pl.FP32],
+     weights_proj: pl.Tensor[[D, IDX_N_HEADS], pl.BF16],
+     hadamard_idx: pl.Tensor[[IDX_HEAD_DIM, IDX_HEAD_DIM], pl.BF16],
+-    inner_wkv: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
++    inner_wkv: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     inner_wgate: pl.Tensor[[INNER_OUT_DIM, D], pl.BF16],
+     inner_ape: pl.Tensor[[COMPRESS_RATIO, INNER_OUT_DIM], pl.FP32],
+     inner_norm_w: pl.Tensor[[IDX_HEAD_DIM], pl.BF16],
+--- a/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_indexer_compressor.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_indexer_compressor.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_indexer_compressor.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .compact_metadata import ROPE_TILE_ROWS, load_compact_rope_rows
+ from .config import (
+@@ -115,7 +117,7 @@
+ @pl.jit.inline(auto_scope=False)
+ def indexer_compressor_project(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+-    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
+     kv_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+     score_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+@@ -352,7 +354,7 @@
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, INNER_STATE_TABLE_COLUMNS_DYN], pl.INT32],
+-    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+@@ -557,7 +559,7 @@
+     kv: pl.Tensor[[T_DYN, HEAD_DIM], pl.FP32],
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, INNER_STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, INNER_STATE_TABLE_COLUMNS_DYN], pl.INT32],
+-    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wkv: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/nz_mode.py
+@@ -90,7 +90,7 @@
+     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
+     params = inspect.signature(root_function).parameters
+     result = {}
+-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
++    for name in ("wq_a", "wq_b", "wo_a", "wo_b", "cmp_wgate", "inner_wkv"):
+         layout = params[name].annotation.layout
+         if layout is None:
+             result[name] = "ND"
+--- a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -141,14 +141,19 @@
+         )
+         return torch_npu.npu_format_cast(value, target)
+ 
+-    def root_weight(name, shape, dtype):
++    def root_weight(name, shape, dtype, module=None):
+         # 根矩阵方向与 Native 相同。格式已匹配时借用原存储，禁止解包、转置或重新打包。
+-        value = getattr(attention, name).weight.detach()
++        value = (getattr(attention, name) if module is None else module).weight.detach()
+         if tuple(value.shape) != shape or value.dtype != dtype or not value.is_contiguous():
+             raise ValueError(f"Unexpected Native {name} weight: {value.shape}/{value.dtype}")
+         current = int(torch_npu.get_npu_format(value))
+         if layouts[name] == "NZ":
+-            return value if current == 29 else _recast(name, value, current, 29)
++            if current == 29:
++                return value
++            if module is not None:
++                logger.info("PTO_CSA_WEIGHT_INIT_NZ %s: PTO专用NZ副本，Native原权重保留", name)
++                return torch_npu.npu_format_cast(value, 29)
++            return _recast(name, value, current, 29)
+         if current in (_ACL_FORMAT_NCHW, _ACL_FORMAT_ND):
+             return value
+         return _recast(name, value, current, _ACL_FORMAT_ND)
+@@ -195,7 +200,7 @@
+         "gamma_cq": weight(attention.q_norm, (1024,), bf16),
+         "gamma_ckv": weight(attention.kv_norm, (512,), bf16),
+         "cmp_wkv": weight(main.wkv, (1024, 4096), bf16),
+-        "cmp_wgate": weight(main.wgate, (1024, 4096), bf16),
++        "cmp_wgate": root_weight("cmp_wgate", (1024, 4096), bf16, main.wgate),
+         "cmp_ape": main.ape.detach().float().contiguous(),
+         # Match Native A3 storage; the RMS task widens loaded BF16 tiles.
+         "cmp_norm_w": weight(main.norm, (512,), bf16),
+@@ -203,7 +208,7 @@
+         "idx_wq_b_scale": scale(indexer.wq_b, 8192),
+         "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
+         **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
+-        "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
++        "inner_wkv": root_weight("inner_wkv", (256, 4096), bf16, inner.wkv),
+         "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
+         "inner_ape": inner.ape.detach().float().contiguous(),
+         "inner_norm_w": weight(inner.norm, (128,), bf16),
+--- a/tests/pypto_test/dsv4_csa_replay.py
++++ b/tests/pypto_test/dsv4_csa_replay.py
+@@ -128,9 +128,20 @@
+     """来源布局/形状相同则不动字节；只转换独占的只读权重。"""
+     from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import repack_weights
+ 
++    source_layouts = dict(meta["weight_layouts"])
++    # 旧schema=2张量级已有ND记录；只迁移已知的两个Compressor投影权重。
++    # 保留显式未知布局、形状/dtype/物理格式和只读独占存储的拒绝检查。
++    for name, shape in (("cmp_wgate", (1024, 4096)), ("inner_wkv", (256, 4096))):
++        if name in target_layouts and name not in source_layouts:
++            spec, value = meta["tensors"][name], tensors[name]
++            if (meta.get("schema_version") == SCHEMA_VERSION and spec.get("layout") == "ND"
++                    and spec.get("source_format") in (0, 2) and spec["shape"] == list(shape)
++                    and spec["dtype"] == "torch.bfloat16" and str(value.dtype) == "torch.bfloat16"
++                    and tuple(value.shape) == shape and value.is_contiguous()):
++                source_layouts[name] = "ND"
+     converted = []
+     for name, target in target_layouts.items():
+-        source = meta["weight_layouts"].get(name)
++        source = source_layouts.get(name)
+         if source not in ("ND", "NZ") or target not in ("ND", "NZ"):
+             raise ValueError(f"未知权重布局：{name} {source} -> {target}")
+         shape_matches = target_shapes is None or tuple(tensors[name].shape) == tuple(target_shapes[name])
+@@ -142,7 +153,7 @@
+         if len(meta["storages"][spec["storage"]]["parameters"]) != 1:
+             raise ValueError(f"布局转换会破坏共享存储：{name}，需先明确整组别名的转换方式")
+         converted.append(name)
+-    return repack_weights(tensors, meta["weight_layouts"], target_layouts, target_shapes), converted
++    return repack_weights(tensors, source_layouts, target_layouts, target_shapes), converted
+ 
+ 
+ def restore_mutable_storages(meta, initial, backings):
+--- a/tests/pypto_test/test_csa_nz_config.py
++++ b/tests/pypto_test/test_csa_nz_config.py
+@@ -135,11 +135,13 @@
+     expected_nz = ({"wq_a", "wo_a"} if mode == 2 else set())
+     if mode >= 1:
+         expected_nz.update(("wq_b", "wo_b"))
++    if suffix == "_perf" and mode == 2:
++        expected_nz.update(("cmp_wgate", "inner_wkv"))
+     layouts = nz_mode.root_weight_layouts(root)
+     assert {key for key, value in layouts.items() if value == "NZ"} == expected_nz
+     assert nz_mode.root_weight_shapes(root) == {
+         "wq_a": (1024, 4096), "wq_b": (1024, 32768),
+-        "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096),
++        "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096), "cmp_wgate": (1024, 4096), "inner_wkv": (256, 4096),
+     }
+ 
+ try:
+--- a/tests/pypto_test/test_csa_replay.py
++++ b/tests/pypto_test/test_csa_replay.py
+@@ -169,3 +169,47 @@
+     assert before["state"].tolist() == [0, 0]
+     assert reference["state"].tolist() == [1, 1]
+     assert reference["out"].tolist() == [2, 2]
++
++
++@pytest.mark.parametrize("name,width", [("cmp_wgate", 1024), ("inner_wkv", 256)])
++@pytest.mark.parametrize("target_layout", ["ND", "NZ"])
++def test_legacy_compressor_gate_snapshot_migrates_both_ways(name, width, target_layout):
++    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import _unpack_nz
++
++    gate = (torch.arange(width * 4096).reshape(width, 4096) % 97).to(torch.bfloat16)
++    roles, source = {name: "in"}, {"state_timing": "before_call"}
++    meta, payload = capture_tensors({name: gate}, roles, {}, source)
++    values, _ = materialize(meta, payload)
++    shapes = {name: (width, 4096)}
++    converted, names = convert_weight_layouts(values, meta, {name: target_layout}, shapes)
++    assert names == ([name] if target_layout == "NZ" else [])
++    actual = _unpack_nz(converted[name]) if target_layout == "NZ" else converted[name]
++    assert torch.equal(actual, gate)
++    if target_layout == "ND":
++        assert converted[name] is values[name]
++    new_meta, new_payload = capture_tensors(converted, roles, {name: target_layout}, source)
++    new_values, _ = materialize(new_meta, new_payload)
++    unchanged, names = convert_weight_layouts(new_values, new_meta, {name: target_layout}, shapes)
++    assert names == [] and unchanged[name] is new_values[name]
++    precision, names = convert_weight_layouts(new_values, new_meta, {name: "ND"}, shapes)
++    assert torch.equal(precision[name], gate)
++
++
++@pytest.mark.parametrize("name,width", [("cmp_wgate", 1024), ("inner_wkv", 256)])
++def test_legacy_compressor_gate_requires_explicit_nd_and_exclusive_input(name, width):
++    gate = torch.zeros((width, 4096), dtype=torch.bfloat16)
++    source, shapes = {"state_timing": "before_call"}, {name: (width, 4096)}
++    for field, value in (("source_format", 29), ("layout", "NZ")):
++        meta, _ = capture_tensors({name: gate}, {name: "in"}, {}, source)
++        meta["tensors"][name][field] = value
++        with pytest.raises(ValueError, match="未知权重布局"):
++            convert_weight_layouts({name: gate}, meta, {name: "NZ"}, shapes)
++    meta, _ = capture_tensors({name: gate}, {name: "in"}, {name: "unknown"}, source)
++    with pytest.raises(ValueError, match="未知权重布局"):
++        convert_weight_layouts({name: gate}, meta, {name: "NZ"}, shapes)
++    for aliased in (False, True):
++        tensors = {name: gate, "alias": gate.view(-1)} if aliased else {name: gate}
++        roles = {name: "in" for name in tensors} if aliased else {name: "inout"}
++        meta, _ = capture_tensors(tensors, roles, {}, source)
++        with pytest.raises(ValueError, match="共享存储" if aliased else "只读权重"):
++            convert_weight_layouts(tensors, meta, {name: "NZ"}, shapes)
+--- a/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_compressor_ratio4.py
++++ b/vllm_ascend/ops/pypto/dsv4_csa_compressor_pair_nz_369ad2c1_v1/decode_compressor_ratio4.py
+@@ -10,6 +10,8 @@
+ """CSA integration dependency adapted from pypto-lib 205255b4/decode_compressor_ratio4.py."""
+ 
+ import pypto.language as pl
++
++from .nz_mode import BF16_WEIGHT_LAYOUT
+ 
+ from .compact_metadata import ROPE_TILE_ROWS, load_compact_rope_rows
+ from .config import (
+@@ -104,7 +106,7 @@
+ def compressor_ratio4_project(
+     x: pl.Tensor[[T_DYN, D], pl.BF16],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     kv_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+     score_proj_pad: pl.Tensor[[BS_PAD, OUT_DIM], pl.FP32],
+     late_dep: pl.Scalar[pl.TASK_ID],
+@@ -256,7 +258,7 @@
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, STATE_TABLE_COLUMNS_DYN], pl.INT32],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     position_ids: pl.Tensor[[T_DYN], pl.INT64],
+     seq_lens: pl.Tensor[[B_DYN], pl.INT32],
+@@ -425,7 +427,7 @@
+     compress_state: pl.Tensor[[COMPRESS_STATE_BLOCK_NUM_DYN, STATE_PAGE_ELEMENTS_DYN], pl.FP32],
+     state_table: pl.Tensor[[B_DYN, STATE_TABLE_COLUMNS_DYN], pl.INT32],
+     wkv: pl.Tensor[[OUT_DIM, D], pl.BF16],
+-    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16],
++    wgate: pl.Tensor[[OUT_DIM, D], pl.BF16, BF16_WEIGHT_LAYOUT],
+     ape: pl.Tensor[[COMPRESS_RATIO, OUT_DIM], pl.FP32],
+     norm_w: pl.Tensor[[HEAD_DIM], pl.BF16],
+     cos: pl.Tensor[[COMPRESSED_ROWS_DYN, ROPE_HEAD_DIM], pl.FP32],
