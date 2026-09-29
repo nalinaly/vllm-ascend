@@ -135,6 +135,14 @@ def main():
     parser.add_argument("--operator-source", type=Path,
                         help="只供对照测试：指定已冻结的 ops/pypto 源码目录")
     parser.add_argument("--weight-nz-mode", type=int, default=2)
+    parser.add_argument("--aic-metrics", choices=("PipeUtilization", "L2Cache", "MemoryAccess",
+                                                 "ArithmeticUtilization", "MemoryUB", "MemoryL0"),
+                        help="给 profiler 指定 AI Core 指标：PipeUtilization 给每个 kernel 的 "
+                             "mte1/mte2/mte3/cube/vec 占比，用于判定受哪条 pipe 限制；"
+                             "L2Cache 给 L2 命中率，用于判定交接缓冲是否走 HBM")
+    # 单次 profiled 重放的 span 方差太大（实测本不该受影响的档位摆了 44 μs），
+    # 分辨不了 20 μs 量级的改动；在同一个 profiler 窗口里连采多次、取中位数。
+    parser.add_argument("--profile-replays", type=int, default=9)
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--swimlane", action="store_true",
                         help="PTO 侧采 level-4 泳道用于拆解设备侧任务图跨度；"
@@ -341,12 +349,17 @@ def main():
                 # profiler 一律采：验收口径是**纯设备耗时**，
                 # 图外 NPU Event 的区间里含每次迭代的主机派发，不能当验收数字。
                 profile_dir = args.output / "profile"
+                metric = None
+                if args.aic_metrics:
+                    metric = getattr(torch_npu.profiler.AiCMetrics, args.aic_metrics)
+                    report["aic_metrics"] = args.aic_metrics
                 report["timing"] = measure_graph_interval(
                     fixture, compiled_call, output, reference,
                     iters=args.iters, warmup=args.warmup, require_exact=runtime is not None,
-                    profile_dir=profile_dir)
+                    profile_dir=profile_dir, aic_metrics=metric,
+                    profile_replays=args.profile_replays)
                 # 不要用 report["device"]：那个键已经是卡号。
-                report["device_profile"] = device_interval(profile_dir)
+                report["device_profile"] = device_interval(profile_dir, replays=args.profile_replays)
                 if not report["device_profile"].get("available"):
                     raise RuntimeError(f"拿不到纯设备耗时：{report['device_profile']}")
                 report["device_span_us"] = report["device_profile"]["span_us"]
