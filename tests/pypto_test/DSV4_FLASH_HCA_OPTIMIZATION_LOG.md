@@ -6882,3 +6882,55 @@ profiler缺失ACL到NPU flow连线，不能做CPU→NPU因果图；原始设备C
 attention AIV开始334.94→330.28、结束504.34→523.00。Q和Compressor竞争AIC后，
 向量侧的并发关系也改变了，不能用Q单组缩短45.6μs等价整段收益。
 精度与保护区通过。完整证据：[hca_qearly_20260930](hca_qearly_20260930/README.md)。
+
+## 105. 长档softmax统计留在UB，保留核内收益并继续处理长尾（2026-09-30）
+
+最新本地ops-transformer 28f40354的SWAVectorBlock将softmaxMax/Sum保留在UB。
+PTO当前maxima/totals却由同一AIV写GM、两个tick后再读回；它们不参与跨核交接。
+本轮改成每AIV独立的三槽UB环，scores/probs/values、FFTS次数、max/量化/归约顺序均不变。
+
+v1虽然显式CPU编译通过，设备跨版本逐bit失败，未计时。生成代码显示动态tile.slice
+经reshape后绑定环首地址，写入端却保留了动态槽偏移。v2用显式Vec extract生成动态TEXTRACT，
+完整输出/cache/state恢复逐bit一致。不修改公共PyPTO/Simpler/PTOAS/PTO-ISA；
+局部证据见[COMPILER_SLICE_NOTE.md](hca_softmax_ring_20260930/COMPILER_SLICE_NOTE.md)。
+
+128K/B16独立DFX：attention AIV核内min/max/mean从186.78/192.60/189.74变为
+174.74/181.62/177.84，mean下降6.27%、max下降10.98μs；AIC mean185.64→173.76。
+同进程筛选则600.53→610.23，不能只报核内收益当作整层收益。
+未改的其他task也变化，gather组跨度34.86→69.32，再次表明需观察多task联动。
+
+与已提交O-B版本组合，128K/B16和16384/B4都进入长分支，完整状态及图重放/保护区通过。
+后者页表[4,6]、128行有效压缩历史，覆盖只有压缩块加raw的短循环排空。
+同进程组合筛选577.20→596.85，因此又用生产服务入口同卡ABBA核对，每侧18次真实span：
+
+| 实现 | min | max | mean |
+| --- | ---: | ---: | ---: |
+| 已接入O-B的base | 585.75 | 638.50 | 600.86 |
+| O-B + UB环 | 561.50 | 655.50 | 592.21 |
+
+本窗口mean减少8.65μs（1.44%），max增加17μs。两种筛选方向不同、进程间漂移明显，
+稳定整层收益和长尾改善都未证明。依既定规则保留核内收益，短档路径不改；不扩大负/不明收益的七档或模型测试。
+已有Native基线不重标为当前版本成绩，领先20%的目标仍未达到。
+完整脚本、数据、任务和泳道：[hca_softmax_ring_20260930](hca_softmax_ring_20260930/README.md)。
+
+新增脚本Ruff、shell语法及diff检查通过；attention文件原有I001/E501检查项由61项变为60项，
+没有新增诊断，未做整文件无关格式化。完整format.sh ci仍受缺少pre-commit限制。
+
+## 106. 下一轮：按Native跨query延续流水，而非重复排空（2026-09-30源码审查）
+
+本地ops-transformer 28f40354提供了两个尚未吸收的具体结构参考，尚无新性能结论：
+
+1. `sparse_attn_sharedkv_swa_kernel.h`约790行只在当前核的最后一项设置`extraLoop=PRELOAD_NUM`，
+   用持续递增的gloop驱动PreloadPipeline，跨query延续QK/PV流水。
+   当前PTO `_long_sparse_attn_hca_tp1`对每个token执行`work_count + QK_PRE_LAUNCH`，每次重新启动/排空。
+   128K/B16每worker有4个token，单从循环结构看可避免3次重复排空；这不是已测的时间收益。
+2. `sparse_attn_sharedkv_tiling.cpp`约1538行，CFA/SWA的mBaseSize为`(256/gSize)*gSize`，
+   H=64时覆盖最多4个query，PTO仍按单query的M64处理。不要把SCFA的`mBaseSize=gSize`
+   当成C128 HCA的唯一参考；模式选择依据cmpSparseIndices是否存在。
+   本地源码策略不等于已经证明安装包为本形状选择了相同内部分块，后续需保留这一边界。
+
+先做跨query延续流水，再独立评估多query拼块，避免一次叠加两类改动。
+跨query方案必须保留：压缩先于raw的既有数值顺序；每query的sink/位置/mask；
+三槽KV/probs/values的生命周期；PV完成时对正确query做inverse RoPE与输出；
+seq_lens=0及不同请求work_count的尾部。QK已进入下一query时，PV可能仍归约上一query，
+不能直接沿用当前token的归约状态或频率。仍先冻结包CPU编译、代表长档筛选，数值中性检查后再补受影响边界。

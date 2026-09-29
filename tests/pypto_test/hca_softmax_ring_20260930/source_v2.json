@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "bef9f7fa",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-softmax-ring-v2-bef9f7fa-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-softmax-ring-v2-bef9f7fa-20260930/ring",
+  "change": "long attention per-block max/sum moves from GM to per-AIV UB ring",
+  "numerics": "same FP32 max/sum, BF16 probabilities, merge order and FFTS; short path unchanged",
+  "reference": "ops-transformer SparseAttnSharedkv SWAVectorBlock softmaxMaxBuff/softmaxSumBuff",
+  "v2": "explicit Vec extract with dynamic row offset; no compiler or runtime edits"
+}
