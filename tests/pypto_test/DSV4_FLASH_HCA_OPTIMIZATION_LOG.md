@@ -4829,3 +4829,102 @@ flat 1D），但那需要运行时开 SDMA，先不引入——按用户裁定"�
 实际存在的参数（CSA 没有 `cmp_wgate`）；`native_adapter.weight()` 新增
 `layout_name`，声明为 NZ 时在加载期一次性 `npu_format_cast(..., 29)`。
 基线签名不带 layout → 读出 "ND" → 行为与改前逐字节一致。
+
+## 86. 三张 B 操作数权重改 NZ 的逐项测量（2026-09-29）
+
+按"逐个测、判据是绝对时间、测完验精度"的要求，`variants_nzweights_20260929/`
+下每个快照只切一张权重。
+
+### 86.1 第一批：NZ 但**去掉**该权重的 Vector 预热（128K/B16 同卡 ABBA）
+
+| 变体 | 样本 | 中位数 | 相对 base | 精度 |
+| --- | --- | --- | --- | --- |
+| base | 580.2 / 582.2 / 580.2（σ≈1.2） | 580.25 | — | OK |
+| `nz_cmpwkv` | 554.5 / **596.2 / 597.5** | 596.25 | **+16.00 ✗** | OK |
+| `nz_cmpwgate` | 570.5 / 574.0 | 572.25 | −8.00（σ 12.6~29.7，不显著） | OK |
+| `nz_wkv` | — | — | 编译失败，见 86.3 | — |
+| `nz_all` | — | — | 同上 | — |
+
+`nz_cmpwkv` 的 554.5 是孤例，后两个样本一致落在 596~598。
+**两张都没拿到收益。** base 的 σ 只有 1.2，而变体样本散得多——这本身就指向
+失去 L2 预热：权重是否还在 L2 里，变成取决于上一个 pass 留下了什么。
+
+### 86.2 NZ 权重为什么不能再由 Vector 核预热，以及三次修法
+
+PyPTO 的拒绝是显式的用户级 CHECK：
+
+```
+ValueError: NZ layout currently supports only matmul operand loads
+(target_memory=pl.Mem.Mat), got Vec. An NZ tensor is a cube weight:
+load it into Mat, or annotate the tensor as pl.ND.
+```
+
+机制：`pl.NZ` 让 `BlockNzTensorViews` 把张量改写成分形 rank-5 形状、改写
+`tile.load` 坐标，生成 `TLoadGm2L1Nz2nz`（GM 分形序直搬 L1），这是 cube
+操作数通路；预热的 `[64, 512]` 二维开窗在分形排布下内存不连续，
+Vec 通路也没有分形→逻辑的转换单元。
+
+出路是 `BlockNzTensorViews` 文档里那条规则：**覆盖全部元素的 rank-1 view
+与 layout 无关**（分块重排索引空间、不动内存），展平后仍按 ND 读。
+展平成 `[1, HEAD_DIM*D]` 按 32768 元素分段，正好 64 段、每段 64 KiB，
+与现在的 64 个 `64×512` 块**段数和字节数都相同**。三次尝试：
+
+| 尝试 | 做法 | 结果 |
+| --- | --- | --- |
+| `nz_cmp_warm` | 调用点内联 `pl.reshape(cmp_wkv, [1, N])` 传进去 | ✗ `@pl.jit: missing inferred tensor metadata for parameter 'cmp_wkv'` |
+| `nz_cmp_warm2` | 先落成具名变量再传 | ✗ 同一个错误 |
+| `nz_cmp_warm3` | **展平搬进 `warm_kv_weights` 函数体内**，参数仍是原始 NZ 张量 | 在测 |
+
+**`@pl.jit` 的参数元数据推断只认直接传进来的根参数，不接受派生 view。**
+错误提示自己写着 "Pass the tensor directly as a function argument"。
+`warm_wo_a` 一直是对的写法——它的 `pl.reshape(wo_a, ...)` 在函数体内做，
+不跨函数传。展平必须放在 `pl.spmd` 之外（spmd 体内张量已变成 tile）、
+函数体之内（Orchestration 上下文）。
+
+### 86.3 `wkv` 改 NZ 被符号证明挡住
+
+`qkv_proj_rope.py:799` 报：
+
+```
+ValueError: NZ layout requires the slice offset on shape[-1] to be non-negative,
+and this one cannot be proven to be. ... Provable forms are a non-negative
+constant, the SPMD block index, a loop variable whose start and step are both
+non-negative, and any sum or product built from those — note that a difference
+never qualifies.
+```
+
+根因在 block 分解：
+
+```python
+kv_col0   = (kbg // (KV_OK * kv_m_groups)) * KV_N_TILE        # 列，shape[-1]
+kv_k_base = ((kbg // kv_m_groups) % KV_OK) * KV_SPLIT_K_TILE  # 行，shape[-2]
+kv_m_group = kbg % kv_m_groups
+```
+
+`kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))` 是**运行时值**。
+PyPTO 只能对**常量**除数推符号（文档：对正常量的取模／整除，符号从被除数证明），
+除数一旦是运行时值就证不出来。
+
+- `nz_wkv2`：`kv_col0 = pl.max(..., 0)`，照 `_proj_a_mm_nz` 里
+  `n0 = pl.max(nf, 0) * A_COL_TILE` 的手法。**✗ 同一个错误**，
+  推测是 `IsProvableNonNegative` 的 `sign_budget` 撑不住
+  `Max(Mul(FloorDiv(blk, Mul(const, Min(...))), const), 0)` 这个嵌套。
+- `nz_wkv3`：**把列换到最内层、对编译期常量取模**，行偏移的除数也随之变成常量：
+
+```python
+kv_col0    = (kbg % (HEAD_DIM // KV_N_TILE)) * KV_N_TILE
+kv_k_base  = ((kbg // (HEAD_DIM // KV_N_TILE)) % KV_OK) * KV_SPLIT_K_TILE
+kv_m_group = kbg // ((HEAD_DIM // KV_N_TILE) * KV_OK)
+```
+
+总块数 `(HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups` 与各维取值范围都不变，
+只是块编号重排，所以数学等价；但 worker 到工作的映射顺序变了，
+L2 局部性可能受影响，必须实测而不是假定等价。在测。
+
+### 86.4 顺带修掉的口径不一致
+
+`run_hca_single_layer.sh` 硬编码 `export VLLM_ASCEND_ENABLE_NZ=1`，而
+`BF16_WEIGHT_NZ` 的判据是 `>= 2`——**精度校验一直跑在与性能测试
+（`run_hca_compiled_case.sh` 默认 2）不同的权重布局下**，而且 BF16 权重的
+NZ 标注在那里会静默失效。已改成 `${VLLM_ASCEND_ENABLE_NZ:-1}`，
+默认档位不变、可从外部覆盖。

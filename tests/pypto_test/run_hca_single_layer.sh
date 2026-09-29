@@ -13,7 +13,10 @@ shift
 mkdir -p "$hca_output/ascend"
 export ASCEND_RT_VISIBLE_DEVICES="$TASK_DEVICE"
 export ASCEND_PROCESS_LOG_PATH="$hca_output/ascend"
-export VLLM_ASCEND_ENABLE_NZ=1
+# 默认档位不变（1：INT8 权重走 NZ、BF16 走 ND），但允许外部覆盖：
+# BF16_WEIGHT_NZ 的判据是 >= 2，写死 1 会让 BF16 权重的 NZ 标注静默失效，
+# 于是精度校验跑的布局与性能测试（run_hca_compiled_case.sh 默认 2）不是同一套。
+export VLLM_ASCEND_ENABLE_NZ="${VLLM_ASCEND_ENABLE_NZ:-1}"
 export PTO_CSA_VARIANT=performance
 export VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0
 # 与上线 decode 口径对齐，取自
