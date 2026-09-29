@@ -12,7 +12,7 @@ import pypto.language as pl
 
 from .hc_pre_fused import NORM_EPS, hc_pre_norm
 from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
-from ..deepseek_v4_flash_dspark_perf.qkv_proj_rope import qkv_proj_rope
+from .qkv_proj_rope import qkv_proj_rope
 from .decode_compressor_ratio128 import (
     B_DYN, BOUNDS_DYN, CMP_PAGES_DYN, COMPACT_ROWS_DYN, STATE_COLUMNS_DYN,
     STATE_PAGE_ELEMENTS_DYN, STATE_PAGES_DYN, T_DYN, compressor_ratio128,
@@ -146,7 +146,12 @@ def _decode_hca_tp1_layer(
             x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms, x_hc,
         )
 
-    q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16)
+    # 直接二维分配保留manual_dep；外层reshape视图会默认恢复自动依赖。
+    # 四组只写各自的head，Attention通过q_ready直接等待全部生产者。
+    q = pl.create_tensor([tokens, H * HEAD_DIM], dtype=pl.BF16, manual_dep=True)
+    q_ready = pl.array.create(4, pl.TASK_ID)
+    for group in pl.unroll(4):
+        q_ready[group] = pl.system.task_invalid()
     kv = pl.create_tensor([tokens, HEAD_DIM], dtype=pl.BF16)
     qr = pl.create_tensor([tokens, Q_LORA], dtype=pl.INT8)
     qr_scale = pl.create_tensor([tokens, 1], dtype=pl.FP32)
@@ -154,7 +159,7 @@ def _decode_hca_tp1_layer(
         ready = pl.system.task_dummy(deps=[])
         q, qa_tid = qkv_proj_rope(
             normalized, wq_a, wq_b, wq_b_scale, wkv, freqs_cos, freqs_sin,
-            gamma_cq, gamma_ckv, q, kv, qr, qr_scale, ready,
+            gamma_cq, gamma_ckv, q, kv, qr, qr_scale, q_ready, ready,
         )
         cache_rows = pl.tensor.dim(ori_cache, 0) * 32
         cache_flat = pl.reshape(ori_cache, [cache_rows, HEAD_DIM])
@@ -172,7 +177,7 @@ def _decode_hca_tp1_layer(
         packed = pl.create_tensor([O_GROUPS * T_PAD, O_GROUP_IN], dtype=pl.BF16)
         packed, heads_tid = sparse_attn_hca_tp1(
             q, ori_cache, ori_table, cmp_cache, cmp_table, positions, seq_lens, attn_sink,
-            freqs_cos, freqs_sin, packed, raw_tid, compressed_tid,
+            freqs_cos, freqs_sin, packed, raw_tid, compressed_tid, q_ready,
         )
         with pl.scope():
             x_out = o_proj_hc_post(packed, wo_a, wo_b, wo_b_scale, x_hc, post, comb, x_out, heads_tid)

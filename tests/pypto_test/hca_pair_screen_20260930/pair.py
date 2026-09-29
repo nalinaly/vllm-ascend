@@ -50,6 +50,7 @@ def main():
     parser.add_argument("--history", type=int, default=131072)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--cycles", type=int, default=5)
+    parser.add_argument("--nz-mode", type=int, choices=(0, 1, 2), default=2)
     parser.add_argument("--device", type=int, default=int(os.environ.get("TASK_DEVICE", "-1")))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--check-only", action="store_true")
@@ -61,6 +62,7 @@ def main():
     if args.padding_graph and args.batch < 2:
         parser.error("padding-graph需要batch至少为2")
     args.output.mkdir(parents=True, exist_ok=True)
+    os.environ["VLLM_ASCEND_ENABLE_NZ"] = str(args.nz_mode)
     import pypto.torch
     import torch
 
@@ -78,6 +80,7 @@ def main():
         "case": [args.history, args.batch],
         "device": args.device,
         "scope": "same-process PTO-root screening, not Native or production-service acceptance",
+        "nz_mode": args.nz_mode,
     }
     if args.check_only:
         (args.output / "registration.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -104,7 +107,7 @@ def main():
         raise RuntimeError("Native metadata自定义算子不可用")
     tokens = args.batch * 6
     additional = decode_additional_config([tokens])
-    additional.update(weight_nz_mode=2, enable_kv_nz=False, enable_dsa_cp=False)
+    additional.update(weight_nz_mode=args.nz_mode, enable_kv_nz=False, enable_dsa_cp=False)
     config = EngineArgs(
         model=CHECKPOINT,
         tokenizer_mode="deepseek_v4",

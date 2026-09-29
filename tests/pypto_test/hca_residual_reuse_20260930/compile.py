@@ -15,6 +15,7 @@ def main():
     parser.add_argument("side")
     parser.add_argument("--operator-source", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT)
+    parser.add_argument("--nz-mode", type=int, choices=(0, 1, 2), default=2)
     args = parser.parse_args()
     if args.operator_source is not None:
         source = args.operator_source.resolve()
@@ -25,7 +26,9 @@ def main():
         source = Path(manifest["baseline" if args.side == "base" else "candidate"])
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    os.environ.update(VLLM_ASCEND_ENABLE_NZ="2", VLLM_ASCEND_PTO_CSA_ATOMIC_ADD="0", PTO_CSA_VARIANT="performance")
+    os.environ.update(
+        VLLM_ASCEND_ENABLE_NZ=str(args.nz_mode), VLLM_ASCEND_PTO_CSA_ATOMIC_ADD="0", PTO_CSA_VARIANT="performance",
+    )
     sys.path.insert(0, str(ROOT.parent))
     from dsv4_csa_env import activate
 
@@ -55,6 +58,7 @@ def main():
         "graphs": graphs,
         "cann": os.environ["ASCEND_HOME_PATH"],
         "device_execution": False,
+        "nz_mode": args.nz_mode,
     }
     (output / f"compile_{args.side}.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report), flush=True)

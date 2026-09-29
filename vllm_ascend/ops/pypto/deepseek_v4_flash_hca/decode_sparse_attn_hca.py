@@ -751,7 +751,7 @@ def _legacy_sparse_attn_hca_tp1(
 
 @pl.jit.inline(auto_scope=False)
 def _short_sparse_attn_hca_tp1(
-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
+    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
     ori_kv: pl.Tensor[[ORI_BLOCK_NUM_DYN, BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
     ori_block_table: pl.Tensor[[B_DYN, ORI_TABLE_COLUMNS_DYN], pl.INT32],
     cmp_kv: pl.Tensor[[CMP_BLOCK_NUM_DYN, CMP_STORAGE_BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
@@ -764,6 +764,7 @@ def _short_sparse_attn_hca_tp1(
     o_packed_heads: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
     raw_cache_ready_dep: pl.Scalar[pl.TASK_ID],
     cmp_cache_ready_dep: pl.Scalar[pl.TASK_ID],
+    q_ready: pl.Array[4, pl.TASK_ID],
 ) -> tuple[pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16], pl.Scalar[pl.TASK_ID]]:
     t_dim = pl.tensor.dim(q, 0)
     request_count = pl.tensor.dim(kv_seq_lens, 0)
@@ -898,7 +899,7 @@ def _short_sparse_attn_hca_tp1(
     sink_column = pl.reshape(attn_sink, [H, 1])
     with pl.spmd(
         short_workers, name_hint="hca_short_attention_pack",
-        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid], allow_early_resolve=True,
+        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid, q_ready], allow_early_resolve=True,
     ) as short_tid:
         short_worker = pl.tile.get_block_idx()
         pl.system.set_ffts(short_ffts)
@@ -1022,7 +1023,7 @@ def _short_sparse_attn_hca_tp1(
 
 @pl.jit.inline(auto_scope=False)
 def _long_sparse_attn_hca_tp1(
-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
+    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
     ori_kv: pl.Tensor[[ORI_BLOCK_NUM_DYN, BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
     ori_block_table: pl.Tensor[[B_DYN, ORI_TABLE_COLUMNS_DYN], pl.INT32],
     cmp_kv: pl.Tensor[[CMP_BLOCK_NUM_DYN, CMP_STORAGE_BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
@@ -1035,6 +1036,7 @@ def _long_sparse_attn_hca_tp1(
     o_packed_heads: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
     raw_cache_ready_dep: pl.Scalar[pl.TASK_ID],
     cmp_cache_ready_dep: pl.Scalar[pl.TASK_ID],
+    q_ready: pl.Array[4, pl.TASK_ID],
 ) -> tuple[pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16], pl.Scalar[pl.TASK_ID]]:
     t_dim = pl.tensor.dim(q, 0)
     request_count = pl.tensor.dim(kv_seq_lens, 0)
@@ -1168,7 +1170,7 @@ def _long_sparse_attn_hca_tp1(
     sink_col = pl.reshape(attn_sink, [H, 1])
     with pl.spmd(
         NUM_QK_CORES, name_hint="hca_unified_attention",
-        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid], allow_early_resolve=True,
+        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid, q_ready], allow_early_resolve=True,
     ) as attention_tid:
         worker = pl.tile.get_block_idx()
         pl.system.set_ffts(ffts)
@@ -1403,7 +1405,7 @@ def _long_sparse_attn_hca_tp1(
 
 @pl.jit.inline(auto_scope=False)
 def sparse_attn_hca_tp1(
-    q: pl.Tensor[[T_DYN, H, HEAD_DIM], pl.BF16],
+    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
     ori_kv: pl.Tensor[[ORI_BLOCK_NUM_DYN, BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
     ori_block_table: pl.Tensor[[B_DYN, ORI_TABLE_COLUMNS_DYN], pl.INT32],
     cmp_kv: pl.Tensor[[CMP_BLOCK_NUM_DYN, CMP_STORAGE_BLOCK_SIZE, 1, HEAD_DIM], pl.BF16],
@@ -1416,6 +1418,7 @@ def sparse_attn_hca_tp1(
     o_packed_heads: pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16],
     raw_cache_ready_dep: pl.Scalar[pl.TASK_ID],
     cmp_cache_ready_dep: pl.Scalar[pl.TASK_ID],
+    q_ready: pl.Array[4, pl.TASK_ID],
 ) -> tuple[pl.Tensor[[O_GROUPS * T_PAD, O_GROUP_IN], pl.BF16], pl.Scalar[pl.TASK_ID]]:
     # 页表容量不超过四页时，全部压缩行确定在一个 K128 块内；更宽页表保持原路径。
     ready = pl.array.create(1, pl.TASK_ID)
@@ -1423,14 +1426,14 @@ def sparse_attn_hca_tp1(
         packed, short_ready = _short_sparse_attn_hca_tp1(
             q, ori_kv, ori_block_table, cmp_kv, cmp_block_table, position_ids,
             kv_seq_lens, attn_sink, freqs_cos, freqs_sin, o_packed_heads,
-            raw_cache_ready_dep, cmp_cache_ready_dep,
+            raw_cache_ready_dep, cmp_cache_ready_dep, q_ready,
         )
         ready[0] = short_ready
     else:
         packed, long_ready = _long_sparse_attn_hca_tp1(
             q, ori_kv, ori_block_table, cmp_kv, cmp_block_table, position_ids,
             kv_seq_lens, attn_sink, freqs_cos, freqs_sin, o_packed_heads,
-            raw_cache_ready_dep, cmp_cache_ready_dep,
+            raw_cache_ready_dep, cmp_cache_ready_dep, q_ready,
         )
         ready[0] = long_ready
     return packed, ready[0]

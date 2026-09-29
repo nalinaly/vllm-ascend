@@ -30,6 +30,7 @@ def main():
             "sources", "case", "device", "cann", "summary", "cross_variant_exact", "state_exact", "guards",
         )}
         row["source_report"] = str(path)
+        row["nz_mode"] = report.get("nz_mode", 2)
         row["purpose"] = "functional_only" if report["summary"]["base"]["count"] < 10 else "performance_screen"
         if "padding_graph" in report:
             padding = report["padding_graph"]
