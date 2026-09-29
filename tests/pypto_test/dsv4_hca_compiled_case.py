@@ -155,6 +155,17 @@ def main():
     # 而且只在 PYPTO planner 下有意义（PTOAS/DSA_RP 下 dbC=2 是自动的）。
     parser.add_argument("--pypto-dbc", action="store_true",
                         help="编译时打开 legacy-PYPTO 的 L0C 双缓冲（dbC=2）")
+    # Simpler 运行时 ABI。默认 TENSORMAP_AND_RINGBUFFER 是"在 AICPU 上建任务图、
+    # 靠 TensorMap 自动推导依赖"，实测 simpler_aicpu_kernel_exec 比计算核还长
+    # （683.1 vs 663.2 μs，且晚 18 μs 收尾），device span 由它而非计算决定
+    # （LOG 第 87 节）。host_build_graph 让主机 CPU 提前建好整张图，
+    # 文档写明它是 Graph Execution 所需——而本用例正是 NPUGraph 回放。
+    parser.add_argument("--pypto-runtime", choices=("tensormap_and_ringbuffer", "host_build_graph"),
+                        help="选择 Simpler 运行时 ABI；不给则用 PyPTO 默认值")
+    # AICPU 线程数：0 走 runtime 默认，否则只接受 2..5。建图若能并行，
+    # 那 683 μs 的 simpler_aicpu_kernel_exec 应当下降，而 span 正由它决定。
+    parser.add_argument("--aicpu-threads", type=int, default=0, choices=(0, 2, 3, 4, 5),
+                        help="pypto.torch.init 的 aicpu_thread_num；0 用运行时默认")
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--swimlane", action="store_true",
                         help="PTO 侧采 level-4 泳道用于拆解设备侧任务图跨度；"
@@ -245,8 +256,14 @@ def main():
 
                 compact_cache_key = _COMPACT_METADATA_CACHE
                 service = hca_service
+                # runtime 与 aicpu_thread_num 由 init 绑定，PassContext 改不了
+                # （实测报 "conflicts with runtime ... bound by pypto.torch.init"）。
+                # 泳道显示 simpler_aicpu_kernel_exec 比计算核还长、device span 由它决定
+                # （LOG 第 87 节），所以这两项直接对着那段开销。
                 pypto.torch.init(
-                    device=args.device, platform="a2a3", runtime="tensormap_and_ringbuffer",
+                    device=args.device, platform="a2a3",
+                    runtime=args.pypto_runtime or "tensormap_and_ringbuffer",
+                    **({"aicpu_thread_num": args.aicpu_threads} if args.aicpu_threads else {}),
                     **({"enable_chip_swimlane": 4, "enable_dep_gen": True,
                         "output_dir": str((args.output / "dfx").resolve())} if args.swimlane else {}),
                 )
@@ -331,8 +348,10 @@ def main():
                             # PyPTO 的 JIT 在首次调用时编译，所以 PassContext 必须在
                             # 这里生效；后续重放再进出一次只是主机侧开销，不进设备跨度。
                             from pypto.pypto_core import passes as pypto_passes
-                            stack.enter_context(pypto_passes.PassContext(
-                                [], enable_pypto_l0c_double_buffer=True))
+                            ctx_kwargs = {}
+                            if args.pypto_dbc:
+                                ctx_kwargs["enable_pypto_l0c_double_buffer"] = True
+                            stack.enter_context(pypto_passes.PassContext([], **ctx_kwargs))
                         compiled(fixture["hidden"], fixture["positions"], output)
 
                 restore(fixture)

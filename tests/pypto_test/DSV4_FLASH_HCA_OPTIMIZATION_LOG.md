@@ -5861,3 +5861,75 @@ PyPTO 为这个循环生成的标量序列上，而那既看不见（工具不�
 2. **重新校准 0.80** ——若差距主体是 DSL 生成对手写 AscendC 的固有差，
    该目标可能不在算子调优的可达范围内。第 63.3 节记的 `ops-transformer` 配方
    是手写实现，把它的绝对耗时当 PTO 的目标，前提是两者的代码生成质量可比。
+
+## 94. ★★★★ 漏掉的一整层：`pypto.torch.init` 的运行时参数（2026-09-29）
+
+第 93.4 节说"算子侧 + 当前工具链 + 不改 PyPTO 三个约束下 0.80 没有可执行路径"，
+并且此前多次声称"编译开关已穷举"。**那是错的**——我只看了
+`PassContext`（`memory_planner`、`enable_pypto_l0c_double_buffer`），
+从没看 `pypto.torch.init` 这一层。它的签名里有一串未试过的参数：
+
+```python
+def init(device=None, platform="a2a3", runtime="tensormap_and_ringbuffer",
+         aicpu_thread_num=0, enable_chip_swimlane=0, enable_dep_gen=False,
+         output_dir=None, ring_task_window=None, ring_heap=None, ring_dep_pool=None)
+```
+
+**为什么这一层要紧**：第 87 节量到 `simpler_aicpu_kernel_exec`（683.1 μs）
+比计算核（663.2 μs）还长、晚 18 μs 收尾，**device span 由它而非计算决定**，
+31 个用例无一例外（AICPU 占 span 98.5%+）。前七个候选优化的都是那 663 μs 的计算，
+而卡住 span 的是这 683 μs 的 AICPU 建图——`runtime` 与 `aicpu_thread_num`
+正是作用在它上面的。
+
+### 94.1 `aicpu_thread_num`：只有 4 可用，初测 −11 μs
+
+文档写 "0 selects the runtime default; otherwise 2..5"，实测（128K/B16 同卡 ABBA）：
+
+| 值 | 结果 |
+| --- | --- |
+| 2 | ✗ `RuntimeError: npuSynchronizeDevice ... NPUStream` 运行时崩溃 |
+| **4** | **−11.00 μs**（3 样本，中位数 578.50 vs base 589.50） |
+| 5 | ✗ `ChipWorkerError('simpler_kernel_mode_init failed with code -1000')` |
+
+**合法区间名义是 2..5，实际只有 4 能跑。** −11.00 只有 3 样本、极差 39.25 μs，
+正是 `cmp_wgate` 那种形态（第 88.12 节：四轮 −8/−13/−10.5/+2.75 最终判为不可用），
+已补到 6 样本复测。
+
+### 94.2 `runtime="host_build_graph"`：阻塞点具体且可修
+
+必须在 `init` 传，不能经 `PassContext`——后者报
+`Active PassContext runtime 'host_build_graph' conflicts with runtime
+'tensormap_and_ringbuffer' bound by pypto.torch.init`。改到 `init` 后换成新错误：
+
+```
+hc_pre_fused.py:113:5: HBG kernel Host orchestration 'hc_pre_norm' cannot use
+tensor.read on Tensor storage. Pass the required Host value as an explicit scalar argument.
+```
+
+即 `hc_pre_norm` 里这三行：
+
+```python
+scale0 = pl.read(hc_scale, [0])
+scale1 = pl.read(hc_scale, [1])
+scale2 = pl.read(hc_scale, [2])
+```
+
+HCA 包共 68 处 `pl.read`（compressor 15、hc_pre 6、decode_hca 3、sparse_attn 44），
+但报错只点 **Host orchestration 层**那处，说明 spmd／incore 内的 read
+（如 `pl.read(kv_seq_lens, [request])`）不受此限。
+
+修法：把 `hc_attn_scale` 的三个值在主机侧读出，作为 `pl.Scalar[pl.FP32]`
+参数经根签名传入。**要动根函数签名与 `native_adapter`（接口面），
+工作量远大于 `aicpu_thread_num`**，留作 `at4` 定论之后的下一步。
+
+潜在收益：若建图完全挪到主机，span 从 692 降到计算核的 663 附近，约 **−29 μs**
+（约 5%，1.117 → 约 1.06）。不足以单独到 0.80，但会是本轮最大的确定性收益。
+
+### 94.3 这是本轮第八次同类错误
+
+前七次是口径搞错（把两 lane 当一个、循环边界算错、小样本当效应、
+漏数 Mat 驻留物、误读 Native 流水级数、参数从结果反推），
+这次是**搜索范围没覆盖就宣布穷举**。
+教训：**说"穷举了"之前，先把配置面的每一层都列出来**——
+`PassContext` 之外还有 `pypto.torch.init`，`init` 之外还有 `RunOptions`／
+`CompileOptions`（第 08-entry-points.md 文档有完整清单）。

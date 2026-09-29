@@ -35,7 +35,7 @@ for v in "${ab_variants[@]}"; do
     ab_source[base]=""
   elif [ "$label" != "$v" ]; then
     ab_source[$label]="--operator-source ${v#*=}"
-  elif [[ "$v" =~ ^nz[0-9]$ ]] || [ "$v" = dbc ]; then
+  elif [[ "$v" =~ ^nz[0-9]$ ]] || [ "$v" = dbc ] || [ "$v" = hbg ] || [[ "$v" =~ ^at[2-5]$ ]]; then
     ab_source[$v]=""   # 只改环境/编译开关，源码用仓库生产版
   else
     hit="$(ls -d "$hca_tests"/variants_*/"$v" 2>/dev/null | head -1)"
@@ -70,6 +70,12 @@ for label in "${ab_order[@]}"; do
   elif [ "$label" = dbc ]; then
     # 只切编译期的 L0C 双缓冲开关，源码用仓库生产版。
     ab_extra=(--pypto-dbc)
+  elif [ "$label" = hbg ]; then
+    # 只切 Simpler 运行时 ABI：主机提前建图，取代 AICPU 上的 TensorMap 建图。
+    ab_extra=(--pypto-runtime host_build_graph)
+  elif [[ "$label" =~ ^at([2-5])$ ]]; then
+    # 只切 AICPU 线程数（init 的 aicpu_thread_num，合法值 2..5）。
+    ab_extra=(--aicpu-threads "${BASH_REMATCH[1]}")
   fi
   # 不用 exec：要在同一个任务（同一张卡）里接着跑下一个变体。
   env "${ab_env[@]}" bash "$hca_tests/run_hca_compiled_case.sh" "$target" pto \
