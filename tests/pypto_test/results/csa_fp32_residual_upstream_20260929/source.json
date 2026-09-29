@@ -1,0 +1,29 @@
+{
+  "baseline": "46cec3a0",
+  "source_prefix": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-fp32-residual-upstream-46cec3a0-v1",
+  "variant": "pkg:dsv4_csa_fp32_residual_upstream_46cec3a0_v1",
+  "cases": [
+    [
+      131072,
+      16
+    ],
+    [
+      8192,
+      24
+    ]
+  ],
+  "swimlane_cases": [
+    [
+      131072,
+      16
+    ]
+  ],
+  "windows": 2,
+  "change": "FP32残差收发；按上游RMS/linear组织并开启RMS early；保持接入侧尾行、缓存策略与融合HC_post",
+  "unchanged": "attention BF16舍入、matmul/量化/KV/cache/state/metadata/early/sync_start及权重布局",
+  "scope": "两档新鲜同卡正式A/B；长档BF16泳道复用前轮，FP32采新两窗，不把跨轮DFX当同轮正式事件",
+  "accuracy": "性能后比较八类状态；首调用除输出舍入外应相同，再检查FP32输出接回输入的eager/graph",
+  "reused_baseline_dfx": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_fp32_residual_20260929",
+  "upstream": "pypto-lib2164563: hc_pre.py/hc_pre_gates",
+  "previous_fp32_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_fp32_residual_20260929"
+}

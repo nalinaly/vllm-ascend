@@ -1,0 +1,14 @@
+{
+  "status": "LOCAL_GAIN_MODEL_GATE_PENDING",
+  "adopted_in_production": false,
+  "production_operator": "46cec3a0",
+  "task_status": "completed (exit=0)",
+  "weighted_8_2_csa_pct": -1.8692146938291332,
+  "scope": "同卡两代表档完整CSA；不是完整Transformer或整模型forward",
+  "accuracy": "首调用回舍BF16后八类完整状态零差异；FP32连续输入自身eager/graph和保护区通过；后续输入/输出/Top-K发生预期舍入规则差异",
+  "remaining": [
+    "FP32贯穿Native集成的attention/FFN/HCA/embedding/head与缓冲边界",
+    "独立逐元素容差、逐token和DSpark整模型验收",
+    "若进入生产候选再覆盖七档和尾行/padding，不用两档替代"
+  ]
+}

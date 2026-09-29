@@ -1,0 +1,17 @@
+{
+  "scope": "仅源码及已完成CPU编译产物；不冒称设备并行或收益",
+  "versions": {
+    "csa_fp32_residual_20260929": {
+      "source": "tests/pypto_test/results/csa_fp32_residual_20260929/compiled/candidate/orchestration/_decode_csa_tp1_layer.cpp",
+      "linear_args": "        // Spmd hc_pre_linear_spmd: hc_pre_linear\n        CoreTaskArgs params_t1;\n        params_t1.add_output(mixes_partials_inline436);\n        params_t1.add_input(x_flat_inline431);\n        params_t1.add_input(ext_hc_attn_fn);\n        params_t1.add_scalar(linear_units_inline445);\n        params_t1.add_scalar(linear_workers_inline472);\n        params_t1.add_scalar(t_dim_inline447);\n        params_t1.add_scalar(t_linear_inline479);\n        params_t1.launch_spec.set_block_num(linear_workers_inline472);\n        params_t1.set_allow_early_resolve(true);\n",
+      "linear_reads_inv_rms": false,
+      "rms_early": false
+    },
+    "csa_fp32_residual_upstream_20260929": {
+      "source": "tests/pypto_test/results/csa_fp32_residual_upstream_20260929/compiled/candidate/orchestration/_decode_csa_tp1_layer.cpp",
+      "linear_args": "        // Spmd hc_pre_linear_spmd: hc_pre_linear\n        CoreTaskArgs params_t1;\n        params_t1.add_output(mixes_partials_inline418);\n        params_t1.add_input(x_flat_inline411);\n        params_t1.add_input(ext_hc_attn_fn);\n        params_t1.add_scalar(linear_units_inline416);\n        params_t1.add_scalar(linear_workers_inline391);\n        params_t1.add_scalar(t_dim_inline479);\n        params_t1.add_scalar(t_linear_inline445);\n        params_t1.launch_spec.set_block_num(linear_workers_inline391);\n        params_t1.set_allow_early_resolve(true);\n",
+      "linear_reads_inv_rms": false,
+      "rms_early": true
+    }
+  }
+}

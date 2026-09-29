@@ -1,0 +1,366 @@
+--- baseline/a/tests/pypto_test/coefficients_seven_experiment/compiled_case.py
++++ baseline/b/tests/pypto_test/coefficients_seven_experiment/compiled_case.py
+@@ -138,6 +138,8 @@
+             scale.copy_((0.00390625 + ((rows * 37) % 251).float() / 16384).to(scale.dtype).reshape(scale.shape))
+             group["initial"] = group["allocation"].cpu()
+             output = torch.empty_like(fixture["hidden"])
++            report["residual_dtype"] = str(fixture["hidden"].dtype)
++            report["output_dtype"] = str(output.dtype)
+             topk = {}
+             service = runtime = observed = None
+             if args.side == "pto":
+@@ -253,6 +255,33 @@
+                 iters=20, warmup=5, require_exact=runtime is not None, profile_dir=args.output / "profile")
+             if args.save_state:
+                 torch.save(collect_state(fixture, output, topk_value()), args.output / "states.pt")
++            # 性能采样完成后才检查跨调用FP32残差；不将copy/验证算入CSA计时。
++            from dsv4_csa_validation import compare_tensor
++
++            fixture["hidden"].copy_(output)
++            torch.npu.synchronize()
++            chain_input = fixture["hidden"].cpu()
++            report["residual_chain"] = {
++                "scope": "上次attention-half输出作为下次输入，同层权重且cache恢复；非完整Transformer/model",
++                "dtype": str(chain_input.dtype),
++                "non_bf16_values": int((chain_input.float() != chain_input.bfloat16().float()).sum()),
++            }
++            restore(fixture)
++            eager_call()
++            torch.npu.synchronize()
++            chain_ref = collect_state(fixture, output, topk_value())
++            restore(fixture)
++            compiled_call()
++            torch.npu.synchronize()
++            chain_graph = collect_state(fixture, output, topk_value())
++            checks = {name: compare_tensor(chain_graph[name], value, 0, 0) for name, value in chain_ref.items()}
++            chain_guards = guard_checks(fixture)
++            report["residual_chain"].update(eager_graph_checks=checks, guards=chain_guards)
++            if any(v["status"] != "PASS" for v in (*checks.values(), *chain_guards.values())):
++                raise ValueError("Chained residual graph or storage guard failed")
++            report["residual_chain"]["status"] = "PASS"
++            if args.save_state:
++                torch.save(chain_graph, args.output / "chain_states.pt")
+             report["mean_us"] = statistics.mean(report["timing"]["samples_us"])
+             report["status"] = "MEASURED"
+     except BaseException as error:
+--- candidate/a/tests/pypto_test/coefficients_seven_experiment/compiled_case.py
++++ candidate/b/tests/pypto_test/coefficients_seven_experiment/compiled_case.py
+@@ -137,7 +137,10 @@
+             rows = torch.arange(scale.numel(), dtype=torch.int64, device=device)
+             scale.copy_((0.00390625 + ((rows * 37) % 251).float() / 16384).to(scale.dtype).reshape(scale.shape))
+             group["initial"] = group["allocation"].cpu()
++            fixture["hidden"] = fixture["hidden"].float()
+             output = torch.empty_like(fixture["hidden"])
++            report["residual_dtype"] = str(fixture["hidden"].dtype)
++            report["output_dtype"] = str(output.dtype)
+             topk = {}
+             service = runtime = observed = None
+             if args.side == "pto":
+@@ -253,6 +256,33 @@
+                 iters=20, warmup=5, require_exact=runtime is not None, profile_dir=args.output / "profile")
+             if args.save_state:
+                 torch.save(collect_state(fixture, output, topk_value()), args.output / "states.pt")
++            # 性能采样完成后才检查跨调用FP32残差；不将copy/验证算入CSA计时。
++            from dsv4_csa_validation import compare_tensor
++
++            fixture["hidden"].copy_(output)
++            torch.npu.synchronize()
++            chain_input = fixture["hidden"].cpu()
++            report["residual_chain"] = {
++                "scope": "上次attention-half输出作为下次输入，同层权重且cache恢复；非完整Transformer/model",
++                "dtype": str(chain_input.dtype),
++                "non_bf16_values": int((chain_input.float() != chain_input.bfloat16().float()).sum()),
++            }
++            restore(fixture)
++            eager_call()
++            torch.npu.synchronize()
++            chain_ref = collect_state(fixture, output, topk_value())
++            restore(fixture)
++            compiled_call()
++            torch.npu.synchronize()
++            chain_graph = collect_state(fixture, output, topk_value())
++            checks = {name: compare_tensor(chain_graph[name], value, 0, 0) for name, value in chain_ref.items()}
++            chain_guards = guard_checks(fixture)
++            report["residual_chain"].update(eager_graph_checks=checks, guards=chain_guards)
++            if any(v["status"] != "PASS" for v in (*checks.values(), *chain_guards.values())):
++                raise ValueError("Chained residual graph or storage guard failed")
++            report["residual_chain"]["status"] = "PASS"
++            if args.save_state:
++                torch.save(chain_graph, args.output / "chain_states.pt")
+             report["mean_us"] = statistics.mean(report["timing"]["samples_us"])
+             report["status"] = "MEASURED"
+     except BaseException as error:
+--- candidate/a/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/decode_csa.py
++++ candidate/b/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/decode_csa.py
+@@ -132,7 +132,7 @@
+ 
+ 
+ def _decode_csa_tp1_layer(
+-    x_hc: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
++    x_hc: pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32],
+     hc_attn_fn: pl.Tensor[[MIX_HC, HC_DIM], pl.FP32],
+     hc_attn_scale: pl.Tensor[[3], pl.FP32],
+     hc_attn_base: pl.Tensor[[MIX_HC], pl.FP32],
+@@ -188,7 +188,7 @@
+     wo_b_scale: pl.Tensor[[D], pl.FP32],
+     idx_topk_scores: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.FP32]],
+     idx_topk: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32]],
+-    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16]],
++    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32]],
+ ):
+     """TP1 整层：mHC 的 pre 门 + input_layernorm + attention + mHC 的 post。
+ 
+@@ -199,8 +199,7 @@
+     回 GM；而 `comb` 门与 `hc_post` 里 `comb x residual` 那一项都不依赖 attention
+     的输出，可以落进 kernel 开头那段 AIV 空窗（实测 25~100us 有 47~48 核空闲）。
+ 
+-    hc 残差流按 Native 的 BF16 收发：43 层里只有 21 层走 PTO，`x_hc` / `x_out`
+-    要与 Native 的 `npu_hc_pre_v2` / `npu_hc_post` 在层间互传。
++    私有试验：残差FP32收发，移除入口副本及末端BF16舍入；不是现有模型接入入口。
+     """
+     x_hc.bind_dynamic(0, T_DYN)
+     x_out.bind_dynamic(0, T_DYN)
+@@ -250,16 +249,13 @@
+     # 保留已验证的 HC scope 边界以管理任务和临时张量的生命周期。
+     # scope 退出释放引用，并不是设备端等待所有任务完成的 barrier；
+     # 消费者的执行顺序由张量依赖和显式 TaskId 依赖保证。
+-    # 加宽后顺手按原512列次序计算RMS，消除独立RMS任务对FP32中间缓冲的再读取。
+-    # Cube及mix仍消费同一FP32缓冲；不把AIV cast下沉到纯Cube任务。
+-    x_hc32 = pl.create_tensor([t_dim, HC_MULT, D], dtype=pl.FP32)
++    # FP32残差直接供Cube/mix读取，RMS保持现有512列归约次序。
++    x_hc32 = x_hc
+     x_hc_flat = pl.reshape(x_hc, [t_dim, HC_MULT * D])
+-    x_hc32_flat = pl.reshape(x_hc32, [t_dim, HC_MULT * D])
+     widen_rows = (t_dim + HC_WIDEN_T_TILE - 1) // HC_WIDEN_T_TILE
+     hc_padded_rows = ((t_dim + LINEAR_T_TILE - 1) // LINEAR_T_TILE) * LINEAR_T_TILE
+     inv_rms = pl.create_tensor([hc_padded_rows, 1], dtype=pl.FP32)
+-    widen_tail = pl.create_tensor([HC_WIDEN_T_TILE, HC_MULT * D], dtype=pl.FP32)
+-    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_widen_rms") as _widen_tid:
++    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_rms") as _rms_tid:
+         for widen_blk in pl.range(pl.tile.get_block_idx(), widen_rows,
+                                   pl.min(widen_rows, HC_WIDEN_WORKERS)):
+             w_t0 = widen_blk * HC_WIDEN_T_TILE
+@@ -267,27 +263,18 @@
+             w_sq_sum = pl.full([1, HC_WIDEN_T_TILE], dtype=pl.FP32, value=0.0)
+             for w_db in pl.pipeline(HC_MULT * D // HC_WIDEN_D_TILE, stage=4):
+                 w_d0 = w_db * HC_WIDEN_D_TILE
+-                w_src = pl.slice(x_hc_flat, [HC_WIDEN_T_TILE, HC_WIDEN_D_TILE], [w_t0, w_d0],
++                w_val = pl.slice(x_hc_flat, [HC_WIDEN_T_TILE, HC_WIDEN_D_TILE], [w_t0, w_d0],
+                                  valid_shape=[w_rows, HC_WIDEN_D_TILE])
+-                w_val = pl.cast(w_src, pl.FP32)
+                 if w_rows == HC_WIDEN_T_TILE:
+-                    x_hc32_flat[w_t0:w_t0 + HC_WIDEN_T_TILE, w_d0:w_d0 + HC_WIDEN_D_TILE] = w_val
+                     w_sq = pl.mul(w_val, w_val)
+                     w_sq_row = pl.reshape(pl.row_sum(w_sq), [1, HC_WIDEN_T_TILE])
+                     w_sq_sum = pl.add(w_sq_sum, w_sq_row)
+                 else:
+-                    # cast可能丢失valid_shape，显式恢复并清零无效行后才参与归约。
+                     w_valid = pl.set_validshape(w_val, w_rows, HC_WIDEN_D_TILE)
+                     w_clean = pl.fillpad(w_valid, pad_value=pl.PadValue.zero)
+                     w_sq_tail = pl.mul(w_clean, w_clean)
+                     w_sq_row_tail = pl.reshape(pl.row_sum(w_sq_tail), [1, HC_WIDEN_T_TILE])
+                     w_sq_sum = pl.add(w_sq_sum, w_sq_row_tail)
+-                    widen_tail[0:HC_WIDEN_T_TILE, w_d0:w_d0 + HC_WIDEN_D_TILE] = w_val
+-                    w_out = pl.load(
+-                        widen_tail, [0, w_d0], [HC_WIDEN_T_TILE, HC_WIDEN_D_TILE],
+-                        valid_shape=[w_rows, HC_WIDEN_D_TILE], target_memory=pl.MemorySpace.Vec,
+-                    )
+-                    pl.store(w_out, [w_t0, w_d0], x_hc32_flat)
+             w_mean = pl.add(pl.mul(w_sq_sum, HC_DIM_INV), NORM_EPS)
+             w_inv = pl.reshape(pl.rsqrt(w_mean, high_precision=True), [HC_WIDEN_T_TILE, 1])
+             inv_rms[w_t0:w_t0 + HC_WIDEN_T_TILE, 0:1] = w_inv
+--- candidate/a/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/decode_o_proj.py
++++ candidate/b/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/decode_o_proj.py
+@@ -377,10 +377,10 @@
+     wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, WO_A_WEIGHT_LAYOUT],
+     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
+     wo_b_scale: pl.Tensor[[D], pl.FP32],
+-    residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
++    residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32],
+     post: pl.Tensor[[T_DYN, HC_MULT], pl.FP32],
+     comb: pl.Tensor[[T_DYN, HC_MULT * HC_MULT], pl.FP32],
+-    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16]],
++    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32]],
+     heads_dep: pl.Scalar[pl.TASK_ID],
+     ROW_TILE: pl.constexpr,
+     A_COL_TILE: pl.constexpr,
+@@ -497,10 +497,10 @@
+     wo_a: pl.Tensor[[O_GROUPS, O_GROUP_IN, O_LORA], pl.BF16, WO_A_WEIGHT_LAYOUT],
+     wo_b: pl.Tensor[[O_GROUPS * O_LORA, D], pl.INT8, QUANT_WEIGHT_LAYOUT],
+     wo_b_scale: pl.Tensor[[D], pl.FP32],
+-    residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
++    residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32],
+     post: pl.Tensor[[T_DYN, HC_MULT], pl.FP32],
+     comb: pl.Tensor[[T_DYN, HC_MULT * HC_MULT], pl.FP32],
+-    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16]],
++    x_out: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32]],
+     heads_dep: pl.Scalar[pl.TASK_ID],
+ ):
+     """Use upstream row/column tiles while retaining Native weight storage."""
+--- candidate/a/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/hc_post.py
++++ candidate/b/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/hc_post.py
+@@ -1,4 +1,105 @@
+ # SPDX-License-Identifier: Apache-2.0
+-from ..deepseek_v4_flash_dspark.hc_post import hc_post as hc_post
+-from ..deepseek_v4_flash_dspark.hc_post import hc_post_block as hc_post_block
+-from ..deepseek_v4_flash_dspark.hc_post import hc_post_test as hc_post_test
++"""从上游 pypto-lib `models/deepseek_v4_flash_dspark/hc_post.py` 移植。
++
++mHC 的收尾：y[t, out_h] = post[t, out_h] * x[t] + sum_in_h comb[t, in_h, out_h] * residual[t, in_h]。
++其中只有 `post * x` 这一项依赖 attention 的输出，comb 与 residual 的组合
++完全可以和 attention 并行——这正是把它搬进 PTO kernel 的理由。
++
++与上游一样按 dtype 说明：上游 hc 残差流是 FP32 端到端，本私有试验同样保留FP32残差收发；attention的BF16舍入不变。
++prefill 入口与 standalone 用例不搬，本包只做 decode。
++"""
++
++import pypto.language as pl
++
++from .config import DECODE_BATCH, DECODE_SEQ, TP
++from .config import FLASH as M
++
++# Dynamic shape variables.
++T_DYN = pl.dynamic("T_DYN")  # T = B * S
++
++# model config
++D = M.hidden_size
++HC_MULT = M.hc_mult
++HC_DIM = M.hc_dim
++assert HC_MULT == 4
++
++# tiling
++T_TILE = 4
++INACTIVE_FILL_T_TILE = 16
++INACTIVE_FILL_D_TILE = 256
++assert (DECODE_BATCH // TP * DECODE_SEQ) % T_TILE == 0
++
++
++@pl.jit.inline
++def hc_post_block(
++    x_block: pl.Tensor,
++    residual_flat: pl.Tensor,
++    post: pl.Tensor,
++    comb: pl.Tensor,
++    y_flat: pl.Out[pl.Tensor],
++    t0: pl.Scalar[pl.INDEX],
++    n0: pl.Scalar[pl.INDEX],
++    valid_rows: pl.Scalar[pl.INDEX],
++    ROWS: pl.constexpr,
++    COLS: pl.constexpr,
++):
++    # x_block is already BF16: retain the rounding boundary before HC math.
++    x_f32 = pl.cast(x_block, pl.FP32)
++    res_0 = pl.slice(residual_flat, [ROWS, COLS], [t0, n0],
++                            valid_shape=[valid_rows, COLS], clamp=True)
++    res_1 = pl.slice(residual_flat, [ROWS, COLS], [t0, D + n0],
++                            valid_shape=[valid_rows, COLS], clamp=True)
++    res_2 = pl.slice(residual_flat, [ROWS, COLS], [t0, 2 * D + n0],
++                            valid_shape=[valid_rows, COLS], clamp=True)
++    res_3 = pl.slice(residual_flat, [ROWS, COLS], [t0, 3 * D + n0],
++                            valid_shape=[valid_rows, COLS], clamp=True)
++    for out_h in pl.unroll(HC_MULT):
++        post_scalar = pl.read(post, [t0, out_h])
++        single_y = pl.mul(x_f32, post_scalar)
++        comb_scalar_0 = pl.read(comb, [t0, out_h])
++        single_weighted_0 = pl.mul(res_0, comb_scalar_0)
++        single_y = pl.add(single_y, single_weighted_0)
++        comb_scalar_1 = pl.read(comb, [t0, HC_MULT + out_h])
++        single_weighted_1 = pl.mul(res_1, comb_scalar_1)
++        single_y = pl.add(single_y, single_weighted_1)
++        comb_scalar_2 = pl.read(comb, [t0, 2 * HC_MULT + out_h])
++        single_weighted_2 = pl.mul(res_2, comb_scalar_2)
++        single_y = pl.add(single_y, single_weighted_2)
++        comb_scalar_3 = pl.read(comb, [t0, 3 * HC_MULT + out_h])
++        single_weighted_3 = pl.mul(res_3, comb_scalar_3)
++        single_y = pl.add(single_y, single_weighted_3)
++        single_result = single_y
++        y_flat[t0 : t0 + ROWS, out_h * D + n0 : out_h * D + n0 + COLS] = pl.set_validshape(
++            single_result, valid_rows, COLS)
++    return y_flat
++
++
++def _hc_post(
++    x: pl.Tensor[[T_DYN, D], pl.BF16],
++    residual: pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32],
++    post: pl.Tensor[[T_DYN, HC_MULT], pl.FP32],
++    comb: pl.Tensor[[T_DYN, HC_MULT * HC_MULT], pl.FP32],
++    y: pl.Out[pl.Tensor[[T_DYN, HC_MULT, D], pl.FP32]],
++):
++    x.bind_dynamic(0, T_DYN)
++    residual.bind_dynamic(0, T_DYN)
++    post.bind_dynamic(0, T_DYN)
++    comb.bind_dynamic(0, T_DYN)
++    y.bind_dynamic(0, T_DYN)
++    t_dim = pl.tensor.dim(x, 0)
++
++    residual_flat = pl.reshape(residual, [t_dim, HC_DIM])
++    y_flat = pl.reshape(y, [t_dim, HC_DIM])
++
++    token_tiles = (t_dim + T_TILE - 1) // T_TILE
++    for token_block in pl.spmd(token_tiles, name_hint="hc_post"):
++        t0 = token_block * T_TILE
++        for t in pl.pipeline(t0, t0 + T_TILE, stage=2):
++            if t < t_dim:
++                x_block = pl.slice(x, [1, D], [t, 0])
++                y_flat = hc_post_block(x_block, residual_flat, post, comb, y_flat, t, 0, 1, 1, D)
++    return y
++
++
++hc_post = pl.jit.inline(_hc_post)
++hc_post_test = pl.jit(_hc_post)
+--- candidate/a/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/service.py
++++ candidate/b/vllm_ascend/ops/pypto/dsv4_csa_fp32_residual_46cec3a0_v1/service.py
+@@ -46,7 +46,7 @@
+         if metadata is None or getattr(context, "is_draft_model", False):
+             return False
+         # 整层入口：进出都是层间的 mHC 残差流 [T, HC_MULT, D]。
+-        if hidden.ndim != 3 or tuple(hidden.shape[1:]) != (4, 4096) or hidden.dtype != torch.bfloat16:
++        if hidden.ndim != 3 or tuple(hidden.shape[1:]) != (4, 4096) or hidden.dtype != torch.float32:
+             return False
+         tokens = hidden.shape[0]
+         if tokens % QUERY_TOKENS or not 1 <= tokens // QUERY_TOKENS <= self.batch_capacity:
+--- candidate/a/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
++++ candidate/b/vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/native_adapter.py
+@@ -238,8 +238,8 @@
+         if not 1 <= batch <= DECODE_BATCH or tokens != batch * 6:
+             raise ValueError(f"CSA requires 1 <= batch <= {DECODE_BATCH} and six unpadded rows per request")
+         # kernel 现在从 mHC 的残差流进、也从它出，入参是层间的 [T, HC_MULT, D]。
+-        if tuple(hidden.shape[1:]) != (4, 4096) or hidden.dtype != torch.bfloat16 or not hidden.is_contiguous():
+-            raise ValueError("CSA expects a contiguous BF16 hc residual stream [T, 4, 4096]")
++        if tuple(hidden.shape[1:]) != (4, 4096) or hidden.dtype != torch.float32 or not hidden.is_contiguous():
++            raise ValueError("CSA expects a contiguous FP32 hc residual stream [T, 4, 4096]")
+         if positions.dtype != torch.int64 or tuple(positions.shape) != (tokens,):
+             raise ValueError("CSA expects the Native INT64 target position vector")
+         for name, (metadata, _) in groups.items():
+@@ -290,7 +290,7 @@
+             inner_state_block_table=self.tables["indexer_state"],
+             idx_topk_scores=empty("idx_topk_scores", (tokens, 512), torch.float32),
+             idx_topk=empty("idx_topk", (tokens, 512), torch.int32),
+-            x_out=empty("x_out", (tokens, 4, 4096), torch.bfloat16),
++            x_out=empty("x_out", (tokens, 4, 4096), torch.float32),
+         )
+         for name, slot_name, rope_name in (
+             ("compressed", "cmp_slot_mapping", "cmp_freqs"),
+--- candidate/a/tests/pypto_test/dsv4_csa_single_layer.py
++++ candidate/b/tests/pypto_test/dsv4_csa_single_layer.py
+@@ -662,6 +662,9 @@
+         groups = {
+             name: (fixture["metadata"][group["prefix"]], group["views"]) for name, group in fixture["groups"].items()
+         }
++        # Native参考已先按BF16执行；只加宽同值输入给私有FP32根。
++        fixture["hidden"] = fixture["hidden"].float()
++        report["residual_dtype"] = str(fixture["hidden"].dtype)
+         call = adapter.NativeCSACall(
+             adapter.CSAOperators.register(),
+             weights,
+@@ -717,7 +720,9 @@
+             pto.append(collect_state(fixture, call.args["x_out"], call.args["idx_topk"]))
+             report["pto_guards"].append(guard_checks(fixture))
+         report["pto_self"] = {name: compare_tensor(pto[1][name], value, 0, 0) for name, value in pto[0].items()}
+-        report["pto_native"] = {name: compare_tensor(pto[0][name], value, 0, 0) for name, value in native[0].items()}
++        report["pto_native"] = {
++            name: compare_tensor(pto[0][name], value.float() if name == "x_out" else value, 0, 0)
++            for name, value in native[0].items()}
+         visible = (fixture["positions"].cpu() + 1) // 4
+         report["topk_selection"] = compare_topk(pto[0]["idx_topk"], native[0]["idx_topk"], visible)
+         if args.save_state:
