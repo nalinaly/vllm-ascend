@@ -412,3 +412,23 @@ TransposeBatchMatMulKernel与MM_CFG_K_SHIFT；其InnerProcess调用Matmul Iterat
 短档分支完整验证已结束：短O-A +6.175%、CSA 8:2 +0.426%，未保住前轮短档收益，亦不采用。
 源码相同的K512核体不足以保证换编排后的收益；两轮设备分别3/0，不直接跨轮归因。
 保持生产K256，按实际场景分支的规则继续适用于后续有实测收益的策略。
+
+
+## Sparse逆RoPE整块Gather与压缩KV搬运的后续核对（2026-09-29）
+
+Native参考`posembedding/rotary_position_embedding/op_kernel/rotate_interleaved_split_bsn_pad.h`，
+第214行构造整块索引，261/295行一次Gather整个元素区间。Sparse当前16×64二维TGATHER
+在实际PTO-ISA327cd586中按16行分别vmuls、barrier和vgather；展平1×1024可减少行间屏障。
+PTO索引已含head*512，单位为元素，ISA内部乘sizeof(float)，不能再次乘4。
+[独立候选及CPU生成证据](results/csa_sparse_rope_flat_gather_20260929/README.md)不改变算术或调度；
+两代表档Sparse AIV加权−2.472%、完整CSA−0.266%，长均值/P95代价单列；完整状态与H127/B3/padding通过后已采用。
+
+另核对同版`SparseFlashMlaCsa`的压缩KV路径，避免把SWA的DataCopyPA误套到压缩部分：
+`SMLAVectorBlock::GetRealS2Idx/GetKeyGmOffset`仍分别GetValue读取Top-K和页表，
+`CopyInKv/ProcessVec0L`使用成对DMA、16KiB双UB缓冲，`CopyOutMrgeResult`写kvMergeGm；
+Cube的压缩分支随后从该GM合并区DataCopy到L1。Native并非把所有稀疏压缩行直接从原cache读入L1。
+
+当前PyPTO已有`pl.tile.mgather`，但ISA A3的elem模式仍逐元素标量读取GM，row模式仍逐行DMA；
+Mat模式接受GM索引并逐行ND2NZ。不能仅因API名字更高层就断言消除了标量访存或搬运。
+后续若采用，应证明与当前gather_row循环相比减少了真实索引读取/同步，并保持负索引和原页表语义。
+旧的Top-K/页表预读及成对DMA没有稳定收益，未原样重测。本轮不修改ISA/PTOAS/PyPTO，也不变Native缓存布局。

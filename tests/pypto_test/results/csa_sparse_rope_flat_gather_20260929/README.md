@@ -22,7 +22,7 @@ CPU需确认1×1024 TGATHER及reshape为视图，无新增搬运和容量溢出�
 5预热20正式设备事件，四窗DFX；性能后核对八类完整状态、整数索引、metadata与保护区。
 两侧CANN9.2/mode2/atomic0/det0、现有PTO图，保留P95/max，不重测Native或先跑整模型。
 
-[来源](source.json)、[唯一算子改动](candidate.patch)。结果未完成前不宣称收益或精度通过。
+[来源](source.json)、[唯一算子改动](candidate.patch)。正式两档与完整状态已完成，见[结果](RESULTS.md)；尾块/padding也已通过，已接入性能版单文件。
 
 
 CPU完整编译/PTOAS/CCE/link/load已通过，生成两个pub_h展开点均为输入1×8192、输出1×1024，
@@ -32,3 +32,24 @@ reshape前后TASSIGN同地址；TLOAD23/TSTORE13/TMOV9/TEXTRACT14/TCONCAT4与未
 [编译信息](compile_candidate.json)、[具体Gather类型和调用计数](static_evidence.json)。
 
 实际编译使用Simpler/build/pto-isa 327cd586，已核对其中TGather同样逐validRow循环；没有改ISA实现。
+
+
+两档完整状态逐元素通过，Sparse AIV长156.128→152.117μs（−2.569%），短182.357→178.563（−2.081%），
+8:2 −2.472%。长四窗范围完全分离，短范围重叠，不能说短每窗都更快。AIC加权−2.424%，含与AIV互等变化。
+完整CSA长963.185→964.806（+0.168%），短927.921→909.341（−2.002%），8:2 −0.266%。
+长P95 971.480→978.360、max978.060→986.840增加；短P95/max下降。四组均0/20超过P50的105%，
+不宣称长期异常尾部或EP16已解决。未改Q_B和HC等任务也有读数变化，不把独立DFX差额当调度成本。
+
+边界任务`task_20260929_195407_4663718485`：只补H127/B3/T18与同图active-B 3/2/1/3。
+按明确核内收益保留的既有口径推进，长CSA代价单列；不采用上一阶段NZ候选，也不重新测试Native。
+
+
+与上游pypto-lib2164563的差别：`models/deepseek_v4_flash_dspark/decode_sparse_attn_csa.py:435`
+仍由独立48-worker `merge_norm`加载mi/li/oi并做逆RoPE，第466行使用二维TGATHER；
+本仓此前已把发布融合到最后PV，现在进一步展平该Gather。本仓qk_pv核时因此包含这段收尾，
+不能直接拿上游不含merge_norm的qk_pv数值相减来衡量纯算术差距；本次没有新测上游。
+
+边界任务完成退出0：两侧H127/B3/T18的八类完整状态零容差通过，active-B 3/2/1/3同图padding、metadata及保护区通过。
+已采用性能版Sparse单文件，正文与设备验证的冻结候选相同，生产/测试两根依赖解析通过；精度版未改。
+[边界证据](boundary/summary.json)、[采用取舍](decision.json)、[生产解析](production_parse.json)。
+最新完整七档仍f4861832，不按本轮局部降幅外推七档或EP16。

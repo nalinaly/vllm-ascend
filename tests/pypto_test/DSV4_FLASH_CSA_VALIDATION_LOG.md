@@ -12339,3 +12339,47 @@ task_20260929_193859_406772521712已正常auto提交，冻结pkg后不再修改�
 完整事件计时/P95、四窗Sparse双核，性能完成后检查八类完整状态/索引/保护区。有效才补受影响边界。
 Native旧正式基线复用，精度版/Native流程/工具链和生产算子均未改。
 [源码、补丁、CPU证据与运行入口](results/csa_sparse_rope_flat_gather_20260929/README.md)。
+
+## 465. Sparse整块Gather两档核内下降，性能后完整状态通过，进入单一边界检查（2026-09-29）
+
+task_20260929_193859_406772521712完成退出0。CANN9.2/mode2/atomic0/det0，同卡长B16/短B24，
+5预热20正式事件、每侧4个独立DFX图窗口。八类跨版本完整张量零容差通过，图重放/保护区/Top-K结构通过。
+
+| 档位 | 完整CSA μs | 变化 | P95 μs | max μs | Sparse AIC μs | Sparse AIV μs |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 128K/B16 | 963.185→964.806 | +0.168% | 971.480→978.360 | 978.060→986.840 | 152.356→148.476 | 156.128→152.117 |
+| 8K/B24 | 927.921→909.341 | −2.002% | 949.780→924.280 | 950.340→933.760 | 178.564→175.114 | 182.357→178.563 |
+
+8:2完整CSA−0.266%，Sparse AIV−2.472%、AIC−2.424%。长AIV四窗范围154.850–157.153→151.768–152.602，
+完全分离；短180.530–184.480→173.337–181.465，范围重叠，不宣称每窗都更快。
+AIC源码算术未改，核时含AIC/AIV流水互等，不能把同步随动下降冒称新Cube算术优化。
+长P95增加6.880μs，max增加8.780μs；四组均0/20超过各自P50的105%，只说明本次没有该级别尖峰。
+
+未改控制同样保留：长Q_B −8.254%、Score AIC−0.468%、O-A+1.466%、HC widen+3.014%；
+短Q_B−4.975%、Score AIC−2.284%、O-A+2.094%、HC widen+4.277%。不能把全部读数变化直接归因Gather，
+也不能把独立DFX和正式CSA相减估算调度。候选长Sparse四窗分离且只改Gather屏障组织，满足核内保留依据。
+
+按用户“核内有真实收益先保留，随后调度”的规则，进入H127/B3/T18、同图active-B 3/2/1/3的唯一边界任务
+`task_20260929_195407_4663718485`；通过后仅移入性能版Sparse文件。Native/精度版/工具链保持，
+不扩测已否定NZ、不先做七档或EP16。本轮单层精度PASS不代表新的token/DSpark验收。
+[性能、完整状态与四窗证据](results/csa_sparse_rope_flat_gather_20260929/RESULTS.md)。
+
+## 466. Sparse整块Gather尾行/padding精确通过，采用性能版单文件（2026-09-29）
+
+边界task_20260929_195407_4663718485完成退出0。H127/B3/T18，deterministic level1、atomic0、mode2；
+两侧八类完整状态逐元素零差异，同图active-B 3/2/1/3均通过，compact metadata/保护区全部通过。
+因此将已测decode_sparse_attn_csa.py移入性能版，移入前确认生产仍与冻结基线一致，避免覆盖其他会话修改；
+移入内容与已测候选正文一致，生产和测试两个入口依赖解析通过。没有扩大测试无关权重/ND/EP16。
+
+保留的事实：两档Sparse AIV核时均值下降，8:2−2.472%，长四窗完全分离；完整CSA 8:2−0.266%。
+长档完整CSA+0.168%、P95+6.880μs、max+8.780μs仍列为代价；本轮不宣称全场景全指标加速或尾部问题关闭。
+精度版、Native、toolchain及cache格式未变；新七档和整模型token/DSpark待阶段出口，不能沿用历史PASS。
+
+pypto-lib2164563仍在独立merge_norm中加载mi/li/oi、执行二维Gather（decode_sparse_attn_csa.py:435/466）。
+本仓已将发布融合到末PV，本次仅进一步减少Gather内部行间屏障；qk_pv计时包含范围不同，
+不能直接与上游不含merge_norm的qk_pv相减，亦没有重新测上游。
+[采用结果](results/csa_sparse_rope_flat_gather_20260929/RESULTS.md)、
+[边界](results/csa_sparse_rope_flat_gather_20260929/boundary/summary.json)、
+[取舍](results/csa_sparse_rope_flat_gather_20260929/decision.json)。
+
+本次定向Ruff、shell语法及diff检查通过；统一format.sh ci仍因缺pre-commit未完成，不宣称全仓CI通过。

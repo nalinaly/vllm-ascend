@@ -124,7 +124,8 @@ L0仍K128双缓冲、任务/worker及K顺序保持；CPU完整编译通过，N25
 
 当前新候选为Sparse最终逆RoPE整块Gather，参考AscendC按整块处理索引的实现。
 A3二维TGATHER已有16轮向量barrier，展平1×1024后只需一轮，元素总数与全部浮点运算保持。
-CPU生成码确认无新增搬运，尚待设备双档核时/CSA/P95及性能后的完整状态检查。
+CPU确认无新增搬运。两档Sparse AIV加权−2.472%、完整CSA−0.266%；长CSA+0.168%、P95+6.880μs单列。
+八类完整状态、H127/B3及同图padding通过，已接入性能版单文件。本页完整七档尚未包含该局部改动。
 [候选与源码依据](results/csa_sparse_rope_flat_gather_20260929/README.md)。
 
 [有效策略与失败记录](DSV4_FLASH_CSA_VALIDATION_LOG.md)、[AscendC源码参考](DSV4_FLASH_CSA_ASCENDC_REFERENCES.md)。
