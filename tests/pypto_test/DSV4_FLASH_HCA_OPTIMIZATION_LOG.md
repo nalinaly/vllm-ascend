@@ -2287,3 +2287,80 @@ Native 侧 17 个静态编译 kernel，前几名：
 与 PTO 融合算子内部对应的 incore task 比，找出 PTO 慢在哪几段。
 这正是记忆 `perf-target-is-per-incore-task-gap` 说的口径，只是现在有了
 Native 侧带静态 kernel 的真实分项数字可以对照。
+
+## 52. ★★★ 差距定位到 O 投影的 cube 效率：PTO 的 proj_a 是 Native 同一矩阵乘的 5.7 倍（2026-09-29）
+
+### 52.1 为什么必须用 sk=0 做细分
+
+sk=1 下 Native 的 24 个算子被 SuperKernel 融合成 **5 个 MIX_AIC 大 kernel（占 79.4%）**，
+kernel 名只是被融合那一串的**第一个**（如 `SK:InplacePartialRotaryMul 102.96` 里还含别的算子），
+**无法做逐功能归属**。这正是用户说"sk=0 是供 incore task 细分对比用"的原因。
+用 `--super-kernel 0` 重采后 Native 展开成 24 个独立 kernel、16 类算子，才能对照。
+
+### 52.2 三个用例的设备/主机拆解（128K/B16，profiler 口径）
+
+| 用例 | kernel 数 | 设备忙时 | 设备跨度 | 端到端 p50 | 主机/其他 |
+| --- | --- | --- | --- | --- | --- |
+| Native sk=1 | 17 | 548.8 | 572.5 | 825.37 | 252.9 |
+| Native sk=0 | 24 | 640.1 | 597.2 | 840.14 | 242.9 |
+| PTO | 2 | 1390.3 | **701.2** | 927.40 | **226.2** |
+
+- **主机开销 PTO 最低**（226.2 vs 242.9/252.9），不是差距来源（第 51 节已证）。
+- SuperKernel 对 Native 的作用：设备忙时 640.1 → 548.8（−91.3），跨度 597.2 → 572.5（−24.7）。
+- ⚠ **不要跨侧比"设备忙时"**：PTO 的两个 kernel（AICPU 调度器 701.28 + AICore 689.04）
+  是并发的，忙时和 1390.3 没有意义。**跨度才是可比量。**
+
+### 52.3 逐段对照（Native sk=0 未融合 vs PTO 泳道任务跨度）
+
+| 段 | Native sk=0 | PTO | 差 |
+| --- | --- | --- | --- |
+| attention | 185.8（`SparseAttnSharedkv`） | 156.2 | **−29.6** ✓ |
+| 其余（mHC pre / Q·KV 投影 / RoPE / 压缩器 / KV 写回 / dequant·gather） | 约 366 | 约 274.5 | **−92** ✓ |
+| **O 投影 + mHC post** | **约 88** | **193.3** | **+105** ★★★ |
+
+**O 投影这一段的 +105 μs 就等于整个设备侧差距（104 μs）。其余各段 PTO 全赢。**
+
+Native 的 O 投影链（sk=0 下可识别）：
+
+| 算子 | μs |
+| --- | --- |
+| `aclnnMatmulWeightNz_MatMulCommon_MatMulV2`（wo_a，BF16 NZ） | 19.08 |
+| `aclnnDynamicQuantV2_DynamicQuant` | 12.68 |
+| `aclnnQuantMatmulWeightNz_QuantBatchMatmulV3`（wo_b，INT8 NZ） | 43.56 |
+| `HcPost` | 20.56 |
+| 合计 | **95.9**（另一种指派为 81.2，取决于两对同名算子哪个属 Q 哪个属 O） |
+
+PTO 的对应链（泳道跨度 430.7 → 624.0 = 193.3 μs）：
+
+| 任务 | 跨度 | 核·μs | 块 |
+| --- | --- | --- | --- |
+| `proj_a_mm_0` | 128.2 | **2628.5** | 64（AIC） |
+| `quant_0` | 116.8 | 1236.2 | 24（AIV） |
+| `_proj_b_mm_nz_kernel__2` | 70.2 | 761.4 | 64（AIC） |
+| `hca_oproj_hc_post_0` | 42.5 | 1855.1 | 48（AIV） |
+
+### 52.4 ★ 具体到一个算子：proj_a 的 cube 效率
+
+两者算的是同一件事：`o_packed [96, 8×4096] × wo_a [8, 4096, 1024]` = **3.22 G MAC**。
+
+| | wall | 核·μs |
+| --- | --- | --- |
+| Native `aclnnMatmulWeightNz` | **19.08** | 约 458（19.08 × 24） |
+| PTO `proj_a_mm_0` | 128.2 | **2628.5** |
+
+**即便 PTO 把 24 个 AIC 全占满，2628.5 核·μs 也要 110 μs，是 Native 的 5.7 倍。**
+按 a2a3 的 cube 峰值（16×16×16 = 4096 MAC/cycle/核）粗估，Native 的 19.08 μs
+已经接近理论值，而 PTO 的 proj_a 只到峰值的约 1/6。
+
+**这是 cube 计算效率问题，不是调度问题**——与第 34～45 节查的派发成本、依赖结构、
+预取、块数全都无关。那些方向即便全部做成，量级也只有几十 μs，
+而这一项单独就是 105 μs。
+
+### 52.5 与历史记录的关系
+
+第 11／19 节曾否定过 proj_a 的行块 M 分档（v13）与列块 N128→N256（v14/v19），
+理由是"cube 本就按 valid_shape 只算有效行"和"NZ 下无带宽可换"。
+那些都是在旧口径下、且没有 Native 同一矩阵乘的对照数字时做的判断。
+**现在有了 Native 19.08 μs 这个明确靶子，proj_a 的 tiling／数据布局应当重新审视。**
+下一步要查的是 PTO proj_a 的 K 维分块、L0/L1 复用与 NZ 权重读取方式，
+对照 `aclnnMatmulWeightNz` 的做法（记忆 `compare-pto-against-native-path`）。
