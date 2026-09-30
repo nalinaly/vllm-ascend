@@ -1361,6 +1361,7 @@ def indexer_score_topk_forest(
     qh_quant_tid: pl.Scalar[pl.TASK_ID],
     weights_tid: pl.Scalar[pl.TASK_ID],
     cache_write_tid: pl.Scalar[pl.TASK_ID],
+    host_max_seq_len: pl.Scalar[pl.INT32],
 ):
     """Score leaves and merge Top-K roots; long S6 publishes one root per leaf."""
     b_dim = pl.tensor.dim(idx_block_table, 0)
@@ -1377,9 +1378,7 @@ def indexer_score_topk_forest(
     # The whole batch uses query rows for one leaf, or private lane rows for multiple leaves.
     score_arena = pl.create_tensor([SCORE_ARENA_ROWS, TOPK_CANDIDATES_PER_LEAF], dtype=pl.FP32)
     # 8K及长上下文统一尝试片上FP16/Cube规约；更短历史保留Vector路径。
-    max_topk_cache_len = 0
-    for topk_batch in pl.range(b_dim):
-        max_topk_cache_len = pl.max(max_topk_cache_len, pl.read(kv_seq_lens, [topk_batch]) // COMPRESS_RATIO)
+    max_topk_cache_len = host_max_seq_len // COMPRESS_RATIO
     if max_topk_cache_len >= INDEXER_NATIVE_CUBE_MIN_ROWS:
         # 长历史的完整leaf每半区4096候选：512一轮，11轮降至8轮。
         # 短历史保留384半区，避免扩大最后一轮的padding计算。
@@ -1621,10 +1620,6 @@ def indexer_score_topk_forest(
 
         score_tid = direct_leaf_tid
 
-    max_topk_cache_len = 0
-    for topk_batch in pl.range(b_dim):
-        topk_cache_len = pl.read(kv_seq_lens, [topk_batch]) // COMPRESS_RATIO
-        max_topk_cache_len = pl.max(max_topk_cache_len, topk_cache_len)
     with pl.scope():
         if max_topk_cache_len < INDEXER_NATIVE_CUBE_MIN_ROWS:
             with pl.spmd(
@@ -1938,6 +1933,7 @@ def indexer_weights_score(
     weights_gate_dep: pl.Scalar[pl.TASK_ID],
     qh_quant_tid: pl.Scalar[pl.TASK_ID],
     weights_workers: pl.Scalar[pl.INDEX],
+    host_max_seq_len: pl.Scalar[pl.INT32],
 ) -> tuple[pl.Tensor[[T_DYN, IDX_TOPK], pl.FP32], pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32], pl.Scalar[pl.TASK_ID]]:
     """Weights projection and the score/top-k forest over an already-quantized query."""
     weights, weights_tid = indexer_weights_project(x, weights_proj, weights_gate_dep, weights_workers)
@@ -1955,6 +1951,7 @@ def indexer_weights_score(
         qh_quant_tid,
         weights_tid,
         cache_write_dep,
+        host_max_seq_len,
     )
     return topk_scores, topk_idxs, leaf_tid
 
@@ -1978,6 +1975,7 @@ def indexer(
     kv_seq_lens: pl.Tensor[[B_DYN], pl.INT32],
     late_dep: pl.Scalar[pl.TASK_ID],
     cache_write_dep: pl.Scalar[pl.TASK_ID],
+    host_max_seq_len: pl.Scalar[pl.INT32],
 ):
     qr_hadamard_i8 = pl.create_tensor([T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], dtype=pl.INT8)
     qr_hadamard_scale_dq = pl.create_tensor([T_PAD * IDX_N_HEADS, 1], dtype=pl.FP32)
@@ -2009,5 +2007,6 @@ def indexer(
         weights_gate_dep,
         qh_quant_tid,
         TP1_WEIGHTS_WORKERS,
+        host_max_seq_len,
     )
     return topk_scores, topk_idxs

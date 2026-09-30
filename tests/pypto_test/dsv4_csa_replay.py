@@ -12,9 +12,16 @@ SCHEMA_VERSION = 2
 
 
 def argument_roles(root_function):
+    from pypto.language import constexpr
+
     definition = ast.parse(textwrap.dedent(inspect.getsource(root_function))).body[0]
+    signature = inspect.signature(root_function)
     roles = {}
     for arg in definition.args.args:
+        # constexpr parameters specialize source but never appear in the
+        # runtime ABI or a device tensor snapshot.
+        if signature.parameters[arg.arg].annotation is constexpr:
+            continue
         annotation = arg.annotation
         marker = annotation.value if isinstance(annotation, ast.Subscript) else None
         roles[arg.arg] = {"Out": "out", "InOut": "inout"}.get(getattr(marker, "attr", None), "in")

@@ -3,7 +3,10 @@
 
 import torch
 
-from .native_adapter import NativeCSACall, prepare_weights
+from vllm_ascend.ops.pypto.variant import csa_runtime
+
+from .host_metadata import CSAHostMetadata
+from .native_adapter import HBGNativeCSACall, NativeCSACall, prepare_weights
 from .service_config import MAX_BATCH_SIZE, QUERY_TOKENS
 
 # 同一个 decode step 里，compressor_metadata 的入参只跟 KV cache group 有关、与层无关：
@@ -22,6 +25,7 @@ class CSAServiceRuntime:
         self.wrapper = attention.dsa_attn
         self.layer_name = self.wrapper.dsa_attn.layer_name
         self.operators = operators
+        self.is_hbg = csa_runtime() == "host_build_graph"
         # layer 提供 mHC 的门控权重与 attention 的 input_layernorm：
         # 这两段现在也在 PTO kernel 里，见 decode_csa._decode_csa_tp1_layer。
         self.weights = prepare_weights(attention, None, layer)
@@ -135,10 +139,22 @@ class CSAServiceRuntime:
             "indexer_state": (metadata["indexer_state"], (indexer_state,)),
         }
         tokens = hidden.shape[0]
-        call = NativeCSACall(
+        call_type = HBGNativeCSACall if self.is_hbg else NativeCSACall
+        host_kwargs = {}
+        if self.is_hbg:
+            host = CSAHostMetadata.from_native(metadata["indexer"].decode)
+            host_kwargs["host_metadata"] = host
+            # An enclosing NPUGraph freezes the Host scalar. Record precisely
+            # which Native CPU value its replay guard must check; per-request
+            # lengths remain live device inputs inside the captured tasks.
+            context.additional_kwargs.setdefault("pto_csa_hbg_graph_metadata", {})[
+                self.prefixes["indexer"]
+            ] = host
+        call = call_type(
             self.operators, self.weights, hidden, positions, groups, layer_name=self.layer_name,
             compact_metadata=compact,
             buffers={"idx_topk_scores": self.scores[:tokens], "idx_topk": self.topk[:tokens], "x_out": output},
+            **host_kwargs,
         )
         # A single fused call publishes all KV writes. Notify the connector on
         # the same stream after that call; no global synchronization is needed.

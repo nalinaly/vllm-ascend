@@ -30,6 +30,15 @@ _ALIASES = {"precision": "precision", "prec": "precision",
 _BISECT_PREFIX = "pkg:"
 
 
+def csa_runtime() -> str:
+    from vllm_ascend import envs
+
+    runtime = envs.PTO_CSA_RUNTIME
+    if runtime not in ("tensormap_and_ringbuffer", "host_build_graph"):
+        raise ValueError(f"Unsupported PTO_CSA_RUNTIME={runtime!r}")
+    return runtime
+
+
 def selected_variant() -> str:
     """返回 "precision" 或 "performance"；无法识别的取值必须报错而不是静默回退。"""
     value = os.environ.get(_ENV, "precision").strip().lower()

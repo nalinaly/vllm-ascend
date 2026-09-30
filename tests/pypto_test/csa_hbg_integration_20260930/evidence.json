@@ -1,0 +1,550 @@
+{
+  "kind": "Extracted from saved reports; not raw device logs",
+  "source_base": "bc451fe1",
+  "pypto": "88f605986",
+  "simpler": "a54c05095",
+  "cann": "9.2.0-beta.2",
+  "weight_nz_mode": 2,
+  "atomic_add": 0,
+  "hbg_heap_mib": 320,
+  "cases": {
+    "factory_b4_8k_hbg": {
+      "task_id": "task_20260930_181118_41325916380",
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hbg-integration/tests/pypto_test/results/csa_hbg_integration/factory_b4_8k_hbg/report.json",
+      "status": "MEASURED",
+      "batch": 4,
+      "history": 8192,
+      "execution_config": {
+        "path": "manual_npu_graph",
+        "pto_runtime": "host_build_graph",
+        "enable_npugraph_ex": false,
+        "enable_static_kernel": false,
+        "worker_cpu_binding": false,
+        "scope": "核内与手工图区间诊断；未经过decode模板的编译优化，不作为该模板下Native性能验收"
+      },
+      "host_metadata": {
+        "max_seq_len": 8198,
+        "graph_key": 1
+      },
+      "pto_self": {
+        "x_out": "PASS",
+        "idx_topk": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS",
+        "indexer.0": "PASS",
+        "indexer.1": "PASS",
+        "indexer_state.0": "PASS"
+      },
+      "guards": [
+        {
+          "status": "PASS",
+          "checks": 31
+        },
+        {
+          "status": "PASS",
+          "checks": 31
+        }
+      ],
+      "native_zero_tolerance_diagnostic": {
+        "x_out": {
+          "status": "FAIL",
+          "max_abs": 0.03125,
+          "mismatches": 96880
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 10999
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "max_abs": 0.015625,
+          "mismatches": 3773
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "max_abs": 0.0078125,
+          "mismatches": 32
+        },
+        "state.0": {
+          "status": "FAIL",
+          "max_abs": 0.00015385448932647705,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 31
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "max_abs": 6.103515625e-05,
+          "mismatches": 4
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "max_abs": 0.0003209710121154785,
+          "mismatches": 12280
+        }
+      },
+      "fixed_metadata_graph": {
+        "status": "PASS",
+        "replays": [
+          {
+            "input": "A",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          },
+          {
+            "input": "B",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          },
+          {
+            "input": "A",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          }
+        ]
+      }
+    },
+    "factory_b4_8k_ring": {
+      "task_id": "task_20260930_181305_45386016233",
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hbg-integration/tests/pypto_test/results/csa_hbg_integration/factory_b4_8k_ring/report.json",
+      "status": "MEASURED",
+      "batch": 4,
+      "history": 8192,
+      "execution_config": {
+        "path": "manual_npu_graph",
+        "pto_runtime": "tensormap_and_ringbuffer",
+        "enable_npugraph_ex": false,
+        "enable_static_kernel": false,
+        "worker_cpu_binding": false,
+        "scope": "核内与手工图区间诊断；未经过decode模板的编译优化，不作为该模板下Native性能验收"
+      },
+      "host_metadata": null,
+      "pto_self": {
+        "x_out": "PASS",
+        "idx_topk": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS",
+        "indexer.0": "PASS",
+        "indexer.1": "PASS",
+        "indexer_state.0": "PASS"
+      },
+      "guards": [
+        {
+          "status": "PASS",
+          "checks": 31
+        },
+        {
+          "status": "PASS",
+          "checks": 31
+        }
+      ],
+      "native_zero_tolerance_diagnostic": {
+        "x_out": {
+          "status": "FAIL",
+          "max_abs": 0.03125,
+          "mismatches": 96880
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 10999
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "max_abs": 0.015625,
+          "mismatches": 3773
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "max_abs": 0.0078125,
+          "mismatches": 32
+        },
+        "state.0": {
+          "status": "FAIL",
+          "max_abs": 0.00015385448932647705,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 31
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "max_abs": 6.103515625e-05,
+          "mismatches": 4
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "max_abs": 0.0003209710121154785,
+          "mismatches": 12280
+        }
+      }
+    },
+    "factory_b4_128k_hbg": {
+      "task_id": "task_20260930_181607_52190218742",
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hbg-integration/tests/pypto_test/results/csa_hbg_integration/factory_b4_128k_hbg/report.json",
+      "status": "MEASURED",
+      "batch": 4,
+      "history": 131072,
+      "execution_config": {
+        "path": "manual_npu_graph",
+        "pto_runtime": "host_build_graph",
+        "enable_npugraph_ex": false,
+        "enable_static_kernel": false,
+        "worker_cpu_binding": false,
+        "scope": "核内与手工图区间诊断；未经过decode模板的编译优化，不作为该模板下Native性能验收"
+      },
+      "host_metadata": {
+        "max_seq_len": 131078,
+        "graph_key": 2
+      },
+      "pto_self": {
+        "x_out": "PASS",
+        "idx_topk": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS",
+        "indexer.0": "PASS",
+        "indexer.1": "PASS",
+        "indexer_state.0": "PASS"
+      },
+      "guards": [
+        {
+          "status": "PASS",
+          "checks": 31
+        },
+        {
+          "status": "PASS",
+          "checks": 31
+        }
+      ],
+      "native_zero_tolerance_diagnostic": {
+        "x_out": {
+          "status": "FAIL",
+          "max_abs": 0.015625,
+          "mismatches": 112348
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 11360
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "max_abs": 0.015625,
+          "mismatches": 3802
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "max_abs": 0.0078125,
+          "mismatches": 23
+        },
+        "state.0": {
+          "status": "FAIL",
+          "max_abs": 0.00015385448932647705,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 33
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "max_abs": 6.103515625e-05,
+          "mismatches": 3
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "max_abs": 0.0003209710121154785,
+          "mismatches": 12280
+        }
+      },
+      "fixed_metadata_graph": {
+        "status": "PASS",
+        "replays": [
+          {
+            "input": "A",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          },
+          {
+            "input": "B",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          },
+          {
+            "input": "A",
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 31
+            }
+          }
+        ]
+      }
+    },
+    "metadata_service_b4_8k": {
+      "task_id": "task_20260930_182217_6605761459",
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hbg-integration/tests/pypto_test/results/csa_hbg_integration/metadata_service_b4_8k/report.json",
+      "status": "MEASURED",
+      "batch": 4,
+      "history": 8192,
+      "execution_config": {
+        "path": "manual_npu_graph",
+        "pto_runtime": "host_build_graph",
+        "enable_npugraph_ex": false,
+        "enable_static_kernel": false,
+        "worker_cpu_binding": false,
+        "scope": "核内与手工图区间诊断；未经过decode模板的编译优化，不作为该模板下Native性能验收"
+      },
+      "host_metadata": {
+        "max_seq_len": 8198,
+        "graph_key": 1
+      },
+      "pto_self": {
+        "x_out": "PASS",
+        "idx_topk": "PASS",
+        "swa.0": "PASS",
+        "compressed.0": "PASS",
+        "state.0": "PASS",
+        "indexer.0": "PASS",
+        "indexer.1": "PASS",
+        "indexer_state.0": "PASS"
+      },
+      "guards": [
+        {
+          "status": "PASS",
+          "checks": 31
+        },
+        {
+          "status": "PASS",
+          "checks": 31
+        }
+      ],
+      "native_zero_tolerance_diagnostic": {
+        "x_out": {
+          "status": "FAIL",
+          "max_abs": 0.03125,
+          "mismatches": 96880
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 10999
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "max_abs": 0.015625,
+          "mismatches": 3773
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "max_abs": 0.0078125,
+          "mismatches": 32
+        },
+        "state.0": {
+          "status": "FAIL",
+          "max_abs": 0.00015385448932647705,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "max_abs": null,
+          "mismatches": 31
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "max_abs": 6.103515625e-05,
+          "mismatches": 4
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "max_abs": 0.0003209710121154785,
+          "mismatches": 12280
+        }
+      },
+      "metadata_replay": {
+        "status": "PASS",
+        "scope": "同址更新长度、位置、页表、compact metadata；跨拓扑拒绝旧图并重新捕获",
+        "captures": 2,
+        "cross_topology_rejected": true,
+        "steps": [
+          {
+            "input": "A",
+            "host_max_seq_len": 8198,
+            "graph_key": 1,
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 5
+            },
+            "readonly": {
+              "status": "PASS",
+              "checks": 22
+            }
+          },
+          {
+            "input": "B",
+            "host_max_seq_len": 8202,
+            "graph_key": 1,
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 5
+            },
+            "readonly": {
+              "status": "PASS",
+              "checks": 22
+            }
+          },
+          {
+            "input": "C",
+            "host_max_seq_len": 8190,
+            "graph_key": 0,
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 5
+            },
+            "readonly": {
+              "status": "PASS",
+              "checks": 22
+            }
+          },
+          {
+            "input": "A",
+            "host_max_seq_len": 8198,
+            "graph_key": 1,
+            "comparison": {
+              "status": "PASS",
+              "checks": 8
+            },
+            "guards": {
+              "status": "PASS",
+              "checks": 5
+            },
+            "readonly": {
+              "status": "PASS",
+              "checks": 22
+            }
+          }
+        ],
+        "service": {
+          "status": "PASS",
+          "eager_then_graph": [
+            {
+              "comparison": {
+                "status": "PASS",
+                "checks": 8
+              },
+              "guards": {
+                "status": "PASS",
+                "checks": 31
+              }
+            },
+            {
+              "comparison": {
+                "status": "PASS",
+                "checks": 8
+              },
+              "guards": {
+                "status": "PASS",
+                "checks": 31
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "hbg_vs_ring_b4_8k": {
+    "x_out": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "idx_topk": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "swa.0": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "compressed.0": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "state.0": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "indexer.0": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "indexer.1": {
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "indexer_state.0": {
+      "equal": true,
+      "max_abs": 0.0
+    }
+  },
+  "cpu_tests": ".............                                                            [100%]\n13 passed, 52 warnings in 18.61s",
+  "limits": [
+    "No 16-device model/token or performance acceptance",
+    "Model graph topology transitions require a matching capture; no automatic model multi-bucket capture",
+    "HBG snapshot serialization of scalars is not implemented"
+  ]
+}

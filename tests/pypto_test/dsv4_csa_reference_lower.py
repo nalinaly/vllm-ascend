@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from dsv4_csa_env import activate, write_json
+from dsv4_csa_replay import argument_roles
 
 
 def main() -> None:
@@ -50,7 +51,8 @@ def main() -> None:
             name = kernel.__name__
             (args.output_dir / f"{name}_lowered.py").write_text(str(program))
             report["kernels"].append(
-                {"name": name, "parameters": kernel.param_names, "mutable_and_output": kernel.output_param_names}
+                {"name": name, "parameters": list(argument_roles(getattr(module, name))),
+                 "mutable_and_output": kernel.output_param_names}
             )
         report.update(
             status="PASS",
