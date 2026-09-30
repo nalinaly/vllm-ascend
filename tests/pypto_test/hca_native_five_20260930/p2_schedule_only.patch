@@ -1,0 +1,6 @@
+--- a/deepseek_v4_flash_dspark_perf/decode_o_proj.py
++++ b/deepseek_v4_flash_dspark_perf/decode_o_proj.py
+@@ -193 +193,2 @@
+-        allow_early_resolve=True,
++        # O-A完成后再允许量化上核，验证K-shift与组间交错的联动。
++        allow_early_resolve=False,

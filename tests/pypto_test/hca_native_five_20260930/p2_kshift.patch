@@ -1,0 +1,6 @@
+--- a/deepseek_v4_flash_dspark_perf/decode_o_proj.py
++++ b/deepseek_v4_flash_dspark_perf/decode_o_proj.py
+@@ -212 +212,2 @@
+-                outer_k = outer * PROJ_A_L1_K_TILE
++                # Native KLoopMDL按block编号错开较大L1段；此处为PTO任务block编号。
++                outer_k = ((outer + pa_unit) % (O_GROUP_IN // PROJ_A_L1_K_TILE)) * PROJ_A_L1_K_TILE

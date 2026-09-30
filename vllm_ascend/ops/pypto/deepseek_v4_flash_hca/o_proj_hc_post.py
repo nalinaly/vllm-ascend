@@ -42,6 +42,7 @@ def _decode_o_proj_tp1_parts(
     heads_dep: pl.Scalar[pl.TASK_ID],
     ROW_TILE: pl.constexpr,
     A_COL_TILE: pl.constexpr,
+    PIPELINE_OA: pl.constexpr,
 ):
     """HCA 的分组 O 投影任务组织，复用 CSA 矩阵乘，保留 HCA 收尾依赖。"""
     proj_a_rows = (t_dim + PROJ_A_ROW_TILE - 1) // PROJ_A_ROW_TILE
@@ -65,7 +66,7 @@ def _decode_o_proj_tp1_parts(
 
             o_r_pad, pa_tid = proj_a_mm(
                 o_packed, wo_a, o_r_pad, g, row_base_o, out_col_g,
-                t_dim, proj_a_rows, heads_dep, A_COL_TILE,
+                t_dim, proj_a_rows, heads_dep, A_COL_TILE, PIPELINE_OA,
             )
 
             col_g = g * O_LORA
@@ -130,7 +131,7 @@ def _o_proj_hc_post_tiled(
 ):
     tokens = pl.tensor.dim(residual, 0)
     partials, scales, ready = _decode_o_proj_tp1_parts(
-        packed, wo_a, wo_b, tokens, heads_dep, MM_ROWS, MM_COLS,
+        packed, wo_a, wo_b, tokens, heads_dep, MM_ROWS, MM_COLS, PIPELINE_OA=True,
     )
     residual_flat = pl.reshape(residual, [tokens, HC_DIM])
     output_flat = pl.reshape(output, [tokens, HC_DIM])

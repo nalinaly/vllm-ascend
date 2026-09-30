@@ -1,0 +1,115 @@
+{
+  "scope": "HCA b1569fa1 增量合入后的完整 root CPU 编译；没有设备执行",
+  "merge_parents": [
+    "8b09ac55",
+    "b1569fa1"
+  ],
+  "hca": {
+    "status": "CPU_COMPILE_PASS",
+    "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/vllm_ascend/ops/pypto",
+    "graphs": {
+      "decode_hca_tp1_layer": "_DepGraph",
+      "decode_hca_tp1_layer_test": "_DepGraph"
+    },
+    "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+    "device_execution": false,
+    "nz_mode": 2
+  },
+  "csa": {
+    "scope": "CPU full-chain compilation; no device execution",
+    "variant": "performance",
+    "root_layouts": {
+      "wq_a": "NZ",
+      "wq_b": "NZ",
+      "wo_a": "NZ",
+      "wo_b": "NZ",
+      "wkv": "ND",
+      "cmp_wkv": "ND",
+      "cmp_wgate": "ND"
+    },
+    "atomic_add": 0,
+    "kernels": [
+      {
+        "name": "_decode_csa_tp1_layer",
+        "parameters": [
+          "x_hc",
+          "hc_attn_fn",
+          "hc_attn_scale",
+          "hc_attn_base",
+          "attn_norm_w",
+          "wq_a",
+          "wq_b",
+          "wq_b_scale",
+          "wkv",
+          "gamma_cq",
+          "gamma_ckv",
+          "freqs_cos",
+          "freqs_sin",
+          "cmp_freqs_cos",
+          "cmp_freqs_sin",
+          "inner_freqs_cos",
+          "inner_freqs_sin",
+          "cmp_wkv",
+          "cmp_wgate",
+          "cmp_ape",
+          "cmp_norm_w",
+          "compress_state",
+          "state_block_table",
+          "idx_wq_b",
+          "idx_wq_b_scale",
+          "weights_proj",
+          "hadamard_idx",
+          "inner_wkv",
+          "inner_wgate",
+          "inner_ape",
+          "inner_norm_w",
+          "inner_compress_state",
+          "inner_state_block_table",
+          "kv_cache",
+          "cmp_kv",
+          "cmp_block_table",
+          "idx_native_kv_cache",
+          "idx_block_table",
+          "ori_slot_mapping",
+          "ori_block_table",
+          "cmp_slot_mapping",
+          "idx_slot_mapping",
+          "state_slot_mapping",
+          "inner_state_slot_mapping",
+          "position_ids",
+          "kv_seq_lens",
+          "cmp_query_start_loc",
+          "cmp_seq_lens",
+          "idx_query_start_loc",
+          "attn_sink",
+          "wo_a",
+          "wo_b",
+          "wo_b_scale",
+          "idx_topk_scores",
+          "idx_topk",
+          "x_out"
+        ],
+        "mutable_and_output": [
+          "compress_state",
+          "inner_compress_state",
+          "kv_cache",
+          "cmp_kv",
+          "idx_native_kv_cache",
+          "idx_topk_scores",
+          "idx_topk",
+          "x_out"
+        ]
+      }
+    ],
+    "device_binaries": "built_without_device_execution",
+    "status": "PASS",
+    "tp": 1,
+    "query": 6,
+    "argv_unchanged": true
+  },
+  "padding_slots_cpu_tests": {
+    "passed": 3,
+    "command": "python -m pytest -q tests/pypto_test/test_hca_padding_slots.py"
+  },
+  "device_validation": "等待机器重启后的任务队列恢复；新版功能、token 精度、性能尚未验证"
+}

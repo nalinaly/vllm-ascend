@@ -3,7 +3,11 @@
     "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
     "nested": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/nested",
     "compact": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact",
-    "peeled": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/peeled"
+    "peeled": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/peeled",
+    "n256": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/n256",
+    "integrated": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/integrated",
+    "integrated_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/integrated_v2",
+    "kshift": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/kshift"
   },
   "baseline": "0742f07c production operator, captured at f4dfef15",
   "change": "N128 O-A: L1 K512 stage2, explicit L0 K128 stage2, single init_cond accumulator",
@@ -18,5 +22,15 @@
   },
   "nested_failure": "AccCompactValid: dynamic valid M needs compact Acc storage; plain create is rejected",
   "compact_note": "Explicit L0 path uses compact=True plus validshape; currently an internal compiler API. Before production adoption prefer a tile.matmul-derived seed or an officially supported narrow seed.",
-  "peeled_change": "first real K128 tile.matmul derives compact Acc; finish first K512 then pipeline remaining K512 chunks; same arithmetic order and no extra GM loads, no compact=True and no runtime init_cond"
+  "peeled_change": "first real K128 tile.matmul derives compact Acc; finish first K512 then pipeline remaining K512 chunks; same arithmetic order and no extra GM loads, no compact=True and no runtime init_cond",
+  "n256_change": "O-A N256 / L1 K256 / explicit L0 K64 stage2; B16 goes 64->32 workers, halves repeated input reads across N blocks; same groups/quant/O-B dependencies",
+  "n256_scope": "private HCA package; both small/medium and large O-A branches use explicit N256 pipeline; K64 microstep changes require actual numerical comparison",
+  "integrated_scope": "only HCA opts into PIPELINE_OA=True; shared helper default=False preserves CSA; only NZ N128 routes to explicit pipeline, N256 and ND retain originals",
+  "integrated_failure": "conditional inline call: missing inferred tensor metadata for o_r_pad",
+  "integrated_v2_scope": "same kernel body/strategy as compact, constexpr flag inside SPMD; HCA=True, CSA default=False; ND/N256 unchanged",
+  "kshift_change": "relative to integrated_v2, rotate K512 start by N-block index; all 8 K blocks exactly once; FP32 reduction order changes, output requires arithmetic diagnosis and later model token acceptance",
+  "kshift_reference": "ops-nn/matmul/transpose_batch_mat_mul/op_kernel/transpose_batch_mat_mul.cpp:71-88 NZ MM_CFG_K_SHIFT; strategy reference only, not proof of installed binary or equivalent scheduling",
+  "adoption": "integrated_v2: HCA NZ N128 only; explicit compact internal API dependency documented and tested",
+  "reference_correction": "PP einsum is ND strategy reference; actual local NZ dispatcher uses TransposeBatchMatMulKernel/MM_CFG_K_SHIFT",
+  "kshift_status": "CPU only; not queued; must match Native KLoop before experiment"
 }

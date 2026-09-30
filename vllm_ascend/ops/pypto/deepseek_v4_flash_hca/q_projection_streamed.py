@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Q_B每16个head独立发布；保持原整数矩阵分块和逐行数值策略。"""
+"""Q-B每16个head独立发布，以分层双缓冲保留原整数结果和逐行数值策略。"""
 
 import pypto.language as pl
 
@@ -27,7 +27,12 @@ STREAM_CUBE_WORKERS = 16 // STREAM_GROUPS
 STREAM_VEC_WORKERS = 48 // STREAM_GROUPS
 STREAM_M = 128
 STREAM_N = 256
-STREAM_K = 256
+# 对齐Native A3 MDL：L1搬运K512，L0以K128双缓冲，保留N256和四组交接。
+# compact Acc匹配动态有效行，是当前PyPTO内部接口；B4/补位验证见
+# tests/pypto_test/hca_native_five_20260930/README.md。
+STREAM_L1_K = 512
+STREAM_L0_K = 128
+
 
 
 @pl.jit.inline(auto_scope=False)
@@ -249,16 +254,28 @@ def q_proj_q_streamed(
                     col = 0 + col_local
                     for t0 in pl.range(0, matrix_rows, STREAM_M):
                         count = pl.min(STREAM_M, tile_rows - t0)
-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
-                            qr_part = pl.slice(
-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
-                            )
-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+                        seed_storage = pl.create_tile([STREAM_M, STREAM_N], dtype=pl.INT32,
+                                                      target_memory=pl.MemorySpace.Acc, compact=True)
+                        seed = pl.tile.set_validshape(seed_storage, count, STREAM_N)
+                        for outer, (outer_acc,) in pl.pipeline(0, Q_LORA // STREAM_L1_K, stage=2, init_values=(seed,)):
+                            k_base = outer * STREAM_L1_K
+                            a_l1 = pl.load(qr_i8_matmul, [t0, k_base], [STREAM_M, STREAM_L1_K],
+                                           valid_shape=[count, STREAM_L1_K], target_memory=pl.MemorySpace.Mat)
+                            b_l1 = pl.load(wq_b, [k_base, col], [STREAM_L1_K, STREAM_N],
+                                           target_memory=pl.MemorySpace.Mat)
+                            for inner, (inner_acc,) in pl.pipeline(
+                                0, STREAM_L1_K // STREAM_L0_K, stage=2, init_values=(outer_acc,),
+                            ):
+                                k_inner = inner * STREAM_L0_K
+                                a_l0 = pl.tile.extract(a_l1, 0, k_inner, [STREAM_M, STREAM_L0_K],
+                                                      target_memory=pl.MemorySpace.Left)
+                                b_l0 = pl.tile.extract(b_l1, k_inner, 0, [STREAM_L0_K, STREAM_N],
+                                                      target_memory=pl.MemorySpace.Right)
+                                updated = pl.tile.matmul_acc(inner_acc, a_l0, b_l0,
+                                                            init_cond=(outer == 0 and inner == 0))
+                                inner_done = pl.yield_(updated)
+                            outer_done = pl.yield_(inner_done)
+                        q_proj_i32 = pl.store(outer_done, [t0, col_local], q_proj_i32)
             dq_tid = q_proj_q_dequant_stream(
                 wq_b_scale,
                 rope_cos_il,
@@ -284,16 +301,28 @@ def q_proj_q_streamed(
                     col = 8192 + col_local
                     for t0 in pl.range(0, matrix_rows, STREAM_M):
                         count = pl.min(STREAM_M, tile_rows - t0)
-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
-                            qr_part = pl.slice(
-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
-                            )
-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+                        seed_storage = pl.create_tile([STREAM_M, STREAM_N], dtype=pl.INT32,
+                                                      target_memory=pl.MemorySpace.Acc, compact=True)
+                        seed = pl.tile.set_validshape(seed_storage, count, STREAM_N)
+                        for outer, (outer_acc,) in pl.pipeline(0, Q_LORA // STREAM_L1_K, stage=2, init_values=(seed,)):
+                            k_base = outer * STREAM_L1_K
+                            a_l1 = pl.load(qr_i8_matmul, [t0, k_base], [STREAM_M, STREAM_L1_K],
+                                           valid_shape=[count, STREAM_L1_K], target_memory=pl.MemorySpace.Mat)
+                            b_l1 = pl.load(wq_b, [k_base, col], [STREAM_L1_K, STREAM_N],
+                                           target_memory=pl.MemorySpace.Mat)
+                            for inner, (inner_acc,) in pl.pipeline(
+                                0, STREAM_L1_K // STREAM_L0_K, stage=2, init_values=(outer_acc,),
+                            ):
+                                k_inner = inner * STREAM_L0_K
+                                a_l0 = pl.tile.extract(a_l1, 0, k_inner, [STREAM_M, STREAM_L0_K],
+                                                      target_memory=pl.MemorySpace.Left)
+                                b_l0 = pl.tile.extract(b_l1, k_inner, 0, [STREAM_L0_K, STREAM_N],
+                                                      target_memory=pl.MemorySpace.Right)
+                                updated = pl.tile.matmul_acc(inner_acc, a_l0, b_l0,
+                                                            init_cond=(outer == 0 and inner == 0))
+                                inner_done = pl.yield_(updated)
+                            outer_done = pl.yield_(inner_done)
+                        q_proj_i32 = pl.store(outer_done, [t0, col_local], q_proj_i32)
             dq_tid = q_proj_q_dequant_stream(
                 wq_b_scale,
                 rope_cos_il,
@@ -319,16 +348,28 @@ def q_proj_q_streamed(
                     col = 16384 + col_local
                     for t0 in pl.range(0, matrix_rows, STREAM_M):
                         count = pl.min(STREAM_M, tile_rows - t0)
-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
-                            qr_part = pl.slice(
-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
-                            )
-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+                        seed_storage = pl.create_tile([STREAM_M, STREAM_N], dtype=pl.INT32,
+                                                      target_memory=pl.MemorySpace.Acc, compact=True)
+                        seed = pl.tile.set_validshape(seed_storage, count, STREAM_N)
+                        for outer, (outer_acc,) in pl.pipeline(0, Q_LORA // STREAM_L1_K, stage=2, init_values=(seed,)):
+                            k_base = outer * STREAM_L1_K
+                            a_l1 = pl.load(qr_i8_matmul, [t0, k_base], [STREAM_M, STREAM_L1_K],
+                                           valid_shape=[count, STREAM_L1_K], target_memory=pl.MemorySpace.Mat)
+                            b_l1 = pl.load(wq_b, [k_base, col], [STREAM_L1_K, STREAM_N],
+                                           target_memory=pl.MemorySpace.Mat)
+                            for inner, (inner_acc,) in pl.pipeline(
+                                0, STREAM_L1_K // STREAM_L0_K, stage=2, init_values=(outer_acc,),
+                            ):
+                                k_inner = inner * STREAM_L0_K
+                                a_l0 = pl.tile.extract(a_l1, 0, k_inner, [STREAM_M, STREAM_L0_K],
+                                                      target_memory=pl.MemorySpace.Left)
+                                b_l0 = pl.tile.extract(b_l1, k_inner, 0, [STREAM_L0_K, STREAM_N],
+                                                      target_memory=pl.MemorySpace.Right)
+                                updated = pl.tile.matmul_acc(inner_acc, a_l0, b_l0,
+                                                            init_cond=(outer == 0 and inner == 0))
+                                inner_done = pl.yield_(updated)
+                            outer_done = pl.yield_(inner_done)
+                        q_proj_i32 = pl.store(outer_done, [t0, col_local], q_proj_i32)
             dq_tid = q_proj_q_dequant_stream(
                 wq_b_scale,
                 rope_cos_il,
@@ -354,16 +395,28 @@ def q_proj_q_streamed(
                     col = 24576 + col_local
                     for t0 in pl.range(0, matrix_rows, STREAM_M):
                         count = pl.min(STREAM_M, tile_rows - t0)
-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
-                            qr_part = pl.slice(
-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
-                            )
-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+                        seed_storage = pl.create_tile([STREAM_M, STREAM_N], dtype=pl.INT32,
+                                                      target_memory=pl.MemorySpace.Acc, compact=True)
+                        seed = pl.tile.set_validshape(seed_storage, count, STREAM_N)
+                        for outer, (outer_acc,) in pl.pipeline(0, Q_LORA // STREAM_L1_K, stage=2, init_values=(seed,)):
+                            k_base = outer * STREAM_L1_K
+                            a_l1 = pl.load(qr_i8_matmul, [t0, k_base], [STREAM_M, STREAM_L1_K],
+                                           valid_shape=[count, STREAM_L1_K], target_memory=pl.MemorySpace.Mat)
+                            b_l1 = pl.load(wq_b, [k_base, col], [STREAM_L1_K, STREAM_N],
+                                           target_memory=pl.MemorySpace.Mat)
+                            for inner, (inner_acc,) in pl.pipeline(
+                                0, STREAM_L1_K // STREAM_L0_K, stage=2, init_values=(outer_acc,),
+                            ):
+                                k_inner = inner * STREAM_L0_K
+                                a_l0 = pl.tile.extract(a_l1, 0, k_inner, [STREAM_M, STREAM_L0_K],
+                                                      target_memory=pl.MemorySpace.Left)
+                                b_l0 = pl.tile.extract(b_l1, k_inner, 0, [STREAM_L0_K, STREAM_N],
+                                                      target_memory=pl.MemorySpace.Right)
+                                updated = pl.tile.matmul_acc(inner_acc, a_l0, b_l0,
+                                                            init_cond=(outer == 0 and inner == 0))
+                                inner_done = pl.yield_(updated)
+                            outer_done = pl.yield_(inner_done)
+                        q_proj_i32 = pl.store(outer_done, [t0, col_local], q_proj_i32)
             dq_tid = q_proj_q_dequant_stream(
                 wq_b_scale,
                 rope_cos_il,

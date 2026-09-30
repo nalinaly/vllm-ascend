@@ -32,7 +32,34 @@
 性能版使用 `PTO_CSA_VARIANT=performance`、`VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0`。
 配置仍要求现有 TP1/S6 条件，未支持的 decode 形状回退 Native。
 
-## 已完成的检查
+## HCA 增量更新（2026-09-30 下午）
+
+继续合入 HCA 从 `ee88d87f` 到 `b1569fa1` 的六个提交，保留新增的过程文档、脚本和报告。
+本次生产变更只有三个文件：
+
+- `deepseek_v4_flash_hca/q_projection_streamed.py`：接入 Q-B 的 L1 K512 搬运与 L0 K128 双缓冲，
+  保留四组 head 交接和动态有效行的 compact Acc。
+- 公共 `deepseek_v4_flash_dspark_perf/decode_o_proj.py`：接入 HCA 使用的 O-A 两级流水。
+  CSA 的调用显式传入 `PIPELINE_OA=False`，保留既有融合 HC_post、直接 TaskId 和 T=96 收尾调度。
+- `deepseek_v4_flash_hca/o_proj_hc_post.py`：保留第一次合并时移入的 HCA 分组组织函数，
+  补齐 `PIPELINE_OA` 参数并向公共矩阵乘转发 `True`。不能直接用 HCA 分支的整个公共文件覆盖 CSA。
+
+仅按本次接口冲突做定向验证：HCA 完整 root 编译并加载设备库通过，CSA 性能版完整 root
+设备代码编译通过；均在 CPU 上完成，没有设备执行。NZ2、atomic0，复用现有调试工具链，
+不修改 PyPTO/Simpler。补位 slot 的三个 CPU 用例通过。小型编译报告见
+`hca_update_compile.json`，生成源码、库和编译日志留在本地结果目录，不进入 Git。
+
+上午的联合功能结果只适用于更新前版本。14:49 核对发现机器启动时间为 13:04:36，
+Native worker 与 engine 进程已消失，原日志止于 12:16 的静态编译等待；没有 Native rank JSON，
+也没有 token 对比结果。不能把队列残留的 running 当作任务仍在执行。
+
+重启后 `pto-task.service` 为 not-found/inactive，task-daemon PID 文件对应的进程不存在；
+当前用户 `sudo -n -l` 返回需要密码。已向旧任务发送终止请求，但守护进程未运行，尚未收到确认。
+已请求恢复队列，不绕过 task-submit 裸跑设备，也不修改其他会话的队列状态。
+恢复后先做本次合并的 CSA/HCA 单卡功能，再重新执行 `run_validation.sh` 的联合整网功能和
+输出 token 精度；两项通过后才使用 `run_model.sh` 采性能。输出使用新目录，保留上午的旧版证据。
+
+## 首次合并已完成的检查
 
 - 配置选择、批次参数传递、性能层映射、离线批次及 token 比较：51 项 CPU 检查通过。
 - CSA 精度版完整链 CPU lowering 通过，记录于 `precision_lower.json`；不替代设备精度结论。
@@ -67,7 +94,7 @@
 功能检查的 6 项 CPU 用例通过，包含缺 rank、缺 HCA 层、未重放、未恢复完整 KV 和
 输出 token 数不足的反例；生产算子和部署配置未变。
 
-当前任务：`task_20260930_113437_389283610684`。
+旧版任务：`task_20260930_113437_389283610684`，进程已消失，见上方重启说明。
 本地结果：`results/csa_hca_merge_20260930/validation_h131072_b16_v1`。
 这是 128K/B16 联合整网代表场景，不代表七档、请求生命周期或全部 padding 场景通过。
 
@@ -75,7 +102,7 @@
 每 rank 在实际 T=96 档位重放联合图 33 次，覆盖全部 41 层，生成 49,152 个 token。
 逐 rank 检查记录见 `functional_h131072_b16.json`。已复核原始 `pto/rank*.json`，
 16 个 rank 的实际运行配置一致，norm/quant 融合、静态 kernel 与 FULL_DECODE_ONLY 均开启。
-Native 精度对照正在初始化，此时不记录 token 一致或性能通过。
+Native 精度对照未完成，进程已在机器重启前后消失；不记录 token 一致或性能通过。
 
 ## 配置及历史任务
 

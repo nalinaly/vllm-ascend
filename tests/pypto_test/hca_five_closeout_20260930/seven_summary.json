@@ -1,0 +1,2032 @@
+{
+  "status": "COMPLETE",
+  "source": {
+    "baseline_commit": "29917c4e",
+    "sources": {
+      "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/production",
+      "kshift_schedule": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/kshift_schedule",
+      "before_qb": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base"
+    },
+    "scope": "仅五点收尾：复核点2与已落地点3的组合，最终29917c4e完成七档单卡/泳道/完整状态检查。用户明确16卡不用本会话做，模型任务在pending状态撤回。",
+    "device_tests_resumed_by_user": true,
+    "candidate_change": "在当前Q-B双缓冲基础上应用原有K-shift+O-A early-resolve关闭补丁；未改调参。",
+    "final_version": "29917c4e",
+    "candidate_decision": "仅保留候选：长档3/5组改善且其余四组平均慢0.75us，短档均值+5.825us。七档与模型验收固定production，仅点3入默认。",
+    "seven_cases": [
+      [
+        131072,
+        4
+      ],
+      [
+        131072,
+        8
+      ],
+      [
+        131072,
+        16
+      ],
+      [
+        131072,
+        24
+      ],
+      [
+        8192,
+        16
+      ],
+      [
+        8192,
+        24
+      ],
+      [
+        8192,
+        32
+      ]
+    ],
+    "toolchain": {
+      "pypto": "88f605986",
+      "simpler": "a54c05095"
+    },
+    "model_validation": {
+      "status": "CANCELLED_BEFORE_START",
+      "reason": "用户明确16卡不用本会话做",
+      "task": "task_20260930_114155_1024083218",
+      "executed": false
+    }
+  },
+  "cases": [
+    {
+      "case": "h131072_b4",
+      "history": 131072,
+      "batch": 4,
+      "status": "MEASURED",
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b4/p1_native/report.json",
+          "samples_us": [
+            285.0,
+            278.25,
+            279.75,
+            278.25,
+            275.75,
+            287.75,
+            281.0,
+            276.75,
+            278.75,
+            279.0,
+            280.25,
+            280.0,
+            282.5,
+            279.25,
+            280.5,
+            280.25,
+            278.25,
+            279.75,
+            278.25,
+            280.75,
+            280.5,
+            281.5,
+            280.25,
+            277.0,
+            279.25,
+            281.25,
+            279.0,
+            280.25,
+            277.5,
+            280.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 275.75,
+            "max_us": 287.75,
+            "mean_us": 279.89166666666665,
+            "p50_us": 279.875,
+            "p95_us": 282.5
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 1788,
+              "max_abs": 0.015625,
+              "rmse": 0.00017138114997256528
+            },
+            "swa.0": {
+              "mismatches": 1,
+              "max_abs": 0.0009765625,
+              "rmse": 1.254264734690531e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b4/p2_before/report.json",
+          "samples_us": [
+            381.5,
+            354.75,
+            346.25,
+            344.5,
+            344.0,
+            380.75,
+            343.75,
+            334.5,
+            337.25,
+            337.0,
+            347.0,
+            339.0,
+            343.5,
+            342.5,
+            348.0,
+            332.0,
+            332.0,
+            335.75,
+            349.0,
+            342.25,
+            347.0,
+            336.0,
+            342.0,
+            346.0,
+            347.5,
+            342.25,
+            342.0,
+            338.0,
+            334.75,
+            338.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 332.0,
+            "max_us": 381.5,
+            "mean_us": 344.3,
+            "p50_us": 342.375,
+            "p95_us": 354.75
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b4/p3_final/report.json",
+          "samples_us": [
+            360.0,
+            347.5,
+            342.0,
+            347.25,
+            332.75,
+            320.75,
+            334.5,
+            338.0,
+            321.25,
+            340.5,
+            324.25,
+            330.0,
+            340.75,
+            339.0,
+            321.25,
+            328.75,
+            335.5,
+            322.5,
+            321.25,
+            328.75,
+            340.75,
+            332.0,
+            328.0,
+            332.25,
+            331.0,
+            339.0,
+            322.25,
+            306.0,
+            330.25,
+            339.5
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 306.0,
+            "max_us": 360.0,
+            "mean_us": 332.5833333333333,
+            "p50_us": 332.125,
+            "p95_us": 347.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b4/p4_native/report.json",
+          "samples_us": [
+            300.5,
+            294.5,
+            290.0,
+            294.0,
+            313.0,
+            296.5,
+            292.5,
+            294.25,
+            293.5,
+            294.75,
+            293.25,
+            293.5,
+            314.0,
+            312.5,
+            313.5,
+            296.0,
+            292.75,
+            295.5,
+            293.25,
+            294.75,
+            294.0,
+            295.0,
+            294.5,
+            315.0,
+            293.25,
+            297.25,
+            292.0,
+            290.25,
+            292.75,
+            311.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 290.0,
+            "max_us": 315.0,
+            "mean_us": 297.925,
+            "p50_us": 294.5,
+            "p95_us": 313.5
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 1788,
+              "max_abs": 0.015625,
+              "rmse": 0.00017138114997256528
+            },
+            "swa.0": {
+              "mismatches": 1,
+              "max_abs": 0.0009765625,
+              "rmse": 1.254264734690531e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 275.75,
+        "max_us": 315.0,
+        "mean_us": 288.90833333333336,
+        "p50_us": 288.875,
+        "p95_us": 313.0
+      },
+      "before": {
+        "count": 30,
+        "min_us": 332.0,
+        "max_us": 381.5,
+        "mean_us": 344.3,
+        "p50_us": 342.375,
+        "p95_us": 354.75
+      },
+      "final": {
+        "count": 30,
+        "min_us": 306.0,
+        "max_us": 360.0,
+        "mean_us": 332.5833333333333,
+        "p50_us": 332.125,
+        "p95_us": 347.25
+      },
+      "final_vs_native_mean_percent": 15.117251723441672,
+      "final_vs_before_mean_percent": -3.403039984509637,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b4/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h131072_b8",
+      "history": 131072,
+      "batch": 8,
+      "status": "MEASURED",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b8/p1_native/report.json",
+          "samples_us": [
+            380.25,
+            393.0,
+            395.25,
+            394.0,
+            410.5,
+            392.0,
+            388.75,
+            390.25,
+            376.0,
+            393.75,
+            392.75,
+            428.5,
+            375.75,
+            392.75,
+            394.75,
+            394.25,
+            375.0,
+            395.25,
+            377.5,
+            393.5,
+            392.25,
+            394.5,
+            376.25,
+            378.5,
+            374.75,
+            397.25,
+            376.25,
+            395.25,
+            376.75,
+            393.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 374.75,
+            "max_us": 428.5,
+            "mean_us": 389.6166666666667,
+            "p50_us": 392.75,
+            "p95_us": 397.25
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b8/p2_before/report.json",
+          "samples_us": [
+            483.5,
+            428.75,
+            412.75,
+            417.5,
+            409.0,
+            414.0,
+            406.0,
+            423.25,
+            415.25,
+            404.5,
+            407.5,
+            412.5,
+            412.0,
+            410.75,
+            401.0,
+            403.5,
+            401.75,
+            398.25,
+            411.25,
+            413.25,
+            401.25,
+            402.75,
+            399.25,
+            406.0,
+            408.25,
+            396.75,
+            410.5,
+            406.75,
+            401.0,
+            410.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 396.75,
+            "max_us": 483.5,
+            "mean_us": 410.98333333333335,
+            "p50_us": 408.625,
+            "p95_us": 423.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b8/p3_final/report.json",
+          "samples_us": [
+            508.25,
+            422.5,
+            410.25,
+            407.75,
+            415.5,
+            408.5,
+            397.5,
+            410.5,
+            403.0,
+            394.75,
+            410.25,
+            411.75,
+            412.0,
+            405.5,
+            410.75,
+            410.5,
+            408.75,
+            402.0,
+            390.0,
+            409.25,
+            407.0,
+            404.25,
+            401.75,
+            409.25,
+            416.0,
+            400.0,
+            409.0,
+            401.75,
+            400.0,
+            408.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 390.0,
+            "max_us": 508.25,
+            "mean_us": 410.23333333333335,
+            "p50_us": 408.75,
+            "p95_us": 416.0
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b8/p4_native/report.json",
+          "samples_us": [
+            400.0,
+            416.75,
+            411.25,
+            412.5,
+            438.0,
+            419.75,
+            408.25,
+            414.25,
+            415.25,
+            414.25,
+            396.5,
+            425.25,
+            417.25,
+            411.75,
+            410.75,
+            414.0,
+            414.5,
+            412.5,
+            411.5,
+            415.75,
+            398.0,
+            417.5,
+            413.75,
+            414.25,
+            410.75,
+            411.5,
+            415.25,
+            413.75,
+            410.75,
+            411.5
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 396.5,
+            "max_us": 438.0,
+            "mean_us": 413.23333333333335,
+            "p50_us": 413.75,
+            "p95_us": 419.75
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 374.75,
+        "max_us": 438.0,
+        "mean_us": 401.425,
+        "p50_us": 399.0,
+        "p95_us": 419.75
+      },
+      "before": {
+        "count": 30,
+        "min_us": 396.75,
+        "max_us": 483.5,
+        "mean_us": 410.98333333333335,
+        "p50_us": 408.625,
+        "p95_us": 423.25
+      },
+      "final": {
+        "count": 30,
+        "min_us": 390.0,
+        "max_us": 508.25,
+        "mean_us": 410.23333333333335,
+        "p50_us": 408.75,
+        "p95_us": 416.0
+      },
+      "final_vs_native_mean_percent": 2.194266259782851,
+      "final_vs_before_mean_percent": -0.18248915203373794,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b8/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h131072_b16",
+      "history": 131072,
+      "batch": 16,
+      "status": "MEASURED",
+      "device": 2,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b16/p1_native/report.json",
+          "samples_us": [
+            556.25,
+            548.25,
+            549.75,
+            544.25,
+            548.0,
+            546.25,
+            540.75,
+            544.0,
+            569.0,
+            545.25,
+            543.75,
+            541.25,
+            546.75,
+            543.75,
+            550.75,
+            541.75,
+            531.25,
+            547.5,
+            542.25,
+            542.0,
+            546.25,
+            545.5,
+            546.5,
+            542.75,
+            545.25,
+            544.75,
+            544.75,
+            545.5,
+            545.75,
+            547.5
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 531.25,
+            "max_us": 569.0,
+            "mean_us": 545.9083333333333,
+            "p50_us": 545.375,
+            "p95_us": 550.75
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 15814,
+              "max_abs": 0.015625,
+              "rmse": 0.00025832636810872354
+            },
+            "swa.0": {
+              "mismatches": 9,
+              "max_abs": 0.0078125,
+              "rmse": 5.198251420362164e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b16/p2_before/report.json",
+          "samples_us": [
+            612.5,
+            611.0,
+            586.0,
+            578.5,
+            569.25,
+            575.25,
+            568.75,
+            581.25,
+            561.0,
+            560.75,
+            565.0,
+            567.25,
+            552.0,
+            562.5,
+            561.0,
+            567.0,
+            562.5,
+            564.5,
+            568.5,
+            563.0,
+            583.75,
+            561.5,
+            557.75,
+            561.75,
+            569.75,
+            569.0,
+            563.0,
+            551.75,
+            562.75,
+            558.5
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 551.75,
+            "max_us": 612.5,
+            "mean_us": 569.2333333333333,
+            "p50_us": 564.75,
+            "p95_us": 586.0
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b16/p3_final/report.json",
+          "samples_us": [
+            634.25,
+            597.5,
+            602.5,
+            598.25,
+            585.5,
+            589.25,
+            593.5,
+            570.75,
+            588.25,
+            586.5,
+            592.25,
+            599.75,
+            593.5,
+            582.75,
+            587.0,
+            591.25,
+            599.0,
+            582.25,
+            598.0,
+            576.5,
+            592.25,
+            588.5,
+            578.75,
+            584.5,
+            583.25,
+            580.75,
+            597.25,
+            578.75,
+            594.25,
+            595.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 570.75,
+            "max_us": 634.25,
+            "mean_us": 590.725,
+            "p50_us": 590.25,
+            "p95_us": 599.75
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b16/p4_native/report.json",
+          "samples_us": [
+            580.0,
+            546.25,
+            541.75,
+            541.25,
+            525.75,
+            541.5,
+            540.75,
+            536.0,
+            538.25,
+            538.75,
+            539.0,
+            542.25,
+            523.25,
+            525.25,
+            540.0,
+            538.0,
+            539.5,
+            565.5,
+            542.75,
+            536.5,
+            545.75,
+            539.0,
+            542.0,
+            547.25,
+            524.75,
+            540.75,
+            541.5,
+            543.0,
+            540.25,
+            524.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 523.25,
+            "max_us": 580.0,
+            "mean_us": 540.3583333333333,
+            "p50_us": 540.5,
+            "p95_us": 547.25
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 15814,
+              "max_abs": 0.015625,
+              "rmse": 0.00025832636810872354
+            },
+            "swa.0": {
+              "mismatches": 9,
+              "max_abs": 0.0078125,
+              "rmse": 5.198251420362164e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 523.25,
+        "max_us": 580.0,
+        "mean_us": 543.1333333333333,
+        "p50_us": 542.75,
+        "p95_us": 556.25
+      },
+      "before": {
+        "count": 30,
+        "min_us": 551.75,
+        "max_us": 612.5,
+        "mean_us": 569.2333333333333,
+        "p50_us": 564.75,
+        "p95_us": 586.0
+      },
+      "final": {
+        "count": 30,
+        "min_us": 570.75,
+        "max_us": 634.25,
+        "mean_us": 590.725,
+        "p50_us": 590.25,
+        "p95_us": 599.75
+      },
+      "final_vs_native_mean_percent": 8.762427887565982,
+      "final_vs_before_mean_percent": 3.775546056098844,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b16/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h131072_b24",
+      "history": 131072,
+      "batch": 24,
+      "status": "MEASURED",
+      "device": 3,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b24/p1_native/report.json",
+          "samples_us": [
+            756.0,
+            739.0,
+            729.75,
+            733.0,
+            729.5,
+            728.75,
+            734.25,
+            732.75,
+            729.75,
+            735.75,
+            731.75,
+            733.25,
+            728.25,
+            727.0,
+            733.25,
+            731.25,
+            730.75,
+            733.5,
+            735.25,
+            732.75,
+            734.25,
+            719.0,
+            729.0,
+            733.5,
+            730.0,
+            736.0,
+            729.0,
+            730.0,
+            730.5,
+            734.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 719.0,
+            "max_us": 756.0,
+            "mean_us": 732.3583333333333,
+            "p50_us": 732.25,
+            "p95_us": 736.0
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 22205,
+              "max_abs": 0.015625,
+              "rmse": 0.0002491762909279169
+            },
+            "swa.0": {
+              "mismatches": 20,
+              "max_abs": 0.0078125,
+              "rmse": 5.391697816192945e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b24/p2_before/report.json",
+          "samples_us": [
+            788.75,
+            788.5,
+            789.75,
+            783.0,
+            794.5,
+            778.25,
+            783.25,
+            773.5,
+            780.25,
+            768.75,
+            779.0,
+            782.75,
+            789.25,
+            793.25,
+            789.5,
+            790.75,
+            779.25,
+            789.0,
+            809.0,
+            780.25,
+            785.0,
+            785.0,
+            777.5,
+            782.75,
+            789.5,
+            775.75,
+            789.75,
+            771.5,
+            775.75,
+            777.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 768.75,
+            "max_us": 809.0,
+            "mean_us": 784.0083333333333,
+            "p50_us": 783.125,
+            "p95_us": 793.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b24/p3_final/report.json",
+          "samples_us": [
+            787.25,
+            777.0,
+            783.25,
+            781.75,
+            779.0,
+            809.75,
+            810.75,
+            779.75,
+            795.5,
+            767.25,
+            778.0,
+            770.25,
+            803.75,
+            780.75,
+            781.75,
+            781.0,
+            792.75,
+            786.75,
+            778.5,
+            786.5,
+            774.5,
+            767.75,
+            794.5,
+            795.25,
+            764.25,
+            772.25,
+            771.0,
+            767.0,
+            771.0,
+            769.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 764.25,
+            "max_us": 810.75,
+            "mean_us": 781.9333333333333,
+            "p50_us": 780.25,
+            "p95_us": 803.75
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b24/p4_native/report.json",
+          "samples_us": [
+            760.75,
+            723.25,
+            720.5,
+            717.25,
+            724.5,
+            719.5,
+            719.5,
+            712.75,
+            716.75,
+            717.75,
+            717.75,
+            715.25,
+            716.25,
+            720.75,
+            720.25,
+            716.0,
+            717.0,
+            720.5,
+            721.0,
+            712.25,
+            718.5,
+            719.25,
+            718.75,
+            714.75,
+            716.75,
+            717.25,
+            718.0,
+            720.5,
+            717.0,
+            719.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 712.25,
+            "max_us": 760.75,
+            "mean_us": 719.6666666666666,
+            "p50_us": 718.25,
+            "p95_us": 723.25
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 22205,
+              "max_abs": 0.015625,
+              "rmse": 0.0002491762909279169
+            },
+            "swa.0": {
+              "mismatches": 20,
+              "max_abs": 0.0078125,
+              "rmse": 5.391697816192945e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 712.25,
+        "max_us": 760.75,
+        "mean_us": 726.0125,
+        "p50_us": 725.75,
+        "p95_us": 736.0
+      },
+      "before": {
+        "count": 30,
+        "min_us": 768.75,
+        "max_us": 809.0,
+        "mean_us": 784.0083333333333,
+        "p50_us": 783.125,
+        "p95_us": 793.25
+      },
+      "final": {
+        "count": 30,
+        "min_us": 764.25,
+        "max_us": 810.75,
+        "mean_us": 781.9333333333333,
+        "p50_us": 780.25,
+        "p95_us": 803.75
+      },
+      "final_vs_native_mean_percent": 7.7024615049097855,
+      "final_vs_before_mean_percent": -0.26466555415015636,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h131072_b24/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h8192_b16",
+      "history": 8192,
+      "batch": 16,
+      "status": "MEASURED",
+      "device": 4,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b16/p1_native/report.json",
+          "samples_us": [
+            406.0,
+            402.75,
+            418.0,
+            403.5,
+            418.75,
+            419.25,
+            417.25,
+            416.0,
+            422.25,
+            417.25,
+            419.25,
+            424.0,
+            420.75,
+            417.0,
+            418.5,
+            415.75,
+            404.0,
+            420.5,
+            419.0,
+            417.0,
+            402.5,
+            416.25,
+            418.75,
+            417.75,
+            421.25,
+            422.0,
+            420.25,
+            419.5,
+            420.5,
+            419.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 402.5,
+            "max_us": 424.0,
+            "mean_us": 416.5083333333333,
+            "p50_us": 418.625,
+            "p95_us": 422.0
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 24928,
+              "max_abs": 0.015625,
+              "rmse": 0.0003589514588740321
+            },
+            "swa.0": {
+              "mismatches": 9,
+              "max_abs": 0.0078125,
+              "rmse": 5.198251420362164e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b16/p2_before/report.json",
+          "samples_us": [
+            513.25,
+            444.75,
+            427.75,
+            429.5,
+            431.25,
+            441.75,
+            417.5,
+            425.5,
+            432.5,
+            425.0,
+            426.25,
+            429.5,
+            421.75,
+            438.5,
+            428.5,
+            433.5,
+            429.75,
+            426.75,
+            436.25,
+            440.5,
+            417.75,
+            434.25,
+            433.75,
+            447.5,
+            423.5,
+            432.0,
+            419.75,
+            437.0,
+            433.25,
+            428.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 417.5,
+            "max_us": 513.25,
+            "mean_us": 433.55833333333334,
+            "p50_us": 430.5,
+            "p95_us": 444.75
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b16/p3_final/report.json",
+          "samples_us": [
+            487.25,
+            440.25,
+            434.25,
+            417.0,
+            426.0,
+            418.75,
+            416.5,
+            419.5,
+            417.5,
+            423.75,
+            416.5,
+            434.25,
+            419.25,
+            417.5,
+            420.0,
+            414.25,
+            404.75,
+            417.5,
+            414.0,
+            429.5,
+            406.75,
+            416.0,
+            413.75,
+            419.5,
+            421.0,
+            414.5,
+            422.0,
+            421.0,
+            428.0,
+            429.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 404.75,
+            "max_us": 487.25,
+            "mean_us": 422.68333333333334,
+            "p50_us": 419.375,
+            "p95_us": 434.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b16/p4_native/report.json",
+          "samples_us": [
+            410.25,
+            422.0,
+            419.75,
+            418.0,
+            408.5,
+            420.25,
+            422.0,
+            420.5,
+            421.75,
+            423.25,
+            419.25,
+            423.5,
+            402.75,
+            404.75,
+            421.0,
+            416.0,
+            404.25,
+            422.0,
+            418.25,
+            420.0,
+            405.75,
+            421.25,
+            419.75,
+            419.0,
+            425.75,
+            416.75,
+            422.0,
+            413.0,
+            407.25,
+            420.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 402.75,
+            "max_us": 425.75,
+            "mean_us": 416.9583333333333,
+            "p50_us": 419.75,
+            "p95_us": 423.25
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 24928,
+              "max_abs": 0.015625,
+              "rmse": 0.0003589514588740321
+            },
+            "swa.0": {
+              "mismatches": 9,
+              "max_abs": 0.0078125,
+              "rmse": 5.198251420362164e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 402.5,
+        "max_us": 425.75,
+        "mean_us": 416.73333333333335,
+        "p50_us": 419.0,
+        "p95_us": 423.25
+      },
+      "before": {
+        "count": 30,
+        "min_us": 417.5,
+        "max_us": 513.25,
+        "mean_us": 433.55833333333334,
+        "p50_us": 430.5,
+        "p95_us": 444.75
+      },
+      "final": {
+        "count": 30,
+        "min_us": 404.75,
+        "max_us": 487.25,
+        "mean_us": 422.68333333333334,
+        "p50_us": 419.375,
+        "p95_us": 434.25
+      },
+      "final_vs_native_mean_percent": 1.4277715565509386,
+      "final_vs_before_mean_percent": -2.5083129913314295,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b16/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h8192_b24",
+      "history": 8192,
+      "batch": 24,
+      "status": "MEASURED",
+      "device": 5,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b24/p1_native/report.json",
+          "samples_us": [
+            538.25,
+            526.0,
+            518.5,
+            524.0,
+            522.5,
+            522.75,
+            524.75,
+            523.75,
+            523.75,
+            524.75,
+            523.25,
+            523.0,
+            529.0,
+            529.75,
+            523.5,
+            524.25,
+            524.5,
+            525.25,
+            522.0,
+            524.25,
+            523.0,
+            522.25,
+            520.25,
+            526.0,
+            523.75,
+            524.75,
+            523.5,
+            523.5,
+            523.25,
+            526.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 518.5,
+            "max_us": 538.25,
+            "mean_us": 524.475,
+            "p50_us": 523.75,
+            "p95_us": 529.0
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 36118,
+              "max_abs": 0.015625,
+              "rmse": 0.0003517470681252689
+            },
+            "swa.0": {
+              "mismatches": 20,
+              "max_abs": 0.0078125,
+              "rmse": 5.391697816192945e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b24/p2_before/report.json",
+          "samples_us": [
+            661.75,
+            603.75,
+            619.75,
+            621.0,
+            594.0,
+            595.0,
+            600.25,
+            613.0,
+            610.75,
+            617.5,
+            594.75,
+            625.5,
+            652.25,
+            599.5,
+            606.0,
+            601.0,
+            620.75,
+            609.25,
+            605.75,
+            595.75,
+            613.5,
+            620.0,
+            599.0,
+            610.75,
+            588.5,
+            615.5,
+            600.5,
+            591.5,
+            603.25,
+            602.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 588.5,
+            "max_us": 661.75,
+            "mean_us": 609.7333333333333,
+            "p50_us": 605.875,
+            "p95_us": 625.5
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b24/p3_final/report.json",
+          "samples_us": [
+            636.0,
+            628.25,
+            610.25,
+            629.25,
+            613.75,
+            617.75,
+            608.25,
+            616.0,
+            622.25,
+            630.25,
+            619.75,
+            618.0,
+            617.25,
+            615.25,
+            616.75,
+            619.75,
+            615.75,
+            613.5,
+            613.75,
+            618.5,
+            619.0,
+            608.5,
+            629.5,
+            619.0,
+            609.75,
+            630.25,
+            619.25,
+            618.75,
+            626.0,
+            626.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 608.25,
+            "max_us": 636.0,
+            "mean_us": 619.5416666666666,
+            "p50_us": 618.625,
+            "p95_us": 630.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b24/p4_native/report.json",
+          "samples_us": [
+            547.5,
+            542.25,
+            526.5,
+            536.0,
+            539.0,
+            536.5,
+            532.25,
+            536.5,
+            531.5,
+            576.75,
+            527.0,
+            529.75,
+            530.0,
+            535.5,
+            525.5,
+            557.75,
+            533.75,
+            526.5,
+            531.25,
+            532.25,
+            534.0,
+            535.5,
+            529.5,
+            531.0,
+            533.5,
+            531.25,
+            530.5,
+            536.5,
+            533.0,
+            535.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 525.5,
+            "max_us": 576.75,
+            "mean_us": 535.4833333333333,
+            "p50_us": 533.25,
+            "p95_us": 547.5
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 36118,
+              "max_abs": 0.015625,
+              "rmse": 0.0003517470681252689
+            },
+            "swa.0": {
+              "mismatches": 20,
+              "max_abs": 0.0078125,
+              "rmse": 5.391697816192945e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 518.5,
+        "max_us": 576.75,
+        "mean_us": 529.9791666666666,
+        "p50_us": 526.75,
+        "p95_us": 542.25
+      },
+      "before": {
+        "count": 30,
+        "min_us": 588.5,
+        "max_us": 661.75,
+        "mean_us": 609.7333333333333,
+        "p50_us": 605.875,
+        "p95_us": 625.5
+      },
+      "final": {
+        "count": 30,
+        "min_us": 608.25,
+        "max_us": 636.0,
+        "mean_us": 619.5416666666666,
+        "p50_us": 618.625,
+        "p95_us": 630.25
+      },
+      "final_vs_native_mean_percent": 16.899249184323285,
+      "final_vs_before_mean_percent": 1.608626722064277,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b24/swimlane_final/dfx/merged_swimlane.json"
+    },
+    {
+      "case": "h8192_b32",
+      "history": 8192,
+      "batch": 32,
+      "status": "MEASURED",
+      "device": 6,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "passes": {
+        "p1_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b32/p1_native/report.json",
+          "samples_us": [
+            625.75,
+            601.5,
+            600.25,
+            602.5,
+            587.75,
+            598.25,
+            597.25,
+            599.0,
+            598.25,
+            597.75,
+            602.5,
+            600.0,
+            602.0,
+            602.75,
+            602.5,
+            605.75,
+            588.75,
+            602.25,
+            597.75,
+            597.0,
+            596.5,
+            601.75,
+            599.75,
+            596.0,
+            602.25,
+            601.0,
+            620.75,
+            602.75,
+            609.5,
+            602.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 587.75,
+            "max_us": 625.75,
+            "mean_us": 601.3916666666667,
+            "p50_us": 601.25,
+            "p95_us": 609.5
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 53971,
+              "max_abs": 0.015625,
+              "rmse": 0.00036944571555735034
+            },
+            "swa.0": {
+              "mismatches": 29,
+              "max_abs": 0.0078125,
+              "rmse": 6.310092772060667e-06
+            }
+          }
+        },
+        "p2_before": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b32/p2_before/report.json",
+          "samples_us": [
+            723.25,
+            771.0,
+            692.75,
+            686.0,
+            687.25,
+            736.5,
+            699.5,
+            691.5,
+            696.75,
+            697.75,
+            687.5,
+            688.5,
+            693.25,
+            751.0,
+            683.25,
+            758.25,
+            754.25,
+            748.75,
+            680.5,
+            684.75,
+            702.0,
+            697.25,
+            686.75,
+            701.75,
+            756.25,
+            753.0,
+            746.75,
+            701.0,
+            759.25,
+            694.75
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 680.5,
+            "max_us": 771.0,
+            "mean_us": 713.7,
+            "p50_us": 698.625,
+            "p95_us": 758.25
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p3_final": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b32/p3_final/report.json",
+          "samples_us": [
+            723.5,
+            699.75,
+            671.25,
+            657.5,
+            674.0,
+            700.75,
+            662.25,
+            695.5,
+            688.75,
+            657.0,
+            648.5,
+            681.0,
+            662.25,
+            654.25,
+            680.5,
+            652.0,
+            652.75,
+            676.5,
+            666.5,
+            684.5,
+            650.0,
+            695.0,
+            660.5,
+            645.75,
+            653.5,
+            667.5,
+            651.75,
+            681.5,
+            685.25,
+            673.25
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 645.75,
+            "max_us": 723.5,
+            "mean_us": 671.7666666666667,
+            "p50_us": 669.375,
+            "p95_us": 699.75
+          },
+          "compiler": {
+            "static_compile_results": [],
+            "static_super_flags": [],
+            "installed_static_packages": 0,
+            "pto_dispatch_calls": 3,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {}
+        },
+        "p4_native": {
+          "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b32/p4_native/report.json",
+          "samples_us": [
+            622.5,
+            597.25,
+            594.0,
+            595.25,
+            600.75,
+            592.25,
+            596.0,
+            593.0,
+            600.0,
+            593.75,
+            593.75,
+            595.5,
+            593.75,
+            598.0,
+            596.75,
+            594.0,
+            593.0,
+            593.75,
+            594.0,
+            606.5,
+            599.0,
+            595.0,
+            592.5,
+            599.0,
+            594.25,
+            597.0,
+            596.5,
+            595.75,
+            595.75,
+            596.0
+          ],
+          "stats": {
+            "count": 30,
+            "min_us": 592.25,
+            "max_us": 622.5,
+            "mean_us": 596.8166666666667,
+            "p50_us": 595.625,
+            "p95_us": 600.75
+          },
+          "compiler": {
+            "static_compile_results": [
+              true
+            ],
+            "static_super_flags": [
+              true
+            ],
+            "installed_static_packages": 1,
+            "pto_dispatch_calls": 0,
+            "module_compiled_attr": false,
+            "module_aot_loaded_attr": false
+          },
+          "native_eager_differences": {
+            "x_out": {
+              "mismatches": 53971,
+              "max_abs": 0.015625,
+              "rmse": 0.00036944571555735034
+            },
+            "swa.0": {
+              "mismatches": 29,
+              "max_abs": 0.0078125,
+              "rmse": 6.310092772060667e-06
+            }
+          }
+        }
+      },
+      "native": {
+        "count": 60,
+        "min_us": 587.75,
+        "max_us": 625.75,
+        "mean_us": 599.1041666666666,
+        "p50_us": 597.75,
+        "p95_us": 609.5
+      },
+      "before": {
+        "count": 30,
+        "min_us": 680.5,
+        "max_us": 771.0,
+        "mean_us": 713.7,
+        "p50_us": 698.625,
+        "p95_us": 758.25
+      },
+      "final": {
+        "count": 30,
+        "min_us": 645.75,
+        "max_us": 723.5,
+        "mean_us": 671.7666666666667,
+        "p50_us": 669.375,
+        "p95_us": 699.75
+      },
+      "final_vs_native_mean_percent": 12.128525228639987,
+      "final_vs_before_mean_percent": -5.8754845640091595,
+      "state_equivalence": {
+        "exact": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "status": "PASS"
+      },
+      "swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/seven/h8192_b32/swimlane_final/dfx/merged_swimlane.json"
+    }
+  ],
+  "scope": "正式第3层真实权重、合成历史、同卡设备span；PTO完整状态只比较优化前后。不是整网性能或跨Native数值验收。",
+  "native_policy": "CANN9.2/NZ2/npugraph_ex dynamic=False/inplace/static/SuperKernel开启；PTO关闭SuperKernel",
+  "p95_estimator": "sorted(samples)[floor(0.95*(n-1))]；native60个样本，before/final各30个",
+  "weighted_long_short_8_to_2": {
+    "final_vs_before_mean_percent": -0.46660778247069157,
+    "final_vs_native_mean_percent": 8.785651206441006
+  },
+  "download_directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/download_hca_7cases_29917c4e"
+}
