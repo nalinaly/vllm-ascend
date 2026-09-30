@@ -1,0 +1,732 @@
+{
+  "kind": "从原始 report.json 提取的摘要，不是设备原始日志",
+  "source_base": "d468bd64",
+  "candidate": "本提交的 HCA Host 标量 factory 与适配层",
+  "pypto": "88f605986",
+  "simpler": "a54c05095",
+  "cann": "9.2.0-beta.2",
+  "heap_mib": 320,
+  "weight_nz_mode": 2,
+  "atomic_add": 0,
+  "cases": {
+    "b4_8192_ring": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/b4_8192_ring/report.json",
+      "task_id": "task_20260930_195352_24479557129",
+      "status": "MEASURED",
+      "runtime": "tensormap_and_ringbuffer",
+      "batch": 4,
+      "history": 8192,
+      "task_device": "0",
+      "effective_compilation": {
+        "cudagraph_mode": "FULL_DECODE_ONLY",
+        "enable_npugraph_ex": true,
+        "enable_static_kernel": true,
+        "fuse_norm_quant": true
+      },
+      "pto_native": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 117025,
+          "max_abs": 0.015625,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 3737,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 49167,
+          "max_abs": null,
+          "nonfinite": 0
+        }
+      },
+      "service_direct": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "graph_eager": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "native_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "pto_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "graph_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "timing": {
+        "scope": "mHC pre + input norm + HCA attention + mHC post；包含本层 compact metadata 生成",
+        "method": "图外 NPU Event；相同初态交替 A/B、B/A；无 profiler；恢复与编译不计时",
+        "iters": 10,
+        "warmup": 5,
+        "native": {
+          "samples_us": [
+            364.0199899673462,
+            373.56001138687134,
+            377.90000438690186,
+            368.259996175766,
+            364.34000730514526,
+            376.96000933647156,
+            360.76000332832336,
+            374.4800090789795,
+            375.88000297546387,
+            365.79999327659607
+          ],
+          "us_min": 360.76000332832336,
+          "us_mean": 370.1960027217865,
+          "us_max": 377.90000438690186,
+          "us_p95": 377.90000438690186,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto": {
+          "samples_us": [
+            329.4000029563904,
+            327.45999097824097,
+            326.4800012111664,
+            328.33999395370483,
+            317.8600072860718,
+            330.00001311302185,
+            319.9000060558319,
+            323.6199915409088,
+            310.95999479293823,
+            332.3200047016144
+          ],
+          "us_min": 310.95999479293823,
+          "us_mean": 324.63400065898895,
+          "us_max": 332.3200047016144,
+          "us_p95": 332.3200047016144,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto_direct": {
+          "samples_us": [
+            312.86001205444336,
+            335.2000117301941,
+            321.9600021839142,
+            318.8599944114685,
+            320.4599916934967,
+            338.4599983692169,
+            315.6200051307678,
+            336.7399871349335,
+            321.0799992084503,
+            329.3600082397461
+          ],
+          "us_min": 312.86001205444336,
+          "us_mean": 325.06000101566315,
+          "us_max": 338.4599983692169,
+          "us_p95": 338.4599983692169,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        }
+      }
+    },
+    "b4_8192_hbg": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/b4_8192_hbg/report.json",
+      "task_id": "task_20260930_195352_24479557129",
+      "status": "MEASURED",
+      "runtime": "host_build_graph",
+      "batch": 4,
+      "history": 8192,
+      "task_device": "0",
+      "effective_compilation": {
+        "cudagraph_mode": "FULL_DECODE_ONLY",
+        "enable_npugraph_ex": true,
+        "enable_static_kernel": true,
+        "fuse_norm_quant": true
+      },
+      "pto_reference": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "pto_native": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 117025,
+          "max_abs": 0.015625,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 3737,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 49167,
+          "max_abs": null,
+          "nonfinite": 0
+        }
+      },
+      "service_direct": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "graph_eager": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "native_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "pto_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "graph_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "timing": {
+        "scope": "mHC pre + input norm + HCA attention + mHC post；包含本层 compact metadata 生成",
+        "method": "图外 NPU Event；相同初态交替 A/B、B/A；无 profiler；恢复与编译不计时",
+        "iters": 10,
+        "warmup": 5,
+        "native": {
+          "samples_us": [
+            356.27999901771545,
+            348.6799895763397,
+            356.1199903488159,
+            350.43999552726746,
+            356.359988451004,
+            351.8199920654297,
+            379.0999948978424,
+            350.58000683784485,
+            358.9000105857849,
+            351.66001319885254
+          ],
+          "us_min": 348.6799895763397,
+          "us_mean": 355.9939980506897,
+          "us_max": 379.0999948978424,
+          "us_p95": 379.0999948978424,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto": {
+          "samples_us": [
+            68017.6010131836,
+            69234.00115966797,
+            67892.05932617188,
+            68445.32012939453,
+            69915.17639160156,
+            68796.73767089844,
+            69004.25720214844,
+            69285.7437133789,
+            69271.72088623047,
+            68153.60260009766
+          ],
+          "us_min": 67892.05932617188,
+          "us_mean": 68801.62200927734,
+          "us_max": 69915.17639160156,
+          "us_p95": 69915.17639160156,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto_direct": {
+          "samples_us": [
+            69346.28295898438,
+            70222.54180908203,
+            68453.79638671875,
+            68164.75677490234,
+            68700.52337646484,
+            69329.78057861328,
+            69318.603515625,
+            69552.84118652344,
+            68231.46057128906,
+            68823.66180419922
+          ],
+          "us_min": 68164.75677490234,
+          "us_mean": 69014.42489624023,
+          "us_max": 70222.54180908203,
+          "us_p95": 70222.54180908203,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        }
+      }
+    },
+    "b4_131072_ring": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/b4_131072_ring/report.json",
+      "task_id": "task_20260930_195553_246224614865",
+      "status": "MEASURED",
+      "runtime": "tensormap_and_ringbuffer",
+      "batch": 4,
+      "history": 131072,
+      "task_device": "1",
+      "effective_compilation": {
+        "cudagraph_mode": "FULL_DECODE_ONLY",
+        "enable_npugraph_ex": true,
+        "enable_static_kernel": true,
+        "fuse_norm_quant": true
+      },
+      "pto_native": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 74086,
+          "max_abs": 0.015625,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 3779,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 49167,
+          "max_abs": null,
+          "nonfinite": 0
+        }
+      },
+      "service_direct": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "graph_eager": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "native_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "pto_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "graph_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "timing": {
+        "scope": "mHC pre + input norm + HCA attention + mHC post；包含本层 compact metadata 生成",
+        "method": "图外 NPU Event；相同初态交替 A/B、B/A；无 profiler；恢复与编译不计时",
+        "iters": 10,
+        "warmup": 5,
+        "native": {
+          "samples_us": [
+            410.16000509262085,
+            395.70000767707825,
+            396.49999141693115,
+            404.5200049877167,
+            406.34000301361084,
+            402.7999937534332,
+            398.4600007534027,
+            406.9800078868866,
+            394.58000659942627,
+            405.77998757362366
+          ],
+          "us_min": 394.58000659942627,
+          "us_mean": 402.182000875473,
+          "us_max": 410.16000509262085,
+          "us_p95": 410.16000509262085,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto": {
+          "samples_us": [
+            351.6800105571747,
+            377.3599863052368,
+            353.92001271247864,
+            382.69999623298645,
+            353.81999611854553,
+            378.3999979496002,
+            358.3599925041199,
+            376.9800066947937,
+            349.73999857902527,
+            374.46001172065735
+          ],
+          "us_min": 349.73999857902527,
+          "us_mean": 365.74200093746185,
+          "us_max": 382.69999623298645,
+          "us_p95": 382.69999623298645,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto_direct": {
+          "samples_us": [
+            376.23998522758484,
+            407.71999955177307,
+            371.6000020503998,
+            376.92001461982727,
+            362.3400032520294,
+            384.7399950027466,
+            361.03999614715576,
+            378.80000472068787,
+            348.1200039386749,
+            386.4800035953522
+          ],
+          "us_min": 348.1200039386749,
+          "us_mean": 375.40000081062317,
+          "us_max": 407.71999955177307,
+          "us_p95": 407.71999955177307,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        }
+      }
+    },
+    "b4_131072_hbg": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/b4_131072_hbg/report.json",
+      "task_id": "task_20260930_195553_246224614865",
+      "status": "MEASURED",
+      "runtime": "host_build_graph",
+      "batch": 4,
+      "history": 131072,
+      "task_device": "1",
+      "effective_compilation": {
+        "cudagraph_mode": "FULL_DECODE_ONLY",
+        "enable_npugraph_ex": true,
+        "enable_static_kernel": true,
+        "fuse_norm_quant": true
+      },
+      "pto_reference": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "pto_native": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 74086,
+          "max_abs": 0.015625,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 3779,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 49167,
+          "max_abs": null,
+          "nonfinite": 0
+        }
+      },
+      "service_direct": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "graph_eager": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "native_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "pto_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "graph_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "timing": {
+        "scope": "mHC pre + input norm + HCA attention + mHC post；包含本层 compact metadata 生成",
+        "method": "图外 NPU Event；相同初态交替 A/B、B/A；无 profiler；恢复与编译不计时",
+        "iters": 10,
+        "warmup": 5,
+        "native": {
+          "samples_us": [
+            422.6999878883362,
+            430.1399886608124,
+            422.50001430511475,
+            422.2800135612488,
+            420.80000042915344,
+            419.979989528656,
+            421.31999135017395,
+            409.31999683380127,
+            432.3599934577942,
+            406.2800109386444
+          ],
+          "us_min": 406.2800109386444,
+          "us_mean": 420.76799869537354,
+          "us_max": 432.3599934577942,
+          "us_p95": 432.3599934577942,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto": {
+          "samples_us": [
+            76185.2798461914,
+            75803.1005859375,
+            74300.36163330078,
+            75946.38061523438,
+            75743.27850341797,
+            74566.48254394531,
+            76683.19702148438,
+            76499.13787841797,
+            74865.79895019531,
+            75541.99981689453
+          ],
+          "us_min": 74300.36163330078,
+          "us_mean": 75613.50173950195,
+          "us_max": 76683.19702148438,
+          "us_p95": 76683.19702148438,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        },
+        "pto_direct": {
+          "samples_us": [
+            78292.83905029297,
+            75996.8032836914,
+            74682.67822265625,
+            75722.71728515625,
+            75266.51763916016,
+            74772.91870117188,
+            74488.54064941406,
+            75663.52081298828,
+            75448.82202148438,
+            75226.73797607422
+          ],
+          "us_min": 74488.54064941406,
+          "us_mean": 75556.20956420898,
+          "us_max": 78292.83905029297,
+          "us_p95": 78292.83905029297,
+          "checks": {
+            "status": "PASS",
+            "checks": 4
+          }
+        }
+      }
+    },
+    "metadata_hbg": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/metadata_hbg/report.json",
+      "task_id": "task_20260930_195553_246224323462",
+      "status": "PASS",
+      "runtime": "host_build_graph",
+      "batch": 4,
+      "history_a": 124,
+      "history_b": 131070,
+      "table_history": 131070,
+      "task_device": "0",
+      "metadata_changed": [
+        "metadata['model.layers.3.self_attn.attn'].decode.block_table",
+        "metadata['model.layers.3.self_attn.attn'].decode.input_positions",
+        "metadata['model.layers.3.self_attn.attn'].decode.qli_metadata",
+        "metadata['model.layers.3.self_attn.attn'].decode.sas_metadata",
+        "metadata['model.layers.3.self_attn.attn'].decode.seq_lens",
+        "metadata['model.layers.3.self_attn.attn'].decode.start_pos",
+        "metadata['model.layers.3.self_attn.attn'].seq_lens",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.block_table",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.input_positions",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.qli_metadata",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.sas_metadata",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.seq_lens",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.slot_mapping",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].decode.start_pos",
+        "metadata['model.layers.3.self_attn.compressor.state_cache'].seq_lens",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.block_table",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.input_positions",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.qli_metadata",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.sas_metadata",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.seq_lens",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.slot_mapping",
+        "metadata['model.layers.3.self_attn.swa_cache'].decode.start_pos",
+        "metadata['model.layers.3.self_attn.swa_cache'].seq_lens"
+      ],
+      "steps": [
+        {
+          "state": "A",
+          "output_nonfinite": 0,
+          "graph_eager": {
+            "status": "PASS",
+            "checks": 4
+          },
+          "guards": {
+            "status": "PASS",
+            "checks": 18
+          }
+        },
+        {
+          "state": "B",
+          "output_nonfinite": 0,
+          "graph_eager": {
+            "status": "PASS",
+            "checks": 4
+          },
+          "graph_direct": {
+            "status": "PASS",
+            "checks": 4
+          },
+          "guards": {
+            "status": "PASS",
+            "checks": 18
+          }
+        },
+        {
+          "state": "A",
+          "output_nonfinite": 0,
+          "graph_eager": {
+            "status": "PASS",
+            "checks": 4
+          },
+          "repeat_a": {
+            "status": "PASS",
+            "checks": 4
+          },
+          "guards": {
+            "status": "PASS",
+            "checks": 18
+          }
+        }
+      ]
+    },
+    "ring_compat": {
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hca_hbg_integration_20260930/ring_compat/report.json",
+      "task_id": "task_20260930_195807_248112228607",
+      "status": "MEASURED",
+      "runtime": "tensormap_and_ringbuffer",
+      "batch": 4,
+      "history": 8192,
+      "task_device": "0",
+      "effective_compilation": {
+        "cudagraph_mode": "FULL_DECODE_ONLY",
+        "enable_npugraph_ex": true,
+        "enable_static_kernel": true,
+        "fuse_norm_quant": true
+      },
+      "pto_reference": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "pto_native": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 117025,
+          "max_abs": 0.015625,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 3737,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 49167,
+          "max_abs": null,
+          "nonfinite": 0
+        }
+      },
+      "service_direct": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "graph_eager": {
+        "output": "PASS",
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS"
+      },
+      "native_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "pto_guards": {
+        "status": "PASS",
+        "checks": 19
+      },
+      "graph_guards": {
+        "status": "PASS",
+        "checks": 19
+      }
+    }
+  },
+  "limits": [
+    "手工 NPUGraph 单卡合成历史，不替代正式 SK1 七档性能",
+    "未做 16 卡、联合 HBG 或 token/DSpark 验收",
+    "设备恢复/校验/清零环节尚未分别计时，不能给出单一根因",
+    "format.sh ci 因环境缺少 pre-commit 未完成"
+  ]
+}

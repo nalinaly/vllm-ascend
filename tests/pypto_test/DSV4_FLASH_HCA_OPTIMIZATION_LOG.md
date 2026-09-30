@@ -5959,6 +5959,9 @@ HCA 包共 68 处 `pl.read`（compressor 15、hc_pre 6、decode_hca 3、sparse_a
 
 ### 94.5 ✗ `runtime="host_build_graph"`：三个阻塞全解开，但慢 157 倍
 
+> 2026-09-30 修订：本次慢现象保留为历史测量；下文“NPUGraph 不兼容、Host 每次重建”的
+> 成因解释已撤回。独立 HBG 入口和动态 metadata 图验证见第 140 节，当前实测仍有严重退化。
+
 阻塞链（每一步都零接口改动）：
 
 | 阻塞 | 位置 | 修法 |
@@ -6080,6 +6083,8 @@ orchestration 层的 GM 标量读，按理删掉只会更快或无变化。
    都在质疑这个前提。
 
 ## 96. ⛔ HBG 路径按用户裁定停止；`readdown` 也否（2026-09-29）
+
+> 以下是当时裁定；用户 2026-09-30 重新要求 HCA 接入 HBG，恢复范围及结果见第 140 节。
 
 **用户 2026-09-29 裁定：「HBG 的路径停掉，之后我会安排做」。**
 第 94.5 节那条 `runtime=host_build_graph` 的线索到此为止，不再由本项目推进
@@ -8007,3 +8012,44 @@ PTO复用9月30日29917c4e的七档30步profiling和独立单次泳道，没有�
 21份JSON和逐档来源索引已汇聚、命名：
 `results/hca_native_sk0_profiles_20260930/download_hca_7cases_sk0_task_details_29917c4e/`。
 [完整文件说明、三步核对及取消记录](hca_native_sk0_profiles_20260930/README.md)。
+
+
+## 140. HCA 独立 HBG 入口：显式 Host scale，单卡功能通过，性能仍严重退化（2026-09-30）
+
+按用户新目标恢复 HBG 接入，直接修改 `dsv4-flash-pto-v0.25.1rc1`，没有新分支。
+CANN9.2.0-beta.2、PyPTO88f605986、Simpler a54c05095、正式第3层权重、NZ2、atomic=0。
+PyPTO/Simpler 未修改，Native cache 布局不变；默认仍为 ring。
+
+新增 `decode_hca_tp1_layer_hbg` / `dsv4_hca::attention_hbg`，原36个Tensor之后增加
+三个必填FP32 Host标量 `host_hc_scale0/1/2`。加载期从该层 `hc_attn_scale` 一次取得，
+调用和图重放期间不读设备标量。两入口通过Python factory共享算术；ring保留原六次Host读，
+HBG依赖图只消费显式参数。原Tensor ABI保留，适配层按Torch schema跳过constexpr。
+
+与CSA不同，HCA Host端不读取seqlen内容；长度/位置/slot在设备任务内读取，
+长短Attention分支看页表形状容量。没有添加无消费者的Host seqlen参数。
+权重更新须重新准备Host scale及重新捕获图；联合模型仍受CSA自身的Host分支约束。
+
+CPU真实kernel ABI编译两侧通过，独立ABI/加载期权重契约2项单测通过。
+新factory的原ring入口B4/8K回归也通过，与改动前四项结果逐bit一致，服务/图保护检查通过。
+B4/8K和B4/128K与改动前ring的输出、SWA/压缩cache/state四项逐bit一致；
+实际服务custom op、图重放、保护区通过。HBG服务图同址history124→131070→124，
+23项metadata及位置/页表更新，每步四项结果和18项保护检查通过；B另有独立直接调用对照。
+这是单卡合成历史，不是连续decode或16卡token/DSpark验收。
+
+同卡两进程图重放诊断，warmup5 + 10样本，μs；含本层compact metadata：
+
+| history/B | ring min | ring mean | ring max | HBG min | HBG mean | HBG max |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8192/4 | 310.96 | 324.63 | 332.32 | 67892.06 | 68801.62 | 69915.18 |
+| 131072/4 | 349.74 | 365.74 | 382.70 | 74300.36 | 75613.50 | 76683.20 |
+
+HBG直接算子均值69014.42/75556.21μs，同样退化；瓶颈不由服务入口compact开销解释。
+这是手工NPUGraph诊断，不替代torch.compile npugraph_ex + SK1正式七档表。
+
+第94.5节“Host每次重建所以不兼容NPUGraph”的解释撤回：当前图功能已验证。
+源码确认当前Simpler每次AICPU调用会 `restore_graph_packet`，包含图包checksum与
+描述校验、临时heap清零、镜像复制、调度状态恢复及flush，随后才启动任务执行。
+这些环节尚未分别计时，不把全部退化强行归因于任一环节；未通过跳过校验/清零来提速。
+
+[完整接口、复现命令、原始结果路径及任务证据](hca_hbg_integration_20260930/README.md)。
+`bash format.sh ci`因环境缺少pre-commit未完成。没有16卡任务，没有更改默认运行时。

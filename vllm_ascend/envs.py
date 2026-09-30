@@ -95,7 +95,7 @@ env_variables: dict[str, Callable[[], Any]] = {
     # 未显式设置时，性能版默认 0（真实 EP16 验证），精度版保持默认 1。
     # 仅接受 0/1，须在导入/编译算子前设置；不含敏感信息，不允许在 graph replay 期切换。
     "VLLM_ASCEND_PTO_CSA_ATOMIC_ADD": _pto_csa_atomic_add,
-    # CSA 运行时：沿用已有 PTO_CSA_RUNTIME 开关。HBG 需要性能版的独立 Host 标量入口。
+    # CSA/HCA 共用运行时。HBG 使用各自的独立 Host 标量入口；CSA 要求性能版。
     # 非敏感配置，必须在运行时初始化前设置，不可在同一进程内切换。
     "PTO_CSA_RUNTIME": lambda: os.getenv("PTO_CSA_RUNTIME", "tensormap_and_ringbuffer"),
     # Whether to anbale dynamic EPLB

@@ -59,6 +59,8 @@ def metadata_leaves(fixture):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--runtime", choices=["tensormap_and_ringbuffer", "host_build_graph"],
+                        default="tensormap_and_ringbuffer")
     parser.add_argument("--batch", type=int, default=4)
     parser.add_argument("--history-a", type=int, default=124)
     parser.add_argument("--history-b", type=int, default=8190)
@@ -68,11 +70,13 @@ def main():
     parser.add_argument("--deterministic-level", type=int, choices=[0, 1, 2], default=0)
     parser.add_argument("--checkpoint", type=Path, default=Path("/data/model/DeepSeek-V4-Flash-0731-w8a8"))
     args = parser.parse_args()
+    weight_options = {"host_scalars": True} if args.runtime == "host_build_graph" else {}
     if not os.environ.get("TASK_DEVICE"):
         raise RuntimeError("NPU 验证必须通过 task-submit 提交")
     args.output.mkdir(parents=True, exist_ok=True)
     os.environ["VLLM_ASCEND_ENABLE_NZ"] = str(args.weight_nz_mode)
     os.environ["HCCL_DETERMINISTIC"] = "true" if args.deterministic_level else "false"
+    os.environ["PTO_CSA_RUNTIME"] = args.runtime
     activate()
     if args.operator_source:
         import vllm_ascend.ops.pypto as operator_package
@@ -81,7 +85,8 @@ def main():
     width = max(args.history_a, args.history_b)
     report = {
         "scope": "单卡服务图同地址 metadata A→B→A；每步同一初态，不是连续 decode 轨迹",
-        "status": "RUNNING", "batch": args.batch, "history_a": args.history_a, "history_b": args.history_b,
+        "status": "RUNNING", "runtime": args.runtime, "batch": args.batch,
+        "history_a": args.history_a, "history_b": args.history_b,
         "table_history": width, "task_device": os.environ["TASK_DEVICE"],
         "operator_source": str(args.operator_source.resolve()) if args.operator_source else "当前 worktree",
     }
@@ -177,7 +182,9 @@ def main():
                 HCAOperators, NativeHCACall, prepare_weights,
             )
 
-            pypto.torch.init(device=0, platform="a2a3", runtime="tensormap_and_ringbuffer")
+            from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
+
+            pypto.torch.init(device=0, platform="a2a3", runtime=args.runtime, **ring_sizing_kwargs())
             report["atomic_add"] = ATOMIC_ADD
             operators = HCAOperators.register()
             import vllm_ascend.ops.dsv4_hca  # noqa: F401
@@ -202,7 +209,7 @@ def main():
             groups_b = {name: (fixture_b["metadata"][group["prefix"]], tuple(group["views"]))
                         for name, group in fixture_b["groups"].items()}
             direct = NativeHCACall(
-                operators, prepare_weights(layer.self_attn, layer), fixture_b["hidden"], fixture_b["positions"],
+                operators, prepare_weights(layer.self_attn, layer, **weight_options), fixture_b["hidden"], fixture_b["positions"],
                 groups_b, layer_name=wrapper.dsa_attn.layer_name,
                 compact_metadata=fixture_b["compact"]["compressed"], output=direct_output,
             )

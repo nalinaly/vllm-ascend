@@ -2,18 +2,24 @@
 """HCA 的 Native 零拷贝描述符与一次整层调用。"""
 
 from dataclasses import dataclass
+import math
 from typing import Any
 
 import torch
 
 from ..deepseek_v4_flash_dspark.native_adapter import prepare_weights as _prepare_weights
 from ..deepseek_v4_flash_dspark.native_storage import physical_pages, table_storage
-from .decode_hca import _decode_hca_tp1_layer, decode_hca_tp1_layer_test
+from ..variant import csa_runtime
+from .decode_hca import _decode_hca_tp1_layer, decode_hca_tp1_layer_hbg, decode_hca_tp1_layer_test
 
 
 @dataclass(frozen=True)
 class HCAOperators:
     attention: Any
+
+    @property
+    def is_hbg(self):
+        return self.attention._schema.name == "dsv4_hca::attention_hbg"
 
     @classmethod
     def register(cls):
@@ -24,13 +30,26 @@ class HCAOperators:
         validate_reduction_mode()
         if ATOMIC_ADD:
             raise ValueError("HCA 首版要求 VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0，请在导入算子前设置")
+        if csa_runtime() == "host_build_graph":
+            return cls(pypto.torch.register(decode_hca_tp1_layer_hbg, "dsv4_hca::attention_hbg"))
         return cls(pypto.torch.register(decode_hca_tp1_layer_test, "dsv4_hca::attention"))
 
 
-def prepare_weights(attention, layer):
+def prepare_weights(attention, layer, *, host_scalars=False):
     if attention.compress_ratio != 128:
         raise ValueError("HCA 只接管 C128 层")
-    return _prepare_weights(attention, None, layer, root_function=_decode_hca_tp1_layer)
+    weights = _prepare_weights(attention, None, layer, root_function=_decode_hca_tp1_layer)
+    if host_scalars:
+        # 初始化阶段仅复制这三个 FP32 常量；调用和图重放期间不读取设备值。
+        # 权重更新后必须重新 prepare_weights 并重新捕获图。
+        scale = weights["hc_attn_scale"]
+        if scale.dtype != torch.float32 or scale.shape != (3,):
+            raise ValueError("HCA HBG 要求 hc_attn_scale 为 FP32 [3]")
+        values = scale.cpu().tolist()
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("HCA HBG 的 hc_attn_scale 必须为有限值")
+        weights.update({f"host_hc_scale{index}": value for index, value in enumerate(values)})
+    return weights
 
 
 class NativeHCACall:
@@ -75,7 +94,8 @@ class NativeHCACall:
             ori_slots=req["swa"].slot_mapping,
         )
         self.operators = operators
-        self.core_args = tuple(self.args[name] for name in decode_hca_tp1_layer_test.param_names)
+        # constexpr 不属于运行时 ABI；HBG 则在同一组 Tensor 后显式增加三个 float。
+        self.core_args = tuple(self.args[arg.name] for arg in operators.attention._schema.arguments)
 
     def __call__(self):
         self.operators.attention(*self.core_args)

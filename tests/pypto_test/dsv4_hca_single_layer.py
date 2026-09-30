@@ -12,6 +12,8 @@ from dsv4_csa_validation import compare_tensor
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--runtime", choices=["tensormap_and_ringbuffer", "host_build_graph"],
+                        default="tensormap_and_ringbuffer")
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--history", type=int, default=124)
     parser.add_argument("--device", type=int, choices=[0], default=0, help="可见设备中的逻辑卡号")
@@ -41,6 +43,7 @@ def main():
     parser.add_argument("--deterministic-level", type=int, choices=[0, 1, 2], default=2)
     parser.add_argument("--checkpoint", type=Path, default=Path("/data/model/DeepSeek-V4-Flash-0731-w8a8"))
     args = parser.parse_args()
+    weight_options = {"host_scalars": True} if args.runtime == "host_build_graph" else {}
     if not 1 <= args.batch <= 40 or args.history < 0:
         parser.error("batch 必须为 1～40，history 不得为负")
     if args.timing_iters < 0 or args.timing_warmup < 1:
@@ -66,6 +69,7 @@ def main():
     args.output.mkdir(parents=True, exist_ok=True)
     os.environ["VLLM_ASCEND_ENABLE_NZ"] = str(args.weight_nz_mode)
     os.environ["HCCL_DETERMINISTIC"] = "true" if args.deterministic_level else "false"
+    os.environ["PTO_CSA_RUNTIME"] = args.runtime
     activate()
     if args.operator_source:
         import vllm_ascend.ops.pypto as operator_package
@@ -77,7 +81,7 @@ def main():
     report = {
         "scope": "正式第 3 层权重，合成输入和历史；不代表整模型验收", "status": "RUNNING",
         "checkpoint": str(args.checkpoint), "seed": 20260928, "task_device": os.environ["TASK_DEVICE"],
-        "weight_nz_mode": args.weight_nz_mode, "deterministic_level": args.deterministic_level,
+        "runtime": args.runtime, "weight_nz_mode": args.weight_nz_mode, "deterministic_level": args.deterministic_level,
         "speculative_tokens": 5, "query_tokens_per_request": 6,
         "operator_source": str(args.operator_source.resolve()) if args.operator_source else "当前 worktree",
         "simpler_root": os.environ.get("HCA_SIMPLER_ROOT_ACTIVE", "共用 pto-eager/simpler"),
@@ -189,8 +193,10 @@ def main():
             from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import HCAOperators, NativeHCACall, prepare_weights
             from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
 
+            from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
+
             pypto.torch.init(
-                device=0, platform="a2a3", runtime="tensormap_and_ringbuffer",
+                device=0, platform="a2a3", runtime=args.runtime, **ring_sizing_kwargs(),
                 **({"enable_chip_swimlane": 4, "enable_dep_gen": True,
                     "output_dir": str((args.output / "dfx").resolve())} if args.swimlane else {}),
             )
@@ -199,7 +205,7 @@ def main():
             groups = {name: (fixture["metadata"][group["prefix"]], tuple(group["views"]))
                       for name, group in fixture["groups"].items()}
             call = NativeHCACall(
-                operators, prepare_weights(layer.self_attn, layer), fixture["hidden"], fixture["positions"], groups,
+                operators, prepare_weights(layer.self_attn, layer, **weight_options), fixture["hidden"], fixture["positions"], groups,
                 layer_name=layer.self_attn.dsa_attn.dsa_attn.layer_name,
                 compact_metadata=fixture["compact"]["compressed"], output=output,
             )
@@ -216,7 +222,7 @@ def main():
                 # 权重准备必须在图捕获之前做完：prepare_weights 内部的 scale() 会做
                 # bool(count_nonzero(offset).cpu())，那是同步 D2H 拷贝，捕获期间会被
                 # rtStreamSynchronize 拒绝（error 107030 / EE1016）。
-                padding_weights = prepare_weights(layer.self_attn, layer)
+                padding_weights = prepare_weights(layer.self_attn, layer, **weight_options)
 
                 def make_call(compact):
                     return NativeHCACall(
@@ -233,7 +239,7 @@ def main():
             if args.lifecycle:
                 from dsv4_hca_lifecycle import check_lifecycle
 
-                lifecycle_weights = prepare_weights(layer.self_attn, layer)
+                lifecycle_weights = prepare_weights(layer.self_attn, layer, **weight_options)
 
                 def lifecycle_call():
                     compact = layer.self_attn.dsa_attn.dsa_attn.impl._compute_compressor_metadata(
@@ -271,7 +277,7 @@ def main():
                         compact_metadata=compact, output=output,
                     )()
 
-                trajectory_weights = prepare_weights(layer.self_attn, layer)
+                trajectory_weights = prepare_weights(layer.self_attn, layer, **weight_options)
                 check_trajectory(
                     fixture, output, native_step, pto_step,
                     layer.self_attn.dsa_attn.dsa_attn.impl, args.trajectory_steps, 20260929, report,

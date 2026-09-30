@@ -14160,3 +14160,18 @@ Native fallback 替代。最终服务/metadata 任务 `task_20260930_182217_6605
 模型 ACLGraphWrapper 已增加 Host 分支保护；自动预捕获不同长度档的整模型图尚未实现，
 模型试用先设 `enforce_eager=True`。CPU ABI、Host 值、图保护与已有快照回归共
 13 项通过；语法和差异空白检查通过。全量格式检查因缺少 pre-commit 未通过。
+
+
+## 504. HCA 独立 HBG 入口在现有 CSA 分支接入（2026-09-30）
+
+按用户新目标直接在 `dsv4-flash-pto-v0.25.1rc1` 增加 HCA 的独立 Host 标量入口，
+无新分支。HCA 没有 Host seqlen 内容读取；实际需要显式传入的是加载期取得的三个
+`hc_attn_scale` FP32值。原36 Tensor入口保留，HBG增加3个必填float，两入口共享算术。
+B4/8K、B4/128K与改动前ring输出及三组cache/state逐bit一致；实际服务图及同址
+history124→131070→124更新通过。CPU完整kernel编译与两项契约单测通过。
+
+功能接通，但HBG设备图重放均值约68.8/75.6ms，远慢于ring的324.6/365.7μs，
+没有切换默认runtime。原HCA记录中“NPUGraph不兼容/每次Host重建”的推断撤回；
+源码确认有AICPU图恢复/校验/清零等逐次成本，具体耗时占比尚待定位。
+本轮没有16卡、联合CSA/HCA HBG或整模型token/DSpark验收；不替换正式七档性能基线。
+[接口合同、完整记录与原始证据](hca_hbg_integration_20260930/README.md)。

@@ -8,6 +8,11 @@ B4/8K、B4/128K 及同址长度切换、实际服务 custom op 的单卡功能�
 尚无 HBG 性能或 16 卡验收。跨 Score 分支的整网图需要匹配捕获，当前试用整网先走 eager。
 入口、容量设置及证据见 [HBG 接入记录](csa_hbg_integration_20260930/README.md)。
 
+同日 HCA 独立 HBG 入口也已接通：加载期显式提供三个 Host scale，HCA seqlen仍在设备读取。
+B4/8K、128K及同址metadata图重放通过，但HBG均值68.8/75.6ms，不能用于性能路径；
+默认ring不变。下一步如推进HBG性能，应先量出AICPU图恢复/校验/清零的成本。
+[HCA接入、历史结论修订与证据](hca_hbg_integration_20260930/README.md)。
+
 **执行优先级（用户最新补充）**：以128K为主，先优化incore task，再优化CSA内部调度；整网性能排后。
 2026-09-29晚追加：逐项检查SPMD的有效用核和`sync_start`，允许按关键链组合调整；
 进一步明确：**有效用满核＋不损害核内流水＋叠加sync_start**，逐项修改，真实并发任务联动。

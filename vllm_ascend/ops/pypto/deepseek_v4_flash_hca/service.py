@@ -11,7 +11,7 @@ class HCAServiceRuntime(CSAServiceRuntime):
         self.wrapper = attention.dsa_attn
         self.layer_name = self.wrapper.dsa_attn.layer_name
         self.operators = operators
-        self.weights = prepare_weights(attention, layer)
+        self.weights = prepare_weights(attention, layer, host_scalars=operators.is_hbg)
         self.prefixes = {
             "swa": self.wrapper.swa_cache_layer.prefix,
             "compressed": self.layer_name,
