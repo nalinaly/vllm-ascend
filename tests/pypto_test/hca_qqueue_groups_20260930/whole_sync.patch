@@ -1,0 +1,6 @@
+# Parent: cube_groups1
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -243 +243 @@
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0], q_ready[1], q_ready[2], q_ready[3]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", sync_start=True, deps=[qproj_dep, q_ready[0], q_ready[1], q_ready[2], q_ready[3]]):

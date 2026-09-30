@@ -1,0 +1,19 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24",
+    "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "cube_groups1": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/cube_groups1",
+    "cube_groups2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/cube_groups2",
+    "whole_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/whole_sync",
+    "qr_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late"
+  },
+  "baseline": "q24 candidate from 5c0fa709, not production",
+  "invariants": "24 Cube total, M128/N256/K256 stage2, four independent 12-AIV dequant groups, exact arithmetic",
+  "hypothesis": "larger SPMD claim ranges distribute Q across scheduler partitions; avoid 6-worker local imbalance",
+  "tradeoff": "fewer Cube producers postpone partial Q release; compare full HCA and parallel compressor/gather",
+  "followup_parents": {
+    "whole_sync": "cube_groups1",
+    "qr_late": "base"
+  },
+  "followup_basis": "even single-24 Q used some cores twice while others idle; check pending pre-stage"
+}

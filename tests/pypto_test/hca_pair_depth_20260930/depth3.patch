@@ -1,0 +1,63 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1164 +1164 @@
+-    pair_slots = 2
++    pair_slots = 3
+@@ -1177 +1177 @@
+-        kv_l1 = pl.create_tile([2 * ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
++        kv_l1 = pl.create_tile([3 * ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+@@ -1188,4 +1188,2 @@
+-            pair_query = pl.load(q_flat, [token0 * H, 0], [2 * H, HEAD_DIM], target_memory=pl.MemorySpace.Mat)
+-            # A two-slot ring leaves L1 capacity for M128 queries. Drain only
+-            # once per pair; QK for the next block overlaps the preceding PV.
+-            for tick in pl.range(work_count + 1):
++            # Q在每块QK内重载；PV期间释放其L1区域，容纳三个KV槽。
++            for tick in pl.range(work_count + 2):
+@@ -1193,2 +1191,3 @@
+-                    l1_row = (tick % 2) * ATTN_K_TILE
+-                    row = (worker * 2 + tick % 2) * (2 * H)
++                    pair_query = pl.load(q_flat, [token0 * H, 0], [2 * H, HEAD_DIM], target_memory=pl.MemorySpace.Mat)
++                    l1_row = (tick % 3) * ATTN_K_TILE
++                    row = (worker * 3 + tick % 3) * (2 * H)
+@@ -1212,3 +1211,3 @@
+-                if tick >= 1:
+-                    pv_tick = tick - 1
+-                    pv_row = (worker * 2 + pv_tick % 2) * (2 * H)
++                if tick >= 2:
++                    pv_tick = tick - 2
++                    pv_row = (worker * 3 + pv_tick % 3) * (2 * H)
+@@ -1216 +1215 @@
+-                    pv_l1_row = (pv_tick % 2) * ATTN_K_TILE
++                    pv_l1_row = (pv_tick % 3) * ATTN_K_TILE
+@@ -1267,2 +1266,2 @@
+-                seed_max = pl.tile.full([2 * (H // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
+-                seed_sum = pl.tile.full([2 * (H // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
++                seed_max = pl.tile.full([3 * (H // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
++                seed_sum = pl.tile.full([3 * (H // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
+@@ -1278 +1277 @@
+-                    cmp_blocks + 3,
++                    cmp_blocks + 4,
+@@ -1282 +1281 @@
+-                        vec_row = (worker * 2 + vec_tick % 2) * (2 * H) + lane * H
++                        vec_row = (worker * 3 + vec_tick % 3) * (2 * H) + lane * H
+@@ -1318,2 +1317,2 @@
+-                                next_max = pl.tile.assemble(head_max_ring, pl.reshape(maximum, [1, H_TILE]), [(vec_tick % 2) * (H // H_TILE) + softmax_part, 0])
+-                                next_sum = pl.tile.assemble(head_sum_ring, pl.reshape(total, [1, H_TILE]), [(vec_tick % 2) * (H // H_TILE) + softmax_part, 0])
++                                next_max = pl.tile.assemble(head_max_ring, pl.reshape(maximum, [1, H_TILE]), [(vec_tick % 3) * (H // H_TILE) + softmax_part, 0])
++                                next_sum = pl.tile.assemble(head_sum_ring, pl.reshape(total, [1, H_TILE]), [(vec_tick % 3) * (H // H_TILE) + softmax_part, 0])
+@@ -1322 +1321 @@
+-                                head_max_done, (vec_tick % 2) * (H // H_TILE), 0, [H // H_TILE, H_TILE], target_memory=pl.MemorySpace.Vec,
++                                head_max_done, (vec_tick % 3) * (H // H_TILE), 0, [H // H_TILE, H_TILE], target_memory=pl.MemorySpace.Vec,
+@@ -1335,3 +1334,3 @@
+-                    if vec_tick >= 1:
+-                        out_tick = vec_tick - 1
+-                        out_row = (worker * 2 + out_tick % 2) * (2 * H) + lane * H
++                    if vec_tick >= 2:
++                        out_tick = vec_tick - 2
++                        out_row = (worker * 3 + out_tick % 3) * (2 * H) + lane * H
+@@ -1340 +1339 @@
+-                            out_m = pl.reshape(pl.tile.extract(updated_max, (out_tick % 2) * (H // H_TILE), 0, [H // H_TILE, H_TILE],
++                            out_m = pl.reshape(pl.tile.extract(updated_max, (out_tick % 3) * (H // H_TILE), 0, [H // H_TILE, H_TILE],
+@@ -1342 +1341 @@
+-                            out_l = pl.reshape(pl.tile.extract(updated_sum, (out_tick % 2) * (H // H_TILE), 0, [H // H_TILE, H_TILE],
++                            out_l = pl.reshape(pl.tile.extract(updated_sum, (out_tick % 3) * (H // H_TILE), 0, [H // H_TILE, H_TILE],

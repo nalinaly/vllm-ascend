@@ -1,0 +1,109 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -26 +26,2 @@
+-STREAM_CUBE_WORKERS = 24 // STREAM_GROUPS
++STREAM_CUBE_WORKERS = 24 // 1
++CUBE_HEADS = 64
+@@ -41 +42 @@
+-    q_proj_i32: pl.Tensor[[QPROJ_MM_T_DYN, STREAM_HEADS * HEAD_DIM], pl.INT32],
++    q_proj_i32: pl.Tensor[[QPROJ_MM_T_DYN, CUBE_HEADS * HEAD_DIM], pl.INT32],
+@@ -95,2 +96,2 @@
+-                    source_h0 = h * HEAD_DIM
+-                    h0 = head_base * HEAD_DIM + source_h0
++                    source_h0 = (head_base % CUBE_HEADS + h) * HEAD_DIM
++                    h0 = (head_base + h) * HEAD_DIM
+@@ -177,2 +178,2 @@
+-                    source_h0_tail = h_tail * HEAD_DIM
+-                    h0_tail = head_base * HEAD_DIM + source_h0_tail
++                    source_h0_tail = (head_base % CUBE_HEADS + h_tail) * HEAD_DIM
++                    h0_tail = (head_base + h_tail) * HEAD_DIM
+@@ -241,3 +242,2 @@
+-            head_base = 0
+-            q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]]):
++            q_proj_i32 = pl.create_tensor([matrix_rows, CUBE_HEADS * HEAD_DIM], dtype=pl.INT32)
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0], q_ready[1], q_ready[2], q_ready[3]]):
+@@ -246 +246 @@
+-                n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
++                n_blocks = CUBE_HEADS * HEAD_DIM // STREAM_N
+@@ -272 +272 @@
+-                head_base,
++                0,
+@@ -275,22 +274,0 @@
+-        with pl.scope():
+-            head_base = 16
+-            q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]]):
+-                pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+-                worker = pl.tile.get_block_idx()
+-                n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+-                for step in pl.range((n_blocks - worker + STREAM_CUBE_WORKERS - 1) // STREAM_CUBE_WORKERS):
+-                    col_local = (worker + step * STREAM_CUBE_WORKERS) * STREAM_N
+-                    col = 8192 + col_local
+-                    for t0 in pl.range(0, matrix_rows, STREAM_M):
+-                        count = pl.min(STREAM_M, tile_rows - t0)
+-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
+-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
+-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
+-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
+-                            qr_part = pl.slice(
+-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
+-                            )
+-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
+-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
+-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+@@ -307 +285 @@
+-                head_base,
++                16,
+@@ -310,22 +287,0 @@
+-        with pl.scope():
+-            head_base = 32
+-            q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]]):
+-                pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+-                worker = pl.tile.get_block_idx()
+-                n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+-                for step in pl.range((n_blocks - worker + STREAM_CUBE_WORKERS - 1) // STREAM_CUBE_WORKERS):
+-                    col_local = (worker + step * STREAM_CUBE_WORKERS) * STREAM_N
+-                    col = 16384 + col_local
+-                    for t0 in pl.range(0, matrix_rows, STREAM_M):
+-                        count = pl.min(STREAM_M, tile_rows - t0)
+-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
+-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
+-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
+-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
+-                            qr_part = pl.slice(
+-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
+-                            )
+-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
+-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
+-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+@@ -342 +298 @@
+-                head_base,
++                32,
+@@ -345,22 +300,0 @@
+-        with pl.scope():
+-            head_base = 48
+-            q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]]):
+-                pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+-                worker = pl.tile.get_block_idx()
+-                n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+-                for step in pl.range((n_blocks - worker + STREAM_CUBE_WORKERS - 1) // STREAM_CUBE_WORKERS):
+-                    col_local = (worker + step * STREAM_CUBE_WORKERS) * STREAM_N
+-                    col = 24576 + col_local
+-                    for t0 in pl.range(0, matrix_rows, STREAM_M):
+-                        count = pl.min(STREAM_M, tile_rows - t0)
+-                        qr_first = pl.slice(qr_i8_matmul, [STREAM_M, STREAM_K], [t0, 0], valid_shape=[count, STREAM_K])
+-                        weight_first = wq_b[0:STREAM_K, col : col + STREAM_N]
+-                        acc = pl.matmul(qr_first, weight_first, out_dtype=pl.INT32)
+-                        for k0 in pl.pipeline(STREAM_K, Q_LORA, STREAM_K, stage=2):
+-                            qr_part = pl.slice(
+-                                qr_i8_matmul, [STREAM_M, STREAM_K], [t0, k0], valid_shape=[count, STREAM_K]
+-                            )
+-                            weight_part = wq_b[k0 : k0 + STREAM_K, col : col + STREAM_N]
+-                            acc = pl.matmul_acc(acc, qr_part, weight_part)
+-                        q_proj_i32[t0 : t0 + STREAM_M, col_local : col_local + STREAM_N] = acc
+@@ -377 +311 @@
+-                head_base,
++                48,
