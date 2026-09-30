@@ -1,0 +1,15 @@
+--- a/deepseek_v4_flash_hca/native_adapter.py
++++ b/deepseek_v4_flash_hca/native_adapter.py
+@@ -30,4 +30,3 @@
+         validate_reduction_mode()
+-        if ATOMIC_ADD:
+-            raise ValueError("HCA 首版要求 VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0，请在导入算子前设置")
++        # 单卡实验：允许复用现有 QR/KV split-K atomic 分支，正式入口限制保持不变。
+         if csa_runtime() == "host_build_graph":
+--- a/deepseek_v4_flash_hca/service_config.py
++++ b/deepseek_v4_flash_hca/service_config.py
+@@ -17,3 +17,2 @@
+     _validate_configuration(config)
+-    if envs.VLLM_ASCEND_PTO_CSA_ATOMIC_ADD != 0:
+-        raise ValueError("HCA 首版使用固定归约，请设置 VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0")
++    # 单卡实验：允许复用现有 QR/KV split-K atomic 分支，正式入口限制保持不变。
