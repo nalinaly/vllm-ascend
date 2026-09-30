@@ -1,0 +1,510 @@
+{
+  "scope": "single-card 128K/B4, TP1, six queries per request, real layer 2 CSA output feeds real layer 3 HCA; attention halves only, fixed synthetic history, no MoE/EPLB/16-card run",
+  "cann": "9.2.0-beta.2",
+  "weight_nz_mode": 2,
+  "atomic_add": 0,
+  "deterministic_level": 1,
+  "profile_steps": 3,
+  "unprofiled_samples": 10,
+  "pypto_final_commit": "cb2484471",
+  "runs": {
+    "before_crc": {
+      "task_id": "task_20260930_212435_28921078924",
+      "simpler_revision": "585ef27988107d7beab625f05c43838730ff1081",
+      "task_device": "0",
+      "raw_directory": "tests/pypto_test/results/hbg_joint_profile_20260930/before_crc",
+      "trace_source": "tests/pypto_test/results/hbg_joint_profile_20260930/before_crc/pytorch/liteserver-hps-365a-00001_2892825_20260930212548166_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "download_files": [
+        "01_Before_128K_B4_CSA-HCA_HBG_PyTorch_3Steps.json",
+        "02_Before_128K_B4_CSA-HCA_HBG_Swimlane_3Steps.json"
+      ],
+      "unprofiled_joint_us": {
+        "samples": [
+          224307.95288085938,
+          224070.9991455078,
+          222261.1541748047,
+          224981.90307617188,
+          224421.53930664062,
+          223997.61962890625,
+          224049.3621826172,
+          225649.26147460938,
+          224383.544921875,
+          225490.61584472656
+        ],
+        "min": 222261.1541748047,
+        "mean": 224361.39526367188,
+        "max": 225649.26147460938
+      },
+      "operators": {
+        "CSA": {
+          "profiled_aicpu_us": {
+            "min": 146300.62,
+            "mean": 146645.77333333335,
+            "max": 147224.7,
+            "samples": [
+              146300.62,
+              146412.0,
+              147224.7
+            ]
+          },
+          "profiled_incore_envelope_us": {
+            "min": 530.7000000000116,
+            "mean": 548.5466666666721,
+            "max": 565.06,
+            "samples": [
+              565.06,
+              549.8800000000047,
+              530.7000000000116
+            ]
+          }
+        },
+        "HCA": {
+          "profiled_aicpu_us": {
+            "min": 77684.48,
+            "mean": 78222.74666666666,
+            "max": 78576.78,
+            "samples": [
+              77684.48,
+              78406.98,
+              78576.78
+            ]
+          },
+          "profiled_incore_envelope_us": {
+            "min": 324.9800000000396,
+            "mean": 341.4933333333368,
+            "max": 355.21999999997206,
+            "samples": [
+              344.27999999999884,
+              324.9800000000396,
+              355.21999999997206
+            ]
+          }
+        }
+      },
+      "checks": {
+        "graph_eager": {
+          "status": "PASS",
+          "tensors": [
+            "csa.x_out",
+            "csa.idx_topk",
+            "csa.swa.0",
+            "csa.compressed.0",
+            "csa.state.0",
+            "csa.indexer.0",
+            "csa.indexer.1",
+            "csa.indexer_state.0",
+            "hca.output",
+            "hca.swa",
+            "hca.compressed",
+            "hca.state"
+          ],
+          "atol": 0,
+          "rtol": 0,
+          "total_mismatches": 0,
+          "max_float_abs": 0
+        },
+        "reference": {
+          "status": "PASS",
+          "tensors": [
+            "csa.x_out",
+            "csa.idx_topk",
+            "csa.swa.0",
+            "csa.compressed.0",
+            "csa.state.0",
+            "csa.indexer.0",
+            "csa.indexer.1",
+            "csa.indexer_state.0",
+            "hca.output",
+            "hca.swa",
+            "hca.compressed",
+            "hca.state"
+          ],
+          "atol": 0,
+          "rtol": 0,
+          "total_mismatches": 0,
+          "max_float_abs": 0
+        },
+        "guards": {
+          "csa": {
+            "status": "PASS",
+            "checks": [
+              "swa",
+              "compressed",
+              "state",
+              "indexer",
+              "indexer_state",
+              "metadata.positions",
+              "metadata.swa.query_start_loc",
+              "metadata.swa.seq_lens",
+              "metadata.swa.block_table",
+              "metadata.swa.slot_mapping",
+              "metadata.swa.start_pos",
+              "metadata.compressed.query_start_loc",
+              "metadata.compressed.seq_lens",
+              "metadata.compressed.block_table",
+              "metadata.compressed.start_pos",
+              "metadata.state.query_start_loc",
+              "metadata.state.seq_lens",
+              "metadata.state.block_table",
+              "metadata.state.slot_mapping",
+              "metadata.state.start_pos",
+              "metadata.indexer.query_start_loc",
+              "metadata.indexer.seq_lens",
+              "metadata.indexer.block_table",
+              "metadata.indexer.start_pos",
+              "metadata.indexer_state.query_start_loc",
+              "metadata.indexer_state.seq_lens",
+              "metadata.indexer_state.block_table",
+              "metadata.indexer_state.slot_mapping",
+              "metadata.indexer_state.start_pos",
+              "metadata.compressed.compact_slots",
+              "metadata.indexer.compact_slots"
+            ]
+          },
+          "hca": {
+            "status": "PASS",
+            "checks": [
+              "swa",
+              "compressed",
+              "state",
+              "metadata.positions",
+              "metadata.swa.query_start_loc",
+              "metadata.swa.seq_lens",
+              "metadata.swa.block_table",
+              "metadata.swa.slot_mapping",
+              "metadata.swa.start_pos",
+              "metadata.compressed.query_start_loc",
+              "metadata.compressed.seq_lens",
+              "metadata.compressed.block_table",
+              "metadata.compressed.start_pos",
+              "metadata.state.query_start_loc",
+              "metadata.state.seq_lens",
+              "metadata.state.block_table",
+              "metadata.state.slot_mapping",
+              "metadata.state.start_pos",
+              "metadata.compressed.compact_slots"
+            ]
+          }
+        }
+      },
+      "launches": [
+        {
+          "operator": "CSA",
+          "step": 1,
+          "epoch": 0,
+          "scheduler_init_boundary_us": 0.0,
+          "first_incore_us": 371.16,
+          "last_incore_us": 936.22,
+          "incore_envelope_us": 565.06,
+          "recorded_start_to_first_incore_us": 371.16,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 1,
+          "epoch": 1,
+          "scheduler_init_boundary_us": 77996.32,
+          "first_incore_us": 78372.96,
+          "last_incore_us": 78717.24,
+          "incore_envelope_us": 344.27999999999884,
+          "recorded_start_to_first_incore_us": 376.6399999999994,
+          "subtask_records": 414
+        },
+        {
+          "operator": "CSA",
+          "step": 2,
+          "epoch": 2,
+          "scheduler_init_boundary_us": 227905.7,
+          "first_incore_us": 228276.94,
+          "last_incore_us": 228826.82,
+          "incore_envelope_us": 549.8800000000047,
+          "recorded_start_to_first_incore_us": 371.2399999999907,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 2,
+          "epoch": 3,
+          "scheduler_init_boundary_us": 306597.82,
+          "first_incore_us": 306978.86,
+          "last_incore_us": 307303.84,
+          "incore_envelope_us": 324.9800000000396,
+          "recorded_start_to_first_incore_us": 381.03999999997905,
+          "subtask_records": 414
+        },
+        {
+          "operator": "CSA",
+          "step": 3,
+          "epoch": 4,
+          "scheduler_init_boundary_us": 457200.56,
+          "first_incore_us": 457587.7,
+          "last_incore_us": 458118.4,
+          "incore_envelope_us": 530.7000000000116,
+          "recorded_start_to_first_incore_us": 387.14000000001397,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 3,
+          "epoch": 5,
+          "scheduler_init_boundary_us": 536038.0,
+          "first_incore_us": 536413.12,
+          "last_incore_us": 536768.34,
+          "incore_envelope_us": 355.21999999997206,
+          "recorded_start_to_first_incore_us": 375.11999999999534,
+          "subtask_records": 414
+        }
+      ],
+      "report_source": "tests/pypto_test/results/hbg_joint_profile_20260930/before_crc/report.json"
+    },
+    "after_crc": {
+      "task_id": "task_20260930_213111_29304566656",
+      "simpler_revision": "ef6812891575eaf2a15051fc9abc659f5415c2e2",
+      "task_device": "0",
+      "raw_directory": "tests/pypto_test/results/hbg_joint_profile_20260930/after_crc",
+      "trace_source": "tests/pypto_test/results/hbg_joint_profile_20260930/after_crc/pytorch/liteserver-hps-365a-00001_2930725_20260930213223787_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "download_files": [
+        "03_After_128K_B4_CSA-HCA_HBG_PyTorch_3Steps.json",
+        "04_After_128K_B4_CSA-HCA_HBG_Swimlane_3Steps.json"
+      ],
+      "unprofiled_joint_us": {
+        "samples": [
+          207414.00146484375,
+          209156.75354003906,
+          206876.6632080078,
+          207805.11474609375,
+          208097.2137451172,
+          206842.83447265625,
+          207426.6815185547,
+          206622.7569580078,
+          205985.107421875,
+          208555.92346191406
+        ],
+        "min": 205985.107421875,
+        "mean": 207478.30505371094,
+        "max": 209156.75354003906
+      },
+      "operators": {
+        "CSA": {
+          "profiled_aicpu_us": {
+            "min": 138371.86,
+            "mean": 139044.68,
+            "max": 139632.24,
+            "samples": [
+              138371.86,
+              139129.94,
+              139632.24
+            ]
+          },
+          "profiled_incore_envelope_us": {
+            "min": 520.2399999999907,
+            "mean": 540.1799999999993,
+            "max": 553.98,
+            "samples": [
+              553.98,
+              546.320000000007,
+              520.2399999999907
+            ]
+          }
+        },
+        "HCA": {
+          "profiled_aicpu_us": {
+            "min": 69321.32,
+            "mean": 69611.90666666666,
+            "max": 69854.04,
+            "samples": [
+              69321.32,
+              69660.36,
+              69854.04
+            ]
+          },
+          "profiled_incore_envelope_us": {
+            "min": 331.179999999993,
+            "mean": 339.0799999999969,
+            "max": 348.3999999999651,
+            "samples": [
+              331.179999999993,
+              337.6600000000326,
+              348.3999999999651
+            ]
+          }
+        }
+      },
+      "checks": {
+        "graph_eager": {
+          "status": "PASS",
+          "tensors": [
+            "csa.x_out",
+            "csa.idx_topk",
+            "csa.swa.0",
+            "csa.compressed.0",
+            "csa.state.0",
+            "csa.indexer.0",
+            "csa.indexer.1",
+            "csa.indexer_state.0",
+            "hca.output",
+            "hca.swa",
+            "hca.compressed",
+            "hca.state"
+          ],
+          "atol": 0,
+          "rtol": 0,
+          "total_mismatches": 0,
+          "max_float_abs": 0
+        },
+        "reference": {
+          "status": "PASS",
+          "tensors": [
+            "csa.x_out",
+            "csa.idx_topk",
+            "csa.swa.0",
+            "csa.compressed.0",
+            "csa.state.0",
+            "csa.indexer.0",
+            "csa.indexer.1",
+            "csa.indexer_state.0",
+            "hca.output",
+            "hca.swa",
+            "hca.compressed",
+            "hca.state"
+          ],
+          "atol": 0,
+          "rtol": 0,
+          "total_mismatches": 0,
+          "max_float_abs": 0
+        },
+        "guards": {
+          "csa": {
+            "status": "PASS",
+            "checks": [
+              "swa",
+              "compressed",
+              "state",
+              "indexer",
+              "indexer_state",
+              "metadata.positions",
+              "metadata.swa.query_start_loc",
+              "metadata.swa.seq_lens",
+              "metadata.swa.block_table",
+              "metadata.swa.slot_mapping",
+              "metadata.swa.start_pos",
+              "metadata.compressed.query_start_loc",
+              "metadata.compressed.seq_lens",
+              "metadata.compressed.block_table",
+              "metadata.compressed.start_pos",
+              "metadata.state.query_start_loc",
+              "metadata.state.seq_lens",
+              "metadata.state.block_table",
+              "metadata.state.slot_mapping",
+              "metadata.state.start_pos",
+              "metadata.indexer.query_start_loc",
+              "metadata.indexer.seq_lens",
+              "metadata.indexer.block_table",
+              "metadata.indexer.start_pos",
+              "metadata.indexer_state.query_start_loc",
+              "metadata.indexer_state.seq_lens",
+              "metadata.indexer_state.block_table",
+              "metadata.indexer_state.slot_mapping",
+              "metadata.indexer_state.start_pos",
+              "metadata.compressed.compact_slots",
+              "metadata.indexer.compact_slots"
+            ]
+          },
+          "hca": {
+            "status": "PASS",
+            "checks": [
+              "swa",
+              "compressed",
+              "state",
+              "metadata.positions",
+              "metadata.swa.query_start_loc",
+              "metadata.swa.seq_lens",
+              "metadata.swa.block_table",
+              "metadata.swa.slot_mapping",
+              "metadata.swa.start_pos",
+              "metadata.compressed.query_start_loc",
+              "metadata.compressed.seq_lens",
+              "metadata.compressed.block_table",
+              "metadata.compressed.start_pos",
+              "metadata.state.query_start_loc",
+              "metadata.state.seq_lens",
+              "metadata.state.block_table",
+              "metadata.state.slot_mapping",
+              "metadata.state.start_pos",
+              "metadata.compressed.compact_slots"
+            ]
+          }
+        }
+      },
+      "launches": [
+        {
+          "operator": "CSA",
+          "step": 1,
+          "epoch": 0,
+          "scheduler_init_boundary_us": 0.0,
+          "first_incore_us": 404.44,
+          "last_incore_us": 958.4200000000001,
+          "incore_envelope_us": 553.98,
+          "recorded_start_to_first_incore_us": 404.44,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 1,
+          "epoch": 1,
+          "scheduler_init_boundary_us": 69624.1,
+          "first_incore_us": 70010.24,
+          "last_incore_us": 70341.42,
+          "incore_envelope_us": 331.179999999993,
+          "recorded_start_to_first_incore_us": 386.1399999999994,
+          "subtask_records": 414
+        },
+        {
+          "operator": "CSA",
+          "step": 2,
+          "epoch": 2,
+          "scheduler_init_boundary_us": 212180.88,
+          "first_incore_us": 212569.82,
+          "last_incore_us": 213116.14,
+          "incore_envelope_us": 546.320000000007,
+          "recorded_start_to_first_incore_us": 388.9400000000023,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 2,
+          "epoch": 3,
+          "scheduler_init_boundary_us": 282097.24,
+          "first_incore_us": 282480.68,
+          "last_incore_us": 282818.34,
+          "incore_envelope_us": 337.6600000000326,
+          "recorded_start_to_first_incore_us": 383.4400000000023,
+          "subtask_records": 414
+        },
+        {
+          "operator": "CSA",
+          "step": 3,
+          "epoch": 4,
+          "scheduler_init_boundary_us": 427540.58,
+          "first_incore_us": 427931.10000000003,
+          "last_incore_us": 428451.34,
+          "incore_envelope_us": 520.2399999999907,
+          "recorded_start_to_first_incore_us": 390.5200000000186,
+          "subtask_records": 712
+        },
+        {
+          "operator": "HCA",
+          "step": 3,
+          "epoch": 5,
+          "scheduler_init_boundary_us": 497647.82,
+          "first_incore_us": 498023.54000000004,
+          "last_incore_us": 498371.94,
+          "incore_envelope_us": 348.3999999999651,
+          "recorded_start_to_first_incore_us": 375.72000000003027,
+          "subtask_records": 414
+        }
+      ],
+      "report_source": "tests/pypto_test/results/hbg_joint_profile_20260930/after_crc/report.json"
+    }
+  }
+}

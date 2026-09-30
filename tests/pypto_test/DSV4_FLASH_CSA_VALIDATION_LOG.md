@@ -14197,3 +14197,21 @@ Native 输出 max_abs / RMSE：CSA 8K 为 0.03125 / 0.0018983364，128K 为
 Torch NPU 适配层；三方版本核对与两个 CPU 契约检查通过，再完成四项单卡验证。
 更正前一轮“源码相同所以无需重建”：精确 revision 契约要求历史变化也配套更新。
 [结果表、复现步骤及证据](hbg_accuracy_20260930/README.md)。
+
+## 506. 单卡 HBG CSA→HCA 联合三步采集与 checksum 消融（2026-09-30）
+
+按用户指定只采单卡，128K/B4、正式第2/3层 attention 半层串接，不含MoE/EPLB。
+先修复HBG kernel-mode漏传AICPU采集配置导致的AIV 507015，同时补齐launch
+边界和每callable依赖图；Before/After均包含修复。每轮三step完整记录3378条
+核内任务，CSA每次712条、HCA每次414条，逐task与核类型的block计数一致。
+
+移除AICPU每次replay的全包FNV扫描，保留Host完整校验及设备framing/身份/
+地址/镜像语义检查。10次无profiler联合replay min/mean/max从
+222261.15/224361.40/225649.26降至205985.11/207478.31/209156.75 μs，
+均值改善7.52%。12项输出、Top-K、cache/state零容差一致，保护区通过。
+
+消融后CSA/HCA AICPU均值139044.68/69611.91 μs，核内首尾区间均值仅
+540.18/339.08 μs。主要GAP仍在核内之外；copy/zero/flush/bind尚未分别计时，
+不能套用空图“checksum占主导”的结论。没有改变默认runtime，没有重测Native
+或替换七档基线，没有整模型token/DSpark及16卡验收。
+[完整口径、前后min/mean/max、复现与下载](hbg_joint_profile_20260930/README.md)。

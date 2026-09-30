@@ -8066,3 +8066,18 @@ Native 输出最大误差均0.015625，RMSE分别0.0019002262/0.0013158137，
 本轮同步了PyPTO旧Simpler ABI pin与子模块，并重建原生扩展和Torch适配层，
 解决仅合并Git历史后版本戳不匹配的初始化阻塞；没有改动HCA算术或默认runtime。
 [完整结果、环境修复与复现](hbg_accuracy_20260930/README.md)。
+
+## 142. 单卡 HBG CSA→HCA 联合三步采集与 replay 校验消融（2026-09-30）
+
+128K/B4，正式第2层CSA输出直接接第3层HCA，实际服务入口、同一NPUGraph。
+HBG采集初始化及launch边界修复后，取得同轮PyTorch/泳道；两root的依赖映射
+分开解析，每step HCA完整414条核内记录，无算术或task配置改动。
+
+去除AICPU replay全包FNV扫描后，HCA三步AICPU min/mean/max为
+69321.32/69611.91/69854.04 μs（原77684.48/78222.75/78576.78）；
+核内首尾区间331.18/339.08/348.40 μs。联合无profiler均值224361.40→207478.31 μs，
+改善7.52%；12项输出/状态零容差及保护区通过。本轮HCA history未跨C128边界，
+跨边界写入覆盖仍以前一节为准。未重测Native或16卡，未替换正式七档性能基线。
+
+主要剩余GAP位于核内之外，copy/zero/flush/bind具体占比仍需分段证据。
+[联合记录、下载目录、版本与复现](hbg_joint_profile_20260930/README.md)。
