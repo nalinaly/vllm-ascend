@@ -8053,3 +8053,16 @@ HBG直接算子均值69014.42/75556.21μs，同样退化；瓶颈不由服务入
 
 [完整接口、复现命令、原始结果路径及任务证据](hca_hbg_integration_20260930/README.md)。
 `bash format.sh ci`因环境缺少pre-commit未完成。没有16卡任务，没有更改默认运行时。
+
+## 141. HBG 长短档精度复核，覆盖压缩 cache 写入（2026-09-30）
+
+在更新后的 PyPTO/Simpler 调试分支配套环境下，补测 B4/history8190 和131070，
+六个 query 跨过 C128 压缩边界。HBG/ring 两个独立进程使用同一初态：输出、
+SWA/压缩cache/state 四项全部逐字节一致；压缩cache分别真实改写3818/3831字节。
+实际服务 eager 与直接调用、服务图重放与 eager 均一致；保护区/只读metadata通过。
+Native 输出最大误差均0.015625，RMSE分别0.0019002262/0.0013158137，
+属于ring也有的差异；未新增容差或宣称整模型token/DSpark通过。没有性能采集或16卡任务。
+
+本轮同步了PyPTO旧Simpler ABI pin与子模块，并重建原生扩展和Torch适配层，
+解决仅合并Git历史后版本戳不匹配的初始化阻塞；没有改动HCA算术或默认runtime。
+[完整结果、环境修复与复现](hbg_accuracy_20260930/README.md)。

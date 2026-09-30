@@ -14175,3 +14175,25 @@ history124→131070→124更新通过。CPU完整kernel编译与两项契约单�
 源码确认有AICPU图恢复/校验/清零等逐次成本，具体耗时占比尚待定位。
 本轮没有16卡、联合CSA/HCA HBG或整模型token/DSpark验收；不替换正式七档性能基线。
 [接口合同、完整记录与原始证据](hca_hbg_integration_20260930/README.md)。
+
+## 505. 更新调试分支后复核 CSA/HCA HBG 精度（2026-09-30）
+
+CANN9.2、NZ2、atomic=0、确定性 level1、正式层权重、合成历史，四项独立单卡任务。
+CSA B4/history8192、131072：HBG 与 ring 的输出、Top-K 和六项 cache/state
+全部逐字节一致；自身重复调用及输入 A→B→A 图重放通过。
+HCA B4/history8190、131070：跨 128-token 压缩边界，输出及三组完整 allocation
+逐字节一致，压缩 cache 实际写入 3818/3831 字节；服务 eager、图重放及保护区通过。
+
+Native 输出 max_abs / RMSE：CSA 8K 为 0.03125 / 0.0018983364，128K 为
+0.015625 / 0.0022274856；HCA 两档为 0.015625 / 0.0019002262、
+0.015625 / 0.0013158137。CSA Native/PTO Top-K 分别替换 117/217 个索引，
+均为 24/24 行集合不同，无结构非法；HBG 相对 ring 的索引差异为零。
+这些既有数值差异没有被重新定义成精度通过；本轮结论仅为 HBG 未引入额外差异。
+未做整模型 token/DSpark、其他 batch 或 16 卡验收，也未采性能数据。
+
+更新分支后先遇到两个配套版本阻塞：Simpler 扩展旧 Git 戳被 import 拒绝；
+重建后又被 PyPTO 旧 ABI pin 拒绝。两次都未执行 PTO，不是精度失败。
+将 PyPTO ABI pin 与 runtime 子模块同步至 Simpler ac1654822，并重建两侧扩展和
+Torch NPU 适配层；三方版本核对与两个 CPU 契约检查通过，再完成四项单卡验证。
+更正前一轮“源码相同所以无需重建”：精确 revision 契约要求历史变化也配套更新。
+[结果表、复现步骤及证据](hbg_accuracy_20260930/README.md)。

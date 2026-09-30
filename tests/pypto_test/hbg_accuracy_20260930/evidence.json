@@ -1,0 +1,877 @@
+{
+  "scope": "单卡正式层权重、合成输入和历史；HBG 对 ring 的数值回归，不代表整模型 token/DSpark 验收",
+  "environment": {
+    "vllm_ascend": "9c46bf0545948416e24fbe922372a954ca7e80aa",
+    "pypto": "d8aed6f8217a2fc1fdbc024a9ad363fc4600c300",
+    "simpler": "ac165482292e6905df27b89deee5fa81ab9a4980",
+    "cann": "9.2.0-beta.2",
+    "batch": 4,
+    "nz_mode": 2,
+    "deterministic_level": 1,
+    "atomic_add": 0,
+    "heap_mb": 320,
+    "pypto_worktree_patch": "python/pypto/_kernel_abi.py: SIMPLER_KERNEL_REVISION 与 runtime 子模块同步为 ac165482292e6905df27b89deee5fa81ab9a4980",
+    "rebuilt": [
+      "simpler editable extension",
+      "pypto native Torch adapter and compiler"
+    ],
+    "abi_checks": "abi_checks.log: 2 passed + ABI_PREFLIGHT_PASS",
+    "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+    "scope": "single-card formal layer weights, synthetic inputs/history; no full-model tokens or DSpark stats",
+    "pypto_tested_tree_commit": "4bddb1209"
+  },
+  "cases": {
+    "csa_8k": {
+      "task_id": "task_20260930_203805_264611210445",
+      "history": 8192,
+      "batch": 4,
+      "runtime": "host_build_graph",
+      "hbg_vs_ring": {
+        "status": "PASS",
+        "reference": "/data/pyptouser/qinchuanyu/pto-eager/.cache/csa-hbg-integration/tests/pypto_test/results/csa_hbg_integration/factory_b4_8k_ring/states.pt",
+        "checks": {
+          "x_out": {
+            "status": "PASS",
+            "shape": [
+              24,
+              4,
+              4096
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 393216,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "idx_topk": {
+            "status": "PASS",
+            "shape": [
+              24,
+              512
+            ],
+            "dtype": "torch.int32",
+            "elements": 12288,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "swa.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              32,
+              1,
+              512
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 606208,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "compressed.0": {
+            "status": "PASS",
+            "shape": [
+              265,
+              32,
+              1,
+              512
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 4341760,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "state.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              2,
+              1,
+              2048
+            ],
+            "dtype": "torch.float32",
+            "elements": 151552,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer.0": {
+            "status": "PASS",
+            "shape": [
+              265,
+              32,
+              1,
+              128
+            ],
+            "dtype": "torch.int8",
+            "elements": 1085440,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer.1": {
+            "status": "PASS",
+            "shape": [
+              265,
+              32,
+              1,
+              1
+            ],
+            "dtype": "torch.float16",
+            "elements": 8480,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer_state.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              2,
+              1,
+              512
+            ],
+            "dtype": "torch.float32",
+            "elements": 37888,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          }
+        }
+      },
+      "native_output": {
+        "status": "FAIL",
+        "shape": [
+          24,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "elements": 393216,
+        "nonfinite": 0,
+        "max_abs": 0.03125,
+        "rmse": 0.001898336381471896,
+        "mismatches": 96880
+      },
+      "native_diagnostics": {
+        "x_out": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 393216,
+          "nonfinite": 0,
+          "max_abs": 0.03125,
+          "rmse": 0.001898336381471896,
+          "mismatches": 96880
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            512
+          ],
+          "dtype": "torch.int32",
+          "elements": 12288,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 10999
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 606208,
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.00023275001628163405,
+          "mismatches": 3773
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "shape": [
+            265,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 4341760,
+          "nonfinite": 0,
+          "max_abs": 0.0078125,
+          "rmse": 4.409332398534843e-06,
+          "mismatches": 32
+        },
+        "state.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "elements": 151552,
+          "nonfinite": 0,
+          "max_abs": 0.00015385448932647705,
+          "rmse": 1.079564384844164e-05,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "shape": [
+            265,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "elements": 1085440,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 31
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "shape": [
+            265,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "elements": 8480,
+          "nonfinite": 0,
+          "max_abs": 6.103515625e-05,
+          "rmse": 9.518732301596362e-07,
+          "mismatches": 4
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "elements": 37888,
+          "nonfinite": 0,
+          "max_abs": 0.0003209710121154785,
+          "rmse": 1.7164450138091322e-05,
+          "mismatches": 12280
+        }
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/csa_8k_hbg/report.json",
+      "guard_checks": 124,
+      "graph_status": "PASS",
+      "graph_replays": 3,
+      "graph_state_checks": 24,
+      "graph_guard_checks": 93,
+      "self_consistency_checks": 16,
+      "native_topk": {
+        "status": "MEASURED",
+        "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+        "rows": 24,
+        "position_mismatches": 10999,
+        "order_only_rows": 0,
+        "different_set_rows": 24,
+        "replaced_indices": 117,
+        "invalid_rows": 0
+      }
+    },
+    "csa_128k": {
+      "task_id": "task_20260930_203855_265360112849",
+      "history": 131072,
+      "batch": 4,
+      "runtime": "host_build_graph",
+      "hbg_vs_ring": {
+        "status": "PASS",
+        "reference": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/csa_128k_ring/states.pt",
+        "checks": {
+          "x_out": {
+            "status": "PASS",
+            "shape": [
+              24,
+              4,
+              4096
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 393216,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "idx_topk": {
+            "status": "PASS",
+            "shape": [
+              24,
+              512
+            ],
+            "dtype": "torch.int32",
+            "elements": 12288,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "swa.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              32,
+              1,
+              512
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 606208,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "compressed.0": {
+            "status": "PASS",
+            "shape": [
+              4105,
+              32,
+              1,
+              512
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 67256320,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "state.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              2,
+              1,
+              2048
+            ],
+            "dtype": "torch.float32",
+            "elements": 151552,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer.0": {
+            "status": "PASS",
+            "shape": [
+              4105,
+              32,
+              1,
+              128
+            ],
+            "dtype": "torch.int8",
+            "elements": 16814080,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer.1": {
+            "status": "PASS",
+            "shape": [
+              4105,
+              32,
+              1,
+              1
+            ],
+            "dtype": "torch.float16",
+            "elements": 131360,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "indexer_state.0": {
+            "status": "PASS",
+            "shape": [
+              37,
+              2,
+              1,
+              512
+            ],
+            "dtype": "torch.float32",
+            "elements": 37888,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          }
+        }
+      },
+      "native_output": {
+        "status": "FAIL",
+        "shape": [
+          24,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "elements": 393216,
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 0.0022274855941578167,
+        "mismatches": 112348
+      },
+      "native_diagnostics": {
+        "x_out": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 393216,
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.0022274855941578167,
+          "mismatches": 112348
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            512
+          ],
+          "dtype": "torch.int32",
+          "elements": 12288,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 11360
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 606208,
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.00023214856957517975,
+          "mismatches": 3802
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "shape": [
+            4105,
+            32,
+            1,
+            512
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 67256320,
+          "nonfinite": 0,
+          "max_abs": 0.0078125,
+          "rmse": 1.1715475407692165e-06,
+          "mismatches": 23
+        },
+        "state.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            2,
+            1,
+            2048
+          ],
+          "dtype": "torch.float32",
+          "elements": 151552,
+          "nonfinite": 0,
+          "max_abs": 0.00015385448932647705,
+          "rmse": 1.0795643848441642e-05,
+          "mismatches": 49120
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "shape": [
+            4105,
+            32,
+            1,
+            128
+          ],
+          "dtype": "torch.int8",
+          "elements": 16814080,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 33
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "shape": [
+            4105,
+            32,
+            1,
+            1
+          ],
+          "dtype": "torch.float16",
+          "elements": 131360,
+          "nonfinite": 0,
+          "max_abs": 6.103515625e-05,
+          "rmse": 1.7861780661997282e-07,
+          "mismatches": 3
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "shape": [
+            37,
+            2,
+            1,
+            512
+          ],
+          "dtype": "torch.float32",
+          "elements": 37888,
+          "nonfinite": 0,
+          "max_abs": 0.0003209710121154785,
+          "rmse": 1.7164450138091322e-05,
+          "mismatches": 12280
+        }
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/csa_128k_hbg/report.json",
+      "guard_checks": 124,
+      "graph_status": "PASS",
+      "graph_replays": 3,
+      "graph_state_checks": 24,
+      "graph_guard_checks": 93,
+      "self_consistency_checks": 16,
+      "native_topk": {
+        "status": "MEASURED",
+        "scope": "Top-K 结构与集合诊断，不代表选择规则或整模型验收",
+        "rows": 24,
+        "position_mismatches": 11360,
+        "order_only_rows": 0,
+        "different_set_rows": 24,
+        "replaced_indices": 217,
+        "invalid_rows": 0
+      }
+    },
+    "hca_8k": {
+      "task_id": "task_20260930_203856_26536514866",
+      "history": 8190,
+      "batch": 4,
+      "runtime": "host_build_graph",
+      "hbg_vs_ring": {
+        "status": "PASS",
+        "reference": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/hca_8k_ring/states.pt",
+        "checks": {
+          "output": {
+            "status": "PASS",
+            "shape": [
+              24,
+              4,
+              4096
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 393216,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "swa": {
+            "status": "PASS",
+            "shape": [
+              1212672
+            ],
+            "dtype": "torch.int8",
+            "elements": 1212672,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "compressed": {
+            "status": "PASS",
+            "shape": [
+              557312
+            ],
+            "dtype": "torch.int8",
+            "elements": 557312,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "state": {
+            "status": "PASS",
+            "shape": [
+              2392320
+            ],
+            "dtype": "torch.int8",
+            "elements": 2392320,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          }
+        }
+      },
+      "native_output": {
+        "status": "FAIL",
+        "shape": [
+          24,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "elements": 393216,
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 0.0019002261562588295,
+        "mismatches": 117115
+      },
+      "native_diagnostics": {
+        "output": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 393216,
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.0019002261562588295,
+          "mismatches": 117115
+        },
+        "swa": {
+          "status": "FAIL",
+          "shape": [
+            1212672
+          ],
+          "dtype": "torch.int8",
+          "elements": 1212672,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 3737
+        },
+        "compressed": {
+          "status": "FAIL",
+          "shape": [
+            557312
+          ],
+          "dtype": "torch.int8",
+          "elements": 557312,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 8
+        },
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            2392320
+          ],
+          "dtype": "torch.int8",
+          "elements": 2392320,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 49185
+        }
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/hca_8k_hbg/report.json",
+      "guard_checks": 38,
+      "service_checks": 4,
+      "graph_state_checks": 4,
+      "graph_guard_checks": 19,
+      "graph_status": "PASS",
+      "compressed_cache_written_bytes": 3818
+    },
+    "hca_128k": {
+      "task_id": "task_20260930_203856_265375328106",
+      "history": 131070,
+      "batch": 4,
+      "runtime": "host_build_graph",
+      "hbg_vs_ring": {
+        "status": "PASS",
+        "reference": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/hca_128k_ring/states.pt",
+        "checks": {
+          "output": {
+            "status": "PASS",
+            "shape": [
+              24,
+              4,
+              4096
+            ],
+            "dtype": "torch.bfloat16",
+            "elements": 393216,
+            "nonfinite": 0,
+            "max_abs": 0.0,
+            "rmse": 0.0,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "swa": {
+            "status": "PASS",
+            "shape": [
+              1212672
+            ],
+            "dtype": "torch.int8",
+            "elements": 1212672,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "compressed": {
+            "status": "PASS",
+            "shape": [
+              4489472
+            ],
+            "dtype": "torch.int8",
+            "elements": 4489472,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          },
+          "state": {
+            "status": "PASS",
+            "shape": [
+              2392320
+            ],
+            "dtype": "torch.int8",
+            "elements": 2392320,
+            "nonfinite": 0,
+            "max_abs": null,
+            "rmse": null,
+            "mismatches": 0,
+            "different_bytes": 0
+          }
+        }
+      },
+      "native_output": {
+        "status": "FAIL",
+        "shape": [
+          24,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "elements": 393216,
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 0.001315813730295755,
+        "mismatches": 74060
+      },
+      "native_diagnostics": {
+        "output": {
+          "status": "FAIL",
+          "shape": [
+            24,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "elements": 393216,
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.001315813730295755,
+          "mismatches": 74060
+        },
+        "swa": {
+          "status": "FAIL",
+          "shape": [
+            1212672
+          ],
+          "dtype": "torch.int8",
+          "elements": 1212672,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 3753
+        },
+        "compressed": {
+          "status": "FAIL",
+          "shape": [
+            4489472
+          ],
+          "dtype": "torch.int8",
+          "elements": 4489472,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 3
+        },
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            2392320
+          ],
+          "dtype": "torch.int8",
+          "elements": 2392320,
+          "nonfinite": 0,
+          "max_abs": null,
+          "rmse": null,
+          "mismatches": 49185
+        }
+      },
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hbg_accuracy_20260930/hca_128k_hbg/report.json",
+      "guard_checks": 38,
+      "service_checks": 4,
+      "graph_state_checks": 4,
+      "graph_guard_checks": 19,
+      "graph_status": "PASS",
+      "compressed_cache_written_bytes": 3831
+    }
+  }
+}
