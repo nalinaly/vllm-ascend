@@ -1,0 +1,1357 @@
+{
+  "source": {
+    "baseline_commit": "55852cff",
+    "limit": "five new optimization points, stop after review and required checks",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+      "oa_tiling_v3": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_tiling_v3",
+      "oa_kshift": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift",
+      "qb_pipeline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+      "qb_reuse": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_reuse",
+      "qa_native_v9": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qa_native_v9",
+      "oa_dispatch": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_dispatch",
+      "oa_kshift_dispatch": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift_dispatch",
+      "base_p23": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+      "base_p4": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+      "base_p2_review": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+      "base_p5": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+      "integrated_13": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/integrated_13"
+    },
+    "points": {
+      "1": "Native NZ baseM96/baseN256/baseK64, stepKa8/stepKb4; only token count 96",
+      "2": "Native KLoopMDL cyclic outer start by block_idx; PTO logical task block differs from physical core; A/B both K512 so factor=1. FP32 accumulation order changes.",
+      "3": "Q-B L1 K512 stage2, L0 K128 stage2; Right two 32KiB slots replaces single 64KiB. Retain N256, M128, four groups x4 workers, dependencies, scales and integer arithmetic.",
+      "4": "Increment over point3: keep full K1024 A in L1 across N rounds; retain K128 L0 double buffers, K512 B streaming, N256, four groups and exact integer arithmetic. Old N128/K256 full-A candidate is not retested.",
+      "5": "Native NT CalcBase/CalBaseMBaseN selects M96/N48/K128 (22 blocks); CalL1Tiling gives stepKa4/stepKb8, A K512/B K1024; last N block valid16. Only 96 tokens, atomic0, NZ; other branches unchanged. Source-derived strategy, not binary tiling proof."
+    },
+    "integration_base": "7d07a579",
+    "decisions": {
+      "1": "保留可复现核内优化候选，不设默认：独立整段无收益，1+3组合长档全部五组回退。",
+      "2": "撤回直接放弃结论，保留K-shift及调度联动候选；短长档均改善，但独立DFX核内变慢且存在BF16差异，缺独立参考和整模型token/DSpark验收。",
+      "3": "接入默认HCA性能路径：Q-B核占用约降低19.88%，长档均值基本持平，短档均值降低3.55%；不宣称已有整网收益。",
+      "4": "不接入：增量相对点3的Q-B核占用变差、整段均值无明确收益。",
+      "5": "不接入：Native来源明确的M96/N48/K128已编译执行，但Q-A核占用和整段均值均变差。",
+      "integrated_13": "不设默认：长档+2.619%，短档-4.805%，8:2加权+1.134%；只保存试验及逐bit/边界证据。"
+    },
+    "point_2_review": "配对筛选：原调度下base/K-shift；新调度下base/K-shift；另测只改调度。各组非同窗四方试验，不声称已测出调度与K-shift交互项。",
+    "compiler_notes": [
+      "JIT依赖调用不读取constexpr默认值，调用端显式传入；共享CSA通过测试root的设备编译/load。",
+      "嵌套constexpr分支需要明确SSA合并；Q-A的inout store视图在orchestration层创建，避免自由维度和TileType误推导。",
+      "Q-A NZ L1转置使用公开tile.transpose_view零搬运解释视图；直接ttrans不适用该Mat布局。",
+      "失败编译仅修复算子表达，不修改PyPTO/PTOAS/PTO-ISA；失败日志留本地，不保留误导性的半成品生成脚本。",
+      "O-A/Q-B显式Acc种子依赖compact内部接口，窄行与补位校验已通过；这不是稳定公共API声明。"
+    ],
+    "pause": "2026-09-30用户让卡给HCA/CSA合并会话；所有21个既有设备任务在暂停核实时均completed(exit=0)。只整理已有结果，不再提交设备任务。"
+  },
+  "reports": {
+    "integrated_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/integrated_13"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 8,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 549.75,
+          "max_us": 590.0,
+          "mean_us": 557.45,
+          "p50_us": 554.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 565.25,
+          "max_us": 584.25,
+          "mean_us": 572.05,
+          "p50_us": 572.25
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 574.0,
+          "candidate_us": 578.875
+        },
+        {
+          "base_us": 554.75,
+          "candidate_us": 569.5
+        },
+        {
+          "base_us": 553.0,
+          "candidate_us": 575.0
+        },
+        {
+          "base_us": 552.0,
+          "candidate_us": 568.625
+        },
+        {
+          "base_us": 553.5,
+          "candidate_us": 568.25
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/integrated_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": 14.599999999999909,
+      "delta_mean_percent": 2.619068974795935,
+      "improved_pair_means": 0
+    },
+    "integrated_128k_b4_boundary": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/integrated_13"
+      },
+      "case": [
+        131072,
+        4
+      ],
+      "device": 10,
+      "summary": {
+        "base": {
+          "count": 2,
+          "min_us": 329.0,
+          "max_us": 387.75,
+          "mean_us": 358.375,
+          "p50_us": 358.375
+        },
+        "candidate": {
+          "count": 2,
+          "min_us": 330.0,
+          "max_us": 349.5,
+          "mean_us": 339.75,
+          "p50_us": 339.75
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 358.375,
+          "candidate_us": 339.75
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/integrated_128k_b4_boundary/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "functional_only",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          4,
+          3,
+          1,
+          4
+        ]
+      },
+      "delta_mean_us": -18.625,
+      "delta_mean_percent": -5.197070108126967,
+      "improved_pair_means": 1
+    },
+    "integrated_8k_b24": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/integrated_13"
+      },
+      "case": [
+        8192,
+        24
+      ],
+      "device": 9,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 602.25,
+          "max_us": 693.5,
+          "mean_us": 626.4,
+          "p50_us": 614.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 584.0,
+          "max_us": 607.5,
+          "mean_us": 596.3,
+          "p50_us": 595.75
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 653.0,
+          "candidate_us": 607.25
+        },
+        {
+          "base_us": 617.875,
+          "candidate_us": 594.375
+        },
+        {
+          "base_us": 609.0,
+          "candidate_us": 587.25
+        },
+        {
+          "base_us": 610.125,
+          "candidate_us": 596.75
+        },
+        {
+          "base_us": 642.0,
+          "candidate_us": 595.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/integrated_8k_b24/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          24,
+          23,
+          1,
+          24
+        ]
+      },
+      "delta_mean_us": -30.100000000000023,
+      "delta_mean_percent": -4.805236270753522,
+      "improved_pair_means": 5
+    },
+    "p1_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_tiling_v3"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 538.0,
+          "max_us": 574.0,
+          "mean_us": 550.7,
+          "p50_us": 547.5
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 540.25,
+          "max_us": 563.75,
+          "mean_us": 555.325,
+          "p50_us": 556.625
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 557.5,
+          "candidate_us": 560.75
+        },
+        {
+          "base_us": 543.5,
+          "candidate_us": 558.0
+        },
+        {
+          "base_us": 546.5,
+          "candidate_us": 555.75
+        },
+        {
+          "base_us": 562.0,
+          "candidate_us": 554.25
+        },
+        {
+          "base_us": 544.0,
+          "candidate_us": 547.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p1_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": 4.625,
+      "delta_mean_percent": 0.8398402033775287,
+      "improved_pair_means": 1
+    },
+    "p1_8k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_tiling_v3"
+      },
+      "case": [
+        8192,
+        16
+      ],
+      "device": 2,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 428.25,
+          "max_us": 478.5,
+          "mean_us": 442.25,
+          "p50_us": 438.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 432.75,
+          "max_us": 459.25,
+          "mean_us": 447.15,
+          "p50_us": 445.875
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 457.5,
+          "candidate_us": 444.625
+        },
+        {
+          "base_us": 443.0,
+          "candidate_us": 439.5
+        },
+        {
+          "base_us": 433.25,
+          "candidate_us": 442.25
+        },
+        {
+          "base_us": 437.125,
+          "candidate_us": 450.5
+        },
+        {
+          "base_us": 440.375,
+          "candidate_us": 458.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p1_8k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          16,
+          15,
+          1,
+          16
+        ]
+      },
+      "delta_mean_us": 4.899999999999977,
+      "delta_mean_percent": 1.1079706048614968,
+      "improved_pair_means": 2
+    },
+    "p2_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 579.75,
+          "max_us": 602.75,
+          "mean_us": 590.0,
+          "p50_us": 588.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 573.0,
+          "max_us": 598.25,
+          "mean_us": 584.325,
+          "p50_us": 583.625
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 600.5,
+          "candidate_us": 582.875
+        },
+        {
+          "base_us": 592.875,
+          "candidate_us": 585.375
+        },
+        {
+          "base_us": 585.375,
+          "candidate_us": 581.375
+        },
+        {
+          "base_us": 585.625,
+          "candidate_us": 583.25
+        },
+        {
+          "base_us": 585.625,
+          "candidate_us": 588.75
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": false,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p2_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "arithmetic_diagnostic": {
+        "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+        "comparison": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 2.9391776896671405e-05,
+          "mismatches": 212,
+          "first_mismatches": [
+            [
+              25,
+              3,
+              1390
+            ],
+            [
+              40,
+              0,
+              2203
+            ],
+            [
+              40,
+              0,
+              2233
+            ],
+            [
+              40,
+              0,
+              2370
+            ],
+            [
+              40,
+              0,
+              2879
+            ],
+            [
+              40,
+              1,
+              926
+            ],
+            [
+              40,
+              1,
+              1199
+            ],
+            [
+              40,
+              1,
+              2370
+            ]
+          ]
+        },
+        "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+      },
+      "delta_mean_us": -5.6749999999999545,
+      "delta_mean_percent": -0.9618644067796556,
+      "improved_pair_means": 4
+    },
+    "p2_8k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift"
+      },
+      "case": [
+        8192,
+        16
+      ],
+      "device": 9,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 439.0,
+          "max_us": 477.0,
+          "mean_us": 449.3,
+          "p50_us": 447.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 423.5,
+          "max_us": 453.5,
+          "mean_us": 438.05,
+          "p50_us": 439.125
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 467.125,
+          "candidate_us": 448.375
+        },
+        {
+          "base_us": 446.0,
+          "candidate_us": 431.0
+        },
+        {
+          "base_us": 447.625,
+          "candidate_us": 440.0
+        },
+        {
+          "base_us": 442.375,
+          "candidate_us": 437.125
+        },
+        {
+          "base_us": 443.375,
+          "candidate_us": 433.75
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": false,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p2_8k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "arithmetic_diagnostic": {
+        "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+        "comparison": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 4.212313496635843e-05,
+          "mismatches": 369,
+          "first_mismatches": [
+            [
+              1,
+              2,
+              13
+            ],
+            [
+              12,
+              0,
+              11
+            ],
+            [
+              12,
+              0,
+              646
+            ],
+            [
+              12,
+              0,
+              1461
+            ],
+            [
+              12,
+              0,
+              1476
+            ],
+            [
+              12,
+              0,
+              1758
+            ],
+            [
+              12,
+              0,
+              2166
+            ],
+            [
+              12,
+              0,
+              2178
+            ]
+          ]
+        },
+        "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+      },
+      "delta_mean_us": -11.25,
+      "delta_mean_percent": -2.5038949476964167,
+      "improved_pair_means": 5
+    },
+    "p2_schedule_only_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_dispatch"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 562.5,
+          "max_us": 616.75,
+          "mean_us": 576.375,
+          "p50_us": 570.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 566.0,
+          "max_us": 586.75,
+          "mean_us": 574.975,
+          "p50_us": 574.5
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 593.125,
+          "candidate_us": 579.375
+        },
+        {
+          "base_us": 574.625,
+          "candidate_us": 573.875
+        },
+        {
+          "base_us": 572.75,
+          "candidate_us": 579.0
+        },
+        {
+          "base_us": 564.875,
+          "candidate_us": 566.25
+        },
+        {
+          "base_us": 576.5,
+          "candidate_us": 576.375
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p2_schedule_only_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": -1.3999999999999773,
+      "delta_mean_percent": -0.2428974192149158,
+      "improved_pair_means": 3
+    },
+    "p2_shift_on_schedule_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_dispatch",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift_dispatch"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 2,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 559.5,
+          "max_us": 602.0,
+          "mean_us": 575.275,
+          "p50_us": 571.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 559.25,
+          "max_us": 574.5,
+          "mean_us": 565.975,
+          "p50_us": 565.125
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 580.75,
+          "candidate_us": 574.125
+        },
+        {
+          "base_us": 570.25,
+          "candidate_us": 567.875
+        },
+        {
+          "base_us": 579.75,
+          "candidate_us": 566.375
+        },
+        {
+          "base_us": 566.25,
+          "candidate_us": 561.625
+        },
+        {
+          "base_us": 579.375,
+          "candidate_us": 559.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": false,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p2_shift_on_schedule_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "arithmetic_diagnostic": {
+        "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+        "comparison": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 2.9391776896671405e-05,
+          "mismatches": 212,
+          "first_mismatches": [
+            [
+              25,
+              3,
+              1390
+            ],
+            [
+              40,
+              0,
+              2203
+            ],
+            [
+              40,
+              0,
+              2233
+            ],
+            [
+              40,
+              0,
+              2370
+            ],
+            [
+              40,
+              0,
+              2879
+            ],
+            [
+              40,
+              1,
+              926
+            ],
+            [
+              40,
+              1,
+              1199
+            ],
+            [
+              40,
+              1,
+              2370
+            ]
+          ]
+        },
+        "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+      },
+      "delta_mean_us": -9.299999999999955,
+      "delta_mean_percent": -1.6166181391508383,
+      "improved_pair_means": 5
+    },
+    "p2_shift_on_schedule_8k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_dispatch",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift_dispatch"
+      },
+      "case": [
+        8192,
+        16
+      ],
+      "device": 1,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 458.75,
+          "max_us": 476.5,
+          "mean_us": 466.325,
+          "p50_us": 463.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 446.5,
+          "max_us": 471.75,
+          "mean_us": 458.05,
+          "p50_us": 456.75
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 476.25,
+          "candidate_us": 458.75
+        },
+        {
+          "base_us": 468.125,
+          "candidate_us": 464.0
+        },
+        {
+          "base_us": 464.75,
+          "candidate_us": 451.75
+        },
+        {
+          "base_us": 462.0,
+          "candidate_us": 460.125
+        },
+        {
+          "base_us": 460.5,
+          "candidate_us": 455.625
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": false,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p2_shift_on_schedule_8k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "arithmetic_diagnostic": {
+        "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+        "comparison": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 4.212313496635843e-05,
+          "mismatches": 369,
+          "first_mismatches": [
+            [
+              1,
+              2,
+              13
+            ],
+            [
+              12,
+              0,
+              11
+            ],
+            [
+              12,
+              0,
+              646
+            ],
+            [
+              12,
+              0,
+              1461
+            ],
+            [
+              12,
+              0,
+              1476
+            ],
+            [
+              12,
+              0,
+              1758
+            ],
+            [
+              12,
+              0,
+              2166
+            ],
+            [
+              12,
+              0,
+              2178
+            ]
+          ]
+        },
+        "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+      },
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          16,
+          15,
+          1,
+          16
+        ]
+      },
+      "delta_mean_us": -8.274999999999977,
+      "delta_mean_percent": -1.7745134830858267,
+      "improved_pair_means": 5
+    },
+    "p3_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 10,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 575.25,
+          "max_us": 638.0,
+          "mean_us": 585.15,
+          "p50_us": 578.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 564.5,
+          "max_us": 601.0,
+          "mean_us": 586.175,
+          "p50_us": 586.75
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 606.625,
+          "candidate_us": 592.625
+        },
+        {
+          "base_us": 579.5,
+          "candidate_us": 586.75
+        },
+        {
+          "base_us": 577.375,
+          "candidate_us": 590.875
+        },
+        {
+          "base_us": 581.75,
+          "candidate_us": 584.625
+        },
+        {
+          "base_us": 580.5,
+          "candidate_us": 576.0
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p3_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": 1.0249999999999773,
+      "delta_mean_percent": 0.1751687601469598,
+      "improved_pair_means": 2
+    },
+    "p3_8k_b24": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline"
+      },
+      "case": [
+        8192,
+        24
+      ],
+      "device": 11,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 600.5,
+          "max_us": 630.25,
+          "mean_us": 612.95,
+          "p50_us": 611.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 582.75,
+          "max_us": 598.75,
+          "mean_us": 591.2,
+          "p50_us": 591.25
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 620.625,
+          "candidate_us": 593.0
+        },
+        {
+          "base_us": 617.75,
+          "candidate_us": 591.375
+        },
+        {
+          "base_us": 609.375,
+          "candidate_us": 594.125
+        },
+        {
+          "base_us": 609.125,
+          "candidate_us": 587.25
+        },
+        {
+          "base_us": 607.875,
+          "candidate_us": 590.25
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p3_8k_b24/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          24,
+          23,
+          1,
+          24
+        ]
+      },
+      "delta_mean_us": -21.75,
+      "delta_mean_percent": -3.5484134105555065,
+      "improved_pair_means": 5
+    },
+    "p4_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_reuse"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 10,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 570.25,
+          "max_us": 612.75,
+          "mean_us": 586.525,
+          "p50_us": 583.375
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 575.75,
+          "max_us": 600.25,
+          "mean_us": 585.9,
+          "p50_us": 585.5
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 601.5,
+          "candidate_us": 588.75
+        },
+        {
+          "base_us": 584.125,
+          "candidate_us": 580.25
+        },
+        {
+          "base_us": 575.25,
+          "candidate_us": 588.875
+        },
+        {
+          "base_us": 589.875,
+          "candidate_us": 587.0
+        },
+        {
+          "base_us": 581.875,
+          "candidate_us": 584.625
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p4_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": -0.625,
+      "delta_mean_percent": -0.10655982268445996,
+      "improved_pair_means": 3
+    },
+    "p4_8k_b24": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_reuse"
+      },
+      "case": [
+        8192,
+        24
+      ],
+      "device": 11,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 595.5,
+          "max_us": 660.25,
+          "mean_us": 613.4,
+          "p50_us": 610.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 606.25,
+          "max_us": 624.0,
+          "mean_us": 615.4,
+          "p50_us": 616.75
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 627.875,
+          "candidate_us": 620.125
+        },
+        {
+          "base_us": 607.75,
+          "candidate_us": 612.875
+        },
+        {
+          "base_us": 609.0,
+          "candidate_us": 620.375
+        },
+        {
+          "base_us": 613.5,
+          "candidate_us": 616.25
+        },
+        {
+          "base_us": 608.875,
+          "candidate_us": 607.375
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p4_8k_b24/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          24,
+          23,
+          1,
+          24
+        ]
+      },
+      "delta_mean_us": 2.0,
+      "delta_mean_percent": 0.3260515161395583,
+      "improved_pair_means": 2
+    },
+    "p5_128k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qa_native_v9"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 555.25,
+          "max_us": 589.25,
+          "mean_us": 564.975,
+          "p50_us": 563.625
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 566.75,
+          "max_us": 587.25,
+          "mean_us": 576.425,
+          "p50_us": 575.375
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 573.625,
+          "candidate_us": 578.25
+        },
+        {
+          "base_us": 564.0,
+          "candidate_us": 576.625
+        },
+        {
+          "base_us": 566.875,
+          "candidate_us": 576.25
+        },
+        {
+          "base_us": 563.375,
+          "candidate_us": 579.875
+        },
+        {
+          "base_us": 557.0,
+          "candidate_us": 571.125
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p5_128k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "delta_mean_us": 11.449999999999932,
+      "delta_mean_percent": 2.0266383468295013,
+      "improved_pair_means": 0
+    },
+    "p5_8k_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qa_native_v9"
+      },
+      "case": [
+        8192,
+        16
+      ],
+      "device": 2,
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 422.5,
+          "max_us": 461.0,
+          "mean_us": 436.7,
+          "p50_us": 434.0
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 427.25,
+          "max_us": 449.5,
+          "mean_us": 439.075,
+          "p50_us": 439.125
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 448.75,
+          "candidate_us": 441.5
+        },
+        {
+          "base_us": 431.625,
+          "candidate_us": 441.0
+        },
+        {
+          "base_us": 431.625,
+          "candidate_us": 446.5
+        },
+        {
+          "base_us": 429.75,
+          "candidate_us": 433.5
+        },
+        {
+          "base_us": 441.75,
+          "candidate_us": 432.875
+        }
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_five_20260930/p5_8k_b16/report.json",
+      "same_variant_replay_and_guards": "PASS",
+      "purpose": "performance_screen",
+      "padding": {
+        "status": "PASS",
+        "active_batches": [
+          16,
+          15,
+          1,
+          16
+        ]
+      },
+      "delta_mean_us": 2.375,
+      "delta_mean_percent": 0.5438516143805749,
+      "improved_pair_means": 2
+    }
+  },
+  "weighted_8_to_2_percent": {
+    "1": 0.8934662836743223,
+    "2": -1.2702705149630078,
+    "3": -0.5695476739935335,
+    "4": -0.02003755491965631,
+    "5": 1.730081000339716,
+    "point_2_on_new_schedule": -1.648197207937836,
+    "integrated_13": 1.1342079256860438
+  },
+  "limits": "各点只与自己的同窗控制比较；不同点不叠加百分比。DFX独立单次采样，核占用/24不是整段延迟；第二点不是同窗四方因子试验。无新Native/整机结论。"
+}

@@ -1,0 +1,94 @@
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -317 +317,5 @@
+-    with pl.spmd(QR_N_BLOCKS * QR_OK * qr_m_groups, name_hint="qr_proj_matmul", allow_early_resolve=True) as qa_tid:
++    native_output = pl.reshape(qr_fp32, [qr_t_matmul, Q_LORA])
++    qa_blocks = QR_N_BLOCKS * QR_OK * qr_m_groups
++    if tile_rows == 96 and ATOMIC_ADD == 0:
++        qa_blocks = (Q_LORA + 47) // 48
++    with pl.spmd(qa_blocks, name_hint="qr_proj_matmul", allow_early_resolve=True) as qa_tid:
+@@ -319,28 +323,56 @@
+-        qbg_idx = pl.tile.get_block_idx()
+-        qr_k_base = ((qbg_idx // QR_N_BLOCKS) % QR_OK) * QR_SPLIT_K_TILE
+-        q_a_col0 = (qbg_idx % QR_N_BLOCKS) * QR_N_TILE
+-        qr_m_group = qbg_idx // (QR_N_BLOCKS * QR_OK)
+-        for dense_t0 in pl.range(qr_m_group * DENSE_M, qr_full_rows, qr_m_groups * DENSE_M):
+-            dense_x0 = tile_base + dense_t0
+-            dense_acc = pl.create_tensor([DENSE_M, QR_N_TILE], dtype=pl.FP32)
+-            for dense_k in pl.pipeline(0, QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
+-                dense_d0 = qr_k_base + dense_k * QR_K_TILE
+-                dense_x = x_view[dense_x0 : dense_x0 + DENSE_M, dense_d0 : dense_d0 + QR_K_TILE]
+-                dense_w = wq_a[q_a_col0 : q_a_col0 + QR_N_TILE, dense_d0 : dense_d0 + QR_K_TILE]
+-                dense_acc = pl.matmul_acc(dense_acc, dense_x, dense_w, b_trans=True, init_cond=(dense_k == 0))
+-            qr_fp32 = pl.assemble(qr_fp32, dense_acc, [dense_t0, q_a_col0], atomic=STORE_ATOMIC)
+-        for t0 in pl.range(qr_full_rows + qr_m_group * QR_M_TILE, qr_t_matmul, qr_m_groups * QR_M_TILE):
+-            q_acc = pl.create_tensor([QR_M_TILE, QR_N_TILE], dtype=pl.FP32)
+-            for db in pl.pipeline(QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
+-                qr_d0 = qr_k_base + db * QR_K_TILE
+-                qr_rows = pl.min(QR_M_TILE, tile_rows - t0)
+-                x_t0 = tile_base + t0
+-                q_x_chunk_bf16 = pl.slice(
+-                    x_view,
+-                    [QR_M_TILE, QR_K_TILE],
+-                    [x_t0, qr_d0],
+-                    valid_shape=[qr_rows, QR_K_TILE],
+-                )
+-                w_chunk = wq_a[q_a_col0 : q_a_col0 + QR_N_TILE, qr_d0 : qr_d0 + QR_K_TILE]
+-                q_acc = pl.matmul_acc(q_acc, q_x_chunk_bf16, w_chunk, b_trans=True, init_cond=(db == 0))
+-            qr_fp32 = pl.assemble(qr_fp32, q_acc, [t0, q_a_col0], atomic=STORE_ATOMIC)
++        if tile_rows == 96 and ATOMIC_ADD == 0:
++            native_block = pl.tile.get_block_idx()
++            native_n = native_block * 48
++            native_n_valid = pl.min(48, Q_LORA - native_n)
++            native_storage = pl.create_tile([96, 48], dtype=pl.FP32,
++                                            target_memory=pl.MemorySpace.Acc, compact=True)
++            native_seed = pl.tile.set_validshape(native_storage, 96, native_n_valid)
++            for b_outer, (b_acc,) in pl.pipeline(0, D // 1024, stage=2, init_values=(native_seed,)):
++                b_start = b_outer * 1024
++                w_l1 = pl.load(wq_a, [native_n, b_start], [48, 1024],
++                               valid_shape=[native_n_valid, 1024], target_memory=pl.MemorySpace.Mat)
++                wt_l1 = pl.tile.transpose_view(w_l1)
++                for a_outer, (a_acc,) in pl.pipeline(0, 2, stage=2, init_values=(b_acc,)):
++                    a_start = b_start + a_outer * 512
++                    x_l1 = pl.load(x, [tile_base, a_start], [96, 512], target_memory=pl.MemorySpace.Mat)
++                    for k_inner, (c_acc,) in pl.pipeline(0, 4, stage=2, init_values=(a_acc,)):
++                        x_l0 = pl.tile.extract(x_l1, 0, k_inner * 128, [96, 128],
++                                              target_memory=pl.MemorySpace.Left)
++                        w_l0 = pl.tile.extract(wt_l1, a_outer * 512 + k_inner * 128, 0, [128, 48],
++                                              target_memory=pl.MemorySpace.Right)
++                        c_next = pl.tile.matmul_acc(c_acc, x_l0, w_l0,
++                                                   init_cond=(b_outer == 0 and a_outer == 0 and k_inner == 0))
++                        c_done = pl.yield_(c_next)
++                    a_done = pl.yield_(c_done)
++                b_done = pl.yield_(a_done)
++            pl.store(b_done, [0, native_n], native_output)
++        else:
++            qbg_idx = pl.tile.get_block_idx()
++            qr_k_base = ((qbg_idx // QR_N_BLOCKS) % QR_OK) * QR_SPLIT_K_TILE
++            q_a_col0 = (qbg_idx % QR_N_BLOCKS) * QR_N_TILE
++            qr_m_group = qbg_idx // (QR_N_BLOCKS * QR_OK)
++            for dense_t0 in pl.range(qr_m_group * DENSE_M, qr_full_rows, qr_m_groups * DENSE_M):
++                dense_x0 = tile_base + dense_t0
++                dense_acc = pl.create_tensor([DENSE_M, QR_N_TILE], dtype=pl.FP32)
++                for dense_k in pl.pipeline(0, QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
++                    dense_d0 = qr_k_base + dense_k * QR_K_TILE
++                    dense_x = x_view[dense_x0 : dense_x0 + DENSE_M, dense_d0 : dense_d0 + QR_K_TILE]
++                    dense_w = wq_a[q_a_col0 : q_a_col0 + QR_N_TILE, dense_d0 : dense_d0 + QR_K_TILE]
++                    dense_acc = pl.matmul_acc(dense_acc, dense_x, dense_w, b_trans=True, init_cond=(dense_k == 0))
++                qr_fp32 = pl.assemble(qr_fp32, dense_acc, [dense_t0, q_a_col0], atomic=STORE_ATOMIC)
++            for t0 in pl.range(qr_full_rows + qr_m_group * QR_M_TILE, qr_t_matmul, qr_m_groups * QR_M_TILE):
++                q_acc = pl.create_tensor([QR_M_TILE, QR_N_TILE], dtype=pl.FP32)
++                for db in pl.pipeline(QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
++                    qr_d0 = qr_k_base + db * QR_K_TILE
++                    qr_rows = pl.min(QR_M_TILE, tile_rows - t0)
++                    x_t0 = tile_base + t0
++                    q_x_chunk_bf16 = pl.slice(
++                        x_view,
++                        [QR_M_TILE, QR_K_TILE],
++                        [x_t0, qr_d0],
++                        valid_shape=[qr_rows, QR_K_TILE],
++                    )
++                    w_chunk = wq_a[q_a_col0 : q_a_col0 + QR_N_TILE, qr_d0 : qr_d0 + QR_K_TILE]
++                    q_acc = pl.matmul_acc(q_acc, q_x_chunk_bf16, w_chunk, b_trans=True, init_cond=(db == 0))
++                qr_fp32 = pl.assemble(qr_fp32, q_acc, [t0, q_a_col0], atomic=STORE_ATOMIC)
++

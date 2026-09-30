@@ -1,0 +1,44 @@
+{
+  "baseline_commit": "55852cff",
+  "limit": "five new optimization points, stop after review and required checks",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+    "oa_tiling_v3": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_tiling_v3",
+    "oa_kshift": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift",
+    "qb_pipeline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+    "qb_reuse": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_reuse",
+    "qa_native_v9": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qa_native_v9",
+    "oa_dispatch": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_dispatch",
+    "oa_kshift_dispatch": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/oa_kshift_dispatch",
+    "base_p23": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+    "base_p4": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/qb_pipeline",
+    "base_p2_review": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+    "base_p5": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/base",
+    "integrated_13": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-native-five-55852cff-20260930/integrated_13"
+  },
+  "points": {
+    "1": "Native NZ baseM96/baseN256/baseK64, stepKa8/stepKb4; only token count 96",
+    "2": "Native KLoopMDL cyclic outer start by block_idx; PTO logical task block differs from physical core; A/B both K512 so factor=1. FP32 accumulation order changes.",
+    "3": "Q-B L1 K512 stage2, L0 K128 stage2; Right two 32KiB slots replaces single 64KiB. Retain N256, M128, four groups x4 workers, dependencies, scales and integer arithmetic.",
+    "4": "Increment over point3: keep full K1024 A in L1 across N rounds; retain K128 L0 double buffers, K512 B streaming, N256, four groups and exact integer arithmetic. Old N128/K256 full-A candidate is not retested.",
+    "5": "Native NT CalcBase/CalBaseMBaseN selects M96/N48/K128 (22 blocks); CalL1Tiling gives stepKa4/stepKb8, A K512/B K1024; last N block valid16. Only 96 tokens, atomic0, NZ; other branches unchanged. Source-derived strategy, not binary tiling proof."
+  },
+  "integration_base": "7d07a579",
+  "decisions": {
+    "1": "保留可复现核内优化候选，不设默认：独立整段无收益，1+3组合长档全部五组回退。",
+    "2": "撤回直接放弃结论，保留K-shift及调度联动候选；短长档均改善，但独立DFX核内变慢且存在BF16差异，缺独立参考和整模型token/DSpark验收。",
+    "3": "接入默认HCA性能路径：Q-B核占用约降低19.88%，长档均值基本持平，短档均值降低3.55%；不宣称已有整网收益。",
+    "4": "不接入：增量相对点3的Q-B核占用变差、整段均值无明确收益。",
+    "5": "不接入：Native来源明确的M96/N48/K128已编译执行，但Q-A核占用和整段均值均变差。",
+    "integrated_13": "不设默认：长档+2.619%，短档-4.805%，8:2加权+1.134%；只保存试验及逐bit/边界证据。"
+  },
+  "point_2_review": "配对筛选：原调度下base/K-shift；新调度下base/K-shift；另测只改调度。各组非同窗四方试验，不声称已测出调度与K-shift交互项。",
+  "compiler_notes": [
+    "JIT依赖调用不读取constexpr默认值，调用端显式传入；共享CSA通过测试root的设备编译/load。",
+    "嵌套constexpr分支需要明确SSA合并；Q-A的inout store视图在orchestration层创建，避免自由维度和TileType误推导。",
+    "Q-A NZ L1转置使用公开tile.transpose_view零搬运解释视图；直接ttrans不适用该Mat布局。",
+    "失败编译仅修复算子表达，不修改PyPTO/PTOAS/PTO-ISA；失败日志留本地，不保留误导性的半成品生成脚本。",
+    "O-A/Q-B显式Acc种子依赖compact内部接口，窄行与补位校验已通过；这不是稳定公共API声明。"
+  ],
+  "pause": "2026-09-30用户让卡给HCA/CSA合并会话；所有21个既有设备任务在暂停核实时均completed(exit=0)。只整理已有结果，不再提交设备任务。"
+}
