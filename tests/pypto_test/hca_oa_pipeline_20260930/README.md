@@ -62,3 +62,6 @@ B4/B16窄行与补位已验证；以后工具链升级仍需关注此契约。
 
 `kshift`只完成CPU编译、没有排真机。用户要求以Native为依据且只再做五点，
 后续归入新的有限轮次审查；当前生产没有K次序改动。
+
+CSA依赖调用补齐显式PIPELINE_OA=False：当前JIT依赖绑定不读取constexpr默认值。
+完整CSA性能版依赖图、设备编译/load已通过，见compile_csa_dependency.json；不增加NPU复测。

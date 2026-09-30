@@ -500,7 +500,7 @@ def _decode_o_proj_tp1_tiled(
     t_dim = pl.tensor.dim(attn_out, 0)
     act_t_blks = (t_dim + PROJ_B_ACT_TASK_T_TILE - 1) // PROJ_B_ACT_TASK_T_TILE
     partials, act_scale_dq, parts_ready = _decode_o_proj_tp1_parts(
-        o_packed, wo_a, wo_b, t_dim, heads_dep, ROW_TILE, A_COL_TILE,
+        o_packed, wo_a, wo_b, t_dim, heads_dep, ROW_TILE, A_COL_TILE, PIPELINE_OA=False,
     )
 
     # Dequantize each group with its own scale, then sum in FP32.
