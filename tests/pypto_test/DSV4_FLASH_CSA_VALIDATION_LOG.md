@@ -14105,3 +14105,33 @@ if ascend_compilation_config.enable_static_kernel:
 的直接入口（第 498.4 节记过 PTO 在那条入口下 `wrapper_compiled: False`、装包 0），
 否则拿不到单一口径的两侧对比。
 
+## 502. CSA HBG 首个编译阻塞：Indexer Host 读取 KV 长度（2026-09-30）
+
+按用户要求尝试 CSA 单卡 HBG，源码 `c6128b72`、PyPTO `88f605986`、
+Simpler `a54c05095`，公共 CANN 9.2.0-beta.2，性能版/NZ2/atomic_add=0。
+本次只定位错误，未修改生产算子。
+
+**已实际复现的是 CPU 上的 HBG kernel 编译检查，真实单卡没有启动。**
+冻结整包源码后，`decode_csa_tp1_layer_test` 的依赖图、原始 IR、HBG kernel ABI
+均构造成功；进入 eager JIT 使用的 `_compile_impl(..., _kernel_abi=abi)` 后，
+在优化、PTOAS 和设备执行前被 `validate_hbg_kernel_orchestration` 拒绝：
+
+```text
+decode_indexer.py:1382:9: HBG kernel Host orchestration 'indexer_score_topk_forest' cannot use tensor.read on Tensor storage. Pass the required Host value as an explicit scalar argument.
+```
+
+对应 `pl.read(kv_seq_lens, [topk_batch]) // COMPRESS_RATIO`：
+Host 循环读取每个请求的 KV 长度并求最大值，用于选择 Score 的 Cube/Vector
+及长短档分支。HBG kernel 不允许 Host 直接解引用 Tensor 存储，
+应显式传入分支所需标量或调整调度表达，并正确处理图重放的元数据更新。
+本次未实施改写；这只是首个错误，不是全部 HBG 兼容性结论。
+
+另准备正式第 2 层权重、B4/8K、不计时的单卡入口，
+将 `pypto.torch.init` 的 runtime 覆盖为 `host_build_graph`。
+任务 `task_20260930_154238_189866031600` 因队列服务未运行始终 pending；
+等待 30 秒后由 task-submit 自动取消，未分配设备，最终查询为 `not_found`。
+因此没有真机性能、精度或设备执行结果，也没有遗留占卡任务。
+
+详细过程、原始复现脚本、完整错误堆栈和队列输出转录已归档至
+[CSA HBG 尝试记录](csa_hbg_repro_20260930/README.md)。
+原始工作目录：`results/csa_hbg_repro_20260930_c6128b72/`。

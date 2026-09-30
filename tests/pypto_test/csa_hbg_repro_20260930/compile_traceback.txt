@@ -1,0 +1,40 @@
+INFO 09-30 15:41:40 [__init__.py:44] Available plugins for group vllm.platform_plugins:
+INFO 09-30 15:41:40 [__init__.py:46] - ascend -> vllm_ascend:register
+INFO 09-30 15:41:40 [__init__.py:49] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.
+INFO 09-30 15:41:40 [__init__.py:237] Platform plugin ascend is activated
+/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/utils/collect_env.py:58: UserWarning: Warning: The /data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2 owner does not match the current owner.
+  warnings.warn(f"Warning: The {path} owner does not match the current owner.")
+/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/utils/collect_env.py:58: UserWarning: Warning: The /data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2/aarch64-linux/ascend_toolkit_install.info owner does not match the current owner.
+  warnings.warn(f"Warning: The {path} owner does not match the current owner.")
+/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/utils/collect_env.py:58: UserWarning: Warning: The /data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2 owner does not match the current owner.
+  warnings.warn(f"Warning: The {path} owner does not match the current owner.")
+/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/utils/collect_env.py:58: UserWarning: Warning: The /data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2/aarch64-linux/ascend_toolkit_install.info owner does not match the current owner.
+  warnings.warn(f"Warning: The {path} owner does not match the current owner.")
+INFO 09-30 15:41:44 [platform.py:61] Breakable cudagraph is force disabled on Ascend because DeepSeek V4 PIECEWISE cudagraph is not supported yet.
+CSA dependency graph parsed
+CSA raw program constructed
+CSA HBG kernel ABI derived; entering actual eager compiler gate
+Traceback (most recent call last):
+  File "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_hbg_repro_20260930_c6128b72/compile_hbg.py", line 36, in <module>
+    _compile_impl(program, output_dir=str(HERE / "compile_output"), platform="a2a3", _kernel_abi=abi)
+  File "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/ir/compile.py", line 433, in _compile_impl
+    validate_hbg_kernel_orchestration(program)
+  File "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/ir/_kernel_compile.py", line 182, in validate_hbg_kernel_orchestration
+    HostAccessVisitor(func.name).run(func.body)
+  File "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/ir/_kernel_compile.py", line 100, in run
+    self.visit_stmt(self.statements.pop())
+  File "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/ir/_kernel_compile.py", line 121, in visit_call
+    self.check_call(op)
+  File "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/ir/_kernel_compile.py", line 115, in check_call
+    raise ValueError(
+ValueError: /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_hbg_repro_20260930_c6128b72/frozen_ops_pypto/deepseek_v4_flash_dspark_perf/decode_indexer.py:1382:9: HBG kernel Host orchestration 'indexer_score_topk_forest' cannot use tensor.read on Tensor storage. Pass the required Host value as an explicit scalar argument.
+{
+  "runtime": "host_build_graph",
+  "execution": "CPU compile gate only; no NPU initialized",
+  "variant": "performance",
+  "nz_mode": 2,
+  "atomic_add": 0,
+  "status": "FAIL",
+  "exception_type": "ValueError",
+  "error": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_hbg_repro_20260930_c6128b72/frozen_ops_pypto/deepseek_v4_flash_dspark_perf/decode_indexer.py:1382:9: HBG kernel Host orchestration 'indexer_score_topk_forest' cannot use tensor.read on Tensor storage. Pass the required Host value as an explicit scalar argument."
+}
