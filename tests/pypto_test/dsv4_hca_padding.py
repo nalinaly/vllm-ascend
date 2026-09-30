@@ -14,6 +14,20 @@ from dsv4_csa_single_layer import guard_checks, restore, writable_bytes
 from dsv4_csa_validation import compare_tensor
 
 
+def compare_empty_compressed_slots(actual, reference, block_size):
+    """空压缩步按Native无效slot值检查各自容量，不要求图与oracle容量相等。"""
+    import torch
+
+    # Native WriteInvalidTile: block=-1, offset=block_size-1。
+    # 同址图保持捕获时容量，图外oracle会随实际请求数缩小；两者都必须全为无效行。
+    results = {}
+    for name, slots in (("slots", actual), ("oracle_slots", reference)):
+        expected = torch.full((slots.shape[0], 2), -1, dtype=torch.int32)
+        expected[:, 1] = block_size - 1
+        results[name] = compare_tensor(slots.cpu(), expected, 0, 0)
+    return results
+
+
 def check_padding_graph(fixture, output, eager, make_call, impl, report):
     """fixture 为满档；eager 是同一实现在满档下的结果（含 output 与三份 allocation）。
 
@@ -112,10 +126,11 @@ def check_padding_graph(fixture, output, eager, make_call, impl, report):
                 rows = valid.nonzero().flatten()
                 if rows.numel() == 0:
                     # 本步可以没有新压缩 token；cos/sin 没有被消费的行。
-                    # 比较完整 slot 缓冲，确保捕获图也没有产生有效写入，
-                    # 不把 compare_tensor 对空张量的拒绝当作算子错误。
-                    compact_checks[f"{name}.slots"] = compare_tensor(
-                        captured[name][2].cpu(), values[2].cpu(), 0, 0)
+                    # 图和oracle容量可以不同，但各自完整slot缓冲必须为Native无效值。
+                    empty_checks = compare_empty_compressed_slots(
+                        captured[name][2], values[2], groups[name]["spec"].block_size,
+                    )
+                    compact_checks.update({f"{name}.{field}": value for field, value in empty_checks.items()})
                     continue
                 for field, value, reference in zip(("cos", "sin", "slots"), captured[name], values):
                     compact_checks[f"{name}.{field}"] = compare_tensor(
