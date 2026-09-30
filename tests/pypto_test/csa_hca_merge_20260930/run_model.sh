@@ -54,6 +54,12 @@ for backend in pto native; do
         --profile-start-step 8 --profile-steps 3 > "$output/${backend}_launch.log" 2>&1
     python "$repo/tests/pypto_test/csa_hca_merge_20260930/source.py" verify "${source_check[@]}"
 done
+# profiler 可能只保存原始 PROF 数据；两侧采集结束后先在 CPU 解析，再做层区间比较。
+for backend in pto native; do
+    TORCH_DEVICE_BACKEND_AUTOLOAD=0 python "$repo/tests/pypto_test/offline_pd/run.py" profile-export \
+        --bank "$bank" --output "$output/$backend" --profile-ranks all --analyse-processes 4 \
+        > "$output/${backend}_profile_export.log" 2>&1
+done
 python "$repo/tests/pypto_test/offline_pd/performance.py" \
     --root "$output" --bank "$bank" --mode 2 --batch "$batch" --decode-tokens 192 \
     --pto-attention both --token-only > "$output/comparison.log" 2>&1

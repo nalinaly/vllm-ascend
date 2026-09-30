@@ -148,7 +148,48 @@ worker 新增 `OFFLINE_STATIC_KERNEL` 日志，记录实际静态模块是否加
 功能和精度通过后，提交性能任务 `task_20260930_172911_254022111899`。
 新目录为 `results/csa_hca_merge_20260930/model_h131072_b16_v4_static`；
 每侧 10 个无 profiler 的纯 `_model_forward` 设备样本，另采 3 步 Level0 profiling。
-此处仅记录已提交，尚无静态配置下的性能结论。本轮仍仅代表 128K/B16 场景。
+完成结果见下节。本轮仍仅代表 128K/B16 场景。
+
+## 联合整网性能完成（2026-09-30 17:52）
+
+`model_h131072_b16_v4_static` 的最终汇总为 `MEASURED_TOKEN_PASS`。
+仍为正式权重、128K 历史、每 rank B16/S6、D TP1×DP/EP16，NZ2、atomic0、det0，
+FULL_DECODE_ONLY、norm/quant 融合及静态 kernel 生效。两侧组长各安装 4 个静态包，
+所有 worker 的 LOCAL_WORLD_SIZE 均为 16。执行代码记录为 `bc451fe1`，运行中仅追加了文档。
+
+| 口径 | Native | CSA + HCA PTO | 均值耗时下降 |
+| --- | ---: | ---: | ---: |
+| 纯 model forward，每侧 160 个样本 | 65.146 ms | 60.564 ms | 7.03% |
+| 各步最慢 rank 的 forward，10 个样本 | 65.499 ms | 60.931 ms | 6.97% |
+| CSA 层区间，每侧 1008 个样本 | 1194.266 μs | 950.032 μs | 20.45% |
+| HCA 层区间，每侧 960 个样本 | 630.028 μs | 611.359 μs | 2.96% |
+
+主结果使用各 rank 预热后第 8～17 步的无 profiler 设备事件；对应均值加速比为 1.0757 倍。
+CSA/HCA 行来自另一轮每卡 3 步 Level0 trace 的设备首末区间，包含内部间隙，不能与主结果
+混作同一次计时，也不能直接换算为端到端吞吐。PTO 第一次调用之前的 compact metadata
+已计入对应层区间；每卡每步 21 层 CSA + 20 层 HCA 均通过固定层序映射检查。
+
+两轮采样的 98,304 个输出 token 全部与 Native 一致，DSpark 接受计数也一致。
+全部 rank 的运行配置对齐；PTO 初始化后的 CANN event 模式为 1，Native 为 0，
+该既有运行时差异单独保留在报告中。
+
+均值有所改善，但不能宣称尾部改善：PTO/Native 的 forward 最大样本分别为
+66.323/66.000 ms，P95 分别为 65.936/65.883 ms。每侧仅 10 个同步步骤，
+尚不足以得出稳定的长期尾延迟结论。本轮不覆盖其他六档、请求生命周期或全部 padding 场景。
+
+采集任务 `task_20260930_172911_254022111899` 的队列退出码为 1，原因是两侧采集结束后
+入口直接调用比较器，Native 的原始 PROF 数据尚未离线解析，16 个 rank 均报缺少解析后的
+trace；原始采样、设备计时和 token 结果完整。随后在 CPU 上对既有数据解析并重新汇总，
+退出 0，未重跑设备。初始失败报告保留为 `performance_comparison_before_export.json`。
+首次手动调用 profile-export 漏传必需的 --bank，退出 2；补齐参数后两侧各 16 份解析均成功。
+
+已补齐 `run_model.sh` 的顺序：两侧设备采集完成后，调用现有 profile-export 解析全部 rank，
+再做性能对照。修正只涉及采集后的 CPU 汇总，不改变算子、计时或采样入口。
+现有原始数据已走完解析与严格比较，脚本语法检查通过；不因此重复单卡或整网设备测试。
+
+小型结果见 `performance_h131072_b16_v4_static.json`；完整报告、两侧各 16 份三步
+PyTorch profiling、压缩设备事件与编译产物保留在 results 原目录，不进入 Git。
+这轮未额外采集 PTO 内部 task 泳道，PyTorch trace 中可见联合 PTO runtime/worker 区间。
 
 ## 首次合并已完成的检查
 
