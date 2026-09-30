@@ -13724,7 +13724,14 @@ PTO 头上，而那部分是 PTO 结构上拿不到的加速项
    用前者跑当前源报 `Cannot prepare for replay during capturing stage`。
    **在这条修好之前，无法在同一口径下给出"Native 开 SuperKernel"的两侧对比。**
 
-### 498.3 ★★ 修正后的七档：Native 开 SuperKernel、按 p50，8:2 加权 0.8194（min 口径 0.8052）
+### 498.3 ⚠ 作废口径：这一节的 Native 其实没开 SuperKernel（按 p50 8:2 加权 0.8194）
+
+> **2026-09-30 更正（见第 501 节）**：本节声称「Native 开 SuperKernel」是错的。
+> vllm 装饰器入口带 `force_eager: True`，注入的 `super_kernel_optimize: True`
+> 只写进了 `backend_options`，并**没有被应用**——SuperKernel 融的是
+> npugraph_ex 图内的 kernel，`force_eager` 下根本没有那张图。
+> 所以下面的 0.8194 / 0.8052 是 **PTO 对 Native 不开 SK** 的比值，
+> 不能当作达标口径。正确口径见第 501 节。
 
 第 498 节初稿用的是"Native 不开 SuperKernel"且按 mean 汇总，两点都要修正：
 
@@ -13732,6 +13739,9 @@ PTO 头上，而那部分是 PTO 结构上拿不到的加速项
    `record_options` 钩子注入 `super_kernel_optimize=True`
    （`backend_options` 与 `installed_static_packages: 1` 确认生效），
    PTO 侧不开——它结构上用不上。
+   ⚠ **这一条是错的**：`installed_static_packages: 1` 只说明 static_kernel 装了包，
+   与 SuperKernel 是否生效无关。判据应该是 `static_super_flags`
+   （第 501 节的 harness 才记录这个字段）。
 2. **必须用 p50 而不是 mean。** `h131072_b8/native_a` 的 20 次里有一次
    **16371.66 μs** 尖峰（p50 仅 951.82），把该侧 mean 拉到 1723.32、
    两次 native 的 mean 差 761.52 μs，按 mean 算出的该档比值 0.553 是假的。
@@ -13755,8 +13765,8 @@ PTO 头上，而那部分是 PTO 结构上拿不到的加速项
 | 按 min | 0.7916 | 0.8594 | **0.8052** | +0.0052 |
 | 按 p95 | 0.8164 | 0.8892 | 0.8309 | +0.0309 |
 
-**128K/B8 与 128K/B16 已在 0.80 以内；缺口集中在 128K/B24 (0.864)
-与三个短档 (0.866~0.885)。**
+⚠ 上表的「Native+SK」列实为 **Native 不开 SK**；「128K/B8 与 128K/B16 已达标」
+因此不成立。换成真正开 SK 的 Native 后见第 501 节。
 
 ### 498.4 ★ 归档 Native 基线（1130.85）无法用于当前源
 
@@ -13776,8 +13786,15 @@ inplace_pass: False, static_kernel_compile: True, super_kernel_optimize: True})`
 同卡对比就是第 498.3 节那张表。
 
 另记：在 vllm 装饰器入口下开 `super_kernel_optimize`，128K/B16 的 Native p50
-从 1218.55（不开）变成 1249.04（开）——**这条入口下该开关没有兑现归档基线
-那 7.7% 的优势**，归档的优势来自整条 `force_eager=False` + 直接 npugraph_ex。
+从 1218.55（不开）变成 1249.04（开）——**当时把这当成「该开关在这条入口下
+没兑现优势」，实际原因是它压根没生效**（`force_eager: True`，见第 501 节）；
+那 30 μs 只是轮次间漂移。
+
+⚠ 本节「对 SK 基线 0.9078 不成立」的论断也要收窄。第 501 节证明
+`force_eager=False` 的直接 npugraph_ex 入口对 **Native 七档全部可跑**，
+失效的只有 PTO 侧。所以正确说法是：**没有任何入口能让两侧都开 SuperKernel**，
+对 SK Native 的比值只能是跨入口比值——而既然 SuperKernel 是 Native 独有的
+真实加速项，达标口径本来就该用它（`hca-gap-uses-native-with-superkernel`）。
 
 ## 499. ★ 改进 A/B 结构：四次交替把卡内漂移从 20~95 μs 降到 1~4 μs（2026-09-30）
 
@@ -13874,11 +13891,13 @@ SuperKernel 对 launch 的摊薄在大 batch 上收益更大，而 PTO 拿不到
 | | |
 | --- | --- |
 | 落地 | 第 492 节 early3 三处 `allow_early_resolve`（`9a983dae`），同轮内 −0.0123 |
-| 七档验收 | 第 498.3 节：同卡 ABBA、Native 开 SK、按 p50 **0.8194**（min **0.8052**） |
-| 已达标档位 | 128K/B8 0.773、128K/B16 0.776 |
-| 缺口 | **0.019（p50）**，集中在 128K/B24 0.864 与三个短档 0.866~0.885 |
+| 七档验收 | ⚠ 第 498.3 节的 0.8194 是**对不开 SK 的 Native**（口径错，见第 501 节） |
+| 已达标档位 | ⚠ 作废，随上一行一起（第 501 节） |
+| 缺口 | ⚠ 作废，随上一行一起（第 501 节） |
 | 方法产出 | 第 499 节的四次交替 A/B：可分辨下限从 20 μs 降到约 5 μs |
 | 候选总数 | 15 个（第 490~499 节），仅 early3 有效；最大的未采用单项是 `nzcmpkv` 的 0.44% |
+
+⚠ 下面这段基于作废的 0.019 缺口，量级要按第 501 节重算；方向判断仍然成立。
 
 **补齐 0.019 需要约 24 个 `nzcmpkv` 量级的项，或一项在长档上值 3%
 （128K 四档合计约 120 μs）的结构性改动**，只能走第 495.3 节那两条：
@@ -13928,13 +13947,13 @@ buf_coefficient_pair = pl.tile.move(buf_coefficients_l1, target_memory=pl.Memory
 | | |
 | --- | --- |
 | 落地 | 第 492 节 early3 三处 `allow_early_resolve`（`9a983dae`），生产源码共 8 行 |
-| 七档验收 | 第 498.3 节：同卡 ABBA、Native 开 SuperKernel、按 p50 **0.8194**（min **0.8052**） |
-| 已达标 | 128K/B8 0.773、128K/B16 0.776 |
-| 缺口 | 0.019（p50），集中在 128K/B24 0.864 与三个短档 0.866~0.885 |
+| 七档验收 | ⚠ 第 498.3 节的 0.8194 是**对不开 SK 的 Native**（口径错，见第 501 节） |
+| 已达标 | ⚠ 作废，随上一行一起（第 501 节） |
+| 缺口 | ⚠ 作废，随上一行一起（第 501 节） |
 | 候选 | 15 个，仅 early3 有效；最大未采用单项 `nzcmpkv` 0.44%（加权 −0.0008） |
 | 方法产出 | 第 499 节四次交替 A/B，可分辨下限 20 μs → 约 5 μs |
 
-**缺口的性质（第 498.1 + 499.3 节）**：SuperKernel 对 Native 值 6.6%~12.7%
+**缺口的性质（第 498.1 + 499.3 节；SK 的量已由第 501 节实测替换为 6.0%~15.2%）**：SuperKernel 对 Native 值 6.6%~12.7%
 （短档 12% 上下），PTO 结构上开不了；按 token 的边际成本在 B16→B24 之间
 由「PTO 更优」反转为「Native 更优」，反转点正是 SuperKernel 摊薄 launch 的
 收益随 batch 变大之处；而 PTO 在 B24 的打包效率（75.5%）反而高于 B16（71.8%）。
@@ -13942,3 +13961,147 @@ buf_coefficient_pair = pl.tile.move(buf_coefficients_l1, target_memory=pl.Memory
 
 下一步需要先确认的前提：目标「Native 的 80% 以内」是按 Native 开 SuperKernel 算，
 还是把该项贡献扣除后只比算子本身。两者对应的剩余工作量差一个数量级。
+
+## 501. ★★ 口径更正：此前所有「Native 开 SuperKernel」的验收其实都是 sk=0；七档实测 SK 对 Native 值 6.0%~15.2%（2026-09-30）
+
+用户直接指出「你的 native 是不是没取 sk=1 的数据？」。核查属实。
+
+**错在哪**：第 498.3 节两侧都走 vllm 的 `@support_torch_compile`，
+该入口带 `force_eager: True`。SuperKernel 在 torch_npu 里其实有**两个半边**，
+`force_eager` 只挡掉了出效果的那一半：
+
+| 半边 | 代码位置 | `force_eager: True` 下 |
+| --- | --- | --- |
+| op_compiler 的 `--enable_super_kernel` | `acl_graph.py:1581` → `static_kernel.py:288` | **仍然生效**（`run_eagerly_compile` 照样读 `_super_kernel_optimize` 传给 `compile_static_kernel`） |
+| AclGraph 级的图内融合 `graph[key].super_kernel_optimize(...)` | `acl_graph.py:1207` | **永不执行** |
+
+第二半在 `capture` 成功之后才跑，而 `AclConcreteGraph.__call__`（`acl_graph.py:819`）
+在 `run_eagerly == '1'` 时直接 `return self.fx_run_eagerly(...)`，根本走不到
+`self.compile()` 那一步，没有 `self.graph[graph_key]` 可融。
+第 498.4 节实测的 1218.55（关）vs 1249.04（开）说明**只有前半边等于没有收益**。
+
+当时用 `installed_static_packages: 1` 当生效判据也是错的——那只证明
+static_kernel 装了包，与 SuperKernel 两个半边都无关。
+
+**正确判据**：`compiler.static_super_flags`。`csa_native_sk_seven_20260930` 的
+harness 记录了这个字段，sk=0 为 `[false]`、sk=1 为 `[true]`，
+另有顶层 `super_kernel: true/false` 与 `super_kernel_graph_calls`。
+以后凡是声称开了 SuperKernel，必须拿这个字段作证，不能拿装包数。
+
+### 501.1 ★★ 七档 Native sk=0 vs sk=1
+
+`results/csa_native_sk_seven_20260930`，源 `.cache/csa-native-superkernel-4ffccb7b`
+（第 498.2 节确认这是当前唯一能在 `force_eager=False` 下跑通 Native 的 harness），
+每档**同一张卡**上 `sk0_a → sk1_a → sk1_b → sk0_b` 的 ABBA、每侧 20 事件，
+七档并行占七张卡。超过 1.25×p50 的样本剔除。单位 μs。
+
+（8K/B32 第一轮的 sk0_b 整槽被外部负载污染——p50 1651.85 对同档另一槽 1313.17，
+是整槽偏移而非单点尖峰，1.25×p50 的样本级过滤挡不住。该档已重跑一整轮 ABBA，
+表内用的是重跑值；污染轮留在 `h8192_b32.round1_contaminated/`。
+**教训：样本级过滤之外还要看同侧两槽的均值差，超过档位自身极差就要重跑那一档。**）
+
+| 档位 | sk=0 min | sk=0 mean | sk=0 max | sk=1 min | sk=1 mean | sk=1 max | SK 收益(mean) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 128K/B4 | 927.22 | 1002.68 | 1134.20 | 795.89 | 850.18 | 914.52 | **15.21%** |
+| 128K/B8 | 923.95 | 930.21 | 971.02 | 856.61 | 860.10 | 864.71 | **7.54%** |
+| 128K/B16 | 1217.71 | 1223.75 | 1230.43 | 1144.26 | 1150.18 | 1157.05 | **6.01%** |
+| 128K/B24 | 1400.50 | 1408.32 | 1419.78 | 1276.96 | 1289.71 | 1296.77 | **8.42%** |
+| 8K/B16 | 1031.78 | 1070.23 | 1167.88 | 914.63 | 953.20 | 1005.21 | **10.93%** |
+| 8K/B24 | 1179.19 | 1198.65 | 1253.34 | 1094.69 | 1119.64 | 1177.53 | **6.59%** |
+| 8K/B32 | 1302.34 | 1323.32 | 1365.85 | 1178.36 | 1208.52 | 1362.42 | **8.67%** |
+
+**128K 平均 9.29%、8K 平均 8.73%、8:2 加权 9.18%。**
+
+与第 498.1 节从归档基线推出的 6.6%~12.7% 同量级，但这次是同卡同源同轮的直接对照，
+取代那组跨轮次的推算。短档不再一致地高于长档（128K/B4 15.2% 反而最高），
+说明第 498.1 节「短档 launch 占比大所以 SK 收益大」的解释站不住——
+那组数字里混了入口差异，不只是 SK。
+
+### 501.2 ★★ 两条编译入口差的不止 SuperKernel，还差 vLLM 的 FX 融合
+
+把两个 harness 的 Native 摆在一起（p50）就能看出它们不可互换：
+
+| 档位 | vllm 装饰器入口<br>（FX 融合 ✓，SK ✗） | 直接 npugraph_ex<br>（FX 融合 ✗，SK ✗） | 直接 npugraph_ex<br>（FX 融合 ✗，SK ✓） |
+| --- | ---: | ---: | ---: |
+| 128K/B4 | 791.36 | 993.27 | 846.12 |
+| 128K/B8 | 954.89 | 927.70 | 860.18 |
+| 128K/B16 | 1249.04 | 1223.41 | 1149.99 |
+| 128K/B24 | 1425.46 | 1408.68 | 1290.03 |
+| 8K/B16 | 864.66 | 1062.69 | 952.11 |
+| 8K/B24 | 1056.98 | 1195.02 | 1115.59 |
+| 8K/B32 | 1183.42 | 1319.32 | 1199.65 |
+
+128K 的 B8/B16/B24 三档两条入口的 sk=0 读数只差 2%~3%，但 128K/B4 差 25.5%、
+8K 三档差 11.5%~22.9%——**差额不是随机漂移，是入口本身的差异**。
+直接入口的 report 自己写明了原因：
+
+```json
+"compilation_scope": {"vllm_ascend_fx_passes": false,
+  "note": "Direct npugraph_ex passes; EngineArgs alone does not apply vLLM FX passes"}
+```
+
+即 `fuse_norm_quant` / `fuse_qknorm_rope` / `fuse_muls_add` 虽然在 `requested`
+里都是 true，直接入口下**并未应用**；它另有一套 `multistream`
+（`torch.npu.stream + record_event/wait_event`，`dsa_overlap: true`）。
+vllm 装饰器入口则相反：FX 融合生效、SuperKernel 不生效。
+
+**所以当前没有任何入口能给出「FX 融合 + SuperKernel 全开」的 Native**，
+也不能拿装饰器入口的 Native 乘上 (1 − SK 收益) 去估那个数——两者融的对象重叠。
+
+### 501.3 当前可下的结论与不可下的结论
+
+**可以下的**：
+
+- SuperKernel 在同入口下对 Native 值 6%~15%，PTO 结构上拿不到
+  （`static-kernel-and-superkernel-are-native-only`）。
+- 第 498.3 节的 0.8194 / 0.8052 是 **PTO 对不开 SK 的 Native**；
+  据此宣布的「128K/B8、128K/B16 已达标」不成立。
+
+**不可以下的**：
+
+- 不能用 `csa_accept_20260930` 的 PTO 去除 `csa_native_sk_seven_20260930`
+  的 Native——跨 harness、跨入口、跨算子快照（`9a983dae` vs `4ffccb7b`），
+  三重不可比。本节上表的横向比较只用于暴露入口差异，不用于产出达标比值。
+
+### 501.4 ★★ 关键前提：生产路径的 Native 本来就开不了 SuperKernel
+
+`vllm_ascend/compilation/compiler_interface.py::_configure_backend`（release 生产代码）
+给 npugraph_ex 的选项是写死的：
+
+```python
+options: dict[str, Any] = {
+    "force_eager": True,      # execute FX graph in eager mode before graph capture
+    "inplace_pass": False,
+    "clone_input": False,
+    "clone_output": False,
+}
+if ascend_compilation_config.enable_static_kernel:
+    options["static_kernel_compile"] = True
+    options["_vllm_aclnn_static_kernel_sym_range"] = ...
+```
+
+**整个 vllm-ascend 仓里没有任何一处设 `super_kernel_optimize`**
+（`grep -rn super_kernel vllm_ascend/` 只命中 csrc 的编译脚本）。
+而 torch_npu 侧 SuperKernel 的应用点在
+`_acl_concrete_graph/acl_graph.py:1207`，位于 `capture` 成功之后、
+作用于 `self.graph[graph_key]`——`force_eager: True` 下没有那张图。
+
+**结论：`force_eager: True` 是生产写死的默认，所以生产的 Native 拿不到
+图级 SuperKernel**（只有 op_compiler 那半边，实测无收益）。要给生产 Native
+开上，得先让它不走 `force_eager`，那是 release 生产代码的改动。
+
+第 498.3 节那套「两侧都走 vllm 装饰器入口」的验收，虽然标签写错了，
+比的其实正是**当前生产形态**：PTO 对生产 Native 的 8:2 加权
+**0.8194（p50）/ 0.8052（min）**。
+
+这与 `hca-gap-uses-native-with-superkernel`（HCA 用开 SK 的 Native 作口径）
+并存但需要用户裁定：那条口径把 SuperKernel 当作 Native 可用而 PTO 不可用的
+真实加速项；本节说明在当前 release 的生产路径里它对 Native 也没开。
+**两种口径的剩余工作量差一个数量级**（0.8052 距 0.80 只差 0.005，
+对开 SK 的 Native 则要再补 6%~15%），交付前必须先定死用哪一种。
+
+**下一步要做的**：口径若定为「生产形态」，第 498.3 节的表只需改标签即可交付；
+口径若定为「Native 开 SK」，则要先把 PTO 侧搬到 `force_eager=False`
+的直接入口（第 498.4 节记过 PTO 在那条入口下 `wrapper_compiled: False`、装包 0），
+否则拿不到单一口径的两侧对比。
+
