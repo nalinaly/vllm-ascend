@@ -1007,6 +1007,9 @@ def launch(args):
         for rank in range(dp):
             env = os.environ.copy()
             env.update({
+                # 单机启动器覆盖全部 DP×TP 进程；热缓存不会再调用编译入口补此变量。
+                # 必须在 worker 启动前声明真实本机规模，供静态编译的 Gloo 分组使用。
+                "LOCAL_WORLD_SIZE": str(dp * tp),
                 "VLLM_DP_SIZE": str(dp), "VLLM_DP_RANK": str(rank), "VLLM_DP_RANK_LOCAL": "0",
                 "VLLM_DP_MASTER_IP": args.host, "VLLM_DP_MASTER_PORT": str(args.port),
                 "ASCEND_RT_VISIBLE_DEVICES": ",".join(devices[rank * tp:(rank + 1) * tp]),

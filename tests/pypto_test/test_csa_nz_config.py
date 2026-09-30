@@ -21,6 +21,7 @@ def test_launcher_forwards_mode_to_every_rank(mode, monkeypatch, tmp_path):
     monkeypatch.setenv("VLLM_ASCEND_ENABLE_NZ", "2" if mode != 2 else "0")
     monkeypatch.setenv("DYNAMIC_EPLB", "true")
     monkeypatch.setenv("EXPERT_MAP_RECORD", "true")
+    monkeypatch.setenv("LOCAL_WORLD_SIZE", "2")
     monkeypatch.setattr(run.signal, "signal", Mock())
     monkeypatch.setattr(run.os, "killpg", Mock())
     children = []
@@ -40,6 +41,7 @@ def test_launcher_forwards_mode_to_every_rank(mode, monkeypatch, tmp_path):
     monkeypatch.setattr(run, "worker", worker)
     expected = mode if mode is not None else 2
     for rank, (cmd, env) in enumerate(children):
+        assert env["LOCAL_WORLD_SIZE"] == "16"
         assert env["VLLM_ASCEND_ENABLE_NZ"] == str(expected)
         assert env["DYNAMIC_EPLB"] == env["EXPERT_MAP_RECORD"] == "false"
         assert env["OMP_NUM_THREADS"] == "10"

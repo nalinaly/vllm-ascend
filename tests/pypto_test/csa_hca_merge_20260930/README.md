@@ -87,6 +87,47 @@ Native worker 与 engine 进程已消失，原日志止于 12:16 的静态编译
 脚本先验证联合 PTO 功能，再运行 Native 并比较输出 token，不采性能。
 此处只记录已启动，不预记整网功能、精度或性能通过。
 
+## 新版联合整网功能与 token 观测（2026-09-30 16:56，静态 kernel 未生效）
+
+任务 `task_20260930_164245_360156022807` 完成，退出 0。限定场景为正式 W8A8 权重、
+128K 历史、每 rank B16/S6、D TP1×DP/EP16；没有扩大为七档或全部生命周期场景通过。
+
+- 功能：全部 16 个 rank 恢复各 16 条离线 KV，共 256 条；41 层全部选择 PTO，
+  每 rank 实际重放 T=96 联合图 33 次，共生成 49,152 个输出 token。
+  见 `functional_h131072_b16_v2.json`。
+- 精度：Native 与联合 PTO 逐 token 比较 49,152 项，差异为 0；16 个 rank 的 DSpark
+  接受计数也一致。见 `tokens_h131072_b16_v2.json`。
+- 历史对照：新版与更新前联合 PTO 的输出 token、DSpark 计数一致，
+  见 `pto_version_tokens_h131072_b16.json`；该项不是另一份 Native 精度证明。
+- 本轮执行代码为 `c6128b72`；后续仅追加过程资料，源码来源检查通过。
+
+以上观测后提交了性能任务 `task_20260930_165707_12203128665`，后因实际静态 kernel 未生效主动终止，退出 130。
+使用 `results/csa_hca_merge_20260930/model_h131072_b16_v3` 新目录；脚本已从原始结果
+重新确认功能与 token 通过。每侧采无 profiler 的 10 个 model forward 设备样本，
+另一次生成原计划采 3 步 Level0 profiling。本轮已终止，不用于正式性能结论。
+
+## 修正热缓存启动缺少本机规模（2026-09-30 17:04）
+
+性能轮日志明确出现 `LOCAL_WORLD_SIZE is not set ... static kernel feature will be disabled`。
+回查 v2 功能/精度轮，两侧也出现同一告警。因此 v2 的功能和 49,152 token 一致结果有效，
+但仅适用于静态 kernel 实际关闭的配置，**不能放行用户要求的静态编译性能验收**。
+
+根因：`AscendCompiler._configure_backend` 只在冷编译时补 `LOCAL_WORLD_SIZE`；
+`AscendCompiler.load` 命中缓存后直接恢复编译图，不执行该初始化。v2 日志确认加载了
+npugraph_ex 编译缓存；torch_npu 的 `_is_multicard_env_valid` 因缺变量返回 False。
+早晨冷编译曾按每个外部 DP 实例的配置推算为 1，也没有反映本机完整的 16 个 rank。
+
+仅修正离线测试启动器：明确向全部子进程传入本机 `DP×TP` 数量，当前 P TP4×DP4 和
+D TP1×DP16 均为 `LOCAL_WORLD_SIZE=16`。不依赖父 shell 或冷编译的副作用，
+不修改生产 CSA/HCA 算子、Native 编译器或任何依赖仓库。
+worker 新增 `OFFLINE_STATIC_KERNEL` 日志，记录实际静态模块是否加载及成功安装包数；
+本机多卡只有 Gloo 组长安装，其余 rank 经 barrier 共享安装并 reselect，不要求每卡安装数非零。
+后续须同时检查环境值、实际编译与组长成功安装证据，再接受静态配置下的结果。
+
+启动器四种 NZ 参数的定向 CPU 用例通过，覆盖父环境错误地设置为 2 时仍向全部 16 个
+子进程传入 16。单卡算子功能不受这项多卡启动修正影响，不重复单卡；
+接下来重新执行联合功能和 token 对照，确认静态 kernel 生效后再采性能。
+
 ## 首次合并已完成的检查
 
 - 配置选择、批次参数传递、性能层映射、离线批次及 token 比较：51 项 CPU 检查通过。

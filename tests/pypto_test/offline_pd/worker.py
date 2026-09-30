@@ -2,6 +2,7 @@
 """仅用于离线测试：在真实 worker 进程、图捕获之前设置确定性。"""
 
 import os
+import sys
 
 import torch
 import torch_npu
@@ -57,6 +58,11 @@ class OfflineNPUWorker(NPUWorker):
 
         ascend = get_ascend_config()
         engine = self.vllm_config
+        # 记录实际安装证据；同机多卡只有 Gloo 组长安装包，其余 rank 共享安装结果。
+        static = sys.modules.get("torch_npu.dynamo.npugraph_ex._acl_concrete_graph.static_kernel")
+        print(f"OFFLINE_STATIC_KERNEL local_world_size={os.environ.get('LOCAL_WORLD_SIZE')} "
+              f"module_loaded={static is not None} "
+              f"installed_packages={len(getattr(static, '_installed_run_pkgs', ()))}", flush=True)
         return {
             "requested_deterministic_level": self._offline_requested_deterministic_level,
             "deterministic_level": torch_npu.npu._get_deterministic_level(),
@@ -81,7 +87,7 @@ class OfflineNPUWorker(NPUWorker):
             },
             "runtime_environment": {
                 name: os.environ.get(name)
-                for name in ("OMP_NUM_THREADS", "OMP_PROC_BIND", "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
+                for name in ("LOCAL_WORLD_SIZE", "OMP_NUM_THREADS", "OMP_PROC_BIND", "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
                              "VLLM_BATCH_INVARIANT", "PYTORCH_NPU_ALLOC_CONF")
             },
             "scheduler": {
