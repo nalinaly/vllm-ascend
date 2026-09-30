@@ -59,7 +59,20 @@ Native 与联合 PTO 使用相同入场、图档位和显存比例。每侧先�
 主性能口径不含 metadata、logits、采样、草稿及步间等待，不能称为端到端吞吐。
 最终 token 一致为精度门槛，DSpark 接受率差异另外报告。
 
-任务：`task_20260930_103703_397535810063`。提交时正在排队，尚无整网结论。
+首轮任务 `task_20260930_103703_397535810063` 已结束，退出码 1。
+日志确认正式权重加载完成、21 个 CSA 与 20 个 HCA 层均绑定成功；11:08 在显存预热的
+Native norm/quant 融合 pattern 注册阶段失败，尚未进入正式 decode。原因是启动脚本
+仅加载基础 `custom_transformer` 包，漏加载既有的 `csa_template_transformer` 补充包，
+导致 `aclnnAddRmsNormBias` / `aclnnAddRmsNormBiasGetWorkspaceSize` 找不到。
+此时没有整网 token、图捕获或性能结论。
+
+修正 `run_model.sh`：公共环境之后加载
+`results/csa_native_template_20260929/env.sh`，两侧均使用同一补充 vendor；私有 OPP 根
+仍分别创建，保留 norm/quant 融合和静态编译。不修改算子实现、不关闭融合、不重新构建依赖。
+CPU 动态加载与两个 API 符号检查通过，见 `native_dependency_check.json`。
+
+重提任务 `task_20260930_111431_262623832757`，结果目录为
+`results/csa_hca_merge_20260930/model_h131072_b16_v2`；提交时等待 8 卡 CI 释放设备。
 
 复跑命令（输出目录应使用新路径）：
 

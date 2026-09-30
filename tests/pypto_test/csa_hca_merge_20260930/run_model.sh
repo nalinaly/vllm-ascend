@@ -6,6 +6,9 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 workspace="$(dirname "$repo")"
 source "$workspace/env-dsv4-0251rc1.sh"
 source_repo="$workspace/vllm-ascend-dsv4-pto-0251rc1"
+# 整网 norm/quant 融合需要已构建的 AddRmsNormBias 补充包；公共环境只含 CSA 基础包。
+# 两侧使用相同 vendor，随后各自创建私有可写 OPP 根。
+source "$source_repo/tests/pypto_test/results/csa_native_template_20260929/env.sh"
 output="$(realpath -m "${1:?指定新的结果目录}")"
 history="${2:-131072}"
 batch="${3:-16}"
