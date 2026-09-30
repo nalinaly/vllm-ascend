@@ -1,0 +1,9 @@
+--- a/deepseek_v4_flash_hca/decode_compressor_ratio128.py
++++ b/deepseek_v4_flash_hca/decode_compressor_ratio128.py
+@@ -154 +154 @@
+-    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_norm_rope_write", allow_early_resolve=True, deps=[pool_tid]) as cache_tid:
++    with pl.spmd(pl.min(requests, WORKERS), name_hint="hca_norm_rope_write", allow_early_resolve=False, deps=[pool_tid]) as cache_tid:
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -50,0 +51 @@
++        sync_start=True,

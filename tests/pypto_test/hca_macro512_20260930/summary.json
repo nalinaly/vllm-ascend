@@ -1,0 +1,283 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+      "macro512": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512",
+      "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+      "macro512_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2"
+    },
+    "baseline": "single-query online candidate, not production",
+    "change": "S2=512 softmax; four 128-column QK chunks; PV K128 accumulation in four L0C tiles; cross-query stream",
+    "invariants": "cache/state, masks, sink, per-query identity, inverse RoPE; no shared toolchain changes",
+    "arithmetic": "larger softmax block before BF16 and Cube PV accumulation change rounding; diagnostic output only",
+    "tradeoff": "reload KV for PV instead of permanent L1 ring; cut PV GM round trips and FFTS handoffs"
+  },
+  "reports": {
+    "macro512_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 538.5,
+          "max_us": 594.5,
+          "mean_us": 559.35,
+          "p50_us": 556.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 592.75,
+          "max_us": 620.25,
+          "mean_us": 605.725,
+          "p50_us": 605.25
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 577.5,
+          "candidate_us": 610.125
+        },
+        {
+          "base_us": 565.375,
+          "candidate_us": 610.625
+        },
+        {
+          "base_us": 555.875,
+          "candidate_us": 602.625
+        },
+        {
+          "base_us": 542.125,
+          "candidate_us": 600.875
+        },
+        {
+          "base_us": 555.875,
+          "candidate_us": 604.375
+        }
+      ],
+      "order": [
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base"
+      ],
+      "cross_variant_exact": {
+        "x_out": false,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "output_arithmetic_diagnostic": {
+        "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+        "comparison": {
+          "status": "FAIL",
+          "shape": [
+            96,
+            4,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            96,
+            4,
+            4096
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 1572864,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.015625,
+          "rmse": 0.0006500071108152272,
+          "mismatches": 98884,
+          "first_mismatches": [
+            [
+              0,
+              0,
+              4
+            ],
+            [
+              0,
+              0,
+              30
+            ],
+            [
+              0,
+              0,
+              42
+            ],
+            [
+              0,
+              0,
+              45
+            ],
+            [
+              0,
+              0,
+              67
+            ],
+            [
+              0,
+              0,
+              70
+            ],
+            [
+              0,
+              0,
+              81
+            ],
+            [
+              0,
+              0,
+              115
+            ]
+          ]
+        },
+        "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_macro512_20260930/macro512_long/report.json",
+      "span_samples_us": [
+        594.5,
+        604.5,
+        615.75,
+        560.5,
+        575.0,
+        601.0,
+        620.25,
+        555.75,
+        556.75,
+        592.75,
+        612.5,
+        555.0,
+        538.5,
+        595.0,
+        606.75,
+        545.75,
+        553.25,
+        602.75,
+        606.0,
+        558.5
+      ]
+    }
+  },
+  "probe": {
+    "scope": "synthetic standalone Attention versus dense FP64; no model token acceptance",
+    "device": 3,
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base_hca_macro512_20260930_probe",
+      "online": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/online_hca_macro512_20260930_probe"
+    },
+    "cases": {
+      "131072": {
+        "edge": false,
+        "vs_dense_fp64": {
+          "base": {
+            "max_abs": 0.0010724107700472718,
+            "rmse": 0.00013005150591471526,
+            "nonfinite": 0,
+            "graph_exact": true,
+            "output_padding_guard": true
+          },
+          "online": {
+            "max_abs": 0.0010972282093847374,
+            "rmse": 0.00013078697356702363,
+            "nonfinite": 0,
+            "graph_exact": true,
+            "output_padding_guard": true
+          }
+        },
+        "online_vs_base": {
+          "max_abs": 0.001953125,
+          "rmse": 0.00010208907735778743,
+          "nonfinite": 0
+        }
+      },
+      "16507": {
+        "edge": true,
+        "vs_dense_fp64": {
+          "base": {
+            "max_abs": 0.0021909856971983332,
+            "rmse": 0.00020954477341037962,
+            "nonfinite": 0,
+            "graph_exact": true,
+            "output_padding_guard": true
+          },
+          "online": {
+            "max_abs": 0.0021909856971983332,
+            "rmse": 0.00020954532541984206,
+            "nonfinite": 0,
+            "graph_exact": true,
+            "output_padding_guard": true
+          }
+        },
+        "online_vs_base": {
+          "max_abs": 0.0009765625,
+          "rmse": 7.585864015790269e-06,
+          "nonfinite": 0
+        }
+      }
+    },
+    "status": "DIAGNOSTIC_COMPLETE",
+    "acceptance": "FP64 errors reported without converting a measured error into an acceptance tolerance"
+  },
+  "limits": "独立数值诊断和同卡性能筛选；没有新增Native、七档或整模型token验收"
+}

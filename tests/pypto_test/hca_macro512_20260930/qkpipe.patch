@@ -1,0 +1,20 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1181 +1180,0 @@
+-        qk_kv = pl.create_tile([ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+@@ -1210,2 +1209,4 @@
+-                        raw_loaded = pl.gather_row(qk_kv, raw_kv, [0, 0],
+-                                             [request * REQUEST_KV_ROWS + raw_drop, 0], [ATTN_K_TILE, HEAD_DIM])
++                        raw_loaded = pl.load(
++                            raw_kv, [request * REQUEST_KV_ROWS + raw_drop, 0],
++                            [ATTN_K_TILE, HEAD_DIM], target_memory=pl.MemorySpace.Mat,
++                        )
+@@ -1220 +1221 @@
+-                        for part in pl.range(parts):
++                        for part in pl.pipeline(parts, stage=2):
+@@ -1222 +1223,4 @@
+-                            cmp_loaded = pl.gather_row(qk_kv, cmp_work_kv, [0, 0], [cmp_row, 0], [ATTN_K_TILE, HEAD_DIM])
++                            cmp_loaded = pl.load(
++                                cmp_work_kv, [cmp_row, 0], [ATTN_K_TILE, HEAD_DIM],
++                                target_memory=pl.MemorySpace.Mat,
++                            )

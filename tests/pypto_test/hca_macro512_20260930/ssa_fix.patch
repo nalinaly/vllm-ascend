@@ -1,0 +1,13 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1210 +1210 @@
+-                        qk_kv = pl.gather_row(qk_kv, raw_kv, [0, 0],
++                        raw_loaded = pl.gather_row(qk_kv, raw_kv, [0, 0],
+@@ -1212 +1212 @@
+-                        raw_key = pl.tile.transpose_view(qk_kv)
++                        raw_key = pl.tile.transpose_view(raw_loaded)
+@@ -1222,2 +1222,2 @@
+-                            qk_kv = pl.gather_row(qk_kv, cmp_work_kv, [0, 0], [cmp_row, 0], [ATTN_K_TILE, HEAD_DIM])
+-                            key = pl.tile.transpose_view(qk_kv)
++                            cmp_loaded = pl.gather_row(qk_kv, cmp_work_kv, [0, 0], [cmp_row, 0], [ATTN_K_TILE, HEAD_DIM])
++                            key = pl.tile.transpose_view(cmp_loaded)

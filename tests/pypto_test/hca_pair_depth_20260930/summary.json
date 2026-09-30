@@ -1,0 +1,88 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/head_extract",
+      "depth3": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-depth-5c0fa709-20260930/depth3",
+      "single_online": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online"
+    },
+    "baseline": "head_extract double-query full-UB candidate from 5c0fa709; not production",
+    "change": "3 KV slots, 2-tick QK preload, Q reloaded per block instead of permanent L1 residency",
+    "invariants": "full FP32 UB accumulators, dynamic head extract, online BF16 strategy, same per-query block order",
+    "tradeoff": "extra Q MTE2 traffic; still drains once per pair; CPU capacity/load required before NPU"
+  },
+  "reports": {
+    "depth3_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/head_extract",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-depth-5c0fa709-20260930/depth3"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 575.75,
+          "max_us": 635.0,
+          "mean_us": 589.325,
+          "p50_us": 584.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 581.75,
+          "max_us": 591.0,
+          "mean_us": 586.025,
+          "p50_us": 585.625
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_pair_depth_20260930/depth3_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

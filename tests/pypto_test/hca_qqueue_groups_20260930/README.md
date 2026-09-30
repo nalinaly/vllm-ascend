@@ -59,3 +59,25 @@ DFX复用`hca_mix_schedule_20260930/run_dfx.sh hca_qqueue_groups_20260930 base c
 全部NPU经task-submit自动排队。泳道位于
 `../results/hca_qqueue_groups_20260930/dfx/{base,cube_groups1}/dfx/merged_swimlane.json`。
 不扩无明确收益组合的七档或16卡测试。
+# 后续完成：QR预置与反量化衔接
+
+whole_sync和qr_late两任务均exit0，完整输出/cache/state跨版逐bit，图重放和保护区通过。
+CANN9.2/NZ2/atomic0/det0、128K/B16，ABBA每侧10次，μs，min/max/mean：
+
+| 增量 | 自己的控制 | 候选 |
+| --- | --- | --- |
+| 一组24 Cube整体sync | 568.500/612.250/583.675 | 571.500/592.000/581.825 |
+| 四组Q24，仅QR不提前解析 | 584.000/625.000/602.700 | 588.250/605.750/593.675 |
+
+whole_sync五组只有两组改善、P50反而580.125→582，mean/max受首组控制慢点影响，不接入。
+qr_late四组改善，但前两组贡献最大，不能直接按−9.025μs接入生产。
+
+新增同卡DFX（base_qr_followup→qr_late，另一个窗口，不与旧base拼接）显示：
+Q24从20个物理Cube、4核重复工作，变为24个各一次；最后Q完成275.34→224.88μs。
+但是48份反量化从39个物理AIV变为46个，仍有2核重复，最终反量化完成318.44→318.92；
+Attention AIV启动322.82→320.34，只提前2.48μs。compressed gather与其重叠，
+核内mean19.212→24.423、跨度54.98→39.94，不能简单把任何单项差值当作完整HCA收益。
+
+保留Q24满核的调度候选，下一项联动gather生产者和四组反量化，不只继续修Q启动。
+逐核记录见[qr_placement.json](qr_placement.json)，完整泳道在
+`../results/hca_qqueue_groups_20260930/dfx/{base_qr_followup,qr_late}/dfx/merged_swimlane.json`。

@@ -5,7 +5,8 @@
     "cube_groups1": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/cube_groups1",
     "cube_groups2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/cube_groups2",
     "whole_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/whole_sync",
-    "qr_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late"
+    "qr_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late",
+    "base_qr_followup": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-workers-e8bd858e-20260930/q24"
   },
   "baseline": "q24 candidate from 5c0fa709, not production",
   "invariants": "24 Cube total, M128/N256/K256 stage2, four independent 12-AIV dequant groups, exact arithmetic",
@@ -15,5 +16,8 @@
     "whole_sync": "cube_groups1",
     "qr_late": "base"
   },
-  "followup_basis": "even single-24 Q used some cores twice while others idle; check pending pre-stage"
+  "followup_basis": "even single-24 Q used some cores twice while others idle; check pending pre-stage",
+  "dfx_aliases": {
+    "base_qr_followup": "same frozen four-group Q24 control; new window for qr_late comparison"
+  }
 }

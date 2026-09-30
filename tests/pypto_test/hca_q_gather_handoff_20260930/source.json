@@ -1,0 +1,16 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late",
+    "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "cache_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-gather-handoff-5a5b9bfb-20260930/cache_late",
+    "cache_late_dq_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-q-gather-handoff-5a5b9bfb-20260930/cache_late_dq_sync"
+  },
+  "baseline": "four-group Q24 with QR early-resolve disabled; unadopted candidate, not production",
+  "basis": "Q spread improved to 24 physical cores, but DQ completion stayed late beside compressed gather",
+  "changes": {
+    "cache_late": "cache writer stops resolving compressed gather before completion",
+    "cache_late_dq_sync": "cache_late plus sync_start for each of four 12-AIV DQ groups"
+  },
+  "invariants": "same kernels/arithmetic, block counts, buffers, cache/state and dependency edges",
+  "limits": "same-card parent comparisons required; do not add independent deltas"
+}

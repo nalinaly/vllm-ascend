@@ -23,3 +23,12 @@ CPU依赖图、编译与load通过；[memory.json](memory.json)记录分配后�
 patch为零上下文，应用到head_extract需`git apply --unidiff-zero`。
 真机通过task-submit自动排队，句柄在[tasks.json](tasks.json)。未测结果不能写成精度或性能通过。
 CPU复用`hca_residual_reuse_20260930/compile.py`，真机复用`hca_pair_screen_20260930/run.sh`。
+
+## 完成结果
+
+task_20260930_080925_22648957535已exit0。CANN9.2/NZ2/atomic0/det0，128K/B16，
+同进程ABBA每侧10次，min/max/mean（μs）：控制575.750/635.000/589.325，
+depth3为581.750/591.000/586.025。P50反而584.750→585.625，五组仅两组mean改善；
+首组控制613.125、候选586.375，后四组混合，不能把max少44或mean少3.3称为稳定收益。
+四类完整状态跨版逐bit、各自图重放和保护区通过；尚无对生产的收益证据，不接入或扩七档。
+数据见[summary.json](summary.json)及其中的原始报告路径。
