@@ -1,0 +1,497 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+      "nested": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/nested",
+      "compact": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact",
+      "peeled": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/peeled",
+      "n256": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/n256",
+      "integrated": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/integrated",
+      "integrated_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/integrated_v2"
+    },
+    "baseline": "0742f07c production operator, captured at f4dfef15",
+    "change": "N128 O-A: L1 K512 stage2, explicit L0 K128 stage2, single init_cond accumulator",
+    "invariants": "8 groups, same worker count/TaskIds/dependencies, Native NZ GM layout, K128 arithmetic order",
+    "scope": "private HCA package only; N256 branch and public CSA operator unchanged",
+    "reference": "ops-nn transpose_batch_mat_mul/pp_matmul_ein_sum_kernel.h L1 prefetch and L0 ping-pong",
+    "expected_capacity_bytes": {
+      "Mat": 524288,
+      "Left": 65536,
+      "Right": 65536,
+      "Acc": 65536
+    },
+    "nested_failure": "AccCompactValid: dynamic valid M needs compact Acc storage; plain create is rejected",
+    "compact_note": "Explicit L0 path uses compact=True plus validshape; currently an internal compiler API. Before production adoption prefer a tile.matmul-derived seed or an officially supported narrow seed.",
+    "peeled_change": "first real K128 tile.matmul derives compact Acc; finish first K512 then pipeline remaining K512 chunks; same arithmetic order and no extra GM loads, no compact=True and no runtime init_cond",
+    "n256_change": "O-A N256 / L1 K256 / explicit L0 K64 stage2; B16 goes 64->32 workers, halves repeated input reads across N blocks; same groups/quant/O-B dependencies",
+    "n256_scope": "private HCA package; both small/medium and large O-A branches use explicit N256 pipeline; K64 microstep changes require actual numerical comparison",
+    "integrated_scope": "only HCA opts into PIPELINE_OA=True; shared helper default=False preserves CSA; only NZ N128 routes to explicit pipeline, N256 and ND retain originals",
+    "integrated_failure": "conditional inline call: missing inferred tensor metadata for o_r_pad",
+    "integrated_v2_scope": "same kernel body/strategy as compact, constexpr flag inside SPMD; HCA=True, CSA default=False; ND/N256 unchanged"
+  },
+  "reports": {
+    "h131072_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 549.0,
+          "max_us": 608.75,
+          "mean_us": 568.65,
+          "p50_us": 564.0
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 552.0,
+          "max_us": 570.25,
+          "mean_us": 558.65,
+          "p50_us": 558.125
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h131072_b16/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "h131072_b16_n256": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/n256"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 590.75,
+          "max_us": 620.75,
+          "mean_us": 604.5,
+          "p50_us": 600.875
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 587.25,
+          "max_us": 606.0,
+          "mean_us": 597.75,
+          "p50_us": 598.25
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h131072_b16_n256/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "h131072_b16_peeled_vs_compact": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/peeled"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 551.75,
+          "max_us": 615.5,
+          "mean_us": 570.875,
+          "p50_us": 568.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 563.75,
+          "max_us": 581.25,
+          "mean_us": 573.4,
+          "p50_us": 573.625
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h131072_b16_peeled_vs_compact/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "h131072_b4_integrated_v2": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/integrated_v2"
+      },
+      "case": [
+        131072,
+        4
+      ],
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 2,
+          "min_us": 350.75,
+          "max_us": 379.75,
+          "mean_us": 365.25,
+          "p50_us": 365.25
+        },
+        "candidate": {
+          "count": 2,
+          "min_us": 363.25,
+          "max_us": 373.0,
+          "mean_us": 368.125,
+          "p50_us": 368.125
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h131072_b4_integrated_v2/report.json",
+      "nz_mode": 2,
+      "purpose": "functional_only",
+      "padding_graph": {
+        "status": "PASS",
+        "scope": "单卡 PTO 同一图的满档→补位→满档；Native builder 在图外更新、Native compact producer 在图内执行；不代表整机或空 rank 验收",
+        "active_batch_sequence": [
+          4,
+          3,
+          1,
+          4
+        ]
+      }
+    },
+    "h8192_b16_padding_v2": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact"
+      },
+      "case": [
+        8192,
+        16
+      ],
+      "device": 9,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 2,
+          "min_us": 432.75,
+          "max_us": 467.75,
+          "mean_us": 450.25,
+          "p50_us": 450.25
+        },
+        "candidate": {
+          "count": 2,
+          "min_us": 428.5,
+          "max_us": 429.75,
+          "mean_us": 429.125,
+          "p50_us": 429.125
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h8192_b16_padding_v2/report.json",
+      "nz_mode": 2,
+      "purpose": "functional_only",
+      "padding_graph": {
+        "status": "PASS",
+        "scope": "单卡 PTO 同一图的满档→补位→满档；Native builder 在图外更新、Native compact producer 在图内执行；不代表整机或空 rank 验收",
+        "active_batch_sequence": [
+          16,
+          15,
+          1,
+          16
+        ]
+      }
+    },
+    "h8192_b24_n256": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/n256"
+      },
+      "case": [
+        8192,
+        24
+      ],
+      "device": 8,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 596.5,
+          "max_us": 644.0,
+          "mean_us": 612.725,
+          "p50_us": 612.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 598.75,
+          "max_us": 625.25,
+          "mean_us": 612.875,
+          "p50_us": 613.375
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_oa_pipeline_20260930/h8192_b24_n256/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen",
+      "padding_graph": {
+        "status": "PASS",
+        "scope": "单卡 PTO 同一图的满档→补位→满档；Native builder 在图外更新、Native compact producer 在图内执行；不代表整机或空 rank 验收",
+        "active_batch_sequence": [
+          24,
+          23,
+          1,
+          24
+        ]
+      }
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

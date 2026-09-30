@@ -43,7 +43,7 @@ def _o_proj_hc_post_tiled(
 ):
     tokens = pl.tensor.dim(residual, 0)
     partials, scales, ready = _decode_o_proj_tp1_parts(
-        packed, wo_a, wo_b, tokens, heads_dep, MM_ROWS, MM_COLS,
+        packed, wo_a, wo_b, tokens, heads_dep, MM_ROWS, MM_COLS, PIPELINE_OA=True,
     )
     residual_flat = pl.reshape(residual, [tokens, HC_DIM])
     output_flat = pl.reshape(output, [tokens, HC_DIM])

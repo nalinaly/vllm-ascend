@@ -78,6 +78,9 @@ ATTENTION_WINDOW_ROWS = LOCAL_O_GROUPS * GROUP_T_PAD
 O_WINDOW_ROWS = TP_SIZE * LOCAL_T_PAD
 
 A_K_TILE = 256
+PROJ_A_PIPE_N_TILE = 128
+PROJ_A_L1_K_TILE = 512
+PROJ_A_L0_K_TILE = 128
 
 PROJ_A_MM_N_TILE = 128
 PROJ_A_LARGE_N_TILE = 256
@@ -180,6 +183,7 @@ def _proj_a_mm_nz(
     proj_a_rows: pl.Scalar[pl.INDEX],
     heads_dep: pl.Scalar[pl.TASK_ID],
     A_COL_TILE: pl.constexpr,
+    PIPELINE_OA: pl.constexpr = False,
 ):
     """Parallelize row and column tiles as upstream; retain Native NZ weights."""
     with pl.spmd(
@@ -197,20 +201,50 @@ def _proj_a_mm_nz(
         pa_src0 = row_base_o + pa_r0
         # The block index remainder is nonnegative; make the NZ bound explicit.
         n0 = pl.max(nf, 0) * A_COL_TILE
-        xa_first = pl.slice(
-            o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, 0], valid_shape=[pa_rows, A_K_TILE]
-        )
-        wa_first = wo_a[g : g + 1, 0:A_K_TILE, n0 : n0 + A_COL_TILE]
-        acc_a = pl.matmul(xa_first, wa_first, out_dtype=pl.FP32)
-        for kb in pl.pipeline(1, O_GROUP_IN // A_K_TILE, stage=2):
-            k0 = kb * A_K_TILE
-            xa_k_chunk = pl.slice(
-                o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, k0], valid_shape=[pa_rows, A_K_TILE]
+        if PIPELINE_OA and A_COL_TILE == PROJ_A_PIPE_N_TILE:
+            # MAD动态M按有效行打包；显式L0流水的Acc种子须匹配该布局。
+            # compact是当前PyPTO的内部接口：不能删除或当作普通128行Acc；
+            # 窄行B4/B16与补位重放见hca_oa_pipeline_20260930。首段剥离实测更慢。
+            seed_storage = pl.create_tile([PROJ_A_ROW_TILE, A_COL_TILE], dtype=pl.FP32,
+                                          target_memory=pl.MemorySpace.Acc, compact=True)
+            seed = pl.tile.set_validshape(seed_storage, pa_rows, A_COL_TILE)
+            for outer, (outer_acc,) in pl.pipeline(0, O_GROUP_IN // PROJ_A_L1_K_TILE, stage=2, init_values=(seed,)):
+                outer_k = outer * PROJ_A_L1_K_TILE
+                lhs = pl.load(o_packed, [pa_src0, outer_k], [PROJ_A_ROW_TILE, PROJ_A_L1_K_TILE],
+                              valid_shape=[pa_rows, PROJ_A_L1_K_TILE], target_memory=pl.MemorySpace.Mat)
+                rhs_group = pl.load(wo_a, [g, outer_k, n0], [1, PROJ_A_L1_K_TILE, A_COL_TILE],
+                                    target_memory=pl.MemorySpace.Mat)
+                rhs = pl.reshape(rhs_group, [PROJ_A_L1_K_TILE, A_COL_TILE])
+                for inner, (inner_acc,) in pl.pipeline(
+                    0, PROJ_A_L1_K_TILE // PROJ_A_L0_K_TILE, stage=2, init_values=(outer_acc,),
+                ):
+                    inner_k = inner * PROJ_A_L0_K_TILE
+                    lhs_part = pl.tile.extract(lhs, 0, inner_k, [PROJ_A_ROW_TILE, PROJ_A_L0_K_TILE],
+                                               target_memory=pl.MemorySpace.Left)
+                    rhs_part = pl.tile.extract(rhs, inner_k, 0, [PROJ_A_L0_K_TILE, A_COL_TILE],
+                                               target_memory=pl.MemorySpace.Right)
+                    updated = pl.tile.matmul_acc(inner_acc, lhs_part, rhs_part,
+                                                 init_cond=(outer == 0 and inner == 0))
+                    inner_done = pl.yield_(updated)
+                outer_done = pl.yield_(inner_done)
+            stored = pl.store(outer_done, [pa_r0, out_col_g + n0], o_r_pad)
+            o_r_pad = pl.yield_(stored)
+        else:
+            xa_first = pl.slice(
+                o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, 0], valid_shape=[pa_rows, A_K_TILE]
             )
-            wa_k_chunk = wo_a[g : g + 1, k0 : k0 + A_K_TILE, n0 : n0 + A_COL_TILE]
-            acc_a = pl.matmul_acc(acc_a, xa_k_chunk, wa_k_chunk)
-        # acc_a is 3D (wo_a keeps its group axis), which subscript-write cannot express.
-        o_r_pad = pl.assemble(o_r_pad, acc_a, [pa_r0, out_col_g + n0])
+            wa_first = wo_a[g : g + 1, 0:A_K_TILE, n0 : n0 + A_COL_TILE]
+            acc_a = pl.matmul(xa_first, wa_first, out_dtype=pl.FP32)
+            for kb in pl.pipeline(1, O_GROUP_IN // A_K_TILE, stage=2):
+                k0 = kb * A_K_TILE
+                xa_k_chunk = pl.slice(
+                    o_packed, [PROJ_A_ROW_TILE, A_K_TILE], [pa_src0, k0], valid_shape=[pa_rows, A_K_TILE]
+                )
+                wa_k_chunk = wo_a[g : g + 1, k0 : k0 + A_K_TILE, n0 : n0 + A_COL_TILE]
+                acc_a = pl.matmul_acc(acc_a, xa_k_chunk, wa_k_chunk)
+            # acc_a is 3D (wo_a keeps its group axis), which subscript-write cannot express.
+            stored = pl.assemble(o_r_pad, acc_a, [pa_r0, out_col_g + n0])
+            o_r_pad = pl.yield_(stored)
     return o_r_pad, pa_tid
 
 
@@ -226,6 +260,7 @@ def _proj_a_mm_nd(
     proj_a_rows: pl.Scalar[pl.INDEX],
     heads_dep: pl.Scalar[pl.TASK_ID],
     A_COL_TILE: pl.constexpr,
+    PIPELINE_OA: pl.constexpr = False,
 ):
     """ND 版：与上游 _decode_o_proj 同形，(行块 x N 块) 二维展开、行块最外。"""
     with pl.spmd(
@@ -377,6 +412,7 @@ def _decode_o_proj_tp1_parts(
     heads_dep: pl.Scalar[pl.TASK_ID],
     ROW_TILE: pl.constexpr,
     A_COL_TILE: pl.constexpr,
+    PIPELINE_OA: pl.constexpr = False,
 ):
     """公共 O 投影主体；返回分组整数累加和量化尺度，供不同收尾复用。"""
     proj_a_rows = (t_dim + PROJ_A_ROW_TILE - 1) // PROJ_A_ROW_TILE
@@ -400,7 +436,7 @@ def _decode_o_proj_tp1_parts(
 
             o_r_pad, pa_tid = proj_a_mm(
                 o_packed, wo_a, o_r_pad, g, row_base_o, out_col_g,
-                t_dim, proj_a_rows, heads_dep, A_COL_TILE,
+                t_dim, proj_a_rows, heads_dep, A_COL_TILE, PIPELINE_OA,
             )
 
             col_g = g * O_LORA
