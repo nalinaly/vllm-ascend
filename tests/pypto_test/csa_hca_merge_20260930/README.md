@@ -71,6 +71,12 @@
 本地结果：`results/csa_hca_merge_20260930/validation_h131072_b16_v1`。
 这是 128K/B16 联合整网代表场景，不代表七档、请求生命周期或全部 padding 场景通过。
 
+功能阶段已经通过（11:53）：16 个 rank 全部恢复 16 条请求，共 256 条；
+每 rank 在实际 T=96 档位重放联合图 33 次，覆盖全部 41 层，生成 49,152 个 token。
+逐 rank 检查记录见 `functional_h131072_b16.json`。已复核原始 `pto/rank*.json`，
+16 个 rank 的实际运行配置一致，norm/quant 融合、静态 kernel 与 FULL_DECODE_ONLY 均开启。
+Native 精度对照正在初始化，此时不记录 token 一致或性能通过。
+
 ## 配置及历史任务
 
 复用正式权重 `/data/model/DeepSeek-V4-Flash-0731-w8a8` 与既有 P TP4×DP4 离线 KV：
