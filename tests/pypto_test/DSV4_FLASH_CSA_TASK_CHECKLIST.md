@@ -118,7 +118,7 @@ Indexer采用后H4095/B3 Native残留max_abs=0.0234375、Top-K集合替换39项�
 | 1 | SPMD有效用核、保持流水、再叠加sync | [O收尾首项](results/csa_spmd_post_balanced_20260929/README.md)已采用T96的48×2+sync，核时均值27.273→22.607μs；T144保留原36×4。[KV第二项](results/csa_spmd_kv_20260929/README.md)长档不采用，短档N64+sync保留待场景分支接入，三候选两档八类状态通过；完整CSA削峰仍未证明。写回48核及KV沿M16扩核已测，未取得长档整体收益；写回16核/两pool联动已完成，保留写回跨度收益但不统一接入；下一项审查O_A/O_B并发任务组，其余SPMD未完成 |
 | 2 | 128K关键链的调度优化 | [RoPE early复核](results/csa_rope_early_revisit_20260929/RESULTS.md)：局部交接变快，完整CSA 8:2首轮−0.467%、反序+0.338%，不全局采用；性能后八类状态零差异。短B24两轮获益，同T=144的128K/B24控制档也−0.538%、八类状态零差异；仅T144分支两档+0.659%/+3.165%、8:2+1.160%，不采用；FP32按上游HC_pre组织的两档实测−1.519%/−3.269%、8:2−1.869%，保留私有候选；首调用回舍/状态及连续自身图通过，但后续Top-K改变，待模型token/DSpark验收；不把O投影必要多波当纯调度开销 |
 | 3 | 保留核内热点 | 当前长B24融合Sparse核时已接近Native独立Sparse，短B16/B32差距仍在；短B32 Score也是后续分支入口。先查最新AscendC适用策略，失败候选无新依据不重复 |
-| 4 | 精度版迁移 | [2026-09-30迁移与七档对比](precision_port_20260930/RESULTS.md)已完成HC融合、QKV无atomic清零消除/M并行、Indexer分页/双缓冲/长短档调度、Sparse收尾融合和O共用MatMul/收尾融合；四代表档输出、Top-K及cache/state与旧精度版逐元素一致。保留累计softmax、舍入、跨O组统一量化和atomic默认；单层证据不代替后续模型token/DSpark验收 |
+| 4 | 精度版迁移 | [2026-09-30迁移与七档对比](precision_port_20260930/RESULTS.md)已完成HC融合、QKV无atomic清零消除/M并行、Indexer分页/双缓冲/长短档调度、Sparse收尾融合和O共用MatMul/收尾融合；四代表档输出、Top-K及cache/state与旧精度版逐元素一致。保留累计softmax、舍入、跨O组统一量化和atomic默认；[2026-10-01的128K/B16两版对照](precision_tokens_20261001/README.md)已完成：TMR、NZ2、atomic0、确定性开启，16卡49,152个token及DSpark统计完全一致；CSA单层28.08%的BF16元素位模式不同，最大绝对误差0.03125。只覆盖本次固定历史，不标记七档Native整网或默认atomic验收完成 |
 | 5 | 最终真实EP16验收 | CANN9.2、新B24、逐token/DSpark、10步decode forward和尾部仍未完成，优先级后置 |
 
 有效策略及其独立证据见[核内差距](DSV4_FLASH_CSA_INCORE_NATIVE_GAP.md)和[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)。

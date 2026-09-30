@@ -1,0 +1,136 @@
+{
+  "scope": "真实第2层权重、合成固定历史输入；单层 CSA 张量，不是整模型 hidden/logits",
+  "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/precision_port_20260930/matrix/h131072_b16",
+  "arithmetic": "两侧 atomic_add=0，单卡样本 deterministic=0",
+  "tensors": {
+    "CSA": {
+      "dtype": "torch.bfloat16",
+      "shape": [
+        96,
+        4,
+        4096
+      ],
+      "elements": 1572864,
+      "bitwise_different_elements": 441669,
+      "different_element_percent": 28.08055877685547,
+      "different_bits": 988846,
+      "total_bits": 25165824,
+      "exact": false,
+      "finite_pairs": 1572864,
+      "unmatched_nonfinite": 0,
+      "max_abs": 0.03125,
+      "rmse": 0.002212350722402334,
+      "mean_abs": 0.0009289990994147956,
+      "ulp_p50": 0.0,
+      "ulp_p95": 3.0,
+      "ulp_max": 30506,
+      "max_ulp_example": {
+        "performance": 0.006317138671875,
+        "precision": -0.0033416748046875
+      }
+    },
+    "idx_topk": {
+      "dtype": "torch.int32",
+      "shape": [
+        96,
+        512
+      ],
+      "elements": 49152,
+      "bitwise_different_elements": 45527,
+      "different_element_percent": 92.62492370605469,
+      "different_bits": 341072,
+      "total_bits": 1572864,
+      "exact": false,
+      "different_set_rows": 96,
+      "rows": 96,
+      "mean_set_overlap_percent": 98.23405456542969
+    },
+    "idx_topk_scores": {
+      "dtype": "torch.float32",
+      "shape": [
+        96,
+        512
+      ],
+      "elements": 49152,
+      "bitwise_different_elements": 49151,
+      "different_element_percent": 99.99797058105469,
+      "different_bits": 443490,
+      "total_bits": 1572864,
+      "exact": false,
+      "finite_pairs": 49152,
+      "unmatched_nonfinite": 0,
+      "max_abs": 2.97249061986804e-06,
+      "rmse": 1.23514752203846e-07,
+      "mean_abs": 9.067591832945254e-08,
+      "ulp_p50": 29812.0,
+      "ulp_p95": 104876.6953125,
+      "ulp_max": 1696559185,
+      "scope": "按输出槽位比较；两侧 Top-K ID 不同，不是相同 ID 的分数对照"
+    },
+    "state.swa": {
+      "dtype": "torch.int8",
+      "shape": [
+        98304
+      ],
+      "elements": 98304,
+      "bitwise_different_elements": 13729,
+      "different_element_percent": 13.965861320495605,
+      "different_bits": 27225,
+      "total_bits": 786432,
+      "exact": false,
+      "scope": "允许写入区域的原始字节；不将字节差当作浮点误差"
+    },
+    "state.compressed": {
+      "dtype": "torch.int8",
+      "shape": [
+        16384
+      ],
+      "elements": 16384,
+      "bitwise_different_elements": 1,
+      "different_element_percent": 0.006103515625,
+      "different_bits": 1,
+      "total_bits": 131072,
+      "exact": false,
+      "scope": "允许写入区域的原始字节；不将字节差当作浮点误差"
+    },
+    "state.state": {
+      "dtype": "torch.int8",
+      "shape": [
+        786432
+      ],
+      "elements": 786432,
+      "bitwise_different_elements": 157249,
+      "different_element_percent": 19.995243072509766,
+      "different_bits": 395976,
+      "total_bits": 6291456,
+      "exact": false,
+      "scope": "允许写入区域的原始字节；不将字节差当作浮点误差"
+    },
+    "state.indexer": {
+      "dtype": "torch.int8",
+      "shape": [
+        2080
+      ],
+      "elements": 2080,
+      "bitwise_different_elements": 140,
+      "different_element_percent": 6.730769634246826,
+      "different_bits": 272,
+      "total_bits": 16640,
+      "exact": false,
+      "scope": "允许写入区域的原始字节；不将字节差当作浮点误差"
+    },
+    "state.indexer_state": {
+      "dtype": "torch.int8",
+      "shape": [
+        196608
+      ],
+      "elements": 196608,
+      "bitwise_different_elements": 38352,
+      "different_element_percent": 19.5068359375,
+      "different_bits": 97395,
+      "total_bits": 1572864,
+      "exact": false,
+      "scope": "允许写入区域的原始字节；不将字节差当作浮点误差"
+    }
+  }
+}

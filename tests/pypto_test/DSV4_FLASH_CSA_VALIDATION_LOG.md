@@ -14305,3 +14305,59 @@ Ruff、shell语法、diff检查通过。最终测量包与工作区修改文件�
 任务task_20260930_234206_354560610902、task_20260930_234206_354560510829均完成并释放卡。
 [完整结果](precision_port_20260930/RESULTS.md)、[迁移范围及复现](precision_port_20260930/README.md)、
 [原始样本与配置](precision_port_20260930/evidence.json)、[逐元素迁移看护](precision_port_20260930/migration_guards.json)。
+
+
+## 509. 2026-10-01：迁移后的精度版与性能版，128K/B16 bit及16卡token对照
+
+用户解除此前“16卡不用本会话测试”的限制。本轮只验证128K/B16，不扩大到七档，不继续优化算子。
+算子版本为`84dc9a3f`；整份vllm_ascend及执行脚本复制后才排队，运行期间不编辑冻结源码。
+CANN9.2.0-beta.2、PyPTO cb248447、Simpler ef681289、PTOAS0.66。比较两种PTO CSA，HCA保持相同。
+
+单层复用§508同版本真实第二层权重、固定合成历史、seed1024的两份原始输出，不重复跑性能测试。
+TMR、NZ2、两侧atomic0、deterministic0；按原始字节XOR/popcount，不做hash：
+
+| 单层指标 | 性能版 vs 精度版 |
+| --- | ---: |
+| BF16 CSA输出位模式不同元素 | 441,669 / 1,572,864（28.0806%） |
+| 实际不同bit | 988,846 / 25,165,824 |
+| 最大绝对误差 / RMSE | 0.03125 / 0.00221235 |
+| ULP中位数 / P95 | 0 / 3 |
+| Top-K集合平均重合率 | 98.2341% |
+| Top-K集合不同的行 | 96 / 96 |
+
+不将“P95为3 ULP”说成所有误差都很小：最大30506 ULP的一对为0.00631714与−0.00334167，
+绝对差0.00965881。state.*统计对象是允许写入区原始字节；Top-K分数按槽位比较，不冒充同ID分数误差。
+单层不是整模型hidden/logits对照。
+
+整模型使用正式DeepSeek-V4-Flash-0731-w8a8、已审计128K bank、TP1/DP=EP16、每卡B16，
+DSpark出5验6，每请求192 token；4份固定历史按rank%4分配、同卡16请求复用历史。
+TMR、NZ2、atomic0、FULL_DECODE_ONLY、static kernel、capture sizes 6/24/48/96；
+set_deterministic_level(1)、HCCL_DETERMINISTIC=true，AIV保留，EPLB关闭。
+两侧均21层PTO CSA+20层PTO HCA，仅切换CSA performance/precision。
+
+首轮task_20261001_002841_37675311650的token及DSpark均一致，但回查发现两侧四个捕获档位的
+CANN静态打包均报Errno36：长cwd被编入shape_info文件名，超过255字节。框架警告后继续运行，
+组长实际installed_packages=0，所以撤回过程中“静态编译已完成”的说法，不将首轮视作static生效验收。
+没有改工具链；测试脚本改用短编译工作目录，并将编译错误和实际安装包数纳入验收。
+
+正式补跑task_20261001_004814_7390367673完成，exit=0：
+
+| 整模型指标 | 结果 |
+| --- | --- |
+| 输出token | 49,152个全部一致，0差异 |
+| DSpark草稿轮数 | 两侧均8,192 |
+| DSpark提出/接受token | 两侧均40,960/40,960 |
+| 五个草稿位置接受数，全卡合计 | 两侧均[8192,8192,8192,8192,8192] |
+| DSpark不同rank-case | 0/16 |
+| 真实FULL_tokens96 forward | 两侧每rank均33次 |
+| 静态kernel安装证据 | 两侧组长均4个包，0编译错误 |
+| 功能及实际配置 | 两侧16个rank全部41层PTO捕获/重放通过；worker实际配置相同 |
+
+结论：两版bit不一致，本次固定128K/B16历史的16卡输出token及DSpark统计一致。
+结论不覆盖任意提示词、整模型逐bit、默认atomic1或Native对照。首轮与正式补跑均保留原始日志，
+不把编译/加载时间作为性能结论；任务完成后16卡已释放。
+本轮生产算子未改；offline_pd/run.py补记variant、atomic、runtime及确定性字段以便核验。
+
+[完整说明与复现](precision_tokens_20261001/README.md)、
+[位差及逐元素误差](precision_tokens_20261001/bit_difference.json)、
+[16卡token/DSpark及实际配置证据](precision_tokens_20261001/token_comparison.json)。
