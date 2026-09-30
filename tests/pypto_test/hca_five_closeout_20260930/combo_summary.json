@@ -1,0 +1,326 @@
+{
+  "combo_128k_b16": {
+    "status": "MEASURED",
+    "case": [
+      131072,
+      16
+    ],
+    "device": 0,
+    "scope": "same-process PTO-root screening, not Native or production-service acceptance",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/production",
+      "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/kshift_schedule"
+    },
+    "summary": {
+      "base": {
+        "count": 10,
+        "min_us": 554.25,
+        "max_us": 606.0,
+        "mean_us": 568.6,
+        "p50_us": 564.375
+      },
+      "candidate": {
+        "count": 10,
+        "min_us": 555.5,
+        "max_us": 569.5,
+        "mean_us": 564.325,
+        "p50_us": 565.75
+      }
+    },
+    "pairs": [
+      {
+        "base_us": 589.125,
+        "candidate_us": 564.75
+      },
+      {
+        "base_us": 564.375,
+        "candidate_us": 562.25
+      },
+      {
+        "base_us": 562.125,
+        "candidate_us": 558.75
+      },
+      {
+        "base_us": 567.25,
+        "candidate_us": 567.375
+      },
+      {
+        "base_us": 560.125,
+        "candidate_us": 568.5
+      }
+    ],
+    "cross_variant_exact": {
+      "x_out": false,
+      "swa.0": true,
+      "compressed.0": true,
+      "state.0": true
+    },
+    "output_arithmetic_diagnostic": {
+      "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+      "comparison": {
+        "status": "FAIL",
+        "shape": [
+          96,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "expected_shape": [
+          96,
+          4,
+          4096
+        ],
+        "expected_dtype": "torch.bfloat16",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 1572864,
+        "comparison": "tolerance",
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 2.9391776896671405e-05,
+        "mismatches": 212,
+        "first_mismatches": [
+          [
+            25,
+            3,
+            1390
+          ],
+          [
+            40,
+            0,
+            2203
+          ],
+          [
+            40,
+            0,
+            2233
+          ],
+          [
+            40,
+            0,
+            2370
+          ],
+          [
+            40,
+            0,
+            2879
+          ],
+          [
+            40,
+            1,
+            926
+          ],
+          [
+            40,
+            1,
+            1199
+          ],
+          [
+            40,
+            1,
+            2370
+          ]
+        ]
+      },
+      "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+    },
+    "state_exact": {
+      "base": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "candidate": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      }
+    },
+    "guards": {
+      "swa": "PASS",
+      "compressed": "PASS",
+      "state": "PASS",
+      "metadata.positions": "PASS",
+      "metadata.swa.query_start_loc": "PASS",
+      "metadata.swa.seq_lens": "PASS",
+      "metadata.swa.block_table": "PASS",
+      "metadata.swa.slot_mapping": "PASS",
+      "metadata.swa.start_pos": "PASS",
+      "metadata.compressed.query_start_loc": "PASS",
+      "metadata.compressed.seq_lens": "PASS",
+      "metadata.compressed.block_table": "PASS",
+      "metadata.compressed.start_pos": "PASS",
+      "metadata.state.query_start_loc": "PASS",
+      "metadata.state.seq_lens": "PASS",
+      "metadata.state.block_table": "PASS",
+      "metadata.state.slot_mapping": "PASS",
+      "metadata.state.start_pos": "PASS",
+      "metadata.compressed.compact_slots": "PASS"
+    },
+    "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/combo_128k_b16/report.json"
+  },
+  "combo_8k_b16": {
+    "status": "MEASURED",
+    "case": [
+      8192,
+      16
+    ],
+    "device": 1,
+    "scope": "same-process PTO-root screening, not Native or production-service acceptance",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/production",
+      "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-five-closeout-29917c4e-20260930/kshift_schedule"
+    },
+    "summary": {
+      "base": {
+        "count": 10,
+        "min_us": 417.5,
+        "max_us": 453.25,
+        "mean_us": 431.0,
+        "p50_us": 429.375
+      },
+      "candidate": {
+        "count": 10,
+        "min_us": 419.5,
+        "max_us": 445.75,
+        "mean_us": 436.825,
+        "p50_us": 438.25
+      }
+    },
+    "pairs": [
+      {
+        "base_us": 443.5,
+        "candidate_us": 439.5
+      },
+      {
+        "base_us": 433.0,
+        "candidate_us": 426.875
+      },
+      {
+        "base_us": 419.25,
+        "candidate_us": 442.375
+      },
+      {
+        "base_us": 432.75,
+        "candidate_us": 436.25
+      },
+      {
+        "base_us": 426.5,
+        "candidate_us": 439.125
+      }
+    ],
+    "cross_variant_exact": {
+      "x_out": false,
+      "swa.0": true,
+      "compressed.0": true,
+      "state.0": true
+    },
+    "output_arithmetic_diagnostic": {
+      "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
+      "comparison": {
+        "status": "FAIL",
+        "shape": [
+          96,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "expected_shape": [
+          96,
+          4,
+          4096
+        ],
+        "expected_dtype": "torch.bfloat16",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 1572864,
+        "comparison": "tolerance",
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 4.212313496635843e-05,
+        "mismatches": 369,
+        "first_mismatches": [
+          [
+            1,
+            2,
+            13
+          ],
+          [
+            12,
+            0,
+            11
+          ],
+          [
+            12,
+            0,
+            646
+          ],
+          [
+            12,
+            0,
+            1461
+          ],
+          [
+            12,
+            0,
+            1476
+          ],
+          [
+            12,
+            0,
+            1758
+          ],
+          [
+            12,
+            0,
+            2166
+          ],
+          [
+            12,
+            0,
+            2178
+          ]
+        ]
+      },
+      "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
+    },
+    "state_exact": {
+      "base": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "candidate": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      }
+    },
+    "guards": {
+      "swa": "PASS",
+      "compressed": "PASS",
+      "state": "PASS",
+      "metadata.positions": "PASS",
+      "metadata.swa.query_start_loc": "PASS",
+      "metadata.swa.seq_lens": "PASS",
+      "metadata.swa.block_table": "PASS",
+      "metadata.swa.slot_mapping": "PASS",
+      "metadata.swa.start_pos": "PASS",
+      "metadata.compressed.query_start_loc": "PASS",
+      "metadata.compressed.seq_lens": "PASS",
+      "metadata.compressed.block_table": "PASS",
+      "metadata.compressed.start_pos": "PASS",
+      "metadata.state.query_start_loc": "PASS",
+      "metadata.state.seq_lens": "PASS",
+      "metadata.state.block_table": "PASS",
+      "metadata.state.slot_mapping": "PASS",
+      "metadata.state.start_pos": "PASS",
+      "metadata.compressed.compact_slots": "PASS"
+    },
+    "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_five_closeout_20260930/combo_8k_b16/report.json"
+  }
+}
