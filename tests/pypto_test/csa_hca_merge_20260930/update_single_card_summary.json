@@ -1,0 +1,118 @@
+{
+  "source": "c6128b72",
+  "scope": "更新合并后的单卡功能检查；Native 数值差异保留，整网 token 精度未验收",
+  "cases": {
+    "csa": {
+      "task": "task_20260930_164033_353433732387",
+      "raw_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/tests/pypto_test/results/csa_hca_merge_20260930/update_c6128b72_single_csa/report.json",
+      "batch": 16,
+      "history": 131072,
+      "status": "MEASURED",
+      "functional_checks_passed": 250,
+      "failed_functional_checks": [],
+      "native_numerical_comparisons": {
+        "x_out": {
+          "status": "FAIL",
+          "mismatches": 440354,
+          "max_abs": 0.03125,
+          "rmse": 0.002197161544379943,
+          "nonfinite": 0
+        },
+        "idx_topk": {
+          "status": "FAIL",
+          "mismatches": 45488,
+          "max_abs": null,
+          "rmse": null,
+          "nonfinite": 0
+        },
+        "swa.0": {
+          "status": "FAIL",
+          "mismatches": 15344,
+          "max_abs": 0.015625,
+          "rmse": 0.00023260881722261272,
+          "nonfinite": 0
+        },
+        "compressed.0": {
+          "status": "FAIL",
+          "mismatches": 122,
+          "max_abs": 0.0078125,
+          "rmse": 1.3489177134919848e-06,
+          "nonfinite": 0
+        },
+        "state.0": {
+          "status": "FAIL",
+          "mismatches": 196505,
+          "max_abs": 0.00032967329025268555,
+          "rmse": 1.2791624963455444e-05,
+          "nonfinite": 0
+        },
+        "indexer.0": {
+          "status": "FAIL",
+          "mismatches": 143,
+          "max_abs": null,
+          "rmse": null,
+          "nonfinite": 0
+        },
+        "indexer.1": {
+          "status": "FAIL",
+          "mismatches": 15,
+          "max_abs": 0.0001220703125,
+          "rmse": 2.4730774889382145e-07,
+          "nonfinite": 0
+        },
+        "indexer_state.0": {
+          "status": "FAIL",
+          "mismatches": 49127,
+          "max_abs": 0.0008581876754760742,
+          "rmse": 1.9887518975145086e-05,
+          "nonfinite": 0
+        }
+      }
+    },
+    "hca": {
+      "task": "task_20260930_164033_353350118909",
+      "raw_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/tests/pypto_test/results/csa_hca_merge_20260930/update_c6128b72_single_hca/report.json",
+      "batch": 16,
+      "history": 131072,
+      "status": "MEASURED",
+      "functional_checks_passed": 65,
+      "failed_functional_checks": [],
+      "native_numerical_comparisons": {
+        "output": {
+          "status": "FAIL",
+          "mismatches": 290681,
+          "max_abs": 0.03125,
+          "rmse": 0.0012992329374263813,
+          "nonfinite": 0
+        },
+        "swa": {
+          "status": "FAIL",
+          "mismatches": 15092,
+          "max_abs": null,
+          "rmse": null,
+          "nonfinite": 0
+        },
+        "compressed": {
+          "status": "PASS",
+          "mismatches": 0,
+          "max_abs": null,
+          "rmse": null,
+          "nonfinite": 0
+        },
+        "state": {
+          "status": "FAIL",
+          "mismatches": 194198,
+          "max_abs": null,
+          "rmse": null,
+          "nonfinite": 0
+        }
+      }
+    }
+  },
+  "joint_validation": {
+    "task": "task_20260930_164245_360156022807",
+    "status": "RUNNING",
+    "result_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/tests/pypto_test/results/csa_hca_merge_20260930/validation_h131072_b16_v2",
+    "scope": "先联合 PTO 功能，再 Native token 对照；未采性能"
+  }
+}
