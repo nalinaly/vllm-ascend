@@ -55,6 +55,8 @@ class ACLGraphEntry:
     # for aclgraph debugging, track the input addresses
     # during capture, and check if they are the same during replay
     input_addresses: list[int] | None = None
+    # Populated only by the opt-in CSA HBG service while capturing this graph.
+    csa_hbg_host_metadata: dict[str, Any] | None = None
 
 
 class ACLGraphWrapper:
@@ -232,6 +234,9 @@ class ACLGraphWrapper:
             # to save memory
             entry.output = weak_ref_tensors(output)
             entry.aclgraph = aclgraph
+            host_metadata = forward_context.additional_kwargs.get("pto_csa_hbg_graph_metadata")
+            if host_metadata:
+                entry.csa_hbg_host_metadata = dict(host_metadata)
 
             compilation_counter.num_cudagraph_captured += 1
 
@@ -239,6 +244,11 @@ class ACLGraphWrapper:
             # the weak ref of the output, so that pytorch can correctly
             # manage the memory during acl graph capture
             return output
+
+        if entry.csa_hbg_host_metadata:
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.host_metadata import validate_graph_replay
+
+            validate_graph_replay(entry.csa_hbg_host_metadata, forward_context.attn_metadata)
 
         if self.is_debugging_mode:
             # check if the input addresses are the same

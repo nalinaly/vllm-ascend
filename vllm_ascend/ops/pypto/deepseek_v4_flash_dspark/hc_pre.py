@@ -72,7 +72,7 @@ def hc_pre_gates_from_rms(
     hc_fn: pl.Tensor[[MIX_HC, HC_DIM], pl.FP32],
     hc_scale: pl.Tensor[[3], pl.FP32],
     hc_base: pl.Tensor[[MIX_HC], pl.FP32],
-    pre_val_store: pl.Tensor[[T_DYN, HC_PAD], pl.FP32],
+    pre_val_store: pl.Tensor[[HC_PAD_ROWS_DYN, HC_PAD], pl.FP32],
     post: pl.Tensor[[T_DYN, HC_MULT], pl.FP32],
     comb: pl.Tensor[[T_DYN, HC_MULT * HC_MULT], pl.FP32],
     row_recip: pl.Scalar[pl.BOOL],
@@ -83,9 +83,6 @@ def hc_pre_gates_from_rms(
     token_tiles = (t_dim + T_TILE - 1) // T_TILE
     t_linear = ((t_dim + LINEAR_T_TILE - 1) // LINEAR_T_TILE) * LINEAR_T_TILE  # pad t_dim up to whole 16-row cube tiles
     x_flat = pl.reshape(x, [t_dim, HC_DIM])
-    scale0 = pl.read(hc_scale, [0])
-    scale1 = pl.read(hc_scale, [1])
-    scale2 = pl.read(hc_scale, [2])
     hc_base_2d = pl.reshape(hc_base, [1, MIX_HC])  # for per-group comb base loads in comb_sinkhorn
 
     # linear: split-K matmul -> per-split partials. The t_dim..t_linear pad rows are
@@ -127,6 +124,8 @@ def hc_pre_gates_from_rms(
     # Only the final partial token tile uses these fixed-size staging buffers.
     post_tail_store = pl.create_tensor([T_TILE, HC_PAD], dtype=pl.FP32)
     for ob_worker in pl.spmd(pl.min(token_tiles, PRE_POST_WORKERS), name_hint="split_pre_post", allow_early_resolve=True):
+        scale0 = pl.read(hc_scale, [0])
+        scale1 = pl.read(hc_scale, [1])
         for ob in pl.range(ob_worker, token_tiles, pl.min(token_tiles, PRE_POST_WORKERS)):
             t0 = ob * T_TILE
             valid_rows = pl.min(T_TILE, t_dim - t0)
@@ -155,6 +154,7 @@ def hc_pre_gates_from_rms(
     # column-first 20-iteration Sinkhorn -> comb.
     comb_tail_store = pl.create_tensor([COMB_T_TILE, HC_PAD * HC_MULT], dtype=pl.FP32)
     for ob in pl.spmd(token_tiles, name_hint="comb_sinkhorn", allow_early_resolve=True):
+        scale2 = pl.read(hc_scale, [2])
         t0 = ob * COMB_T_TILE
         valid_rows = pl.min(COMB_T_TILE, t_dim - t0)
         inv_col_t = pl.load(inv_rms, [t0, 0], [COMB_T_TILE, 1], valid_shape=[valid_rows, 1], target_memory=pl.MemorySpace.Vec)

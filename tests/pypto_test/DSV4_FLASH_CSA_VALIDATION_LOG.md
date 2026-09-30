@@ -14135,3 +14135,28 @@ Host 循环读取每个请求的 KV 长度并求最大值，用于选择 Score �
 详细过程、原始复现脚本、完整错误堆栈和队列输出转录已归档至
 [CSA HBG 尝试记录](csa_hbg_repro_20260930/README.md)。
 原始工作目录：`results/csa_hbg_repro_20260930_c6128b72/`。
+
+
+## 503. CSA 独立 HBG 入口：显式 Host 长度与单卡图语义（2026-09-30）
+
+在 `bc451fe1` 基底的独立工作树接入性能版 HBG，PyPTO `88f605986`、Simpler
+`a54c05095`、CANN 9.2.0-beta.2；本轮没有修改 PyPTO 或 Simpler。
+新增 `decode_csa_tp1_layer_hbg` / `dsv4_csa::attention_hbg`：原 56 个 Tensor
+之后增加必填 INT32 `host_max_seq_len`，从 Native CPU `decode.max_seq_lens` 取得，
+包含当前六个 query。原 ring ABI 仍为 56 个 Tensor，两入口共用函数体与存储适配。
+Indexer 两处 Host 读长度改为显式标量；HC_pre 三个 scale 在消费它们的 SPMD 内读取。
+
+B4/8K HBG 与 ring 的八项输出及 cache/state 逐 bit 一致；B4/128K HBG
+eager/固定 metadata 图通过。同址长度 8198→8202→8190→8198、位置/页表/compact
+metadata 更新与各自独立 eager 参考逐 bit 一致；跨分支拒绝旧图，重新捕获后通过。
+实际 `dsv4_csa_forward` 服务入口 eager/图重放均通过，确认选中 HBG，没有用
+Native fallback 替代。最终服务/metadata 任务 `task_20260930_182217_6605761459`，
+完整任务清单和复现方式见 [HBG 接入记录](csa_hbg_integration_20260930/README.md)。
+
+初次 launch 的 `-1008` 定位到默认 256 MiB 冻结 heap 不足，GM 请求 279414784 bytes；
+沿用现有接口设 `PTO_CSA_RING_HEAP_MB=320` 后上述 B4 档通过，不能推广为其他 batch
+的容量保证。没有新增性能结论，没有做 16 卡、token/DSpark 或联合 HCA 的 HBG 验收。
+
+模型 ACLGraphWrapper 已增加 Host 分支保护；自动预捕获不同长度档的整模型图尚未实现，
+模型试用先设 `enforce_eager=True`。CPU ABI、Host 值、图保护与已有快照回归共
+13 项通过；语法和差异空白检查通过。全量格式检查因缺少 pre-commit 未通过。

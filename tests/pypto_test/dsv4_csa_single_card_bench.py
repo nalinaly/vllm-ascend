@@ -119,11 +119,11 @@ def _run_benchmark(args, report):
     kernel = getattr(module, entry)
 
     meta = json.loads((args.args_dir / "csa_args_meta.json").read_text())
-    names = list(kernel.param_names)
-    if names != meta["param_names"]:
-        raise ValueError("落盘入参的参数表与当前 kernel 不一致，需重新采集快照")
     root = getattr(module, kernel.__name__)
     roles = argument_roles(root)
+    names = list(roles)
+    if names != meta["param_names"]:
+        raise ValueError("落盘入参的参数表与当前 kernel 不一致，需重新采集快照")
     if meta.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("旧快照缺少布局/初态/别名信息，必须重新采集 schema=2 快照")
     if any(meta["tensors"][name]["role"] != roles[name] for name in names):

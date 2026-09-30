@@ -55,16 +55,17 @@ def install_csa_forward(layer):
 def init_pto_runtime():
     """CSA 与 HCA 共用同一个设备运行时和 arena 配置。"""
     import inspect
-    import os
 
     import pypto.torch
     from vllm.config import get_current_vllm_config
 
-    from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
+    from vllm_ascend.ops.pypto.variant import csa_runtime, ring_sizing_kwargs
 
     # 运行时默认仍是 tensormap_and_ringbuffer。显存排查发现它在 init 期固定占用
     # 1.343 GiB 设备显存（与 kernel / batch / 层数无关），而 host_build_graph 只占
-    # 0.598 GiB；128K/B24 这类 KV 吃紧的场景可用 PTO_CSA_RUNTIME 切换后实测对比。
+    # 0.598 GiB（仅默认 arena 初始化，不能当作完整 CSA 的运行占用）。
+    # HBG kernel 的 GM heap 使用 ring_heap[0]；B4 CSA 已超过默认 256 MiB，
+    # 实测需显式配置 PTO_CSA_RING_HEAP_MB=320。其他形状需按实际请求容量配置。
     # 见 tests/pypto_test/results/mem_128k_b24_20260928/ANALYSIS.md。
     # PyPTO 运行时 arena 的尺寸只能在 init 时给（之后 prepare_callable / launch
     # 都不再携带 CallConfig），默认那 4x256 MiB heap + 16384 深 task window 合计
@@ -82,7 +83,7 @@ def init_pto_runtime():
     pypto.torch.init(
         device=torch.npu.current_device(),
         platform="a2a3",
-        runtime=os.environ.get("PTO_CSA_RUNTIME", "tensormap_and_ringbuffer"),
+        runtime=csa_runtime(),
         **ring_kwargs,
     )
 
@@ -96,15 +97,19 @@ def prepare_csa_model(model):
     from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import (
         root_weight_layouts, validate_weight_nz_mode,
     )
-    from vllm_ascend.ops.pypto.variant import selected_variant, variant_package
+    from vllm_ascend.ops.pypto.variant import csa_runtime, selected_variant, variant_package
 
     # 两套 CSA 算子并存，由 PTO_CSA_VARIANT 选择，默认精度版。只有算子与其适配层
     # 按版本取；service_config 的档位与图重放闸门两套共用一份（性能版里是重导出），
     # 因为 model_runner_v1.py 直接从精度版导入那些闸门，各留一份就会在判据上分叉。
     package = variant_package()
+    hbg = csa_runtime() == "host_build_graph"
+    if hbg and selected_variant() != "performance":
+        raise ValueError("CSA HBG requires PTO_CSA_VARIANT=performance and its Host scalar entry")
     effective_mode = get_ascend_config().weight_nz_mode
     validate_weight_nz_mode(effective_mode)
-    CSAOperators = importlib.import_module(f"{package}.native_adapter").CSAOperators
+    adapter = importlib.import_module(f"{package}.native_adapter")
+    CSAOperators = adapter.HBGCSAOperators if hbg else adapter.CSAOperators
     CSAServiceRuntime = importlib.import_module(f"{package}.service").CSAServiceRuntime
     root_function = importlib.import_module(f"{package}.decode_csa")._decode_csa_tp1_layer
     layouts = root_weight_layouts(root_function)

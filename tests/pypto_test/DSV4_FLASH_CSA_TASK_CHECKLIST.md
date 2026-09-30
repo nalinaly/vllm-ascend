@@ -1,6 +1,12 @@
 # DSV4 Flash CSA：执行清单
 
-更新：2026-09-29。本文件保留当前合同、有效证据和待办；过程与旧版本结论见[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)和Git。
+更新：2026-09-30。本文件保留当前合同、有效证据和待办；过程与旧版本结论见[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)和Git。
+
+2026-09-30 HBG 接入：性能版增加独立 Host 标量入口，Native CPU `max_seq_lens`
+控制 Indexer 分支，设备 metadata 继续控制逐请求计算；默认仍为 ring。
+B4/8K、B4/128K 及同址长度切换、实际服务 custom op 的单卡功能已通过，
+尚无 HBG 性能或 16 卡验收。跨 Score 分支的整网图需要匹配捕获，当前试用整网先走 eager。
+入口、容量设置及证据见 [HBG 接入记录](csa_hbg_integration_20260930/README.md)。
 
 **执行优先级（用户最新补充）**：以128K为主，先优化incore task，再优化CSA内部调度；整网性能排后。
 2026-09-29晚追加：逐项检查SPMD的有效用核和`sync_start`，允许按关键链组合调整；

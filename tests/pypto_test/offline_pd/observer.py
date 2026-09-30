@@ -1176,7 +1176,7 @@ class OfflineCSAObserver:
             state["seen"][str(tokens)] = state["seen"].get(str(tokens), 0) + 1
             if selected or tokens != expected_tokens:
                 return
-            values = {name: call.args[name] for name in kernel.param_names}
+            values = {name: call.args[name] for name in roles}
             source = {"variant": selected_variant(), "package": package, "weight_nz_mode": WEIGHT_NZ_MODE,
                       "state_timing": "before_call", "root": kernel.__name__}
             meta, payload = capture_tensors(values, roles, root_weight_layouts(root), source)

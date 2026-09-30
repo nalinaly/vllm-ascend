@@ -473,6 +473,7 @@ def measure_graph_interval(fixture, run, output, topk, reference, *, iters, warm
 def run(args, report):
     report["execution_config"] = {
         "path": "manual_npu_graph",
+        "pto_runtime": args.runtime,
         "enable_npugraph_ex": False,
         "enable_static_kernel": False,
         "worker_cpu_binding": False,
@@ -519,7 +520,8 @@ def run(args, report):
     with native_session(config, args.device), torch.inference_mode():
         layer, details = make_layer(config, args.checkpoint, device, args.layer_index)
         report.update(details)
-        fixture = make_fixture(config, layer.self_attn, args.batch, args.history, args.seed, device)
+        fixture = make_fixture(config, layer.self_attn, args.batch, args.history, args.seed, device,
+                               table_history=8200 if args.hbg_metadata_replay else None)
         report["layouts"] = {name: group["layout"] for name, group in fixture["groups"].items()}
         from vllm_ascend.ascend_config import get_ascend_config
 
@@ -642,7 +644,7 @@ def run(args, report):
         report["pto_reduction"] = {
             "atomic_add": ATOMIC_ADD, "qr_split_k": reduction.QR_OK, "kv_split_k": reduction.KV_OK,
         }
-        if (args.graph or args.padding_graph) and ATOMIC_ADD:
+        if (args.graph or args.padding_graph or args.hbg_metadata_replay) and ATOMIC_ADD:
             raise ValueError("图正确性检查使用逐元素精确比较，须设置 --atomic-add 0 排除跨核规约波动")
         adapter = importlib.import_module(f"{package}.native_adapter")
         module = importlib.import_module(f"{package}.decode_csa")
@@ -673,14 +675,28 @@ def run(args, report):
         groups = {
             name: (fixture["metadata"][group["prefix"]], group["views"]) for name, group in fixture["groups"].items()
         }
-        call = adapter.NativeCSACall(
-            adapter.CSAOperators.register(),
+        call_type = adapter.NativeCSACall
+        operators_type = adapter.CSAOperators
+        host_kwargs = {}
+        if args.runtime == "host_build_graph":
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.host_metadata import CSAHostMetadata
+
+            if args.variant not in ("performance", "perf"):
+                raise ValueError("CSA HBG 单卡入口当前要求 --variant performance")
+            call_type = adapter.HBGNativeCSACall
+            operators_type = adapter.HBGCSAOperators
+            host = CSAHostMetadata.from_native(groups["indexer"][0].decode)
+            host_kwargs = {"host_metadata": host}
+            report["hbg_host_metadata"] = {"max_seq_len": host.max_seq_len, "graph_key": host.graph_key()}
+        call = call_type(
+            operators_type.register(),
             weights,
             fixture["hidden"],
             fixture["positions"],
             groups,
             layer_name=fixture["groups"]["compressed"]["prefix"],
             compact_metadata=fixture["compact"],
+            **host_kwargs,
         )
         report["indexer_cache_binding"] = {
             "history_copy_before_csa": hasattr(call, "prepare_indexer_cache"),
@@ -695,7 +711,9 @@ def run(args, report):
         }
         restore(fixture)
         if args.save_case:
-            ordered = {name: call.args[name] for name in module.decode_csa_tp1_layer_test.param_names}
+            if host_kwargs:
+                raise ValueError("当前快照格式仅支持 Tensor；HBG Host 标量请通过报告与单卡入口复现")
+            ordered = {name: call.args[name] for name in call.param_names}
             meta, payload = capture_tensors(
                 ordered,
                 argument_roles(root),
@@ -714,7 +732,7 @@ def run(args, report):
         # 用来验证收窄 ring heap 之后 CSA 算子还能不能跑。
         from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
         pypto.torch.init(
-            device=args.device, platform="a2a3", runtime="tensormap_and_ringbuffer",
+            device=args.device, platform="a2a3", runtime=args.runtime,
             **ring_sizing_kwargs(),  # 取证用：只认 PTO_CSA_RING_* 环境变量
             **({"enable_chip_swimlane": 4, "enable_dep_gen": True,
                 "output_dir": str((args.output / "dfx").resolve())} if args.swimlane else {}),
@@ -804,12 +822,17 @@ def run(args, report):
             report["swimlane"] = windows[0]
         if args.graph:
             check_graph_replay(fixture, call, pto[0], report)
+        if args.hbg_metadata_replay:
+            from csa_hbg_integration_20260930.metadata_replay import check_metadata_replay
+
+            check_metadata_replay(config, layer, fixture, weights, call, args, report)
         if args.padding_graph:
             def make_call(compact):
-                return adapter.NativeCSACall(
+                return call_type(
                     call.ops, weights, fixture["hidden"], fixture["positions"], groups,
                     layer_name=fixture["groups"]["compressed"]["prefix"], compact_metadata=compact,
                     buffers={name: call.args[name] for name in ("x_out", "idx_topk", "idx_topk_scores")},
+                    **host_kwargs,
                 )
 
             check_padding_graph(fixture, call, pto[0], make_call, layer.self_attn.dsa_attn.dsa_attn.impl, report)
@@ -851,10 +874,11 @@ def run(args, report):
                     name: impl._compute_compressor_metadata(groups[name][0].decode)
                     for name in ("compressed", "indexer")
                 }
-                prepared = adapter.NativeCSACall(
+                prepared = call_type(
                     call.ops, weights, fixture["hidden"], fixture["positions"], groups,
                     layer_name=fixture["groups"]["compressed"]["prefix"], compact_metadata=compact,
                     buffers={name: call.args[name] for name in ("x_out", "idx_topk", "idx_topk_scores")},
+                    **host_kwargs,
                 )
                 prepared()
 
@@ -888,6 +912,8 @@ def main():
                         help="正式 C4 层权重序号；4 对应模型第二个 CSA 层")
     parser.add_argument("--seed", type=int, default=1024)
     parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--runtime", choices=("tensormap_and_ringbuffer", "host_build_graph"),
+                        default="tensormap_and_ringbuffer", help="HBG 使用独立 Host 标量入口")
     parser.add_argument("--weight-nz-mode", type=int, choices=(0, 1, 2), default=0)
     parser.add_argument("--variant", default="precision",
                         help="precision / performance，或 pkg:<包名> 指定实验包")
@@ -897,6 +923,8 @@ def main():
                         help="保存 Native 稀疏注意力的实际输入和逆 RoPE 前输出")
     parser.add_argument("--atomic-add", type=int, choices=(0, 1), help="0 为固定规约诊断；未指定时遵循环境配置")
     parser.add_argument("--graph", action="store_true", help="固定规约下验证同地址 A/B/A 输入的图重放")
+    parser.add_argument("--hbg-metadata-replay", action="store_true",
+                        help="HBG B4/8K 同址 metadata 与 Host 长度更新、跨 Score 分支重新捕获")
     parser.add_argument("--padding-graph", action="store_true",
                         help="固定规约下，Native metadata 更新同一个图的满档/补位请求；batch 至少为 2")
     parser.add_argument("--deterministic-level", type=int, choices=(0, 1), default=1,
@@ -913,6 +941,11 @@ def main():
     parser.add_argument("--swimlane-windows", type=int, default=1, help="每个 DFX 窗口只执行一次根调用")
     parser.add_argument("--swimlane-graph", action="store_true", help="DFX 采 ACL Graph 重放；不采 eager 调用")
     args = parser.parse_args()
+    if args.hbg_metadata_replay and (
+        args.runtime != "host_build_graph" or args.history != 8192 or args.batch != 4
+        or args.native_profile_only or args.timing_iters or args.swimlane or args.padding_graph
+    ):
+        parser.error("--hbg-metadata-replay 使用 HBG B4/8K，单独验证 metadata，不与计时/泳道/padding 混跑")
     if not 1 <= args.batch <= 40 or args.history < 0:
         parser.error("batch 必须为 1～40，history 不得为负")
     if args.padding_graph and args.batch < 2:

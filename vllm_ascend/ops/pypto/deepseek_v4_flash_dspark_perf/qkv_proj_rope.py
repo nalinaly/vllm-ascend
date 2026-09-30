@@ -400,7 +400,10 @@ def q_proj_qr(
         with pl.scope():
             qr_t_matmul = ((tile_rows + QR_M_TILE - 1) // QR_M_TILE) * QR_M_TILE
             qr_fp32 = pl.create_tensor([qr_t_matmul, Q_LORA], dtype=pl.FP32)
-            qa_tids[0] = q_proj_qa(x, wq_a, qr_fp32, tile_base, tile_rows)
+            # Bind before the array update: nested inline expansion otherwise
+            # creates a reserved auto-name in the current PyPTO compiler.
+            qa_task = q_proj_qa(x, wq_a, qr_fp32, tile_base, tile_rows)
+            qa_tids[0] = qa_task
 
             q_proj_qr_normalize(qr_fp32, gamma_cq, qr, qr_scale, qr_i8_matmul, qr_scale_pad_store, tile_base, tile_rows)
 

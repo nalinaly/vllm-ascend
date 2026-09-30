@@ -238,7 +238,7 @@ class NativeCSACall:
     """
 
     def __init__(self, ops, weights, hidden, positions, groups, *, layer_name: str, compact_metadata, buffers=None,
-                 kernel=decode_csa_tp1_layer_test):
+                 kernel=decode_csa_tp1_layer_test, host_args=None):
         # Each entry contains its own metadata and Native cache views. No shared
         # synthetic page table can stand in for another cache group.
         self.ops = ops
@@ -284,6 +284,7 @@ class NativeCSACall:
         self.state_storage = {name: physical_pages(self.views[name][0]) for name in ("state", "indexer_state")}
         self.tables = {name: table_storage(req.block_table) for name, req in self.req.items()}
         self.args = dict(weights)
+        self.args.update(host_args or {})
         self.args.update(
             x_hc=hidden,
             kv_cache=self.views["swa"][0],
@@ -334,7 +335,11 @@ class NativeCSACall:
         # Keep the Native buffers and their producer waits; no device conversion.
         self.args["freqs_cos"] = self.native_cos
         self.args["freqs_sin"] = self.native_sin
-        self.core_args = tuple(self.args[name] for name in kernel.param_names)
+        # The dispatcher schema contains runtime parameters only; a JIT source
+        # signature may additionally declare constexpr specialization controls.
+        schema = getattr(self.ops.attention, "_schema", None)
+        self.param_names = tuple(arg.name for arg in schema.arguments) if schema is not None else kernel.param_names
+        self.core_args = tuple(self.args[name] for name in self.param_names)
 
     def _indexer_cache_arguments(self):
         return {"idx_kv_cache": indexer_storage(*self.views["indexer"])}
