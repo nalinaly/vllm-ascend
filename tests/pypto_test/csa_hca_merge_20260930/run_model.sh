@@ -23,8 +23,13 @@ capture_sizes=()
 for size in 6 24 48 96 144 192 240; do
     if (( size <= batch * 6 )); then capture_sizes+=("$size"); fi
 done
-mkdir -p "$output"
+python "$repo/tests/pypto_test/csa_hca_merge_20260930/source.py" verify \
+    --repo "$repo" --manifest "$validation_root/source.json" --bank "$bank" --history "$history" --batch "$batch"
+mkdir -p "$(dirname "$output")"
+mkdir "$output"
 cd "$output"
+source_check=(--repo "$repo" --manifest "$output/source.json" --bank "$bank" --history "$history" --batch "$batch")
+python "$repo/tests/pypto_test/csa_hca_merge_20260930/source.py" record "${source_check[@]}"
 # 从原始结果复核同档位的功能与 token；失败时不加载模型、不进入性能采集。
 python "$repo/tests/pypto_test/csa_hca_merge_20260930/functional.py" \
     --root "$validation_root/pto" --bank "$bank" --batch "$batch" --decode-tokens 192 \
@@ -47,6 +52,7 @@ for backend in pto native; do
         --graph-mode full_decode_only --capture-sizes "${capture_sizes[@]}" --port 30631 \
         --warmup-rounds 1 --warmup-tokens 96 --warmup-steps 8 --steady-cycles 10 \
         --profile-start-step 8 --profile-steps 3 > "$output/${backend}_launch.log" 2>&1
+    python "$repo/tests/pypto_test/csa_hca_merge_20260930/source.py" verify "${source_check[@]}"
 done
 python "$repo/tests/pypto_test/offline_pd/performance.py" \
     --root "$output" --bank "$bank" --mode 2 --batch "$batch" --decode-tokens 192 \
