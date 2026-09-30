@@ -12,7 +12,6 @@
 import pypto.language as pl
 
 from .compact_metadata import ROPE_TILE_ROWS, load_compact_rope_rows
-
 from .config import (
     BLOCK_SIZE,
     C4A_COMPRESSOR_BLOCK_SIZE,
@@ -26,7 +25,13 @@ from .config import (
 from .config import (
     FLASH as M,
 )
-from .layout import INDEXER_KEY_BYTES, INDEXER_PAGE_BYTES_DYN, INDEXER_ROWS_DYN, INNER_STATE_PAGE_ELEMENTS_DYN, INNER_STATE_TABLE_COLUMNS_DYN
+from .layout import (
+    INDEXER_KEY_BYTES,
+    INDEXER_PAGE_BYTES_DYN,
+    INDEXER_ROWS_DYN,
+    INNER_STATE_PAGE_ELEMENTS_DYN,
+    INNER_STATE_TABLE_COLUMNS_DYN,
+)
 
 B_DYN = pl.dynamic("DECODE_IDX_C4_B_DYN")
 
@@ -180,7 +185,9 @@ def indexer_compressor_pool_projected(
     window_values = pl.create_tensor([POOL_WORKERS * STATE_LEN, HEAD_DIM], dtype=pl.FP32)
     window_scores = pl.create_tensor([POOL_WORKERS * STATE_LEN, HEAD_DIM], dtype=pl.FP32)
     pool_workers = pl.min(b_dim, POOL_WORKERS)
-    with pl.spmd(pool_workers, name_hint="scatter_softmax_pool", deps=[_kv_score_tid]) as pool_tid:
+    with pl.spmd(
+        pool_workers, name_hint="scatter_softmax_pool", deps=[_kv_score_tid], allow_early_resolve=True
+    ) as pool_tid:
         pool_worker = pl.tile.get_block_idx()
         for c_idx in pl.range(pool_worker, b_dim, pool_workers):
             first_pos_b = pl.read(position_ids, [c_idx * s_dim])

@@ -583,6 +583,7 @@ def indexer_head_coefficients(
     qh_quant_tid: pl.Scalar[pl.TASK_ID],
     weights_tid: pl.Scalar[pl.TASK_ID],
     query_group_size: pl.constexpr,
+    precision_coefficients: pl.constexpr = False,
 ):
     """把同组query的FP16系数放在对角块，一次Cube完成各自的head规约。"""
     coefficients = pl.create_tensor(
@@ -615,9 +616,13 @@ def indexer_head_coefficients(
                 coefficient_scales, [coefficient_begin, 0], [query_group_size, IDX_N_HEADS]
             )
             query_weights = pl.load(weights, [coefficient_begin, 0], [query_group_size, IDX_N_HEADS])
-            query_scale_half = pl.cast(query_scales, pl.FP16, mode="rint")
-            query_weight_half = pl.cast(query_weights, pl.FP16, mode="rint")
-            head_coefficients = pl.mul(query_scale_half, query_weight_half)
+            if precision_coefficients:
+                # 精度版先做FP32乘法，再一次舍入；不得提前分别量化两个因子。
+                head_coefficients = pl.cast(pl.mul(query_scales, query_weights), pl.FP16, mode="rint")
+            else:
+                query_scale_half = pl.cast(query_scales, pl.FP16, mode="rint")
+                query_weight_half = pl.cast(query_weights, pl.FP16, mode="rint")
+                head_coefficients = pl.mul(query_scale_half, query_weight_half)
             for coefficient_lane in pl.unroll(query_group_size):
                 head_coefficient = pl.tile.extract(
                     head_coefficients, coefficient_lane, 0, [1, IDX_N_HEADS], target_memory=pl.MemorySpace.Vec
@@ -656,6 +661,7 @@ def indexer_score_topk_native_cube(
     key_prefetch_panels: pl.constexpr,
     key_prefetch_to_l0: pl.constexpr,
     balance_leaves: pl.constexpr,
+    precision_coefficients: pl.constexpr = False,
 ):
     """同组query共用Key：双query/M128/N128或S6/M384/N64，保持FP16/Cube策略。"""
     native_page_bytes = pl.tensor.dim(idx_native_kv_cache, 1)
@@ -674,6 +680,7 @@ def indexer_score_topk_native_cube(
         qh_quant_tid,
         weights_tid,
         query_group_size,
+        precision_coefficients,
     )
     # 每个worker两个通信槽，每槽容纳整个query组的分数。
     buf_score_transfer = pl.create_tensor([TOPK_SCORE_WORKERS * 2 * query_group_size, score_tile], dtype=pl.FP32)
@@ -1362,9 +1369,9 @@ def indexer_score_topk_forest(
     weights_tid: pl.Scalar[pl.TASK_ID],
     cache_write_tid: pl.Scalar[pl.TASK_ID],
     host_max_seq_len: pl.Scalar[pl.INT32],
+    precision_coefficients: pl.constexpr = False,
 ):
     """Score leaves and merge Top-K roots; long S6 publishes one root per leaf."""
-    b_dim = pl.tensor.dim(idx_block_table, 0)
     native_page_bytes = pl.tensor.dim(idx_native_kv_cache, 1)
     # Zero-copy GM descriptors inside orchestration, as validation log §116.
     # One writable root allocation avoids partial-overlap Torch ABI arguments.
@@ -1409,6 +1416,7 @@ def indexer_score_topk_forest(
                     1,
                     True,
                     True,
+                    precision_coefficients,
                 )
             else:
                 score_tid = indexer_score_topk_native_cube(
@@ -1433,6 +1441,7 @@ def indexer_score_topk_forest(
                     1,
                     True,
                     False,
+                    precision_coefficients,
                 )
         else:
             short_queries = pl.tensor.dim(position_ids, 0)
@@ -1466,6 +1475,7 @@ def indexer_score_topk_forest(
                     0,
                     True,
                     False,
+                    precision_coefficients,
                 )
             else:
                 score_tid = indexer_score_topk_native_cube(
@@ -1489,6 +1499,7 @@ def indexer_score_topk_forest(
                     0,
                     True,
                     False,
+                    precision_coefficients,
                 )
     else:
         with pl.spmd(
@@ -1952,6 +1963,7 @@ def indexer_weights_score(
         weights_tid,
         cache_write_dep,
         host_max_seq_len,
+        False,
     )
     return topk_scores, topk_idxs, leaf_tid
 

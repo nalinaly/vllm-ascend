@@ -22,9 +22,9 @@ from .nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT
 from .q_projection import (
     PREFILL_DENSE_TILE,
     QPROJ_M_TILE,
-    QPROJ_PIPE_M_TILE,
     QPROJ_MM_N_TILE,
     QPROJ_MM_T_DYN,
+    QPROJ_PIPE_M_TILE,
     QPROJ_T_PAD,
     QPROJ_TAIL_M_TILE,
     q_proj_q_matmul,
@@ -229,17 +229,22 @@ def q_proj_qa(
     x_view = pl.reshape(x, [qa_tokens, D])
     qr_t_matmul = ((tile_rows + QR_M_TILE - 1) // QR_M_TILE) * QR_M_TILE
     qr_full_rows = (tile_rows // QR_DENSE_M_TILE) * QR_DENSE_M_TILE
-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="qr_proj_seed"):
-        for ts0 in pl.range(0, qr_t_matmul, QR_M_TILE):
-            for nseed0 in pl.range(0, Q_LORA, QR_N_TILE):
-                qr_seed = pl.full([QR_M_TILE, QR_N_TILE], dtype=pl.FP32, value=0.0)
-                qr_fp32[ts0 : ts0 + QR_M_TILE, nseed0 : nseed0 + QR_N_TILE] = qr_seed
+    qr_m_groups = pl.min(3, pl.max(1, tile_rows // QR_DENSE_M_TILE))
+    if ATOMIC_ADD != 0:
+        with pl.at(level=pl.Level.CORE_GROUP, name_hint="qr_proj_seed"):
+            for ts0 in pl.range(0, qr_t_matmul, QR_M_TILE):
+                for nseed0 in pl.range(0, Q_LORA, QR_N_TILE):
+                    qr_seed = pl.full([QR_M_TILE, QR_N_TILE], dtype=pl.FP32, value=0.0)
+                    qr_fp32[ts0 : ts0 + QR_M_TILE, nseed0 : nseed0 + QR_N_TILE] = qr_seed
 
-    for qbg_idx in pl.spmd((Q_LORA // QR_N_TILE) * QR_OK, name_hint="qr_proj_matmul", allow_early_resolve=True):
-        q_a_col0 = (qbg_idx // QR_OK) * QR_N_TILE
-        qr_k_base = (qbg_idx % QR_OK) * QR_SPLIT_K_TILE
+    with pl.spmd((Q_LORA // QR_N_TILE) * QR_OK * qr_m_groups, name_hint="qr_proj_matmul", allow_early_resolve=True):
+        pl.set_cache_policy(wq_a, pl.CachePolicy.BYPASS)
+        qbg_idx = pl.tile.get_block_idx()
+        q_a_col0 = (qbg_idx % (Q_LORA // QR_N_TILE)) * QR_N_TILE
+        qr_k_base = ((qbg_idx // (Q_LORA // QR_N_TILE)) % QR_OK) * QR_SPLIT_K_TILE
+        qr_m_group = qbg_idx // ((Q_LORA // QR_N_TILE) * QR_OK)
         qr_native_group = q_a_col0 // QR_NATIVE_N_GROUP
-        for dense_t0 in pl.range(0, qr_full_rows, QR_DENSE_M_TILE):
+        for dense_t0 in pl.range(qr_m_group * QR_DENSE_M_TILE, qr_full_rows, qr_m_groups * QR_DENSE_M_TILE):
             dense_x0 = tile_base + dense_t0
             dense_acc = pl.create_tensor([QR_DENSE_M_TILE, QR_N_TILE], dtype=pl.FP32)
             for dense_k in pl.pipeline(0, QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
@@ -262,7 +267,7 @@ def q_proj_qa(
                 dense_w = wq_a[q_a_col0 : q_a_col0 + QR_N_TILE, dense_d0 : dense_d0 + QR_K_TILE]
                 dense_acc = pl.matmul_acc(dense_acc, dense_x, dense_w, b_trans=True, init_cond=(dense_k == 0))
             qr_fp32 = pl.assemble(qr_fp32, dense_acc, [dense_t0, q_a_col0], atomic=STORE_ATOMIC)
-        for t0 in pl.range(qr_full_rows, qr_t_matmul, QR_M_TILE):
+        for t0 in pl.range(qr_full_rows + qr_m_group * QR_M_TILE, qr_t_matmul, qr_m_groups * QR_M_TILE):
             q_acc = pl.create_tensor([QR_M_TILE, QR_N_TILE], dtype=pl.FP32)
             for db in pl.pipeline(QR_SPLIT_K_TILE // QR_K_TILE, stage=2):
                 qr_k_order = db
@@ -787,16 +792,17 @@ def kv_proj_rope(
             x_view = pl.reshape(x, [t_dim, D])
             t_matmul = ((tile_rows + MATMUL_T_TILE - 1) // MATMUL_T_TILE) * MATMUL_T_TILE
             kv_full_rows = (tile_rows // KV_DENSE_M_TILE) * KV_DENSE_M_TILE
-            kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // (2 * KV_DENSE_M_TILE)))
+            kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // KV_DENSE_M_TILE))
 
             # Split-K kv_proj: KV_N_TILE N-groups expanded KV_OK-fold into cube blocks that
             # atomic-add their K partials into a zero-seeded output.
             kv_fp32 = pl.create_tensor([t_matmul, HEAD_DIM], dtype=pl.FP32)
-            with pl.at(level=pl.Level.CORE_GROUP, name_hint="kv_proj_seed"):
-                for kts0 in pl.range(0, t_matmul, KV_M_TILE):
-                    for kvseed0 in pl.range(0, HEAD_DIM, KV_N_TILE):
-                        kv_seed = pl.full([KV_M_TILE, KV_N_TILE], dtype=pl.FP32, value=0.0)
-                        kv_fp32[kts0 : kts0 + KV_M_TILE, kvseed0 : kvseed0 + KV_N_TILE] = kv_seed
+            if ATOMIC_ADD != 0:
+                with pl.at(level=pl.Level.CORE_GROUP, name_hint="kv_proj_seed"):
+                    for kts0 in pl.range(0, t_matmul, KV_M_TILE):
+                        for kvseed0 in pl.range(0, HEAD_DIM, KV_N_TILE):
+                            kv_seed = pl.full([KV_M_TILE, KV_N_TILE], dtype=pl.FP32, value=0.0)
+                            kv_fp32[kts0 : kts0 + KV_M_TILE, kvseed0 : kvseed0 + KV_N_TILE] = kv_seed
 
             # Native changes the K traversal at the B40/S6 shape.
             if tile_rows == KV_NATIVE_ROWS:
@@ -807,6 +813,7 @@ def kv_proj_rope(
                     (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
                     name_hint="kv_proj_matmul",
                     deps=[late_dep],
+                    allow_early_resolve=True,
                 ) as _kv_tid:
                     kbg = pl.tile.get_block_idx()
                     kv_col0 = (kbg // (KV_OK * kv_m_groups)) * KV_N_TILE

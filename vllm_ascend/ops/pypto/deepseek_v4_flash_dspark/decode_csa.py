@@ -30,8 +30,18 @@ from .decode_indexer import indexer
 from .decode_indexer_compressor import indexer_compressor
 from .decode_o_proj import LOCAL_T, LOCAL_T_PAD, decode_o_proj_tp1
 from .decode_sparse_attn_csa import T_PAD, sparse_attn_csa_tp1
-from .hc_post import hc_post
-from .hc_pre import HC_DIM, HC_MULT, MIX_HC, hc_pre_norm
+from .hc_pre import (
+    HC_DIM,
+    HC_DIM_INV,
+    HC_MULT,
+    HC_PAD,
+    LINEAR_T_TILE,
+    MIX_HC,
+    NORM_EPS,
+    RMS_K_TILE,
+    hc_mix_norm,
+    hc_pre_gates_from_rms,
+)
 from .layout import (
     COMPRESSED_ROWS_DYN,
     COMPRESSED_TABLE_COLUMNS_DYN,
@@ -108,7 +118,7 @@ CSA_PROJECTION_PACK_WORKERS = 16
 CSA_ALL_VISIBLE_WORKERS = 16
 CSA_WB_TOKEN_TILE = 8
 HC_WIDEN_T_TILE = 8    # hc 残差流 BF16->FP32 的行块
-HC_WIDEN_D_TILE = 1024  # 同上，列块
+HC_WIDEN_D_TILE = RMS_K_TILE  # 平方和按512列归约
 HC_WIDEN_WORKERS = 48   # 同上，AIV 通道数
 CSA_ROPE_SIGN_T_TILE = 4  # RoPE 符号行块，沿用上游 csa_rope_interleave 的 4 行
 CSA_ROPE_WORKERS = 16
@@ -222,7 +232,6 @@ def _decode_csa_tp1_layer(
     cmp_block_table.bind_dynamic(1, COMPRESSED_TABLE_COLUMNS_DYN)
     idx_block_table.bind_dynamic(0, B_DYN)
     idx_block_table.bind_dynamic(1, INDEXER_TABLE_COLUMNS_DYN)
-    # attn_out 现在是 kernel 内部张量，不再需要绑定外部动态维。
     idx_topk.bind_dynamic(0, T_DYN)
     idx_topk_scores.bind_dynamic(0, T_DYN)
     t_dim = pl.tensor.dim(x_hc, 0)
@@ -233,43 +242,58 @@ def _decode_csa_tp1_layer(
     # 保留已验证的 HC scope 边界以管理任务和临时张量的生命周期。
     # scope 退出释放引用，并不是设备端等待所有任务完成的 barrier；
     # 消费者的执行顺序由张量依赖和显式 TaskId 依赖保证。
-    # hc 残差流在 vllm-ascend 侧是 BF16（与 Native 的 npu_hc_pre_v2 / npu_hc_post 一致），
-    # 而上游 hc_pre 全程按 FP32 算。这里一次性加宽，不把 cast 下沉到 hc_pre 的每处
-    # tile 读取——下沉过的版本有两个后果：cast 丢掉 pl.slice 的 valid_shape 标记，
-    # padding 区的陈旧字节混进归约（T=60 实测 64 个非有限值）；而且 cast 是 AIV 操作，
-    # 会把纯 Cube 的 hc_pre_linear 编成 mix kernel（泳道里裂成 _aic + _aiv，24.2 -> 32.9us）。
+    # 加宽时计算RMS，省掉重复读取；保留512列归约次序。
+    # Cube及mix仍消费同一FP32缓冲；不把AIV cast下沉到纯Cube任务。
     x_hc32 = pl.create_tensor([t_dim, HC_MULT, D], dtype=pl.FP32)
     x_hc_flat = pl.reshape(x_hc, [t_dim, HC_MULT * D])
     x_hc32_flat = pl.reshape(x_hc32, [t_dim, HC_MULT * D])
     widen_rows = (t_dim + HC_WIDEN_T_TILE - 1) // HC_WIDEN_T_TILE
+    hc_padded_rows = ((t_dim + LINEAR_T_TILE - 1) // LINEAR_T_TILE) * LINEAR_T_TILE
+    inv_rms = pl.create_tensor([hc_padded_rows, 1], dtype=pl.FP32)
     widen_tail = pl.create_tensor([HC_WIDEN_T_TILE, HC_MULT * D], dtype=pl.FP32)
-    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_widen") as _widen_tid:
+    # 这是 hc_pre 前段串行链的第一个任务，原本缺 allow_early_resolve，
+    # 后继任务要等它整组完成才获得派发资格。理由与下面 csa_row_offsets 的注释相同。
+    with pl.spmd(pl.min(widen_rows, HC_WIDEN_WORKERS), name_hint="hc_widen_rms",
+                 allow_early_resolve=True) as _widen_tid:
         for widen_blk in pl.range(pl.tile.get_block_idx(), widen_rows,
                                   pl.min(widen_rows, HC_WIDEN_WORKERS)):
             w_t0 = widen_blk * HC_WIDEN_T_TILE
             w_rows = pl.min(HC_WIDEN_T_TILE, t_dim - w_t0)
-            for w_db in pl.range(HC_MULT * D // HC_WIDEN_D_TILE):
+            w_sq_sum = pl.full([1, HC_WIDEN_T_TILE], dtype=pl.FP32, value=0.0)
+            for w_db in pl.pipeline(HC_MULT * D // HC_WIDEN_D_TILE, stage=4):
                 w_d0 = w_db * HC_WIDEN_D_TILE
                 w_src = pl.slice(x_hc_flat, [HC_WIDEN_T_TILE, HC_WIDEN_D_TILE], [w_t0, w_d0],
                                  valid_shape=[w_rows, HC_WIDEN_D_TILE])
                 w_val = pl.cast(w_src, pl.FP32)
                 if w_rows == HC_WIDEN_T_TILE:
                     x_hc32_flat[w_t0:w_t0 + HC_WIDEN_T_TILE, w_d0:w_d0 + HC_WIDEN_D_TILE] = w_val
+                    w_sq = pl.mul(w_val, w_val)
+                    w_sq_row = pl.reshape(pl.row_sum(w_sq), [1, HC_WIDEN_T_TILE])
+                    w_sq_sum = pl.add(w_sq_sum, w_sq_row)
                 else:
+                    # cast可能丢失valid_shape，显式恢复并清零无效行后才参与归约。
+                    w_valid = pl.set_validshape(w_val, w_rows, HC_WIDEN_D_TILE)
+                    w_clean = pl.fillpad(w_valid, pad_value=pl.PadValue.zero)
+                    w_sq_tail = pl.mul(w_clean, w_clean)
+                    w_sq_row_tail = pl.reshape(pl.row_sum(w_sq_tail), [1, HC_WIDEN_T_TILE])
+                    w_sq_sum = pl.add(w_sq_sum, w_sq_row_tail)
                     widen_tail[0:HC_WIDEN_T_TILE, w_d0:w_d0 + HC_WIDEN_D_TILE] = w_val
                     w_out = pl.load(
                         widen_tail, [0, w_d0], [HC_WIDEN_T_TILE, HC_WIDEN_D_TILE],
                         valid_shape=[w_rows, HC_WIDEN_D_TILE], target_memory=pl.MemorySpace.Vec,
                     )
                     pl.store(w_out, [w_t0, w_d0], x_hc32_flat)
+            w_mean = pl.add(pl.mul(w_sq_sum, HC_DIM_INV), NORM_EPS)
+            w_inv = pl.reshape(pl.rsqrt(w_mean, high_precision=True), [HC_WIDEN_T_TILE, 1])
+            inv_rms[w_t0:w_t0 + HC_WIDEN_T_TILE, 0:1] = w_inv
 
-    # 后续若拆分此 scope，需分别核对 x_normed、post、comb 到各消费者的依赖。
-    # 仅持有 rms_tid 不能代替检查另外两项输出；不由历史 token 差异推断缺边成因。
     with pl.scope():
-        hc_pre_norm(
-            x_hc32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w,
-            post_t, comb_t, x_normed_t, False,
+        pre_val_store = pl.create_tensor([hc_padded_rows, HC_PAD], dtype=pl.FP32)
+        hc_pre_gates_from_rms(
+            x_hc32, hc_attn_fn, hc_attn_scale, hc_attn_base,
+            pre_val_store, post_t, comb_t, False, inv_rms,
         )
+        hc_mix_norm(x_hc32, pre_val_store, attn_norm_w, x_normed_t)
     wb_blocks = (t_dim + CSA_WB_TOKEN_TILE - 1) // CSA_WB_TOKEN_TILE
 
     idx_sin_signed = pl.create_tensor([t_dim, ROPE_HEAD_DIM], dtype=pl.FP32)
@@ -279,9 +303,9 @@ def _decode_csa_tp1_layer(
     # 原先两件事共用一个 CORE_GROUP 任务，整段被前缀和拖成串行——泳道实测
     # csa_rope_sign count=1、Exec 13.42us 却独占一个串行窗口。拆成两个任务，
     # 符号那段走 SPMD，靠 deps 保证偏移先算好。
-    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets") as offsets_tid:
-        build_compact_row_offsets(cmp_query_start_loc, cmp_seq_lens, cmp_row_offsets)
-        build_compact_row_offsets(idx_query_start_loc, kv_seq_lens, idx_row_offsets)
+    with pl.at(level=pl.Level.CORE_GROUP, name_hint="csa_row_offsets", allow_early_resolve=True) as offsets_tid:
+        cmp_row_offsets = build_compact_row_offsets(cmp_query_start_loc, cmp_seq_lens, cmp_row_offsets)
+        idx_row_offsets = build_compact_row_offsets(idx_query_start_loc, kv_seq_lens, idx_row_offsets)
 
     # 向上取整分块并保留 valid_shape：t_dim = batch*6 不保证是 4 的倍数，
     # 上游 csa_rope_interleave 用的 t_dim // 4 会丢掉尾行（batch=1 时 t_dim=6 只覆盖 0~3）。
@@ -309,9 +333,6 @@ def _decode_csa_tp1_layer(
     qr = pl.create_tensor([t_dim, Q_LORA], dtype=pl.INT8)
     qr_scale = pl.create_tensor([t_dim, 1], dtype=pl.FP32)
     position_ids_t1 = pl.reshape(position_ids, [t_dim, 1])
-    # attn_out 在大 scope 之外创建：它要跨到 scope 末尾喂 hc_post，在 scope 内
-    # 创建会被判成 scope 局部张量而参与内存复用。上游 _decode_csa_tp1 也在这里创建。
-    attn_out = pl.create_tensor([t_dim, D], dtype=pl.BF16)
     with pl.scope():
         # Projection-chain dependency marker.
         late_dep = pl.system.task_dummy(deps=[rope_tid])
@@ -428,8 +449,9 @@ def _decode_csa_tp1_layer(
             o_packed_heads,
         )
         with pl.scope():
-            attn_out = decode_o_proj_tp1(o_packed_heads, wo_a, wo_b, wo_b_scale, attn_out, heads_dep)
-            hc_post(attn_out, x_hc, post_t, comb_t, x_out)
+            x_out = decode_o_proj_tp1(
+                o_packed_heads, wo_a, wo_b, wo_b_scale, x_hc, post_t, comb_t, x_out, heads_dep,
+            )
     return x_out
 
 

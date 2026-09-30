@@ -11,6 +11,9 @@
 
 import pypto.language as pl
 
+from ..deepseek_v4_flash_dspark_perf.decode_indexer import (
+    indexer_score_topk_forest as buffered_score_topk,
+)
 from .config import (
     BLOCK_SIZE,
     C4A_COMPRESSOR_BLOCK_SIZE,
@@ -26,7 +29,6 @@ from .config import (
 )
 from .layout import (
     INDEXER_KEY_BYTES,
-    INDEXER_MIN_PAGE_BYTES,
     INDEXER_PAGE_BYTES_DYN,
     INDEXER_TABLE_COLUMNS_DYN,
 )
@@ -151,10 +153,6 @@ TOPK_QUERY_WORKERS = 48  # Top-K query-merge workers
 TOPK_ARENA_ROWS = T_PAD * TOPK_ROWS_PER_QUERY
 
 TOPK_SCORE_WORKERS = 24  # Top-K score workers
-
-REPACK_WORKERS = 192  # indexer 键重排的 AIV 通道数；repack 是 DMA 启动延迟受限，
-# 块数多才能把各页不齐的耗时摊平并让更多 DMA 在飞。实测 128K/B16 上 48→192 让 PTO
-# 从 1935.0 降到 1770.1（-8.5%），96 起就有 -6%，144/192 饱和（见验证日志 §147）。
 
 SCORE_TILE = 384
 
@@ -437,7 +435,7 @@ def indexer_head_coefficients(
 
 
 @pl.jit.inline(auto_scope=False)
-def indexer_score_topk_forest(
+def indexer_score_topk_precision_forest(
     qr_hadamard_i8: pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8],
     qr_hadamard_scale_dq: pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32],
     weights: pl.Tensor[[T_PAD, IDX_N_HEADS], pl.FP32],
@@ -453,72 +451,26 @@ def indexer_score_topk_forest(
 ):
     """Score and select half-leaves, then merge their exact Top-K rows."""
     b_dim = pl.tensor.dim(idx_block_table, 0)
-    table_columns = pl.tensor.dim(idx_block_table, 1)
-    idx_table_len = b_dim * table_columns
-    # Native packs each page's INT8 keys and FP16 scales into one allocation.
-    idx_block_table_flat = pl.reshape(
-        idx_block_table,
-        [idx_table_len],
-    )
+    native_page_bytes = pl.tensor.dim(idx_kv_cache, 1)
+    # Zero-copy GM descriptors inside orchestration, as validation log §116.
+    # One writable root allocation avoids partial-overlap Torch ABI arguments.
+    cache_bytes = pl.tensor.dim(idx_kv_cache, 0) * native_page_bytes
+    cache_flat = pl.reshape(idx_kv_cache, [cache_bytes])
+    key_rows = cache_bytes // IDX_HEAD_DIM
+    shifted_rows = (cache_bytes - 64) // IDX_HEAD_DIM
+    key_view = pl.reshape(cache_flat[0 : key_rows * IDX_HEAD_DIM], [key_rows, IDX_HEAD_DIM])
+    key_view_shift64 = pl.reshape(cache_flat[64 : 64 + shifted_rows * IDX_HEAD_DIM], [shifted_rows, IDX_HEAD_DIM])
     pair_arena = pl.create_tensor([TOPK_ARENA_ROWS, TOPK_PAIR_WIDTH], dtype=pl.FP32)
     # The whole batch uses query rows for one leaf, or private lane rows for multiple leaves.
     score_arena = pl.create_tensor([SCORE_ARENA_ROWS, TOPK_CANDIDATES_PER_LEAF], dtype=pl.FP32)
     coefficients, coefficients_tid = indexer_head_coefficients(
         qr_hadamard_scale_dq, weights, position_ids, qh_quant_tid, weights_tid
     )
-    # ---- 键/scale 重排 ----------------------------------------------------
-    # Native 把一页的 32 个 INT8 键（4096 字节）和 32 个 FP16 scale（64 字节）放在
-    # 同一块分配里，页跨度 4160。4160 % 128 = 64，所以 [blocks*32, 128] 这个二维
-    # 视图不存在，打分侧没法直接把整页搬进 L1（L1 是 16x32 分形，落点行号必须是 16
-    # 的倍数、列号是 32 的倍数）。原先的办法是先搬进 UB 再 aic_gather 进 L1，多一跳。
-    #
-    # 这里每步先做一次重排：把本步可见的页按逻辑页序拷成紧凑的
-    # [b_dim * repack_pages * BLOCK_SIZE, IDX_HEAD_DIM]，scale 拷成
-    # [b_dim, repack_pages * BLOCK_SIZE]。之后打分侧读的是连续行，既能整块直搬 L1，
-    # 也能把一个 lane 的多页并成一次 DMA。**搬运的字节完全相同**，不改变任何计算或
-    # 累加顺序，因此与 Native 的逐 token 一致性不受影响。
-    repack_max_len = 0
-    for repack_batch in pl.range(b_dim):
-        repack_max_len = pl.max(repack_max_len, pl.read(kv_seq_lens, [repack_batch]) // COMPRESS_RATIO)
-    repack_max_len = pl.max(pl.min(repack_max_len, TOPK_MAX_CANDIDATES), 1)
-    # 末尾多留一个 lane 的余量：打分侧最后一个 tile 总是读满 SCORE_LANE_ROWS 行
-    # （超出 lane_valid_rows 的列随后被丢掉），留足余量就不必把读起点往回夹——
-    # 往回夹会让 tile 内的行与候选列号错位。余量页由 repack_safe 用最后一个有效页填上。
-    repack_pages = (repack_max_len + BLOCK_SIZE - 1) // BLOCK_SIZE + (SCORE_LANE_ROWS // BLOCK_SIZE + 1)
-    repack_rows = repack_pages * BLOCK_SIZE
-    key_compact = pl.create_tensor([b_dim * repack_rows, IDX_HEAD_DIM], dtype=pl.INT8)
-    scale_compact = pl.create_tensor([b_dim, repack_rows], dtype=pl.FP16)
-    with pl.spmd(
-        REPACK_WORKERS, name_hint="indexer_key_repack", deps=[cache_write_tid], allow_early_resolve=True
-    ) as repack_tid:
-        repack_worker = pl.tile.get_block_idx()
-        for repack_unit in pl.range(repack_worker, b_dim * repack_pages, REPACK_WORKERS):
-            repack_b = repack_unit // repack_pages
-            repack_page = repack_unit - repack_b * repack_pages
-            repack_len = pl.read(kv_seq_lens, [repack_b]) // COMPRESS_RATIO
-            repack_valid = pl.max(pl.min(repack_len, TOPK_MAX_CANDIDATES), 0)
-            repack_safe = pl.min(repack_page, pl.max((repack_valid - 1) // BLOCK_SIZE, 0))
-            repack_block = pl.cast(
-                pl.read(idx_block_table_flat, [repack_b * table_columns + repack_safe]), pl.INDEX
-            )
-            # 键与 scale 在页内连续（4096 + 32*2 = INDEXER_MIN_PAGE_BYTES），一次读完。
-            repack_bytes = pl.create_tensor([1, INDEXER_MIN_PAGE_BYTES], dtype=pl.INT8)
-            repack_bytes = pl.gather_row(
-                repack_bytes, idx_kv_cache, [0, 0], [repack_block, 0], [1, INDEXER_MIN_PAGE_BYTES]
-            )
-            repack_dst = (repack_b * repack_pages + repack_page) * BLOCK_SIZE
-            key_compact[repack_dst : repack_dst + BLOCK_SIZE, 0:IDX_HEAD_DIM] = pl.reshape(
-                repack_bytes[0:1, 0:INDEXER_KEY_BYTES], [BLOCK_SIZE, IDX_HEAD_DIM]
-            )
-            repack_scale_col = repack_page * BLOCK_SIZE
-            scale_compact[repack_b : repack_b + 1, repack_scale_col : repack_scale_col + BLOCK_SIZE] = (
-                pl.reinterpret_view(repack_bytes[0:1, INDEXER_KEY_BYTES:INDEXER_MIN_PAGE_BYTES], pl.FP16)
-            )
-
+    # GM零拷贝视图直接读原生页；FP16系数、QK舍入和Cube规约保持精度版规则。
     with pl.spmd(
         TOPK_SCORE_WORKERS,
         name_hint="indexer_score_topk_leaf",
-        deps=[coefficients_tid, repack_tid],
+        deps=[coefficients_tid, cache_write_tid],
         allow_early_resolve=True,
         optimizations=[pl.cross_core_slot(slot_num=1)],
     ) as score_tid:
@@ -536,7 +488,6 @@ def indexer_score_topk_forest(
             query = item // max_leaves
             leaf = item % max_leaves
             batch_idx = query // S
-            repack_base = batch_idx * repack_rows
             position = pl.read(position_ids, [query])
             cache_len = pl.read(kv_seq_lens, [batch_idx]) // COMPRESS_RATIO
             cache_bound = pl.min(cache_len, (position + 1) // COMPRESS_RATIO)
@@ -558,19 +509,31 @@ def indexer_score_topk_forest(
                 ]
                 for score_begin in pl.pipeline(0, lane_span, SCORE_LANE_ROWS, stage=2):
                     read_begin = score_begin * (1 + single_leaf)
-                    # 紧凑缓冲里同一请求的逻辑页是连续行，一个 lane 的整段候选
-                    # 一次 gather_row 就能直搬进 L1，不再需要 UB 中转，也不再是每页一次 DMA。
-                    # 用 create_l1 而不是 tile.create：query_vector 是 Tensor，
-                    # pl.matmul 不允许 Tensor 与 Tile 混用。
                     kv_i8 = pl.create_l1([SCORE_TILE, IDX_HEAD_DIM], dtype=pl.INT8)
                     for key_lane in pl.unroll(2):
-                        kv_i8 = pl.gather_row(
-                            kv_i8,
-                            key_compact,
-                            [key_lane * SCORE_LANE_ROWS, 0],
-                            [repack_base + logical_begin + read_begin + key_lane * lane_stride, 0],
-                            [SCORE_LANE_ROWS, IDX_HEAD_DIM],
-                        )
+                        for key_page in pl.range(SCORE_LANE_ROWS // BLOCK_SIZE):
+                            key_row = logical_begin + read_begin + key_lane * lane_stride + key_page * BLOCK_SIZE
+                            safe_page = pl.min(key_row // BLOCK_SIZE, pl.max((cache_len - 1) // BLOCK_SIZE, 0))
+                            physical_page = pl.max(
+                                pl.cast(pl.read(idx_block_table, [batch_idx, safe_page]), pl.INDEX), 0
+                            )
+                            native_byte = physical_page * native_page_bytes
+                            if native_byte % IDX_HEAD_DIM == 0:
+                                kv_i8 = pl.gather_row(
+                                    kv_i8,
+                                    key_view,
+                                    [key_lane * SCORE_LANE_ROWS + key_page * BLOCK_SIZE, 0],
+                                    [native_byte // IDX_HEAD_DIM, 0],
+                                    [BLOCK_SIZE, IDX_HEAD_DIM],
+                                )
+                            else:
+                                kv_i8 = pl.gather_row(
+                                    kv_i8,
+                                    key_view_shift64,
+                                    [key_lane * SCORE_LANE_ROWS + key_page * BLOCK_SIZE, 0],
+                                    [native_byte // IDX_HEAD_DIM, 0],
+                                    [BLOCK_SIZE, IDX_HEAD_DIM],
+                                )
                     score_i32 = pl.matmul(query_vector, kv_i8, out_dtype=pl.INT32, b_trans=True)
                     # Match Native's FP16 QK tile and FP32 Cube reduction.
                     for score_aiv in pl.split_aiv(2, mode=pl.SplitMode.LEFT_RIGHT):
@@ -583,11 +546,24 @@ def indexer_score_topk_forest(
                     for aiv_id in pl.split_aiv(2, mode=pl.SplitMode.LEFT_RIGHT):
                         lane_begin = aiv_id * lane_stride
                         lane_valid_rows = pl.max(pl.min(valid_count - read_begin - lane_begin, SCORE_LANE_ROWS), 0)
-                        # scale 同样已按逻辑页序排好，一个 lane 一次读完。
-                        scale_col0 = logical_begin + read_begin + lane_begin
-                        kv_scale = scale_compact[
-                            batch_idx : batch_idx + 1, scale_col0 : scale_col0 + SCORE_LANE_ROWS
-                        ]
+                        scale_begin = logical_begin + read_begin + lane_begin
+                        scale_bytes = pl.create_tensor([1, SCORE_LANE_ROWS * 2], dtype=pl.INT8)
+                        for scale_page in pl.range(SCORE_LANE_ROWS // BLOCK_SIZE):
+                            scale_logical_page = pl.min(
+                                (scale_begin + scale_page * BLOCK_SIZE) // BLOCK_SIZE,
+                                pl.max((cache_len - 1) // BLOCK_SIZE, 0),
+                            )
+                            scale_physical_page = pl.max(
+                                pl.cast(pl.read(idx_block_table, [batch_idx, scale_logical_page]), pl.INDEX), 0
+                            )
+                            scale_bytes = pl.gather_row(
+                                scale_bytes,
+                                idx_kv_cache,
+                                [0, scale_page * BLOCK_SIZE * 2],
+                                [scale_physical_page, INDEXER_KEY_BYTES],
+                                [1, BLOCK_SIZE * 2],
+                            )
+                        kv_scale = pl.reinterpret_view(scale_bytes, pl.FP16)
                         weighted_shard = pl.aiv_shard(weighted_scores)
                         score_row = weighted_shard[0:1, :]
                         score_row = pl.mul(score_row, pl.cast(kv_scale, pl.FP32))
@@ -634,6 +610,44 @@ def indexer_score_topk_forest(
 
     return topk_scores, topk_idxs, score_tid
 
+
+@pl.jit.inline(auto_scope=False)
+def indexer_score_topk_forest(
+    qr_hadamard_i8: pl.Tensor[[T_PAD * IDX_N_HEADS, IDX_HEAD_DIM], pl.INT8],
+    qr_hadamard_scale_dq: pl.Tensor[[T_PAD * IDX_N_HEADS, 1], pl.FP32],
+    weights: pl.Tensor[[T_PAD, IDX_N_HEADS], pl.FP32],
+    idx_kv_cache: pl.Tensor[[IDX_CACHE_BLOCK_NUM_DYN, INDEXER_PAGE_BYTES_DYN], pl.INT8],
+    idx_block_table: pl.Tensor[[B_DYN, INDEXER_TABLE_COLUMNS_DYN], pl.INT32],
+    position_ids: pl.Tensor[[T_DYN], pl.INT64],
+    kv_seq_lens: pl.Tensor[[B_DYN], pl.INT32],
+    topk_scores: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.FP32]],
+    topk_idxs: pl.Out[pl.Tensor[[T_DYN, IDX_TOPK], pl.INT32]],
+    qh_quant_tid: pl.Scalar[pl.TASK_ID],
+    weights_tid: pl.Scalar[pl.TASK_ID],
+    cache_write_tid: pl.Scalar[pl.TASK_ID],
+):
+    """复用性能版分页读取、双缓冲和长短档调度，保留精度版系数量化。"""
+    max_seq_len = pl.cast(0, pl.INT32)
+    for batch in pl.range(pl.tensor.dim(kv_seq_lens, 0)):
+        max_seq_len = pl.max(max_seq_len, pl.read(kv_seq_lens, [batch]))
+    # 两分支写同一Out缓冲；只用TaskId数组跨分支传递就绪事件，避免Tensor别名逃逸。
+    score_tasks = pl.array.create(1, pl.TASK_ID)
+    if max_seq_len // COMPRESS_RATIO >= 2048:
+        buffered_scores, buffered_idxs, buffered_tid = buffered_score_topk(
+            qr_hadamard_i8, qr_hadamard_scale_dq, weights, idx_kv_cache,
+            idx_block_table, position_ids, kv_seq_lens, topk_scores, topk_idxs,
+            qh_quant_tid, weights_tid, cache_write_tid, max_seq_len, True,
+        )
+        score_tasks[0] = buffered_tid
+    else:
+        direct_scores, direct_idxs, direct_tid = indexer_score_topk_precision_forest(
+            qr_hadamard_i8, qr_hadamard_scale_dq, weights, idx_kv_cache,
+            idx_block_table, position_ids, kv_seq_lens, topk_scores, topk_idxs,
+            qh_quant_tid, weights_tid, cache_write_tid,
+        )
+        score_tasks[0] = direct_tid
+    score_tid = score_tasks[0]
+    return topk_scores, topk_idxs, score_tid
 
 @pl.jit.inline(auto_scope=False)
 def indexer_qr_rope(
@@ -690,12 +704,15 @@ def indexer_qr_rope(
                     h0 = (hg + h_inner) * IDX_HEAD_DIM
                     wq_scale = pl.reshape(wq_b_scale[h0 : h0 + IDX_HEAD_DIM], [1, IDX_HEAD_DIM])
                     acc_fp32 = pl.cast(
-                        qr_acc_pad[dq_t0 : dq_t0 + DEQUANT_T_TILE, h0 : h0 + IDX_HEAD_DIM], target_type=pl.FP32, mode="none"
+                        qr_acc_pad[dq_t0 : dq_t0 + DEQUANT_T_TILE, h0 : h0 + IDX_HEAD_DIM],
+                        target_type=pl.FP32, mode="none",
                     )
                     # Native combines the activation and weight scales before
                     # multiplying the INT32 accumulator converted to FP32.
                     qr_dequant_scale = pl.col_expand_mul(
-                        pl.row_expand_mul(pl.full([DEQUANT_T_TILE, IDX_HEAD_DIM], dtype=pl.FP32, value=1.0), qr_scale_tile),
+                        pl.row_expand_mul(
+                            pl.full([DEQUANT_T_TILE, IDX_HEAD_DIM], dtype=pl.FP32, value=1.0), qr_scale_tile,
+                        ),
                         wq_scale,
                     )
                     qr_dequant = pl.mul(acc_fp32, qr_dequant_scale)
@@ -720,7 +737,8 @@ def indexer_qr_rope(
                         tail_h0 = (hg + tail_h_inner) * IDX_HEAD_DIM
                         tail_wq_scale = pl.reshape(wq_b_scale[tail_h0 : tail_h0 + IDX_HEAD_DIM], [1, IDX_HEAD_DIM])
                         tail_acc_fp32 = pl.cast(
-                            qr_acc_pad[tail_t0 : tail_t0 + 1, tail_h0 : tail_h0 + IDX_HEAD_DIM], target_type=pl.FP32, mode="none"
+                            qr_acc_pad[tail_t0 : tail_t0 + 1, tail_h0 : tail_h0 + IDX_HEAD_DIM],
+                            target_type=pl.FP32, mode="none",
                         )
                         # Native combines the activation and weight scales before
                         # multiplying the INT32 accumulator converted to FP32.
@@ -728,13 +746,19 @@ def indexer_qr_rope(
                         tail_qr_dequant = pl.mul(tail_acc_fp32, tail_qr_dequant_scale)
                         # Native quantized projection rounds to BF16 before RoPE.
                         tail_qr_dequant = pl.cast(pl.cast(tail_qr_dequant, pl.BF16, mode="rint"), pl.FP32)
-                        tail_qr_nope_bf16 = pl.cast(tail_qr_dequant[:, 0:IDX_NOPE_HEAD_DIM], target_type=pl.BF16, mode="rint")
+                        tail_qr_nope_bf16 = pl.cast(
+                            tail_qr_dequant[:, 0:IDX_NOPE_HEAD_DIM], target_type=pl.BF16, mode="rint",
+                        )
                         tail_qr_rope_slice = tail_qr_dequant[:, IDX_NOPE_HEAD_DIM:IDX_HEAD_DIM]
                         tail_qr_swapped = pl.gather(tail_qr_rope_slice, dim=-1, index=tail_swap_idx)
-                        tail_rope_rot = pl.add(pl.mul(tail_qr_rope_slice, tail_cos_tile), pl.mul(tail_qr_swapped, tail_sin_tile))
+                        tail_rope_rot = pl.add(
+                            pl.mul(tail_qr_rope_slice, tail_cos_tile), pl.mul(tail_qr_swapped, tail_sin_tile),
+                        )
                         tail_rope_bf16 = pl.cast(tail_rope_rot, target_type=pl.BF16, mode="rint")
                         qr_bf16_2d[tail_t0 : tail_t0 + 1, tail_h0 : tail_h0 + IDX_NOPE_HEAD_DIM] = tail_qr_nope_bf16
-                        qr_bf16_2d[tail_t0 : tail_t0 + 1, tail_h0 + IDX_NOPE_HEAD_DIM : tail_h0 + IDX_HEAD_DIM] = tail_rope_bf16
+                        qr_bf16_2d[
+                            tail_t0 : tail_t0 + 1, tail_h0 + IDX_NOPE_HEAD_DIM : tail_h0 + IDX_HEAD_DIM
+                        ] = tail_rope_bf16
 
     return idx_qr_mm_tid
 
@@ -963,7 +987,7 @@ def indexer_weights_score(
     return topk_scores, topk_idxs, leaf_tid
 
 
-@pl.jit.inline
+@pl.jit.inline(auto_scope=False)
 def indexer(
     x: pl.Tensor[[T_DYN, D], pl.BF16],
     qr: pl.Tensor[[T_DYN, Q_LORA], pl.INT8],
