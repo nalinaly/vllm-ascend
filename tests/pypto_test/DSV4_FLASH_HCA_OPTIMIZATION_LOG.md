@@ -7988,3 +7988,22 @@ Q-B核内收益按用户要求保留；不因本轮目标未达成而超出五�
 七档28个PyTorch profiling JSON、7个最终PTO泳道已重命名汇聚：
 `results/hca_five_closeout_20260930/download_hca_7cases_29917c4e/`。
 [完整报告、每pass/P95/原始样本、模型边界与复现](hca_five_closeout_20260930/README.md)。
+
+
+## 139. 七档task细节交付：复用Native SK0三步原图，汇聚最终PTO泳道（2026-09-30）
+
+用户要求Native关闭SK以展开task，新采集限3个step；该需求只涉及文件交付，不恢复性能优化。
+初次遗漏已有采集，提交了七个单卡任务；队列守护进程未运行、当前账号sudo需密码，任务均未启动。
+进一步检索发现9月29日已有完整七档，逐项核实后取消七个重复pending任务，不再重复占卡。
+
+Native七档均为CANN9.2/NZ2、npugraph_ex dynamic=False、inplace/static开启、SuperKernel关闭。
+实际static编译成功、安装包数1，static_super_flags=false；每档恰好3次重放。
+128K/B4、B8每步23个kernel，其余五档24个；原trace均有3次SparseAttnSharedkv及TransposeBatchMatMul。
+Native原报告未记录Git提交，不猜测版本；保留采集日期、原source路径及编译证据。
+
+PTO复用9月30日29917c4e的七档30步profiling和独立单次泳道，没有重采。
+两侧日期不同，用于看task细节，不替换第138节Native SK1同卡正式性能，也不报告新性能收益。
+本轮无生产改动，无16卡任务；队列服务未修复，但文件交付已不再依赖它。
+21份JSON和逐档来源索引已汇聚、命名：
+`results/hca_native_sk0_profiles_20260930/download_hca_7cases_sk0_task_details_29917c4e/`。
+[完整文件说明、三步核对及取消记录](hca_native_sk0_profiles_20260930/README.md)。

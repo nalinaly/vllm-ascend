@@ -28,6 +28,10 @@ P95仍有回退档位，不能声称尾延迟已解决。本轮不改Native、CS
 [五点完整候选及复现](hca_native_five_20260930/README.md)，
 [权威日志第138节](DSV4_FLASH_HCA_OPTIMIZATION_LOG.md#138-五点收尾七档同窗native对照组合复核与模型验收2026-09-30)。
 
+七档task细节包也已齐，见 [Native SK0三步图与最终PTO泳道](hca_native_sk0_profiles_20260930/README.md)。
+Native复用9月29日的SK0/static1三步采集，PTO为9月30日最终版；只用于细节分析，
+不替换上面的SK1性能表。初次重复排队的七个任务均已取消，无需等待队列恢复即可下载。
+
 ## 接手过程背景（以下“下一轮”为当时计划，当前状态以上节为准）
 
 目标保持各档领先同配置Native 20%以上，不因已有候选失败而缩小目标。

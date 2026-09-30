@@ -124,3 +124,7 @@ TORCH_DEVICE_BACKEND_AUTOLOAD=0 OMP_NUM_THREADS=4 ../.venv-dsv4-0251rc1/bin/pyth
 
 使用原句柄查看状态，不用带短timeout的 `--wait` 重提任务；本轮设备任务均已结束，无排队项。
 脚本和精简汇总通过定向Ruff、shell语法与git diff检查；仓库全量格式检查仍受缺少pre-commit限制。
+
+
+查看展开的Native task请使用 [七档Native SK0三步＋最终PTO下载包](../hca_native_sk0_profiles_20260930/README.md)。
+该包复用9月29日Native原始采集和本轮最终PTO图；本报告的SK1正式性能口径不变。

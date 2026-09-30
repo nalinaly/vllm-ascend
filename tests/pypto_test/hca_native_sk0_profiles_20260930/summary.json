@@ -1,0 +1,314 @@
+{
+  "status": "COMPLETE",
+  "native_capture_date": "2026-09-29",
+  "native_source_commit": null,
+  "native_provenance_note": "原report未记录Git提交；按原source路径与实际编译配置留证，不推断commit。",
+  "pto_source_commit": "29917c4e",
+  "pto_capture_date": "2026-09-30",
+  "scope": "复用9月29日Native SK0/static1的3步task细节、9月30日最终PTO的30步profiling和单次泳道。",
+  "limits": "用于查看内部task，不替代Native SK1正式性能对照；两侧采集窗口不同。无16卡任务。",
+  "download_directory": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_profiles_20260930/download_hca_7cases_sk0_task_details_29917c4e",
+  "cases": [
+    {
+      "history": 131072,
+      "batch": 4,
+      "case": "h131072_b4",
+      "status": "COMPLETE",
+      "pto_profile": "01_128K_B4_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "01_128K_B4_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "01_128K_B4_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h131072_b4/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        23,
+        23,
+        23
+      ],
+      "expanded_kernel_names": [
+        "SparseAttnSharedkv",
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "Compressor",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "HcPre",
+        "RmsNorm",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "triton_rms_kernel",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "HcPost"
+      ]
+    },
+    {
+      "history": 131072,
+      "batch": 8,
+      "case": "h131072_b8",
+      "status": "COMPLETE",
+      "pto_profile": "02_128K_B8_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "02_128K_B8_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "02_128K_B8_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h131072_b8/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        23,
+        23,
+        23
+      ],
+      "expanded_kernel_names": [
+        "SparseAttnSharedkv",
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "HcPre",
+        "Compressor",
+        "RmsNorm",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "HcPost",
+        "triton_rms_kernel",
+        "RmsNormDynamicQuant"
+      ]
+    },
+    {
+      "history": 131072,
+      "batch": 16,
+      "case": "h131072_b16",
+      "status": "COMPLETE",
+      "pto_profile": "03_128K_B16_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "03_128K_B16_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "03_128K_B16_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h131072_b16/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        24,
+        24,
+        24
+      ],
+      "expanded_kernel_names": [
+        "SparseAttnSharedkv",
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "Compressor",
+        "HcPre",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "RmsNorm",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "HcPost",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "triton_rms_kernel"
+      ]
+    },
+    {
+      "history": 131072,
+      "batch": 24,
+      "case": "h131072_b24",
+      "status": "COMPLETE",
+      "pto_profile": "04_128K_B24_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "04_128K_B24_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "04_128K_B24_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h131072_b24/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        24,
+        24,
+        24
+      ],
+      "expanded_kernel_names": [
+        "SparseAttnSharedkv",
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "HcPre",
+        "Compressor",
+        "RmsNorm",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "HcPost",
+        "triton_rms_kernel"
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 16,
+      "case": "h8192_b16",
+      "status": "COMPLETE",
+      "pto_profile": "05_8K_B16_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "05_8K_B16_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "05_8K_B16_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h8192_b16/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        24,
+        24,
+        24
+      ],
+      "expanded_kernel_names": [
+        "SparseAttnSharedkv",
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "HcPre",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "Compressor",
+        "RmsNorm",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "HcPost",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "triton_rms_kernel"
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 24,
+      "case": "h8192_b24",
+      "status": "COMPLETE",
+      "pto_profile": "06_8K_B24_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "06_8K_B24_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "06_8K_B24_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h8192_b24/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        24,
+        24,
+        24
+      ],
+      "expanded_kernel_names": [
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "SparseAttnSharedkv",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "Compressor",
+        "HcPre",
+        "InplacePartialRotaryMul",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "RmsNorm",
+        "HcPost",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "triton_rms_kernel"
+      ]
+    },
+    {
+      "history": 8192,
+      "batch": 32,
+      "case": "h8192_b32",
+      "status": "COMPLETE",
+      "pto_profile": "07_8K_B32_02_PTO_Final_PyTorch_30Steps.json",
+      "pto_swimlane": "07_8K_B32_03_PTO_Swimlane_SingleHCA_SyntheticHistory.json",
+      "native_profile": "07_8K_B32_01_Native_SK0_Static1_PyTorch_3Steps.json",
+      "native_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_native_sk0_20260929/h8192_b32/report.json",
+      "device": 1,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "compiler": {
+        "static_compile_results": [
+          true
+        ],
+        "static_super_flags": [
+          false
+        ],
+        "installed_static_packages": 1,
+        "pto_dispatch_calls": 0,
+        "module_compiled_attr": false,
+        "module_aot_loaded_attr": false
+      },
+      "kernels_per_replay": [
+        24,
+        24,
+        24
+      ],
+      "expanded_kernel_names": [
+        "aclnnQuantMatmulWeightNz_QuantBatchMatmulV3_QuantBatchMatmulV3",
+        "SparseAttnSharedkv",
+        "aclnnTransposeBatchMatMulWeightNz_TransposeBatchMatMul_TransposeBatchMatMul",
+        "aclnnScatterNdUpdateV2_ScatterNdUpdateV2AiCore_ScatterNdUpdateV2",
+        "HcPre",
+        "Compressor",
+        "InplacePartialRotaryMul",
+        "RmsNorm",
+        "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+        "HcPost",
+        "aclnnInplaceCopy_TensorMoveAiCore_TensorMove",
+        "triton_rms_kernel"
+      ]
+    }
+  ]
+}
