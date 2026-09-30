@@ -59,7 +59,8 @@ class OfflineNPUWorker(NPUWorker):
         ascend = get_ascend_config()
         engine = self.vllm_config
         # 记录实际安装证据；同机多卡只有 Gloo 组长安装包，其余 rank 共享安装结果。
-        static = sys.modules.get("torch_npu.dynamo.npugraph_ex._acl_concrete_graph.static_kernel")
+        static = (sys.modules.get("npugraph_ex._acl_concrete_graph.static_kernel")
+                  or sys.modules.get("torch_npu.dynamo.npugraph_ex._acl_concrete_graph.static_kernel"))
         print(f"OFFLINE_STATIC_KERNEL local_world_size={os.environ.get('LOCAL_WORLD_SIZE')} "
               f"module_loaded={static is not None} "
               f"installed_packages={len(getattr(static, '_installed_run_pkgs', ()))}", flush=True)
