@@ -45,7 +45,33 @@
   HCA 被队列补入物理设备号，与脚本内映射到逻辑 0 不符，重提时显式使用 `--device 0`。
   不将这两次失败记作通过。
 
-## 整网对照
+## 当前执行顺序：功能、精度、性能
+
+用户在第二轮启动期间明确要求先功能、再精度、最后性能。
+已主动终止性能任务 `task_20260930_111431_262623832757`（退出 130）。
+终止前 16 个 rank 均完成 21 个 CSA 与 20 个 HCA 层的绑定，DSpark 权重加载完成，
+已越过此前缺失 AddRmsNormBias 的融合注册阶段并进入静态 kernel 编译。
+尚未完成图捕获和 decode，也没有性能采集，不将主动终止记作算子失败。
+
+新的入口 `run_validation.sh` 按以下顺序执行，任何一步失败即停止：
+
+1. **功能**：仅运行联合 PTO 的 decode，不挂计时事件或 profiler。
+   `functional.py` 固定检查全部 16 个 rank、每 rank 的完整请求与输出 token 数、
+   离线 KV 恢复记录、21 个 CSA + 20 个 HCA 层在实际 B×S 档位的捕获、
+   以及生成过程中的 FULL 图重放。功能通过写入 `functional.json`。
+2. **精度**：功能通过后才加载 Native，复用功能阶段的 PTO 输出逐 token 对照。
+   不要求浮点逐 bit 一致；DSpark 接受率差异单列。写入 `token_comparison.json`。
+3. **性能**：本轮不采集。两项通过后再调用 `run_model.sh`，必须传入对应验证结果目录；
+   性能脚本会从原始报告重新核对功能和 token，失败时不进入计时。
+
+功能检查的 6 项 CPU 用例通过，包含缺 rank、缺 HCA 层、未重放、未恢复完整 KV 和
+输出 token 数不足的反例；生产算子和部署配置未变。
+
+当前任务：`task_20260930_113437_389283610684`。
+本地结果：`results/csa_hca_merge_20260930/validation_h131072_b16_v1`。
+这是 128K/B16 联合整网代表场景，不代表七档、请求生命周期或全部 padding 场景通过。
+
+## 配置及历史任务
 
 复用正式权重 `/data/model/DeepSeek-V4-Flash-0731-w8a8` 与既有 P TP4×DP4 离线 KV：
 
@@ -71,15 +97,17 @@ Native norm/quant 融合 pattern 注册阶段失败，尚未进入正式 decode�
 仍分别创建，保留 norm/quant 融合和静态编译。不修改算子实现、不关闭融合、不重新构建依赖。
 CPU 动态加载与两个 API 符号检查通过，见 `native_dependency_check.json`。
 
-重提任务 `task_20260930_111431_262623832757`，结果目录为
-`results/csa_hca_merge_20260930/model_h131072_b16_v2`；提交时等待 8 卡 CI 释放设备。
+第二轮结果目录为 `results/csa_hca_merge_20260930/model_h131072_b16_v2`，
+随后按上述用户要求主动终止并改跑功能验证。
 
 复跑命令（输出目录应使用新路径）：
 
 ```bash
 task-submit --device auto --device-num 16 --max-time 5400 \
-  'bash /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/tests/pypto_test/csa_hca_merge_20260930/run_model.sh /path/to/new/output 131072 16'
+  'bash /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-csa-hca-merge-0251rc1/tests/pypto_test/csa_hca_merge_20260930/run_validation.sh /path/to/new/validation 131072 16'
 ```
+
+功能、精度通过后才使用 `run_model.sh /path/to/new/performance 131072 16 /path/to/passed/validation`。
 
 本轮原始报告、日志、trace 与编译产物本地保存于：
 

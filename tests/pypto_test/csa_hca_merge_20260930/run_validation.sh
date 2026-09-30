@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 功能与 token 精度通过后，才对照 Native 与联合 PTO 的整网性能。
+# 按顺序验证联合整网功能和输出 token 精度，不采集 profiler 或性能样本。
 set -eo pipefail
 : "${TASK_DEVICE:?请通过 task-submit 分配 16 张卡}"
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -12,7 +12,6 @@ source "$source_repo/tests/pypto_test/results/csa_native_template_20260929/env.s
 output="$(realpath -m "${1:?指定新的结果目录}")"
 history="${2:-131072}"
 batch="${3:-16}"
-validation_root="$(realpath -e "${4:?先完成 run_validation.sh，并传入对应结果目录}")"
 bank="$source_repo/tests/pypto_test/results/release_offline_pd_20260923/h${history}_bank"
 export LD_LIBRARY_PATH="$source_repo/.cache/csa/native-install:$LD_LIBRARY_PATH"
 export PYTHONPATH="$workspace/.cache/migration-v0.25.1rc1/vllm:$repo:$repo/tests/pypto_test:${PYTHONPATH:-}"
@@ -25,14 +24,6 @@ for size in 6 24 48 96 144 192 240; do
 done
 mkdir -p "$output"
 cd "$output"
-# 从原始结果复核同档位的功能与 token；失败时不加载模型、不进入性能采集。
-python "$repo/tests/pypto_test/csa_hca_merge_20260930/functional.py" \
-    --root "$validation_root/pto" --bank "$bank" --batch "$batch" --decode-tokens 192 \
-    --output "$output/prerequisite_functional.json"
-python "$repo/tests/pypto_test/offline_pd/compare.py" \
-    --native "$validation_root/native" --pto "$validation_root/pto" --bank "$bank" \
-    --batch "$batch" --decode-tokens 192 --ranks 16 --token-only \
-    --output "$output/prerequisite_tokens.json"
 for backend in pto native; do
     mkdir -p "$output/$backend/ascend"
     export ASCEND_PROCESS_LOG_PATH="$output/$backend/ascend"
@@ -40,14 +31,19 @@ for backend in pto native; do
     opp_workspace="$(mktemp -d "$workspace/.cache/merge-opp-${backend}-XXXXXX")"
     export ASCEND_OPP_PATH="$(python "$repo/tests/pypto_test/dsv4_hca_prepare_opp.py" --destination "$opp_workspace")"
     printf '%s\n' "$ASCEND_OPP_PATH" > "$output/$backend/opp_path.txt"
-    python "$repo/tests/pypto_test/offline_pd/run.py" performance \
+    python "$repo/tests/pypto_test/offline_pd/run.py" decode \
         --bank "$bank" --output "$output/$backend" --backend "$backend" --pto-attention both \
         --decode-dp 16 --gpu-memory-utilization 0.95 --batch "$batch" \
         --decode-tokens 192 --max-num-batched-tokens 400 --weight-nz-mode 2 \
-        --graph-mode full_decode_only --capture-sizes "${capture_sizes[@]}" --port 30631 \
-        --warmup-rounds 1 --warmup-tokens 96 --warmup-steps 8 --steady-cycles 10 \
-        --profile-start-step 8 --profile-steps 3 > "$output/${backend}_launch.log" 2>&1
+        --graph-mode full_decode_only --capture-sizes "${capture_sizes[@]}" --port 30631 > "$output/${backend}_launch.log" 2>&1
+    if [[ "$backend" == pto ]]; then
+        # 功能闸门通过后才启动 Native，复用本轮 PTO 输出进行精度比较。
+        python "$repo/tests/pypto_test/csa_hca_merge_20260930/functional.py" \
+            --root "$output/pto" --bank "$bank" --batch "$batch" --decode-tokens 192 \
+            --output "$output/functional.json" > "$output/functional.log" 2>&1
+    fi
 done
-python "$repo/tests/pypto_test/offline_pd/performance.py" \
-    --root "$output" --bank "$bank" --mode 2 --batch "$batch" --decode-tokens 192 \
-    --pto-attention both --token-only > "$output/comparison.log" 2>&1
+python "$repo/tests/pypto_test/offline_pd/compare.py" \
+    --native "$output/native" --pto "$output/pto" --bank "$bank" --batch "$batch" \
+    --decode-tokens 192 --ranks 16 --token-only --output "$output/token_comparison.json" \
+    > "$output/comparison.log" 2>&1
