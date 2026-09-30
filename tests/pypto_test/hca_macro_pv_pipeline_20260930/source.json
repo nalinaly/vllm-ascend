@@ -1,0 +1,17 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_qkpipe",
+    "pvpipe": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro-pvpipe-070d081a-20260930/pvpipe",
+    "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "pvpipe_nested": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro-pvpipe-070d081a-20260930/pvpipe_nested",
+    "pvpipe_nested_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro-pvpipe-070d081a-20260930/pvpipe_nested_v2"
+  },
+  "baseline": "unadopted 512-column macro with QK stage2 pipeline, not production",
+  "change": "PV K128 blocks use local Mat loads and stage2 pipeline with four accumulator carries",
+  "invariants": "same QK stage2, four L0C accumulation order, BF16 softmax, raw block and query stream",
+  "risks_to_check": "zero-iteration raw PV loop, odd K-block tail, no L1/L0C double-buffer overflow",
+  "pvpipe_failure": "Right buffer 262144 > 65536 bytes: K pipeline hoists all four N-column extracts",
+  "nested_change": "K stage2 prefetch with an inner four-column loop consuming one Right tile at a time",
+  "nested_failure": "ConvertToSSA: elif with tuple yield leaves outer else without a final yield",
+  "nested_v2_change": "four explicit single-result if/else branches; one accumulator updated for each N column"
+}

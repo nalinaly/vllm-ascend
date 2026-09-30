@@ -72,6 +72,12 @@ mean增加65.900μs，当前方案不接入。不能仅凭移除32MiB暂存读�
 已排队采集同卡控制/候选独立泳道；没有证据前不指定唯一瓶颈，不扩大无收益版本测试。
 完整结果见[summary.json](summary.json)、[probe_result.json](probe_result.json)。
 
+随后同卡DFX任务`task_20260930_090538_8116467611`完成exit0。
+Attention AIC核内mean168.92→244.22μs，AIV173.15→248.50μs；
+Attention AIC起点316.14→311.50μs，虽然提前约4.6μs，核内增加约75μs。
+metadata均值5.65μs不能抵消读取策略造成的Attention回退，不再扩大该候选测试。
+完整任务统计见[incore.json](incore.json)。
+
 ## 复现来源
 
 源码身份见[source.json](source.json)，所有包为私有只读副本。

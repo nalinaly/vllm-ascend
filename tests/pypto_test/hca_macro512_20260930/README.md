@@ -85,7 +85,7 @@ CPU 复用 `hca_residual_reuse_20260930/compile.py`；独立诊断复用
 真机只通过 task-submit 自动分配单卡，句柄见 [tasks.json](tasks.json)。
 本实验三个任务（probe/pair/DFX）均exit0；没有将零容差输出差异说成逐bit通过。
 
-## QK双缓冲增量：完整层改善，独立泳道排队
+## QK双缓冲增量：完整层与独立泳道均完成
 
 针对v2重复使用同一QK L1 tile，`prepare_pipeline.py`从冻结v2复制新包：
 compressed微块加载改为循环内局部`pl.load`，四块循环使用`pl.pipeline(stage=2)`；
@@ -101,5 +101,9 @@ task_20260930_084830_254199630115已exit0。以macro512_v2为控制，完整输�
 v2为606.750/657.250/628.550，QK双缓冲为604.750/634.250/614.500；
 P50从627.750到612.500，五个ABBA小组mean均改善，保留增量。
 这没有证明整个512列方案优于128列或生产，也不能把不同窗口的差值相加。
-独立泳道用新窗口qkpipe_control（同一v2源码）与macro512_qkpipe，任务仍pending；
-待核对Attention核内与相邻task之后决定下一项，不先扩七档或模型。
+独立泳道用新窗口qkpipe_control（同一v2源码）与macro512_qkpipe，
+任务`task_20260930_090538_8112513015`已completed、exit0。
+Attention AIC核内mean198.77→177.07μs、AIV204.22→181.53μs，分别约减少10.9%/11.1%。
+Attention起点349.06→327.80μs，Q/DQ/gather也有窗口变化，不能把所有起点变化归因于QK代码。
+结果见[incore.json](incore.json)。按LOG135/136的新优先级先优化O-A，
+此核内增量保留在实验包，不先扩七档或模型。

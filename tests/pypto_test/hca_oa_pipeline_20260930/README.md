@@ -41,6 +41,12 @@
 来源见[memory.json](memory.json)和[CPU编译结果](compile_compact.json)。
 CPU通过不等于NPU正确或性能通过。
 
+`peeled`进一步尝试由第一个真实K128 `tile.matmul`自然推导累加器，
+先完成首个K512，再流水处理剩余K512，因此不再使用`compact=True`或循环内初始化判断。
+CPU编译/load通过，片上总容量相同，但生成码诊断显示首段、主体、尾段形成了多个流水组，
+导致Left/Right部分stage=2退化为单缓冲。未排该版本NPU，不将接口更简单误判为性能更优。
+来源为[peeled.patch](peeled.patch)、[编译结果](compile_peeled.json)和[memory_peeled.json](memory_peeled.json)。
+
 ## 验证
 
 已通过自动单卡队列提交`task_20260930_094555_174788815257`，
