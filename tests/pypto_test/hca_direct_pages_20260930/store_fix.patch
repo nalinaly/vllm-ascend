@@ -1,0 +1,12 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1131 +1130,0 @@
+-            gather_mask = pl.tile.full([1, CMP_ATTN_K_TILE], dtype=pl.FP32, value=0.0)
+@@ -1132,0 +1132 @@
++                page_mask = pl.tile.full([1, CMP_STORAGE_BLOCK_SIZE], dtype=pl.FP32, value=0.0)
+@@ -1143,4 +1143 @@
+-                        gather_mask = pl.tile.assemble(
+-                            gather_mask, page_mask, [0, gather_page * CMP_STORAGE_BLOCK_SIZE],
+-                        )
+-            pl.store(gather_mask, [gather_item, 0], cmp_work_valid)
++                pl.store(page_mask, [gather_item, gather_page * CMP_STORAGE_BLOCK_SIZE], cmp_work_valid)

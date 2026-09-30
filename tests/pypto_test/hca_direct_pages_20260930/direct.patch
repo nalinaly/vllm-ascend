@@ -1,0 +1,112 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1114,2 +1114,2 @@
+-    cmp_work_kv = pl.create_tensor([cmp_gather_count * CMP_ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16)
+-
++    # 页表/长度是本次调用输入；这里不读压缩cache，无需等待cache写回。
++    cmp_zero_page = pl.create_tensor([CMP_STORAGE_BLOCK_SIZE, HEAD_DIM], dtype=pl.BF16)
+@@ -1117,4 +1116,0 @@
+-    # 每块承担的搬运项数按实际项数反推，使块数不超过一个 AIV 波（48 块）。
+-    # 原先固定 CMP_GATHER_WORK_TILE 在 128K/B16 下算出约 64 块，是 1.5 波、白扔半波；
+-    # 实测该任务跨度 51.1 μs，而核时间只有 900 μs（48 核下限 18.8 μs）。
+-    # 划分只决定哪个块搬哪几项，搬运内容与顺序不变。
+@@ -1122,6 +1118,8 @@
+-    cmp_gather_blocks = (cmp_gather_count + gather_work_tile - 1) // gather_work_tile
+-    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
+-        gather_block = pl.tile.get_block_idx()
+-        gather_begin = gather_block * gather_work_tile
+-        gather_end = pl.min(gather_begin + gather_work_tile, cmp_gather_count)
+-        for gather_item in pl.range(gather_begin, gather_end):
++    metadata_blocks = pl.max(1, (cmp_gather_count + gather_work_tile - 1) // gather_work_tile)
++    with pl.spmd(metadata_blocks, name_hint="hca_cmp_page_metadata", allow_early_resolve=True) as cmp_gather_tid:
++        metadata_worker = pl.tile.get_block_idx()
++        if metadata_worker == 0:
++            zero_page = pl.tile.full([CMP_STORAGE_BLOCK_SIZE, HEAD_DIM], dtype=pl.BF16, value=0.0)
++            pl.store(zero_page, [0, 0], cmp_zero_page)
++        page_indices = pl.cast(pl.tile.arange(0, [1, CMP_STORAGE_BLOCK_SIZE], dtype=pl.INT32), pl.FP32)
++        for gather_item in pl.range(metadata_worker, cmp_gather_count, metadata_blocks):
+@@ -1129,7 +1127 @@
+-            gather_work = gather_item - gather_request * cmp_work_count
+-            gather_first_col = gather_work * CMP_PAGES_PER_WORK
+-            gather_dst0 = gather_item * CMP_ATTN_K_TILE
+-            gather_tile = pl.tile.full([CMP_ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, value=0.0)
+-            gather_mask = pl.tile.full([1, CMP_ATTN_K_TILE], dtype=pl.FP32, value=0.0)
+-            # Native 不初始化有效长度之后的 KV；零概率乘 NaN 仍会污染 PV。
+-            # 只搬本步已生成的压缩行，未搬入的片内位置保留为零。
++            gather_work = gather_item % cmp_work_count
+@@ -1139,4 +1131,5 @@
+-            for gather_page in pl.range(CMP_PAGES_PER_WORK):
+-                gather_page_col = gather_first_col + gather_page
+-                gather_valid_rows = pl.min(CMP_STORAGE_BLOCK_SIZE, pl.max(
+-                    gather_rows - gather_page_col * CMP_STORAGE_BLOCK_SIZE, 0,
++            gather_mask = pl.tile.full([1, CMP_ATTN_K_TILE], dtype=pl.FP32, value=0.0)
++            for gather_page in pl.unroll(CMP_PAGES_PER_WORK):
++                page_column = gather_work * CMP_PAGES_PER_WORK + gather_page
++                valid_rows = pl.min(CMP_STORAGE_BLOCK_SIZE, pl.max(
++                    gather_rows - page_column * CMP_STORAGE_BLOCK_SIZE, 0,
+@@ -1144,15 +1137,9 @@
+-                if gather_page_col < cmp_table_blocks and gather_valid_rows > 0:
+-                    gather_page_i32 = pl.read(cmp_block_table, [gather_request, gather_page_col])
+-                    if gather_page_i32 >= 0:
+-                        if gather_page_i32 < cmp_block_num:
+-                            gather_page_id = pl.cast(gather_page_i32, pl.INDEX)
+-                            gather_src = gather_page_id * CMP_STORAGE_BLOCK_SIZE
+-                            gather_col = gather_page * CMP_STORAGE_BLOCK_SIZE
+-                            gather_tile = pl.gather_row(
+-                                gather_tile, cmp_kv_flat, [gather_col, 0], [gather_src, 0],
+-                                [CMP_STORAGE_BLOCK_SIZE, HEAD_DIM], valid_shape=[gather_valid_rows, HEAD_DIM],
+-                            )
+-                            for gather_mask_col in pl.unroll(CMP_STORAGE_BLOCK_SIZE):
+-                                if gather_mask_col < gather_valid_rows:
+-                                    pl.tile.write(gather_mask, [0, gather_col + gather_mask_col], 1.0)
+-            pl.store(gather_tile, [gather_dst0, 0], cmp_work_kv)
++                if page_column < cmp_table_blocks and valid_rows > 0:
++                    physical_page = pl.read(cmp_block_table, [gather_request, page_column])
++                    if physical_page >= 0 and physical_page < cmp_block_num:
++                        page_mask = pl.minimum(pl.maximum(
++                            pl.sub(pl.cast(valid_rows, pl.FP32), page_indices), 0.0,
++                        ), 1.0)
++                        gather_mask = pl.tile.assemble(
++                            gather_mask, page_mask, [0, gather_page * CMP_STORAGE_BLOCK_SIZE],
++                        )
+@@ -1160,2 +1146,0 @@
+-
+-
+@@ -1173 +1158 @@
+-        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid, q_ready], allow_early_resolve=True,
++        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, cmp_cache_ready_dep, rope_cs_tid, q_ready], allow_early_resolve=True,
+@@ -1206,3 +1191,31 @@
+-                        cmp_row = (request * cmp_work_count + tick) * ATTN_K_TILE
+-                        kv_l1 = pl.gather_row(kv_l1, cmp_work_kv, [l1_row, 0], [cmp_row, 0],
+-                                             [ATTN_K_TILE, HEAD_DIM])
++                        for page_part in pl.range(CMP_PAGES_PER_WORK):
++                            page_column = tick * CMP_PAGES_PER_WORK + page_part
++                            dst_row = l1_row + page_part * CMP_STORAGE_BLOCK_SIZE
++                            copy_rows = pl.min(CMP_STORAGE_BLOCK_SIZE, pl.max(
++                                cmp_rows - page_column * CMP_STORAGE_BLOCK_SIZE, 0,
++                            ))
++                            if page_column < cmp_table_blocks and copy_rows > 0:
++                                physical_page = pl.yield_(pl.cast(pl.read(
++                                    cmp_block_table, [request, page_column],
++                                ), pl.INDEX))
++                            else:
++                                physical_page = pl.yield_(pl.cast(-1, pl.INDEX))
++                            if copy_rows == CMP_STORAGE_BLOCK_SIZE and physical_page >= 0 and physical_page < cmp_block_num:
++                                kv_l1 = pl.gather_row(
++                                    kv_l1, cmp_kv_flat, [dst_row, 0],
++                                    [physical_page * CMP_STORAGE_BLOCK_SIZE, 0],
++                                    [CMP_STORAGE_BLOCK_SIZE, HEAD_DIM],
++                                )
++                            else:
++                                # 部分页先置零，避免零概率乘以未初始化的NaN。
++                                kv_l1 = pl.gather_row(
++                                    kv_l1, cmp_zero_page, [dst_row, 0], [0, 0],
++                                    [CMP_STORAGE_BLOCK_SIZE, HEAD_DIM],
++                                )
++                                if physical_page >= 0 and physical_page < cmp_block_num and copy_rows > 0:
++                                    kv_l1 = pl.gather_row(
++                                        kv_l1, cmp_kv_flat, [dst_row, 0],
++                                        [physical_page * CMP_STORAGE_BLOCK_SIZE, 0],
++                                        [CMP_STORAGE_BLOCK_SIZE, HEAD_DIM],
++                                        valid_shape=[copy_rows, HEAD_DIM],
++                                    )

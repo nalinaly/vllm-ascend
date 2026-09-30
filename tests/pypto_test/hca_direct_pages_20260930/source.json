@@ -1,0 +1,16 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late",
+    "direct": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct",
+    "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "direct_mask": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_mask",
+    "direct_cast": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_cast",
+    "direct_store": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_store"
+  },
+  "baseline": "Q24 with QR early-resolve disabled, same block-local softmax as production; not adopted",
+  "change": "Cube directly fills its existing 3-slot L1 ring from 32-row Native pages; no KV GM staging",
+  "metadata": "AIV generates exact page-valid mask and one shared zero page before cache completion",
+  "invariants": "same QK/PV tiles, block-local BF16 probabilities, per-query reduction order, public cache layout",
+  "dependencies": "attention explicitly waits for both metadata and compressed cache writer",
+  "tradeoff": "four page-table lookups and segmented loads instead of one contiguous 128-row load"
+}

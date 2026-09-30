@@ -17,9 +17,18 @@ compressed gather与反量化重叠。核内逻辑没有变化，问题转移到
 第112节旧单组48-AIV同步的回退不能直接替代当前四组结构的增量结论。
 
 两个候选均已通过CPU依赖图、编译和load，私有源码已冻结。
-128K/B16真实第3层ABBA、完整状态精确/重放/保护区检查已分别提交自动单卡队列，
-截至[task_statuses.json](task_statuses.json)记录时仍pending，不能称为已测或接入。
-只有真实收益证据出现后再扩受影响短档、七档和整机。
+128K/B16真实第3层ABBA已经完成，两任务均exit0。完整状态跨版逐bit、图重放/保护区通过。
+每侧10样本，min/max/mean（μs）：
+
+| 候选 | 自己的qr_late控制 | 候选 |
+| --- | --- | --- |
+| cache_late | 546.500/592.250/562.025 | 547.000/578.750/567.400 |
+| cache_late_dq_sync | 555.250/609.500/573.550 | 567.750/590.500/578.750 |
+
+两者都只有1/5个ABBA小组mean改善，mean分别回退5.375/5.200，P50也变差；
+不采用、不扩短档/七档/模型，不因较低的样本max而忽略整体回退。
+这组调度属性未解决最后反量化的等待；没有新增DFX支持唯一根因结论。
+完整摘要见[summary.json](summary.json)，终态见[task_statuses.json](task_statuses.json)。
 
 来源见[source.json](source.json)，`prepare.py`复制整包后只修改两个调度属性。
 增量patch为零上下文，应用需`git apply --unidiff-zero`；不修改共享PyPTO/Simpler。

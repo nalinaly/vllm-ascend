@@ -1,0 +1,93 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late",
+      "direct": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct",
+      "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+      "direct_mask": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_mask",
+      "direct_cast": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_cast",
+      "direct_store": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_store"
+    },
+    "baseline": "Q24 with QR early-resolve disabled, same block-local softmax as production; not adopted",
+    "change": "Cube directly fills its existing 3-slot L1 ring from 32-row Native pages; no KV GM staging",
+    "metadata": "AIV generates exact page-valid mask and one shared zero page before cache completion",
+    "invariants": "same QK/PV tiles, block-local BF16 probabilities, per-query reduction order, public cache layout",
+    "dependencies": "attention explicitly waits for both metadata and compressed cache writer",
+    "tradeoff": "four page-table lookups and segmented loads instead of one contiguous 128-row load"
+  },
+  "reports": {
+    "direct_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/qr_late",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/direct_store"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 3,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 561.0,
+          "max_us": 590.5,
+          "mean_us": 574.15,
+          "p50_us": 574.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 627.25,
+          "max_us": 654.75,
+          "mean_us": 640.05,
+          "p50_us": 640.625
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_direct_pages_20260930/direct_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

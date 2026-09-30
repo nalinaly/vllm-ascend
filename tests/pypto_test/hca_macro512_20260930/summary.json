@@ -4,13 +4,19 @@
       "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
       "macro512": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512",
       "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
-      "macro512_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2"
+      "macro512_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2",
+      "macro512_qkpipe": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_qkpipe",
+      "qkpipe_control": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2"
     },
     "baseline": "single-query online candidate, not production",
     "change": "S2=512 softmax; four 128-column QK chunks; PV K128 accumulation in four L0C tiles; cross-query stream",
     "invariants": "cache/state, masks, sink, per-query identity, inverse RoPE; no shared toolchain changes",
     "arithmetic": "larger softmax block before BF16 and Cube PV accumulation change rounding; diagnostic output only",
-    "tradeoff": "reload KV for PV instead of permanent L1 ring; cut PV GM round trips and FFTS handoffs"
+    "tradeoff": "reload KV for PV instead of permanent L1 ring; cut PV GM round trips and FFTS handoffs",
+    "qkpipe_parent": "macro512_v2; same arithmetic and PV, QK tile loads local to stage-2 pipeline",
+    "dfx_aliases": {
+      "qkpipe_control": "same macro512_v2 frozen source in a new same-card DFX window"
+    }
   },
   "reports": {
     "macro512_long": {
@@ -90,6 +96,41 @@
         "compressed.0": true,
         "state.0": true
       },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
       "output_arithmetic_diagnostic": {
         "acceptance": "PENDING_INDEPENDENT_REFERENCE_AND_MODEL_TOKENS",
         "comparison": {
@@ -159,6 +200,107 @@
         },
         "scope": "性能筛选诊断，不把非零输出误差判定为精度通过"
       },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_macro512_20260930/macro512_long/report.json",
+      "span_samples_us": [
+        594.5,
+        604.5,
+        615.75,
+        560.5,
+        575.0,
+        601.0,
+        620.25,
+        555.75,
+        556.75,
+        592.75,
+        612.5,
+        555.0,
+        538.5,
+        595.0,
+        606.75,
+        545.75,
+        553.25,
+        602.75,
+        606.0,
+        558.5
+      ]
+    },
+    "qkpipe_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_qkpipe"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 2,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 606.75,
+          "max_us": 657.25,
+          "mean_us": 628.55,
+          "p50_us": 627.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 604.75,
+          "max_us": 634.25,
+          "mean_us": 614.5,
+          "p50_us": 612.5
+        }
+      },
+      "pairs": [
+        {
+          "base_us": 632.0,
+          "candidate_us": 614.125
+        },
+        {
+          "base_us": 627.125,
+          "candidate_us": 622.625
+        },
+        {
+          "base_us": 629.75,
+          "candidate_us": 614.625
+        },
+        {
+          "base_us": 632.75,
+          "candidate_us": 611.125
+        },
+        {
+          "base_us": 621.125,
+          "candidate_us": 610.0
+        }
+      ],
+      "order": [
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base",
+        "base",
+        "candidate",
+        "candidate",
+        "base"
+      ],
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
       "state_exact": {
         "base": {
           "x_out": true,
@@ -194,28 +336,28 @@
         "metadata.state.start_pos": "PASS",
         "metadata.compressed.compact_slots": "PASS"
       },
-      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_macro512_20260930/macro512_long/report.json",
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_macro512_20260930/qkpipe_long/report.json",
       "span_samples_us": [
-        594.5,
-        604.5,
-        615.75,
-        560.5,
-        575.0,
-        601.0,
-        620.25,
-        555.75,
-        556.75,
-        592.75,
-        612.5,
-        555.0,
-        538.5,
-        595.0,
+        657.25,
+        623.5,
+        604.75,
         606.75,
-        545.75,
-        553.25,
-        602.75,
+        622.5,
+        611.0,
+        634.25,
+        631.75,
+        633.5,
+        609.25,
+        620.0,
+        626.0,
+        636.0,
+        608.0,
+        614.25,
+        629.5,
+        623.75,
+        614.0,
         606.0,
-        558.5
+        618.5
       ]
     }
   },

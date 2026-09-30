@@ -85,7 +85,7 @@ CPU 复用 `hca_residual_reuse_20260930/compile.py`；独立诊断复用
 真机只通过 task-submit 自动分配单卡，句柄见 [tasks.json](tasks.json)。
 本实验三个任务（probe/pair/DFX）均exit0；没有将零容差输出差异说成逐bit通过。
 
-## QK双缓冲增量：CPU通过，设备仍排队
+## QK双缓冲增量：完整层改善，独立泳道排队
 
 针对v2重复使用同一QK L1 tile，`prepare_pipeline.py`从冻结v2复制新包：
 compressed微块加载改为循环内局部`pl.load`，四块循环使用`pl.pipeline(stage=2)`；
@@ -95,6 +95,11 @@ raw也使用局部加载，PV和Vector算术、两槽跨query流水均保持。
 CPU依赖图、编译/load通过。生成码compressed微块使用L1地址196608与327680的两个
 128×512 BF16区域，循环步长2并有尾分支；不是仅写了stage属性而仍只有一个缓冲。
 [memory_qkpipe.json](memory_qkpipe.json)记录Mat458752、Acc131072、Left/Right65536、Vec178112。
-新任务以macro512_v2为控制，要求完整输出/cache/state逐bit，不启用算术差异豁免；
-task_20260930_084830_254199630115仍pending，尚无性能结论。
-若这个增量有收益，仍需回到128列或生产控制比较，不能因优于较慢v2就宣称超过生产。
+task_20260930_084830_254199630115已exit0。以macro512_v2为控制，完整输出/cache/state逐bit、
+自身图重放和保护区通过，没有启用算术差异豁免。
+128K/B16同进程ABBA每侧10次，min/max/mean（μs）：
+v2为606.750/657.250/628.550，QK双缓冲为604.750/634.250/614.500；
+P50从627.750到612.500，五个ABBA小组mean均改善，保留增量。
+这没有证明整个512列方案优于128列或生产，也不能把不同窗口的差值相加。
+独立泳道用新窗口qkpipe_control（同一v2源码）与macro512_qkpipe，任务仍pending；
+待核对Attention核内与相邻task之后决定下一项，不先扩七档或模型。
