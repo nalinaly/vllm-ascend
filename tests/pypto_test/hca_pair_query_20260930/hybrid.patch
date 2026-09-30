@@ -1,0 +1,69 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1168,0 +1169 @@
++    accum = pl.create_tensor([NUM_QK_CORES * pair_rows, HEAD_DIM // 2], dtype=pl.FP32)
+@@ -1271,3 +1272,2 @@
+-                seed_out2 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                seed_out3 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                for vec_tick, (m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter, max_ring, sum_ring) in pl.range(
++                acc_row = (worker * 2 + lane) * H
++                for vec_tick, (m_iter, l_iter, out0_iter, out1_iter, has_iter, max_ring, sum_ring) in pl.range(
+@@ -1275 +1275 @@
+-                    init_values=(seed_m, seed_l, seed_out0, seed_out1, seed_out2, seed_out3, seed_max, seed_sum),
++                    init_values=(seed_m, seed_l, seed_out0, seed_out1, pl.cast(0, pl.INDEX), seed_max, seed_sum),
+@@ -1332,0 +1333,6 @@
++                            if has_iter == 0:
++                                zero_part2 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
++                                prior_part2 = pl.yield_(zero_part2)
++                            else:
++                                loaded_part2 = pl.load(accum, [acc_row, 0 * PV_N_TILE], [H, PV_N_TILE])
++                                prior_part2 = pl.yield_(loaded_part2)
+@@ -1334 +1340 @@
+-                            next_out2 = pl.add(pl.row_expand_mul(out2_iter, alpha),
++                            next_out2 = pl.add(pl.row_expand_mul(prior_part2, alpha),
+@@ -1335,0 +1342,7 @@
++                            pl.store(next_out2, [acc_row, 0 * PV_N_TILE], accum)
++                            if has_iter == 0:
++                                zero_part3 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
++                                prior_part3 = pl.yield_(zero_part3)
++                            else:
++                                loaded_part3 = pl.load(accum, [acc_row, 1 * PV_N_TILE], [H, PV_N_TILE])
++                                prior_part3 = pl.yield_(loaded_part3)
+@@ -1337 +1350 @@
+-                            next_out3 = pl.add(pl.row_expand_mul(out3_iter, alpha),
++                            next_out3 = pl.add(pl.row_expand_mul(prior_part3, alpha),
+@@ -1338,0 +1352 @@
++                            pl.store(next_out3, [acc_row, 1 * PV_N_TILE], accum)
+@@ -1361,4 +1375,3 @@
+-                                    merged_right = pl.concat(
+-                                        pl.tile.slice(next_out2, [H_TILE, PV_N_TILE], [head, 0]),
+-                                        pl.tile.slice(next_out3, [H_TILE, PV_N_TILE], [head, 0]),
+-                                    )
++                                    # Reload only the final H16 slice; retaining next_out2/3
++                                    # until publish keeps both H64 tiles live and defeats spilling.
++                                    merged_right = pl.load(accum, [acc_row + head, 0], [H_TILE, HEAD_DIM // 2])
+@@ -1377,2 +1390,2 @@
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3 = pl.yield_(
+-                                next_m, next_l, next_out0, next_out1, next_out2, next_out3,
++                            active_m, active_l, active_o0, active_o1, active_has = pl.yield_(
++                                next_m, next_l, next_out0, next_out1, pl.cast(1, pl.INDEX),
+@@ -1381,2 +1394,2 @@
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3 = pl.yield_(
+-                                m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter,
++                            active_m, active_l, active_o0, active_o1, active_has = pl.yield_(
++                                m_iter, l_iter, out0_iter, out1_iter, has_iter,
+@@ -1384,2 +1397,2 @@
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after = pl.yield_(
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3,
++                        m_after, l_after, o0_after, o1_after, has_after = pl.yield_(
++                            active_m, active_l, active_o0, active_o1, active_has,
+@@ -1388,2 +1401,2 @@
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after = pl.yield_(
+-                            m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter,
++                        m_after, l_after, o0_after, o1_after, has_after = pl.yield_(
++                            m_iter, l_iter, out0_iter, out1_iter, has_iter,
+@@ -1391,2 +1404,2 @@
+-                    m_done, l_done, o0_done, o1_done, o2_done, o3_done, max_done, sum_done = pl.yield_(
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after, updated_max, updated_sum,
++                    m_done, l_done, o0_done, o1_done, has_done, max_done, sum_done = pl.yield_(
++                        m_after, l_after, o0_after, o1_after, has_after, updated_max, updated_sum,

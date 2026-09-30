@@ -1,0 +1,21 @@
+--- a/deepseek_v4_flash_hca/hc_pre_fused.py
++++ b/deepseek_v4_flash_hca/hc_pre_fused.py
+@@ -105,0 +106 @@
++    x_original: pl.Tensor[[T_DYN, HC_MULT, D], pl.BF16],
+@@ -271 +272 @@
+-    x_flat = pl.reshape(x, [t_dim, HC_DIM])
++    x_flat = pl.reshape(x_original, [t_dim, HC_DIM])
+@@ -337,4 +338,4 @@
+-            x0 = pl.load(x_flat, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+-            x1 = pl.load(x_flat, [t0, D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+-            x2 = pl.load(x_flat, [t0, 2 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+-            x3 = pl.load(x_flat, [t0, 3 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
++            x0 = pl.cast(pl.load(x_flat, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
++            x1 = pl.cast(pl.load(x_flat, [t0, D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
++            x2 = pl.cast(pl.load(x_flat, [t0, 2 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
++            x3 = pl.cast(pl.load(x_flat, [t0, 3 * D + d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE]), pl.FP32)
+--- a/deepseek_v4_flash_hca/decode_hca.py
++++ b/deepseek_v4_flash_hca/decode_hca.py
+@@ -145 +145 @@
+-        hc_pre_norm(x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms)
++        hc_pre_norm(x32, hc_attn_fn, hc_attn_scale, hc_attn_base, attn_norm_w, post, comb, normalized, False, inv_rms, x_hc)

@@ -1,0 +1,6 @@
+# Parent: base
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -435 +435 @@
+-    for tg_idx_worker in pl.spmd(qr_norm_workers, name_hint="qr_rms_norm_quant", allow_early_resolve=True):
++    for tg_idx_worker in pl.spmd(qr_norm_workers, name_hint="qr_rms_norm_quant", allow_early_resolve=False):

@@ -1,0 +1,10 @@
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -533 +533 @@
+-        allow_early_resolve=True,
++        allow_early_resolve=False,
+--- a/deepseek_v4_flash_dspark/q_projection.py
++++ b/deepseek_v4_flash_dspark/q_projection.py
+@@ -100 +100 @@
+-    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
++    with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep], allow_early_resolve=True) as qproj_tid:

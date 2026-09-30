@@ -117,6 +117,7 @@ class CSAOperators:
 # torch_npu 的 acl format 取值：0=NCHW、2=ND，二者都是 PyPTO 根入参接受的基础格式。
 _ACL_FORMAT_NCHW = 0
 _ACL_FORMAT_ND = 2
+_ACL_FORMAT_FRACTAL_NZ = 29
 
 
 def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
@@ -124,8 +125,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
     """Prepare the TP1 ABI from already-loaded Native parameters exactly once."""
     import torch_npu
 
-    if attention.compress_ratio != 4 or attention.n_local_heads != 64 or attention.n_local_groups != 8:
-        raise ValueError("CSA specialization requires C4 and TP1 with 64 heads / 8 output groups")
+    if attention.compress_ratio not in (4, 128) or attention.n_local_heads != 64 or attention.n_local_groups != 8:
+        raise ValueError("PTO attention 要求 C4/C128、TP1、64 个 head 和 8 个输出组")
 
     layouts = root_weight_layouts(root_function)
 
@@ -153,17 +154,23 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
             return value
         return _recast(name, value, current, _ACL_FORMAT_ND)
 
-    def weight(module, shape, dtype, transpose=False):
+    def weight(module, shape, dtype, transpose=False, layout_name=None):
         value = module.weight.detach()
         if tuple(value.shape) != shape or value.dtype != dtype:
             raise ValueError(f"Unexpected loaded weight: {value.shape}/{value.dtype}; expected {shape}/{dtype}")
         if torch_npu.get_npu_format(value) not in (_ACL_FORMAT_NCHW, _ACL_FORMAT_ND):
-            # 这些非目标权重仍由根签名声明 ND，按其数学方向在加载期准备一次。
-            # 四张目标权重由 root_weight 独立绑定，已有 NZ 存储直接复用。
+            # 先统一回 ND，才能按数学方向转置；四张目标权重由 root_weight 独立绑定，
+            # 已有 NZ 存储直接复用，不走这里。
             value = torch_npu.npu_format_cast(value, _ACL_FORMAT_ND)
         if transpose:
             value = value.transpose(-1, -2)
-        return _base_weight_format(value.contiguous())
+        value = _base_weight_format(value.contiguous())
+        # cube matmul 的 B 操作数若在根签名里声明了 NZ，就在加载期一次性转成分形序，
+        # 之后每次矩阵乘直接以 NZ 读入 Mat，省掉片上的 ND→NZ 转换。布局由根签名说话
+        # （见 nz_mode.B_OPERAND_WEIGHTS），这里不再写死。
+        if layout_name is not None and layouts.get(layout_name) == "NZ":
+            return torch_npu.npu_format_cast(value, _ACL_FORMAT_FRACTAL_NZ)
+        return value
 
     def scale(module, width):
         result = module.weight_scale.detach().reshape(-1)
@@ -175,8 +182,8 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
         return result.float().contiguous()
 
     bf16, int8 = torch.bfloat16, torch.int8
-    main, indexer = attention.compressor, attention.indexer
-    inner = indexer.compressor
+    main = attention.compressor
+    compressor_width = 1024 if attention.compress_ratio == 4 else 512
     # mHC 的门控权重与 attention 的 input_layernorm 挂在 DeepseekV4DecoderLayer 上。
     hc = {}
     if layer is not None:
@@ -191,27 +198,33 @@ def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
         "wq_a": root_weight("wq_a", (1024, 4096), bf16),
         "wq_b": root_weight("wq_b", (1024, 32768), int8),
         "wq_b_scale": scale(attention.wq_b, 32768),
-        "wkv": weight(attention.wkv, (512, 4096), bf16, True),
+        "wkv": weight(attention.wkv, (512, 4096), bf16, True, layout_name="wkv"),
         "gamma_cq": weight(attention.q_norm, (1024,), bf16),
         "gamma_ckv": weight(attention.kv_norm, (512,), bf16),
-        "cmp_wkv": weight(main.wkv, (1024, 4096), bf16),
-        "cmp_wgate": weight(main.wgate, (1024, 4096), bf16),
+        "cmp_wkv": weight(main.wkv, (compressor_width, 4096), bf16, layout_name="cmp_wkv"),
+        "cmp_wgate": weight(main.wgate, (compressor_width, 4096), bf16, layout_name="cmp_wgate"),
         "cmp_ape": main.ape.detach().float().contiguous(),
         # Match Native A3 storage; the RMS task widens loaded BF16 tiles.
         "cmp_norm_w": weight(main.norm, (512,), bf16),
-        "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
-        "idx_wq_b_scale": scale(indexer.wq_b, 8192),
-        "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
-        **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
-        "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
-        "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
-        "inner_ape": inner.ape.detach().float().contiguous(),
-        "inner_norm_w": weight(inner.norm, (128,), bf16),
         "attn_sink": attention.attn_sink.detach().contiguous(),
         "wo_a": root_weight("wo_a", (8, 4096, 1024), bf16),
         "wo_b": root_weight("wo_b", (8192, 4096), int8),
         "wo_b_scale": scale(attention.wo_b, 4096),
     }
+    # HCA 不含 Indexer，公共权重准备只在 C4 分支绑定这些参数。
+    if attention.compress_ratio == 4:
+        indexer = attention.indexer
+        inner = indexer.compressor
+        weights.update({
+            "idx_wq_b": weight(indexer.wq_b, (1024, 8192), int8),
+            "idx_wq_b_scale": scale(indexer.wq_b, 8192),
+            "weights_proj": weight(indexer.weights_proj, (64, 4096), bf16, True),
+            **({"hadamard_idx": hadamard.detach().T.to(bf16).contiguous()} if hadamard is not None else {}),
+            "inner_wkv": weight(inner.wkv, (256, 4096), bf16),
+            "inner_wgate": weight(inner.wgate, (256, 4096), bf16),
+            "inner_ape": inner.ape.detach().float().contiguous(),
+            "inner_norm_w": weight(inner.norm, (128,), bf16),
+        })
     return weights
 
 

@@ -1,0 +1,40 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1287,11 +1287,3 @@
+-                                next0, next1, next2, next3 = pl.yield_(
+-                                    pl.tile.matmul_acc(col0, left_part, right_part), col1, col2, col3,
+-                                )
+-                            elif column == 1:
+-                                next0, next1, next2, next3 = pl.yield_(
+-                                    col0, pl.tile.matmul_acc(col1, left_part, right_part), col2, col3,
+-                                )
+-                            elif column == 2:
+-                                next0, next1, next2, next3 = pl.yield_(
+-                                    col0, col1, pl.tile.matmul_acc(col2, left_part, right_part), col3,
+-                                )
++                                next0 = pl.yield_(pl.tile.matmul_acc(
++                                    col0, left_part, right_part,
++                                ))
+@@ -1299,3 +1291,19 @@
+-                                next0, next1, next2, next3 = pl.yield_(
+-                                    col0, col1, col2, pl.tile.matmul_acc(col3, left_part, right_part),
+-                                )
++                                next0 = pl.yield_(col0)
++                            if column == 1:
++                                next1 = pl.yield_(pl.tile.matmul_acc(
++                                    col1, left_part, right_part,
++                                ))
++                            else:
++                                next1 = pl.yield_(col1)
++                            if column == 2:
++                                next2 = pl.yield_(pl.tile.matmul_acc(
++                                    col2, left_part, right_part,
++                                ))
++                            else:
++                                next2 = pl.yield_(col2)
++                            if column == 3:
++                                next3 = pl.yield_(pl.tile.matmul_acc(
++                                    col3, left_part, right_part,
++                                ))
++                            else:
++                                next3 = pl.yield_(col3)

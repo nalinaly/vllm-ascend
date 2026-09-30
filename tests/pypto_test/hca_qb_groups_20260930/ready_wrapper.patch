@@ -1,0 +1,28 @@
+--- a/deepseek_v4_flash_hca/qkv_mixed.py
++++ b/deepseek_v4_flash_hca/qkv_proj_rope.py
+@@ -23 +23,24 @@
+-q_proj_q = q_proj_q_streamed
++@pl.jit.inline(auto_scope=False)
++def q_proj_q_nd_view(
++    x: pl.Tensor[[T_DYN, D], pl.BF16],
++    wq_b: pl.Tensor[[Q_LORA, H * HEAD_DIM], pl.INT8, QUANT_WEIGHT_LAYOUT],
++    wq_b_scale: pl.Tensor[[H * HEAD_DIM], pl.FP32],
++    rope_cos_il: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
++    rope_sin_signed: pl.Tensor[[T_DYN, ROPE_DIM], pl.FP32],
++    rope_swap_idx: pl.Tensor[[T_DYN, ROPE_DIM], pl.INT32],
++    q: pl.Tensor[[T_DYN, H * HEAD_DIM], pl.BF16],
++    qr_i8_matmul: pl.Tensor[[QPROJ_T_PAD, Q_LORA], pl.INT8],
++    qr_scale_pad_store: pl.Tensor[[QPROJ_T_PAD, 1], pl.FP32],
++    qproj_dep: pl.Scalar[pl.TASK_ID],
++    q_ready: pl.Array[4, pl.TASK_ID],
++):
++    t_dim = pl.tensor.dim(x, 0)
++    q_dense = pl.reshape(q, [t_dim, H, HEAD_DIM])
++    q_proj_q_separate(
++        x, wq_b, wq_b_scale, rope_cos_il, rope_sin_signed, rope_swap_idx,
++        q_dense, qr_i8_matmul, qr_scale_pad_store, qproj_dep,
++    )
++    return q
++
++
++q_proj_q = q_proj_q_streamed if QUANT_WEIGHT_NZ else q_proj_q_nd_view

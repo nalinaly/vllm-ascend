@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# 单卡 C128 子链验证；使用 task-submit 分配的设备。
+set -eo pipefail
+: "${TASK_DEVICE:?请通过 task-submit 提交}"
+if [[ "$TASK_DEVICE" == *,* ]]; then
+  printf 'C128 子链验证只需要一张卡。\n' >&2
+  exit 2
+fi
+hca_repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(dirname "$hca_repo")/env-dsv4-0251rc1.sh"
+hca_output="$(realpath -m "${1:?指定结果目录}")"
+mkdir -p "$hca_output/ascend"
+export ASCEND_RT_VISIBLE_DEVICES="$TASK_DEVICE"
+export ASCEND_PROCESS_LOG_PATH="$hca_output/ascend"
+cd "$hca_output"
+exec python "$hca_repo/tests/pypto_test/dsv4_hca_compressor.py" --output "$hca_output"

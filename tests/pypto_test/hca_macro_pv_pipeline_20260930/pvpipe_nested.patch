@@ -1,0 +1,43 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1277,13 +1277,27 @@
+-                        right_update0 = pl.tile.extract(part_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
+-                                                             target_memory=pl.MemorySpace.Right)
+-                        update0 = pl.tile.matmul_acc(acc0, left_part, right_update0)
+-                        right_update1 = pl.tile.extract(part_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
+-                                                             target_memory=pl.MemorySpace.Right)
+-                        update1 = pl.tile.matmul_acc(acc1, left_part, right_update1)
+-                        right_update2 = pl.tile.extract(part_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
+-                                                             target_memory=pl.MemorySpace.Right)
+-                        update2 = pl.tile.matmul_acc(acc2, left_part, right_update2)
+-                        right_update3 = pl.tile.extract(part_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
+-                                                             target_memory=pl.MemorySpace.Right)
+-                        update3 = pl.tile.matmul_acc(acc3, left_part, right_update3)
+-                        done0, done1, done2, done3 = pl.yield_(update0, update1, update2, update3)
++                        # K块加载仍按stage2预取；N列循环顺序消费L0B，
++                        # 避免四列×两级的全部Right操作数同时驻留。
++                        for column, (col0, col1, col2, col3) in pl.range(
++                            4, init_values=(acc0, acc1, acc2, acc3),
++                        ):
++                            right_part = pl.tile.extract(
++                                part_kv, 0, column * PV_N_TILE, [ATTN_K_TILE, PV_N_TILE],
++                                target_memory=pl.MemorySpace.Right,
++                            )
++                            if column == 0:
++                                next0, next1, next2, next3 = pl.yield_(
++                                    pl.tile.matmul_acc(col0, left_part, right_part), col1, col2, col3,
++                                )
++                            elif column == 1:
++                                next0, next1, next2, next3 = pl.yield_(
++                                    col0, pl.tile.matmul_acc(col1, left_part, right_part), col2, col3,
++                                )
++                            elif column == 2:
++                                next0, next1, next2, next3 = pl.yield_(
++                                    col0, col1, pl.tile.matmul_acc(col2, left_part, right_part), col3,
++                                )
++                            else:
++                                next0, next1, next2, next3 = pl.yield_(
++                                    col0, col1, col2, pl.tile.matmul_acc(col3, left_part, right_part),
++                                )
++                            column0, column1, column2, column3 = pl.yield_(next0, next1, next2, next3)
++                        done0, done1, done2, done3 = pl.yield_(column0, column1, column2, column3)

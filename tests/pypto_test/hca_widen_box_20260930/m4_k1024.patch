@@ -1,0 +1,61 @@
+--- a/deepseek_v4_flash_hca/decode_hca.py
++++ b/deepseek_v4_flash_hca/decode_hca.py
+@@ -37,0 +38,3 @@
++WIDEN_ACTIVE_ROWS = 4
++WIDEN_LOAD_COLS = 1024
++WIDEN_PIPE_STAGE = 2
+@@ -111 +114 @@
+-    widen_blocks = (tokens + WIDEN_ROWS - 1) // WIDEN_ROWS
++    widen_blocks = (tokens + WIDEN_ACTIVE_ROWS - 1) // WIDEN_ACTIVE_ROWS
+@@ -114 +116,0 @@
+-    tail = pl.create_tensor([WIDEN_ROWS, HC_DIM], dtype=pl.FP32)
+@@ -119,6 +121,7 @@
+-            row = block * WIDEN_ROWS
+-            count = pl.min(WIDEN_ROWS, tokens - row)
+-            sq_sum = pl.full([1, WIDEN_ROWS], dtype=pl.FP32, value=0.0)
+-            for col_block in pl.pipeline(HC_DIM // RMS_COLS, stage=4):
+-                col = col_block * RMS_COLS
+-                source = pl.slice(x_flat, [WIDEN_ROWS, RMS_COLS], [row, col], valid_shape=[count, RMS_COLS])
++            row = block * WIDEN_ACTIVE_ROWS
++            count = pl.min(WIDEN_ACTIVE_ROWS, tokens - row)
++            sq_sum = pl.tile.full([1, WIDEN_ROWS], dtype=pl.FP32, value=0.0)
++            for col_block in pl.pipeline(HC_DIM // WIDEN_LOAD_COLS, stage=WIDEN_PIPE_STAGE):
++                col = col_block * WIDEN_LOAD_COLS
++                source = pl.load(x_flat, [row, col], [WIDEN_ROWS, WIDEN_LOAD_COLS],
++                                 valid_shape=[count, WIDEN_LOAD_COLS])
+@@ -126,13 +129,17 @@
+-                if count == WIDEN_ROWS:
+-                    x32_flat[row:row + WIDEN_ROWS, col:col + RMS_COLS] = value
+-                    squared = pl.mul(value, value)
+-                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared), [1, WIDEN_ROWS]))
+-                else:
+-                    # cast 可能丢失 valid_shape，显式恢复并清零无效行后才参与归约。
+-                    clean = pl.fillpad(pl.set_validshape(value, count, RMS_COLS), pad_value=pl.PadValue.zero)
+-                    squared_tail = pl.mul(clean, clean)
+-                    sq_sum = pl.add(sq_sum, pl.reshape(pl.row_sum(squared_tail), [1, WIDEN_ROWS]))
+-                    tail[:, col:col + RMS_COLS] = value
+-                    valid = pl.load(tail, [0, col], [WIDEN_ROWS, RMS_COLS], valid_shape=[count, RMS_COLS],
+-                                    target_memory=pl.MemorySpace.Vec)
+-                    pl.store(valid, [row, col], x32_flat)
++                # 只写本worker有效行，不能让两个4行worker的8行物理盒互相覆盖。
++                valid_value = pl.set_validshape(value, count, WIDEN_LOAD_COLS)
++                pl.store(valid_value, [row, col], x32_flat)
++                clean = pl.fillpad(valid_value, pad_value=pl.PadValue.zero)
++                squared = pl.mul(clean, clean)
++                sum_tmp = pl.create_tile([WIDEN_ROWS, RMS_COLS], dtype=pl.FP32)
++                # 宽搬运仍按原来的两段512列顺序累加，不改成1024列整块归约。
++                square_left = pl.tile.extract(
++                    squared, 0, 0, [WIDEN_ROWS, RMS_COLS], target_memory=pl.MemorySpace.Vec,
++                )
++                left_sum = pl.row_sum(square_left, sum_tmp)
++                sq_sum = pl.add(sq_sum, pl.reshape(left_sum, [1, WIDEN_ROWS]))
++                square_right = pl.tile.extract(
++                    squared, 0, RMS_COLS, [WIDEN_ROWS, RMS_COLS], target_memory=pl.MemorySpace.Vec,
++                )
++                right_sum = pl.row_sum(square_right, sum_tmp)
++                sq_sum = pl.add(sq_sum, pl.reshape(right_sum, [1, WIDEN_ROWS]))
+@@ -140 +147,3 @@
+-            inv_rms[row:row + WIDEN_ROWS, 0:1] = pl.reshape(pl.rsqrt(mean, high_precision=True), [WIDEN_ROWS, 1])
++            inverse_tmp = pl.create_tile([1, WIDEN_ROWS], dtype=pl.FP32)
++            inverse = pl.reshape(pl.tile.rsqrt(mean, inverse_tmp), [WIDEN_ROWS, 1])
++            pl.store(pl.set_validshape(inverse, count, 1), [row, 0], inv_rms)

@@ -1,0 +1,8 @@
+--- a/deepseek_v4_flash_hca/hc_pre_fused.py
++++ b/deepseek_v4_flash_hca/hc_pre_fused.py
+@@ -122 +122 @@
+-    for ob in pl.spmd(token_tiles, name_hint="comb_sinkhorn", allow_early_resolve=True):
++    for ob in pl.spmd(token_tiles, name_hint="comb_sinkhorn", allow_early_resolve=True, sync_start=True):
+@@ -283 +283 @@
+-    with pl.spmd(t_pad // MIX_ROWS, name_hint="mix_x_rms_norm", allow_early_resolve=True) as mixed_tid:
++    with pl.spmd(t_pad // MIX_ROWS, name_hint="mix_x_rms_norm", allow_early_resolve=True, sync_start=True) as mixed_tid:

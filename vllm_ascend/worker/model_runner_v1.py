@@ -127,6 +127,7 @@ from vllm_ascend.eplb.core.eplb_worker import EplbProcess
 from vllm_ascend.eplb.eplb_updator import EplbUpdator
 from vllm_ascend.model_executor.offloader import create_offloader
 from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import can_replay_csa_graph, is_csa_model
+from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service_config import is_hca_model
 from vllm_ascend.ops.rotary_embedding import set_cos_and_sin, update_cos_sin
 from vllm_ascend.patch.worker.patch_draft_quarot import patch_load_weights
 from vllm_ascend.quantization.utils import enable_fa_quant
@@ -2724,9 +2725,8 @@ class NPUModelRunner(GPUModelRunner):
                 invalid_modes={CUDAGraphMode.FULL} if disable_full else None,
                 num_active_loras=num_active_loras,
             )
-            # Python forward gates do not run during graph replay. Only replay
-            # a captured CSA bucket for complete, unpadded six-token requests.
-            if mode == CUDAGraphMode.FULL and is_csa_model(self.vllm_config):
+            # 图重放不再经过 Python 入口判定，CSA/HCA 共用实际 S6 请求与捕获档位检查。
+            if mode == CUDAGraphMode.FULL and (is_csa_model(self.vllm_config) or is_hca_model(self.vllm_config)):
                 if not can_replay_csa_graph(
                     num_tokens=csa_actual_tokens, num_reqs=num_reqs,
                     uniform_decode=uniform_decode, padded_tokens=descriptor.num_tokens,
@@ -3465,10 +3465,9 @@ class NPUModelRunner(GPUModelRunner):
                 from vllm.model_executor.model_loader.default_loader import DefaultModelLoader
                 DefaultModelLoader._init_ep_weight_filter = mock_pass
             self.model: nn.Module = get_model(vllm_config=self.vllm_config)
-            # vLLM 0.25.1 has no model-level post-load hook. Prepare CSA only
-            # after get_model has finalized all Native quantized parameters,
-            # and before memory profiling or graph capture.
-            if is_csa_model(self.vllm_config):
+            # vLLM 0.25.1 缺少模型级加载后钩子。CSA/HCA 都在 Native 权重完成量化
+            # 后处理后准备，早于显存 profiling 和图捕获。
+            if is_csa_model(self.vllm_config) or is_hca_model(self.vllm_config):
                 self.model.process_weights_after_loading()
             for name, _ in self.model.named_parameters():
                 # sinks is a kind of parameter in attention

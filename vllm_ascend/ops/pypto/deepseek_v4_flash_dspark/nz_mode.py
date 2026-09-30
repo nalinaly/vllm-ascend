@@ -86,11 +86,20 @@ def validate_weight_nz_mode(effective_mode: int) -> None:
         )
 
 
+# 全部作为 cube matmul B 操作数消费的权重。前四张是零拷贝借用 Native 存储的
+# "根权重"；后三张（HCA 的 KV／压缩投影权重）历史上一律按 ND 准备，但它们同样
+# 是 B 操作数，布局也应当由根签名说话，而不是写死在加载期。根签名各不相同
+# （CSA 没有 cmp_wgate），所以只读实际存在的参数。
+B_OPERAND_WEIGHTS = ("wq_a", "wq_b", "wo_a", "wo_b", "wkv", "cmp_wkv", "cmp_wgate")
+
+
 def root_weight_layouts(root_function) -> dict[str, str]:
     """读取本仓根函数的实际注解；日志与存储绑定共用，避免另维护一份 NZ 名单。"""
     params = inspect.signature(root_function).parameters
     result = {}
-    for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
+    for name in B_OPERAND_WEIGHTS:
+        if name not in params:
+            continue
         layout = params[name].annotation.layout
         if layout is None:
             result[name] = "ND"

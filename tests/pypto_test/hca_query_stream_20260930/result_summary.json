@@ -1,0 +1,332 @@
+{
+  "source": {
+    "baseline_commit": "bb4c2831",
+    "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-query-stream-bb4c2831-20260930/base",
+    "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-query-stream-bb4c2831-20260930/stream",
+    "change": "preserve QK/PV ring across queries; drain only at each worker's final query",
+    "numerics": "unchanged block/quantization/merge order; per-slot query descriptors keep delayed PV correct",
+    "scope": "long path only, same workers and task graph, no toolchain edits"
+  },
+  "pairs": {
+    "h131072_b16": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_query_stream_20260930/pair_h131072_b16/report.json",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 586.5,
+          "max_us": 631.75,
+          "mean_us": 608.45,
+          "p50_us": 609.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 574.5,
+          "max_us": 604.5,
+          "mean_us": 584.325,
+          "p50_us": 579.75
+        }
+      },
+      "runtime_shapes": {
+        "base": {
+          "tokens": 96,
+          "cmp_table": [
+            16,
+            34
+          ],
+          "attention_path": "long"
+        },
+        "candidate": {
+          "tokens": 96,
+          "cmp_table": [
+            16,
+            34
+          ],
+          "attention_path": "long"
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "graph_state_and_guards": "PASS",
+      "padding_graph": null,
+      "padding_active_batches": [],
+      "performance_evidence": true
+    },
+    "h8192_b24": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_query_stream_20260930/pair_h8192_b24/report.json",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 622.25,
+          "max_us": 669.75,
+          "mean_us": 637.35,
+          "p50_us": 630.25
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 633.0,
+          "max_us": 684.75,
+          "mean_us": 644.725,
+          "p50_us": 642.625
+        }
+      },
+      "runtime_shapes": {
+        "base": {
+          "tokens": 144,
+          "cmp_table": [
+            24,
+            4
+          ],
+          "attention_path": "short"
+        },
+        "candidate": {
+          "tokens": 144,
+          "cmp_table": [
+            24,
+            4
+          ],
+          "attention_path": "short"
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "graph_state_and_guards": "PASS",
+      "padding_graph": null,
+      "padding_active_batches": [],
+      "performance_evidence": true
+    },
+    "h16507_b6": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_query_stream_20260930/pair_h16507_b6/report.json",
+      "summary": {
+        "base": {
+          "count": 2,
+          "min_us": 546.0,
+          "max_us": 619.25,
+          "mean_us": 582.625,
+          "p50_us": 582.625
+        },
+        "candidate": {
+          "count": 2,
+          "min_us": 536.5,
+          "max_us": 556.0,
+          "mean_us": 546.25,
+          "p50_us": 546.25
+        }
+      },
+      "runtime_shapes": {
+        "base": {
+          "tokens": 36,
+          "cmp_table": [
+            6,
+            6
+          ],
+          "attention_path": "long"
+        },
+        "candidate": {
+          "tokens": 36,
+          "cmp_table": [
+            6,
+            6
+          ],
+          "attention_path": "long"
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "graph_state_and_guards": "PASS",
+      "padding_graph": "PASS",
+      "padding_active_batches": [
+        6,
+        5,
+        1,
+        6
+      ],
+      "performance_evidence": false
+    },
+    "h16384_b2": {
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_query_stream_20260930/pair_h16384_b2_fixed/report.json",
+      "summary": {
+        "base": {
+          "count": 2,
+          "min_us": 299.25,
+          "max_us": 322.0,
+          "mean_us": 310.625,
+          "p50_us": 310.625
+        },
+        "candidate": {
+          "count": 2,
+          "min_us": 305.0,
+          "max_us": 317.5,
+          "mean_us": 311.25,
+          "p50_us": 311.25
+        }
+      },
+      "runtime_shapes": {
+        "base": {
+          "tokens": 12,
+          "cmp_table": [
+            2,
+            6
+          ],
+          "attention_path": "long"
+        },
+        "candidate": {
+          "tokens": 12,
+          "cmp_table": [
+            2,
+            6
+          ],
+          "attention_path": "long"
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "graph_state_and_guards": "PASS",
+      "padding_graph": "PASS",
+      "padding_active_batches": [
+        2,
+        1,
+        2
+      ],
+      "performance_evidence": false
+    }
+  },
+  "weighted_pair_mean_change_pct": -2.9405674095986223,
+  "service_summary": {
+    "base": {
+      "all_device_replays": {
+        "count": 18,
+        "min_us": 587.0,
+        "max_us": 648.75,
+        "mean_us": 605.7083333333334,
+        "p50_us": 600.125
+      },
+      "pass_medians": {
+        "count": 2,
+        "min_us": 600.0,
+        "max_us": 602.5,
+        "mean_us": 601.25,
+        "p50_us": 601.25
+      },
+      "all_event_replays": {
+        "count": 40,
+        "min_us": 836.899995803833,
+        "max_us": 932.1600198745728,
+        "mean_us": 879.3839946389198,
+        "p50_us": 876.230001449585
+      }
+    },
+    "stream": {
+      "all_device_replays": {
+        "count": 18,
+        "min_us": 558.5,
+        "max_us": 634.75,
+        "mean_us": 583.9027777777778,
+        "p50_us": 580.75
+      },
+      "pass_medians": {
+        "count": 2,
+        "min_us": 570.5,
+        "max_us": 582.25,
+        "mean_us": 576.375,
+        "p50_us": 576.375
+      },
+      "all_event_replays": {
+        "count": 40,
+        "min_us": 818.6600208282471,
+        "max_us": 896.7000246047974,
+        "mean_us": 853.7315011024475,
+        "p50_us": 853.1799912452698
+      }
+    }
+  },
+  "service_full_state": "PASS",
+  "service_samples_and_all_incore_tasks": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/hca_query_stream_20260930/result_h131072_b16.json",
+  "empty_metadata_test_fix": {
+    "baseline_failure": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_query_stream_20260930/pair_h16384_b2_base_padding/failure.json",
+    "failed_check": {
+      "compressed.cos": {
+        "status": "FAIL",
+        "shape": [
+          0,
+          1,
+          1,
+          64
+        ],
+        "dtype": "torch.float32",
+        "expected_shape": [
+          0,
+          1,
+          1,
+          64
+        ],
+        "expected_dtype": "torch.float32",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 0,
+        "reason": "没有可比较的元素"
+      },
+      "compressed.sin": {
+        "status": "FAIL",
+        "shape": [
+          0,
+          1,
+          1,
+          64
+        ],
+        "dtype": "torch.float32",
+        "expected_shape": [
+          0,
+          1,
+          1,
+          64
+        ],
+        "expected_dtype": "torch.float32",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 0,
+        "reason": "没有可比较的元素"
+      },
+      "compressed.slots": {
+        "status": "FAIL",
+        "shape": [
+          0,
+          2
+        ],
+        "dtype": "torch.int32",
+        "expected_shape": [
+          0,
+          2
+        ],
+        "expected_dtype": "torch.int32",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 0,
+        "reason": "没有可比较的元素"
+      }
+    },
+    "resolution": "No newly compressed token: compare complete invalid slots, skip unused cos/sin rows.",
+    "candidate_after_fix": "PASS"
+  },
+  "limits": [
+    "Single-card layer-3 synthetic inputs/history with real weights; not whole-model/Native acceptance.",
+    "Short path unchanged; retain observed drift without assigning it to the long-path change.",
+    "Boundary cycles=1 only check correctness; they are not performance evidence.",
+    "DFX worker times include waits; all linked task groups retained to avoid single-task attribution."
+  ]
+}

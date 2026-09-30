@@ -52,38 +52,15 @@ def install_csa_forward(layer):
         layer.forward = MethodType(csa_layer_forward, layer)
 
 
-def prepare_csa_model(model):
-    # The opt-in runner hook runs after Native per-layer quant finalization.
-    # No PyPTO initialization or NPU allocation occurs during model inspection.
-    import importlib
+def init_pto_runtime():
+    """CSA 与 HCA 共用同一个设备运行时和 arena 配置。"""
     import inspect
     import os
 
     import pypto.torch
     from vllm.config import get_current_vllm_config
-    from vllm_ascend.ascend_config import get_ascend_config
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import (
-        root_weight_layouts, validate_weight_nz_mode,
-    )
-    from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs, selected_variant, variant_package
 
-    # 两套 CSA 算子并存，由 PTO_CSA_VARIANT 选择，默认精度版。只有算子与其适配层
-    # 按版本取；service_config 的档位与图重放闸门两套共用一份（性能版里是重导出），
-    # 因为 model_runner_v1.py 直接从精度版导入那些闸门，各留一份就会在判据上分叉。
-    package = variant_package()
-    effective_mode = get_ascend_config().weight_nz_mode
-    validate_weight_nz_mode(effective_mode)
-    CSAOperators = importlib.import_module(f"{package}.native_adapter").CSAOperators
-    CSAServiceRuntime = importlib.import_module(f"{package}.service").CSAServiceRuntime
-    root_function = importlib.import_module(f"{package}.decode_csa")._decode_csa_tp1_layer
-    layouts = root_weight_layouts(root_function)
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
-
-    reduction = importlib.import_module(f"{package}.qkv_proj_rope")
-    logger.info(
-        "PTO_CSA_REDUCTION atomic_add=%d qr_split_k=%d kv_split_k=%d",
-        ATOMIC_ADD, reduction.QR_OK, reduction.KV_OK,
-    )
+    from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
 
     # 运行时默认仍是 tensormap_and_ringbuffer。显存排查发现它在 init 期固定占用
     # 1.343 GiB 设备显存（与 kernel / batch / 层数无关），而 host_build_graph 只占
@@ -108,6 +85,38 @@ def prepare_csa_model(model):
         runtime=os.environ.get("PTO_CSA_RUNTIME", "tensormap_and_ringbuffer"),
         **ring_kwargs,
     )
+
+
+def prepare_csa_model(model):
+    # The opt-in runner hook runs after Native per-layer quant finalization.
+    # No PyPTO initialization or NPU allocation occurs during model inspection.
+    import importlib
+    from vllm.config import get_current_vllm_config
+    from vllm_ascend.ascend_config import get_ascend_config
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import (
+        root_weight_layouts, validate_weight_nz_mode,
+    )
+    from vllm_ascend.ops.pypto.variant import selected_variant, variant_package
+
+    # 两套 CSA 算子并存，由 PTO_CSA_VARIANT 选择，默认精度版。只有算子与其适配层
+    # 按版本取；service_config 的档位与图重放闸门两套共用一份（性能版里是重导出），
+    # 因为 model_runner_v1.py 直接从精度版导入那些闸门，各留一份就会在判据上分叉。
+    package = variant_package()
+    effective_mode = get_ascend_config().weight_nz_mode
+    validate_weight_nz_mode(effective_mode)
+    CSAOperators = importlib.import_module(f"{package}.native_adapter").CSAOperators
+    CSAServiceRuntime = importlib.import_module(f"{package}.service").CSAServiceRuntime
+    root_function = importlib.import_module(f"{package}.decode_csa")._decode_csa_tp1_layer
+    layouts = root_weight_layouts(root_function)
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
+
+    reduction = importlib.import_module(f"{package}.qkv_proj_rope")
+    logger.info(
+        "PTO_CSA_REDUCTION atomic_add=%d qr_split_k=%d kv_split_k=%d",
+        ATOMIC_ADD, reduction.QR_OK, reduction.KV_OK,
+    )
+
+    init_pto_runtime()
     operators = CSAOperators.register()
     max_num_seqs = get_current_vllm_config().scheduler_config.max_num_seqs
     count = 0

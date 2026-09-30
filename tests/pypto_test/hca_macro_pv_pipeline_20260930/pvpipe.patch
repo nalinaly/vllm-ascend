@@ -1,0 +1,52 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1181 +1180,0 @@
+-        pv_kv = pl.create_tile([ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+@@ -1243,2 +1242,4 @@
+-                        pv_kv = pl.gather_row(pv_kv, raw_kv, [0, 0],
+-                                             [prev_request * REQUEST_KV_ROWS + prev_drop, 0], [ATTN_K_TILE, HEAD_DIM])
++                        first_kv = pl.yield_(pl.load(
++                            raw_kv, [prev_request * REQUEST_KV_ROWS + prev_drop, 0],
++                            [ATTN_K_TILE, HEAD_DIM], target_memory=pl.MemorySpace.Mat,
++                        ))
+@@ -1247 +1248,4 @@
+-                        pv_kv = pl.gather_row(pv_kv, cmp_work_kv, [0, 0], [pv_source, 0], [ATTN_K_TILE, HEAD_DIM])
++                        first_kv = pl.yield_(pl.load(
++                            cmp_work_kv, [pv_source, 0], [ATTN_K_TILE, HEAD_DIM],
++                            target_memory=pl.MemorySpace.Mat,
++                        ))
+@@ -1250 +1254 @@
+-                    right0 = pl.tile.extract(pv_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
++                    right0 = pl.tile.extract(first_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
+@@ -1253 +1257 @@
+-                    right1 = pl.tile.extract(pv_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
++                    right1 = pl.tile.extract(first_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
+@@ -1256 +1260 @@
+-                    right2 = pl.tile.extract(pv_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
++                    right2 = pl.tile.extract(first_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
+@@ -1259 +1263 @@
+-                    right3 = pl.tile.extract(pv_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
++                    right3 = pl.tile.extract(first_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
+@@ -1262,2 +1266,2 @@
+-                    for part, (acc0, acc1, acc2, acc3) in pl.range(
+-                        1, prev_parts, init_values=(first0, first1, first2, first3),
++                    for part, (acc0, acc1, acc2, acc3) in pl.pipeline(
++                        1, prev_parts, stage=2, init_values=(first0, first1, first2, first3),
+@@ -1266 +1270,4 @@
+-                        pv_kv = pl.gather_row(pv_kv, cmp_work_kv, [0, 0], [source_row, 0], [ATTN_K_TILE, HEAD_DIM])
++                        part_kv = pl.load(
++                            cmp_work_kv, [source_row, 0], [ATTN_K_TILE, HEAD_DIM],
++                            target_memory=pl.MemorySpace.Mat,
++                        )
+@@ -1270 +1277 @@
+-                        right_update0 = pl.tile.extract(pv_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
++                        right_update0 = pl.tile.extract(part_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
+@@ -1273 +1280 @@
+-                        right_update1 = pl.tile.extract(pv_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
++                        right_update1 = pl.tile.extract(part_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
+@@ -1276 +1283 @@
+-                        right_update2 = pl.tile.extract(pv_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
++                        right_update2 = pl.tile.extract(part_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
+@@ -1279 +1286 @@
+-                        right_update3 = pl.tile.extract(pv_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
++                        right_update3 = pl.tile.extract(part_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],

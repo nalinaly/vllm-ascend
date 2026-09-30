@@ -1,0 +1,47 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -48,7 +48,7 @@
+     with pl.spmd(
+         STREAM_VEC_WORKERS,
+         name_hint="qproj_dequant_rms_nope_rope",
+-        allow_early_resolve=True,
++        allow_early_resolve=True, sync_start=True,
+     ) as dq_tid:
+         dq_worker = pl.tile.get_block_idx()
+         # 按本档位的 token 数自适应放大 head 块（上游写法）。恒用 Q_ROPE_H_TILE=4 时
+@@ -240,7 +240,7 @@
+         with pl.scope():
+             head_base = 0
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]], sync_start=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -275,7 +275,7 @@
+         with pl.scope():
+             head_base = 16
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]], sync_start=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -310,7 +310,7 @@
+         with pl.scope():
+             head_base = 32
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]], sync_start=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N
+@@ -345,7 +345,7 @@
+         with pl.scope():
+             head_base = 48
+             q_proj_i32 = pl.create_tensor([matrix_rows, STREAM_HEADS * HEAD_DIM], dtype=pl.INT32)
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]], sync_start=True):
+                 pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
+                 worker = pl.tile.get_block_idx()
+                 n_blocks = STREAM_HEADS * HEAD_DIM // STREAM_N

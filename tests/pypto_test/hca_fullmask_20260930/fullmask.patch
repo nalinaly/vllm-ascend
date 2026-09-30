@@ -1,0 +1,72 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1112,6 +1112,10 @@
+     cmp_work_kv = pl.create_tensor([cmp_gather_count * CMP_ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16)
+ 
+     cmp_work_valid = pl.create_tensor([cmp_gather_count, CMP_ATTN_K_TILE], dtype=pl.FP32)
++    # 由实际成功搬运的行数证明页有效性，不能只用页表容量或seq_len。
++    # 每项独占64字节，避免并发scalar write覆盖同cache line的邻项。
++    mask_line_i32 = 16
++    cmp_work_rows = pl.create_tensor([cmp_gather_count, mask_line_i32], dtype=pl.INT32)
+     # 每块承担的搬运项数按实际项数反推，使块数不超过一个 AIV 波（48 块）。
+     # 原先固定 CMP_GATHER_WORK_TILE 在 128K/B16 下算出约 64 块，是 1.5 波、白扔半波；
+     # 实测该任务跨度 51.1 μs，而核时间只有 900 μs（48 核下限 18.8 μs）。
+@@ -1134,6 +1138,7 @@
+             gather_rows = pl.min(HCA_MAX_COMPRESSED_ROWS, pl.max(
+                 pl.read(kv_seq_lens, [gather_request]), 0,
+             ) // COMPRESS_RATIO)
++            copied_rows = 0
+             for gather_page in pl.range(CMP_PAGES_PER_WORK):
+                 gather_page_col = gather_first_col + gather_page
+                 gather_valid_rows = pl.min(CMP_STORAGE_BLOCK_SIZE, pl.max(
+@@ -1143,6 +1148,7 @@
+                     gather_page_i32 = pl.read(cmp_block_table, [gather_request, gather_page_col])
+                     if gather_page_i32 >= 0:
+                         if gather_page_i32 < cmp_block_num:
++                            copied_rows = copied_rows + gather_valid_rows
+                             gather_page_id = pl.cast(gather_page_i32, pl.INDEX)
+                             gather_src = gather_page_id * CMP_STORAGE_BLOCK_SIZE
+                             gather_col = gather_page * CMP_STORAGE_BLOCK_SIZE
+@@ -1155,6 +1161,7 @@
+                                     pl.tile.write(gather_mask, [0, gather_col + gather_mask_col], 1.0)
+             pl.store(gather_tile, [gather_dst0, 0], cmp_work_kv)
+             pl.store(gather_mask, [gather_item, 0], cmp_work_valid)
++            pl.write(cmp_work_rows, [gather_item, 0], pl.cast(copied_rows, pl.INT32))
+ 
+ 
+ 
+@@ -1247,16 +1254,25 @@
+                             maximum, exponent = pl.yield_(raw_m, raw_exp)
+                         else:
+                             cmp_work = vec_tick
+-                            cmp_mask = pl.load(cmp_work_valid, [request * cmp_work_count + cmp_work, 0],
+-                                               [1, ATTN_K_TILE])
+-                            cmp_bias = pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF)
+-                            cmp_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), cmp_bias)
+                             valid_rows = pl.min(ATTN_K_TILE, cmp_rows - cmp_work * ATTN_K_TILE)
+-                            cmp_shaped = pl.set_validshape(cmp_scaled, H // 2, valid_rows)
+-                            cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
+-                            cmp_m = pl.row_max(cmp_masked, reduce_tmp)
+-                            cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
+-                            maximum, exponent = pl.yield_(cmp_m, cmp_exp)
++                            valid_page_rows = pl.read(
++                                cmp_work_rows, [request * cmp_work_count + cmp_work, 0])
++                            if valid_rows == ATTN_K_TILE and valid_page_rows == ATTN_K_TILE:
++                                full_scaled = pl.mul(score, SOFTMAX_SCALE)
++                                full_maximum = pl.row_max(full_scaled, reduce_tmp)
++                                full_exponent = pl.exp(pl.row_expand_sub(full_scaled, full_maximum))
++                                selected_m, selected_e = pl.yield_(full_maximum, full_exponent)
++                            else:
++                                cmp_mask = pl.load(cmp_work_valid, [request * cmp_work_count + cmp_work, 0],
++                                                   [1, ATTN_K_TILE])
++                                cmp_bias = pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF)
++                                cmp_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), cmp_bias)
++                                cmp_shaped = pl.set_validshape(cmp_scaled, H // 2, valid_rows)
++                                cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
++                                cmp_m = pl.row_max(cmp_masked, reduce_tmp)
++                                cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
++                                selected_m, selected_e = pl.yield_(cmp_m, cmp_exp)
++                            maximum, exponent = pl.yield_(selected_m, selected_e)
+                         total = pl.row_sum(exponent, reduce_tmp)
+                         vec_probability = pl.cast(exponent, pl.BF16, mode="rint")
+                         pl.store(vec_probability, [vec_row, 0], probs)

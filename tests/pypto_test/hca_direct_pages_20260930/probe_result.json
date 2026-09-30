@@ -1,0 +1,60 @@
+{
+  "scope": "synthetic standalone Attention versus dense FP64; no model token acceptance",
+  "device": 3,
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qqueue-groups-5c0fa709-20260930/base_hca_direct_pages_20260930_probe",
+    "online": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-direct-pages-cba6c465-20260930/online_hca_direct_pages_20260930_probe"
+  },
+  "cases": {
+    "131072": {
+      "edge": false,
+      "vs_dense_fp64": {
+        "base": {
+          "max_abs": 0.0011189481111155142,
+          "rmse": 0.00012676920575602639,
+          "nonfinite": 0,
+          "graph_exact": true,
+          "output_padding_guard": true
+        },
+        "online": {
+          "max_abs": 0.0011189481111155142,
+          "rmse": 0.00012676920575602639,
+          "nonfinite": 0,
+          "graph_exact": true,
+          "output_padding_guard": true
+        }
+      },
+      "online_vs_base": {
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "nonfinite": 0
+      }
+    },
+    "16507": {
+      "edge": true,
+      "vs_dense_fp64": {
+        "base": {
+          "max_abs": 0.002377886009350072,
+          "rmse": 0.00020690679246488248,
+          "nonfinite": 0,
+          "graph_exact": true,
+          "output_padding_guard": true
+        },
+        "online": {
+          "max_abs": 0.002377886009350072,
+          "rmse": 0.00020690679246488248,
+          "nonfinite": 0,
+          "graph_exact": true,
+          "output_padding_guard": true
+        }
+      },
+      "online_vs_base": {
+        "max_abs": 0.0,
+        "rmse": 0.0,
+        "nonfinite": 0
+      }
+    }
+  },
+  "status": "DIAGNOSTIC_COMPLETE",
+  "acceptance": "FP64 errors reported without converting a measured error into an acceptance tolerance"
+}

@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "ad0e6bbe",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-flat-sync-ad0e6bbe-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pre-ub-ad0e6bbe-20260930/mix_gm_bf16",
+  "change": "mix直接读原始BF16并无损转FP32，线性投影输入不变",
+  "invariants": "相同8行分工、stage2、split0到3及D256归约顺序、BF16舍入、tail保护、依赖",
+  "upstream": "pypto-lib2164563 hc_pre_norm仍存取GM；保留其算术，改变中间值存放位置",
+  "parent_candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-flat-sync-ad0e6bbe-20260930/base",
+  "mixed_storage": "GM"
+}

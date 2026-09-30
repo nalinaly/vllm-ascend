@@ -27,7 +27,7 @@ from dsv4_csa_replay import (
 from dsv4_csa_validation import validate_outputs
 
 
-def _export_swimlane(directory: Path) -> dict:
+def _export_swimlane(directory: Path, *, kernel_pattern="_jit__decode_csa_tp1_layer_*/kernel_config.py") -> dict:
     """把本次 DFX 记录转成带真实任务名的泳道，任务名取自本进程实际生成的 kernel_config。"""
     import ast
     import json as _json
@@ -38,7 +38,7 @@ def _export_swimlane(directory: Path) -> dict:
     if not records.is_file() or not deps.is_file():
         return {"exported": False, "reason": "DFX 未产出记录或依赖"}
     # 在新的输出目录执行，唯一完整层编译产物才可作为任务名称依据。
-    builds = list(Path("build_output").glob("_jit__decode_csa_tp1_layer_*/kernel_config.py"))
+    builds = list(Path("build_output").glob(kernel_pattern))
     if len(builds) != 1:
         return {"exported": False, "reason": f"需要唯一完整层 kernel_config.py，实到 {len(builds)} 份"}
     table = builds[0]

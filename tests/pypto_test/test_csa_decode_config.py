@@ -10,9 +10,10 @@ import pytest
 from offline_pd import run
 
 
+@pytest.mark.parametrize("attention", ["csa", "hca", "both"])
 @pytest.mark.parametrize("backend", ["native", "pto"])
 @pytest.mark.parametrize("graph_mode", ["full_decode_only", "eager"])
-def test_decode_llm_uses_template_optimizations(backend, graph_mode, monkeypatch, tmp_path):
+def test_decode_llm_uses_template_optimizations(attention, backend, graph_mode, monkeypatch, tmp_path):
     bank = tmp_path / "bank"
     bank.mkdir()
     (bank / "plan.json").write_text(json.dumps({
@@ -40,11 +41,18 @@ def test_decode_llm_uses_template_optimizations(backend, graph_mode, monkeypatch
     monkeypatch.setattr(sys, "argv", [
         "run.py", "decode", "--bank", str(bank), "--output", str(tmp_path / "out"),
         "--rank", "0", "--backend", backend, "--graph-mode", graph_mode,
-        "--batch", "24", "--capture-sizes", "144",
+        "--batch", "24", "--capture-sizes", "144", "--pto-attention", attention,
     ])
     with pytest.raises(CapturedLLM):
         run.main()
 
+    if backend == "pto":
+        expected_architecture = {
+            "csa": "PyptoCSADeepseekV4ForCausalLM",
+            "hca": "PyptoHCADeepseekV4ForCausalLM",
+            "both": "PyptoCSAHCADeepseekV4ForCausalLM",
+        }[attention]
+        assert supplied["hf_overrides"]["architectures"] == [expected_architecture]
     additional = supplied["additional_config"]
     compilation = additional["ascend_compilation_config"]
     assert compilation["enable_npugraph_ex"] == (graph_mode != "eager")

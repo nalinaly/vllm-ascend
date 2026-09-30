@@ -1,0 +1,9 @@
+{
+  "baseline_commit": "ad0e6bbe",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-flat-sync-ad0e6bbe-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-query-ad0e6bbe-20260930/pair_v2",
+  "change": "two queries share compressed QK/PV M128; raw QK/PV M64 per query; two L1 KV slots, one tick lookahead; FP32 output accumulation in GM by N128 chunks",
+  "invariants": "same per-query compressed-before-raw order, block maxima, BF16 probabilities, sink/causal masks and RoPE; 24 MIX groups and task dependencies unchanged",
+  "reference": "ops-transformer 28f40354 SplitBalanced mBaseSize and sparse_attn_sharedkv_swa_block_vector.h:757–826 GM FP32 accumulation",
+  "limits": "experimental; requires CPU capacity, real-device precision and performance checks"
+}

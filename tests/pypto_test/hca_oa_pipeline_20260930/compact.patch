@@ -1,0 +1,7 @@
+--- a/deepseek_v4_flash_dspark_perf/decode_o_proj.py
++++ b/deepseek_v4_flash_dspark_perf/decode_o_proj.py
+@@ -201 +201,3 @@
+-            seed = pl.create_tile([PROJ_A_ROW_TILE, 128], dtype=pl.FP32, target_memory=pl.MemorySpace.Acc)
++            seed_storage = pl.create_tile([PROJ_A_ROW_TILE, 128], dtype=pl.FP32,
++                                          target_memory=pl.MemorySpace.Acc, compact=True)
++            seed = pl.tile.set_validshape(seed_storage, pa_rows, 128)

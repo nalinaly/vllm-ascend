@@ -1,0 +1,328 @@
+{
+  "null_v2_h131072_b16": {
+    "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_pair_screen_20260930/null_v2_h131072_b16/report.json",
+    "status": "MEASURED",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-al1-bef9f7fa-20260930/base",
+      "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-al1-bef9f7fa-20260930/base"
+    },
+    "operators": {
+      "base": "hca_pair_base.attention.default",
+      "candidate": "hca_pair_candidate.attention.default"
+    },
+    "case": [
+      131072,
+      16
+    ],
+    "device": 3,
+    "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+    "options": {
+      "dynamic": false,
+      "inplace_pass": true,
+      "static_kernel_compile": true,
+      "super_kernel_optimize": false
+    },
+    "summary": {
+      "base": {
+        "count": 10,
+        "min_us": 579.5,
+        "max_us": 609.5,
+        "mean_us": 590.575,
+        "p50_us": 588.125
+      },
+      "candidate": {
+        "count": 10,
+        "min_us": 585.0,
+        "max_us": 623.25,
+        "mean_us": 595.4,
+        "p50_us": 591.25
+      }
+    },
+    "pairs": [
+      {
+        "base_us": 598.375,
+        "candidate_us": 594.875
+      },
+      {
+        "base_us": 582.5,
+        "candidate_us": 605.75
+      },
+      {
+        "base_us": 596.875,
+        "candidate_us": 595.25
+      },
+      {
+        "base_us": 589.5,
+        "candidate_us": 589.375
+      },
+      {
+        "base_us": 585.625,
+        "candidate_us": 591.75
+      }
+    ],
+    "state_exact": {
+      "base": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "candidate": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      }
+    },
+    "guards": {
+      "swa": "PASS",
+      "compressed": "PASS",
+      "state": "PASS",
+      "metadata.positions": "PASS",
+      "metadata.swa.query_start_loc": "PASS",
+      "metadata.swa.seq_lens": "PASS",
+      "metadata.swa.block_table": "PASS",
+      "metadata.swa.slot_mapping": "PASS",
+      "metadata.swa.start_pos": "PASS",
+      "metadata.compressed.query_start_loc": "PASS",
+      "metadata.compressed.seq_lens": "PASS",
+      "metadata.compressed.block_table": "PASS",
+      "metadata.compressed.start_pos": "PASS",
+      "metadata.state.query_start_loc": "PASS",
+      "metadata.state.seq_lens": "PASS",
+      "metadata.state.block_table": "PASS",
+      "metadata.state.slot_mapping": "PASS",
+      "metadata.state.start_pos": "PASS",
+      "metadata.compressed.compact_slots": "PASS"
+    },
+    "order": [
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base"
+    ],
+    "spans_us": [
+      608.5,
+      592.75,
+      597.0,
+      588.25,
+      584.5,
+      588.25,
+      623.25,
+      580.5,
+      609.5,
+      601.0,
+      589.5,
+      584.25,
+      588.0,
+      589.75,
+      589.0,
+      591.0,
+      591.75,
+      585.0,
+      598.5,
+      579.5
+    ],
+    "kernels_per_replay": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  },
+  "al1_h131072_b16": {
+    "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_pair_screen_20260930/al1_h131072_b16/report.json",
+    "status": "MEASURED",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-al1-bef9f7fa-20260930/base",
+      "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-ob-al1-bef9f7fa-20260930/al1"
+    },
+    "operators": {
+      "base": "hca_pair_base.attention.default",
+      "candidate": "hca_pair_candidate.attention.default"
+    },
+    "case": [
+      131072,
+      16
+    ],
+    "device": 3,
+    "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+    "options": {
+      "dynamic": false,
+      "inplace_pass": true,
+      "static_kernel_compile": true,
+      "super_kernel_optimize": false
+    },
+    "summary": {
+      "base": {
+        "count": 10,
+        "min_us": 581.0,
+        "max_us": 622.0,
+        "mean_us": 589.375,
+        "p50_us": 585.0
+      },
+      "candidate": {
+        "count": 10,
+        "min_us": 582.0,
+        "max_us": 606.25,
+        "mean_us": 595.45,
+        "p50_us": 592.875
+      }
+    },
+    "pairs": [
+      {
+        "base_us": 601.75,
+        "candidate_us": 593.625
+      },
+      {
+        "base_us": 586.5,
+        "candidate_us": 606.0
+      },
+      {
+        "base_us": 583.625,
+        "candidate_us": 592.875
+      },
+      {
+        "base_us": 590.0,
+        "candidate_us": 587.875
+      },
+      {
+        "base_us": 585.0,
+        "candidate_us": 596.875
+      }
+    ],
+    "state_exact": {
+      "base": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "candidate": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      }
+    },
+    "guards": {
+      "swa": "PASS",
+      "compressed": "PASS",
+      "state": "PASS",
+      "metadata.positions": "PASS",
+      "metadata.swa.query_start_loc": "PASS",
+      "metadata.swa.seq_lens": "PASS",
+      "metadata.swa.block_table": "PASS",
+      "metadata.swa.slot_mapping": "PASS",
+      "metadata.swa.start_pos": "PASS",
+      "metadata.compressed.query_start_loc": "PASS",
+      "metadata.compressed.seq_lens": "PASS",
+      "metadata.compressed.block_table": "PASS",
+      "metadata.compressed.start_pos": "PASS",
+      "metadata.state.query_start_loc": "PASS",
+      "metadata.state.seq_lens": "PASS",
+      "metadata.state.block_table": "PASS",
+      "metadata.state.slot_mapping": "PASS",
+      "metadata.state.start_pos": "PASS",
+      "metadata.compressed.compact_slots": "PASS"
+    },
+    "order": [
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base",
+      "base",
+      "candidate",
+      "candidate",
+      "base"
+    ],
+    "spans_us": [
+      622.0,
+      605.25,
+      582.0,
+      581.5,
+      590.0,
+      605.75,
+      606.25,
+      583.0,
+      581.0,
+      593.0,
+      592.75,
+      586.25,
+      597.0,
+      584.0,
+      591.75,
+      583.0,
+      584.5,
+      590.0,
+      603.75,
+      585.5
+    ],
+    "kernels_per_replay": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ]
+  }
+}

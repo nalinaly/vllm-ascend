@@ -1,0 +1,21 @@
+--- a/deepseek_v4_flash_hca/hc_pre_fused.py
++++ b/deepseek_v4_flash_hca/hc_pre_fused.py
+@@ -34 +34,2 @@
+-D_TILE = 256
++D_TILE = 512
++RMS_REDUCE_COLS = 256
+@@ -354,4 +355,10 @@
+-            sum_tmp = pl.create_tile([T_TILE, D_TILE], dtype=pl.FP32)
+-            y_sq_sum = pl.row_sum(y_sq, sum_tmp)
+-            y_sq_row = pl.reshape(y_sq_sum, [1, T_TILE])
+-            sq_sum = pl.add(sq_sum, y_sq_row)
++            sum_tmp = pl.create_tile([T_TILE, RMS_REDUCE_COLS], dtype=pl.FP32)
++            # 读取/混合/归一化用512列，统计仍按原先0,256,512,...次序累加。
++            left_sq = pl.tile.extract(y_sq, 0, 0, [T_TILE, RMS_REDUCE_COLS], target_memory=pl.MemorySpace.Vec)
++            left_sum = pl.row_sum(left_sq, sum_tmp)
++            sq_sum = pl.add(sq_sum, pl.reshape(left_sum, [1, T_TILE]))
++            right_sq = pl.tile.extract(
++                y_sq, 0, RMS_REDUCE_COLS, [T_TILE, RMS_REDUCE_COLS], target_memory=pl.MemorySpace.Vec,
++            )
++            right_sum = pl.row_sum(right_sq, sum_tmp)
++            sq_sum = pl.add(sq_sum, pl.reshape(right_sum, [1, T_TILE]))

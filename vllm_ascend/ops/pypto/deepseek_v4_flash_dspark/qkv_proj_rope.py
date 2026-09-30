@@ -22,6 +22,7 @@ from .nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT
 from .q_projection import (
     PREFILL_DENSE_TILE,
     QPROJ_M_TILE,
+    QPROJ_PIPE_M_TILE,
     QPROJ_MM_N_TILE,
     QPROJ_MM_T_DYN,
     QPROJ_T_PAD,
@@ -664,11 +665,9 @@ def q_proj_q(
     for tile_base in pl.range(0, t_dim, PREFILL_DENSE_TILE):
         tile_rows = pl.min(PREFILL_DENSE_TILE, t_dim - tile_base)
         with pl.scope():
-            # 按 QPROJ_M_TILE 向上取整，qproj 只跑整块：尾部那几行若按 16 行小块补算，
-            # 每个小块都要把整块 [Q_LORA, N] 权重再读一遍。多出来的行读的是
-            # qr_i8_matmul 的补位行，INT8 乘加不产生非有限值，结果落在补位行里，
-            # 反量化只读前 tile_rows 行，与 Native 的逐 token 结果无关。
-            qproj_t_matmul = ((tile_rows + QPROJ_M_TILE - 1) // QPROJ_M_TILE) * QPROJ_M_TILE
+            # 公共 Q_B 的 NZ 路径按 M128 分块，精度版也预留完整写回范围。
+            # 反量化仍只读取 tile_rows 个有效行，不改变归一化与量化语义。
+            qproj_t_matmul = ((tile_rows + QPROJ_PIPE_M_TILE - 1) // QPROJ_PIPE_M_TILE) * QPROJ_PIPE_M_TILE
             q_proj_i32 = pl.create_tensor([qproj_t_matmul, H * HEAD_DIM], dtype=pl.INT32)
             q_proj_i32, _qproj_tid = q_proj_q_matmul(
                 wq_b,

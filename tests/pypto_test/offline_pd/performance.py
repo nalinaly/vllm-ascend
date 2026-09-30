@@ -68,13 +68,18 @@ def device_tasks(directory, rank):
     return rows
 
 
-def layer_intervals(rows, side, steps=3):
+def target_layers(attention):
+    """正式 43 层模型的固定目标集合，不从采集结果反推覆盖率。"""
+    return set({"csa": range(2, 43, 2), "hca": range(3, 43, 2), "both": range(2, 43)}[attention])
+
+
+def layer_intervals(rows, side, steps=3, attention="csa"):
     """按主图及固定模型的 attention/FFN 次序映射，计数或次序不符即拒绝。"""
     def is_op(row, name):
         # CANN 同一图可导出算子名或带编译后缀的 kernel 名；保留原始名称，只统一识别边界。
         return row["name"] == name or row["name"].startswith(name + "_")
 
-    targets = set(range(2, 43, 2))
+    targets = target_layers(attention)
     native_per_step = 86 - (len(targets) if side == "pto" else 0)
     counts = Counter(row["model"] for row in rows if is_op(row, "HcPre"))
     models = [model for model, count in counts.items()
@@ -103,7 +108,7 @@ def layer_intervals(rows, side, steps=3):
         if side == "pto":
             runtimes = [row for row in in_step if row["name"].startswith("simpler_aicpu_kernel_exec_")]
             workers = [row for row in in_step if row["name"].startswith("aicore_kernel_mode_")]
-            require(len(runtimes) == len(workers) == 21,
+            require(len(runtimes) == len(workers) == len(targets),
                     f"step{step}: PTO runtime/worker 数量不符：{len(runtimes)}/{len(workers)}")
             for runtime, worker in zip(runtimes, workers):
                 require(max(runtime["start_ns"], worker["start_ns"]) < min(end(runtime), end(worker)),
@@ -116,7 +121,8 @@ def layer_intervals(rows, side, steps=3):
                 f"step{step}: attention/FFN 次序与正式 43 层模型不符")
         phase_us = [(item["end_ns"] - item["start_ns"]) / 1000 for item in segment]
         model_steps.append({"step": step, "main_graph_us": (upper - lower) / 1000,
-                            "c4_body_sum_us": sum(phase_us[2 * layer] for layer in targets),
+                            "c4_body_sum_us": sum(phase_us[2 * layer] for layer in range(2, 43, 2)),
+                            "c128_body_sum_us": sum(phase_us[2 * layer] for layer in range(3, 43, 2)),
                             "other_attention_sum_us": sum(phase_us[2 * layer] for layer in range(43)
                                                           if layer not in targets),
                             "ffn_sum_us": sum(phase_us[1::2]),
@@ -148,11 +154,12 @@ def compare_forward_setup(native, pto):
     return setups[0]
 
 
-def load_rank(root, side, rank, mode, plan, *, batch, tokens, steps, max_num_seqs, steady_cycles):
+def load_rank(root, side, rank, mode, plan, *, batch, tokens, steps, max_num_seqs, steady_cycles, attention="csa"):
     path = root / side / f"rank{rank}.performance.json"
     value = json.loads(path.read_text())
     # 扫描功能加入前的入口固定 max_num_seqs=batch；新扫描结果必须显式保存容量。
     value.setdefault("max_num_seqs", value["batch"])
+    require(value.get("pto_attention", "csa") == attention, f"{path}: attention 选择不符")
     expected_tokens = batch * (plan["decode"]["speculative_tokens"] + 1)
     expected = {"command": "performance", "backend": side, "rank": rank, "batch": batch,
                 "expected_tokens": expected_tokens, "max_num_seqs": max_num_seqs,
@@ -204,21 +211,23 @@ def load_rank(root, side, rank, mode, plan, *, batch, tokens, steps, max_num_seq
         observed = value.get("csa_observation", [])
         require(len(observed) == 1, f"{path}: 缺少捕获路径")
         captured = observed[0]["capture_time_selection"]
-        # 固定正式模型 43 层中的 21 个 C4 目标层，不能从已有键反推覆盖范围。
-        require(set(captured) == {f"model.layers.{i}.self_attn.attn" for i in range(2, 43, 2)},
-                f"{path}: C4 捕获层键与正式模型前缀不符")
+        # 从正式模型固定结构确定目标层，不能从已有键反推覆盖范围。
+        require(set(captured) == {f"model.layers.{i}.self_attn.attn" for i in target_layers(attention)},
+                f"{path}: 目标捕获层键与正式模型前缀不符")
         require(all(counts.get(f"pto_tokens{expected_tokens}", 0) > 0 for counts in captured.values()),
                 f"{path}: 目标档位未实际捕获 PTO")
     return value, stats
 
 
-def compare(root, mode, plan, *, batch=16, tokens=128, steps=3, ranks=16, max_num_seqs=None, steady_cycles=10):
+def compare(root, mode, plan, *, batch=16, tokens=128, steps=3, ranks=16, max_num_seqs=None, steady_cycles=10,
+            attention="csa", require_spec_equal=True):
     max_num_seqs = batch if max_num_seqs is None else max_num_seqs
     report = {"status": "FAIL", "mode": mode, "scope": "主结果仅比较无 profiler 的 _model_forward 设备耗时均值；"
-              "metadata/logits/采样/草稿/步间等待不计入。CSA 层区间独立取设备 trace 首末。",
+              "metadata/logits/采样/草稿/步间等待不计入。目标 attention 层区间独立取设备 trace 首末。",
               "expected": {"ranks": ranks, "batch": batch, "max_num_seqs": max_num_seqs,
                            "tokens_per_round": tokens, "forward_steps_per_rank": steady_cycles,
                            "profile_steps": steps},
+              "pto_attention": attention, "criterion": "tokens_and_spec" if require_spec_equal else "tokens",
               "errors": [], "token_mismatches": 0, "spec_decode_mismatched_ranks": 0,
               "compared_tokens": 0, "ranks": []}
     samples = {side: [] for side in ("native", "pto")}
@@ -227,7 +236,7 @@ def compare(root, mode, plan, *, batch=16, tokens=128, steps=3, ranks=16, max_nu
     for rank in range(ranks):
         try:
             loaded = {side: load_rank(root, side, rank, mode, plan, batch=batch, tokens=tokens,
-                                     steps=steps, max_num_seqs=max_num_seqs, steady_cycles=steady_cycles)
+                                     steps=steps, max_num_seqs=max_num_seqs, steady_cycles=steady_cycles, attention=attention)
                       for side in ("native", "pto")}
             native, pto = (loaded[side][0] for side in ("native", "pto"))
             for key in ("key", "history", "capture_sizes", "max_num_seqs", "deterministic", "hccl_deterministic",
@@ -258,7 +267,7 @@ def compare(root, mode, plan, *, batch=16, tokens=128, steps=3, ranks=16, max_nu
                                "peak_allocated_bytes": steady["peak_allocated_bytes"],
                                "peak_reserved_bytes": steady["peak_reserved_bytes"]}
                 forward_rows[side][rank] = dict(zip(steady["steady_step_indices"], device))
-                layers = layer_intervals(device_tasks(root / side, rank), side, steps)
+                layers = layer_intervals(device_tasks(root / side, rank), side, steps, attention)
                 entry[side]["layers"] = layers
                 layer_samples[side].extend(layers["intervals"])
             report["ranks"].append(entry)
@@ -275,28 +284,37 @@ def compare(root, mode, plan, *, batch=16, tokens=128, steps=3, ranks=16, max_nu
                 continue
             slowest = [max(rows[i] for rows in by_rank.values()) for i in sorted(common)]
             report["slowest_rank_forward_device"][side] = distribution(slowest)
-        report["csa"] = {}
-        for side, values in layer_samples.items():
-            report["csa"][side] = {
-                "all": distribution([v["us"] for v in values]),
-                "first_layer": distribution([v["us"] for v in values if v["layer"] == 2]),
-                "following_layers": distribution([v["us"] for v in values if v["layer"] != 2]),
-                "by_layer": {str(layer): distribution([v["us"] for v in values if v["layer"] == layer])
-                             for layer in range(2, 43, 2)},
-            }
-        report["csa_scope"] = ("独立 Level0 trace 的设备首末区间，包含内部间隙；PTO runtime/worker "
-                               "取并集首末，不求和，首次根调用前的 compact metadata 单独列明并纳入。")
-        target_applies = batch == 16 and all(case["history"] == 8192 for case in plan["cases"])
+        for kind, layers in (("csa", set(range(2, 43, 2))), ("hca", set(range(3, 43, 2)))):
+            selected = target_layers(attention) & layers
+            if not selected:
+                continue
+            report[kind] = {}
+            for side, values in layer_samples.items():
+                chosen = [v for v in values if v["layer"] in selected]
+                report[kind][side] = {
+                    "all": distribution([v["us"] for v in chosen]),
+                    "first_layer": distribution([v["us"] for v in chosen if v["layer"] == min(selected)]),
+                    "following_layers": distribution([v["us"] for v in chosen if v["layer"] != min(selected)]),
+                    "by_layer": {str(layer): distribution([v["us"] for v in chosen if v["layer"] == layer])
+                                 for layer in sorted(selected)},
+                }
+        report["attention_scope"] = ("独立 Level0 trace 的设备首末区间，包含内部间隙；PTO runtime/worker "
+                                     "取并集首末，不求和，首次根调用前的 compact metadata 单独列明并纳入。")
+        target_applies = attention in ("csa", "both") and batch == 16 and all(
+            case["history"] == 8192 for case in plan["cases"])
         report["csa_750us_target_applicable"] = target_applies
         report["csa_pto_p50_below_750us"] = (report["csa"]["pto"]["all"]["p50_us"] < 750
                                             if target_applies else None)
-    if not report["errors"] and not report["token_mismatches"] and not report["spec_decode_mismatched_ranks"]:
+    if (not report["errors"] and not report["token_mismatches"]
+            and (not require_spec_equal or not report["spec_decode_mismatched_ranks"])):
         report["status"] = "MEASURED_TOKEN_PASS"
     return report
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pto-attention", choices=("csa", "hca", "both"), default="csa")
+    parser.add_argument("--token-only", action="store_true", help="以输出 token 一致验收，接受率差异单独报告")
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--bank", type=Path, required=True)
     parser.add_argument("--mode", type=int, choices=(1, 2), required=True)
@@ -308,7 +326,8 @@ def main():
     args = parser.parse_args()
     report = compare(args.root, args.mode, json.loads((args.bank / "plan.json").read_text()),
                      batch=args.batch, tokens=args.decode_tokens, steps=args.profile_steps,
-                     max_num_seqs=args.max_num_seqs, steady_cycles=args.steady_cycles)
+                     max_num_seqs=args.max_num_seqs, steady_cycles=args.steady_cycles,
+                     attention=args.pto_attention, require_spec_equal=not args.token_only)
     (args.root / "performance_comparison.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({k: v for k, v in report.items() if k != "ranks"}, ensure_ascii=False, indent=2))
     raise SystemExit(report["status"] == "FAIL")

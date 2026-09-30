@@ -14,6 +14,7 @@ import pypto.language as pl
 from ..deepseek_v4_flash_dspark.q_projection import (
     PREFILL_DENSE_TILE,
     QPROJ_M_TILE,
+    QPROJ_PIPE_M_TILE,
     QPROJ_MM_N_TILE,
     QPROJ_MM_T_DYN,
     QPROJ_T_PAD,
@@ -728,7 +729,8 @@ def q_proj_q(
         with pl.scope():
             # Reserve full cube row tiles. NZ marks the tail's actual rows;
             # ND computes the padded INT8 rows. Dequant reads tile_rows only.
-            qproj_t_matmul = ((tile_rows + QPROJ_M_TILE - 1) // QPROJ_M_TILE) * QPROJ_M_TILE
+            # Q_B 按 M128 行块整块写回，缓冲按同一粒度取整。
+            qproj_t_matmul = ((tile_rows + QPROJ_PIPE_M_TILE - 1) // QPROJ_PIPE_M_TILE) * QPROJ_PIPE_M_TILE
             q_proj_i32 = pl.create_tensor([qproj_t_matmul, H * HEAD_DIM], dtype=pl.INT32)
             q_proj_i32, _qproj_tid = q_proj_q_matmul(
                 wq_b,
@@ -806,7 +808,7 @@ def _kv_project(
     kv_m_groups = pl.min(KV_OM, pl.max(1, tile_rows // GROUP_ROWS))
     with pl.spmd(
         (HEAD_DIM // KV_N_TILE) * KV_OK * kv_m_groups,
-        name_hint="kv_proj_matmul",
+        name_hint="kv_proj_matmul", allow_early_resolve=True,
         deps=[late_dep],
     ) as _kv_tid:
         pl.set_cache_policy(wkv, pl.CachePolicy.BYPASS)
@@ -893,7 +895,7 @@ def kv_proj_rope(
             kv_token_tiles = (tile_rows + KV_RMS_T_TILE - 1) // KV_RMS_T_TILE
             for tg_idx in pl.spmd(
                 kv_token_tiles,
-                name_hint="kv_rms_norm_rope",
+                name_hint="kv_rms_norm_rope", allow_early_resolve=True,
                 sync_start=True,
             ):
                 tg = tg_idx * KV_RMS_T_TILE

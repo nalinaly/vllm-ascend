@@ -1,0 +1,22 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "nested": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/nested",
+    "compact": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/compact",
+    "peeled": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-oa-pipeline-f4dfef15-20260930/peeled"
+  },
+  "baseline": "0742f07c production operator, captured at f4dfef15",
+  "change": "N128 O-A: L1 K512 stage2, explicit L0 K128 stage2, single init_cond accumulator",
+  "invariants": "8 groups, same worker count/TaskIds/dependencies, Native NZ GM layout, K128 arithmetic order",
+  "scope": "private HCA package only; N256 branch and public CSA operator unchanged",
+  "reference": "ops-nn transpose_batch_mat_mul/pp_matmul_ein_sum_kernel.h L1 prefetch and L0 ping-pong",
+  "expected_capacity_bytes": {
+    "Mat": 524288,
+    "Left": 65536,
+    "Right": 65536,
+    "Acc": 65536
+  },
+  "nested_failure": "AccCompactValid: dynamic valid M needs compact Acc storage; plain create is rejected",
+  "compact_note": "Explicit L0 path uses compact=True plus validshape; currently an internal compiler API. Before production adoption prefer a tile.matmul-derived seed or an officially supported narrow seed.",
+  "peeled_change": "first real K128 tile.matmul derives compact Acc; finish first K512 then pipeline remaining K512 chunks; same arithmetic order and no extra GM loads, no compact=True and no runtime init_cond"
+}

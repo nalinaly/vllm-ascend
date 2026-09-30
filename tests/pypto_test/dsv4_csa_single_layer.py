@@ -82,7 +82,7 @@ def make_layer(config, checkpoint, device, layer_index=2):
     return layer, {"weights": records, "quant_methods": methods}
 
 
-def make_fixture(config, attention, batch, history, seed, device):
+def make_fixture(config, attention, batch, history, seed, device, table_history=None, reverse_pages=False):
     import torch
     from dsv4_csa_native_case import allocate_native_cache, make_cache_groups
 
@@ -103,9 +103,16 @@ def make_fixture(config, attention, batch, history, seed, device):
     for name, group in groups.items():
         spec = group["spec"]
         ratio = getattr(spec, "compress_ratio", 1)
-        columns = (history + 6 + spec.block_size * ratio - 1) // (spec.block_size * ratio) + 1
+        # table_history 固定页表宽度与分配页数，使不同历史长度的两份 fixture 形状相同，
+        # 供同地址 metadata A→B→A 图重放；默认按本次历史计算，行为不变。
+        width_history = history if table_history is None else table_history
+        if width_history < history:
+            raise ValueError("table_history 不能小于 history")
+        columns = (width_history + 6 + spec.block_size * ratio - 1) // (spec.block_size * ratio) + 1
         # 非压缩历史仅需保留滑窗/近期 state；页表保留完整逻辑列并循环映射独占物理页。
         per_request = columns if name in ("compressed", "indexer") else 9
+        if name == "state" and attention.compress_ratio == 128:
+            per_request = 18
         pages = batch * per_request + 1
         group["layout"] = allocate_native_cache(group, pages, device)
         for i, view in enumerate(group["views"]):
@@ -118,8 +125,9 @@ def make_fixture(config, attention, batch, history, seed, device):
         group["owner"].kv_cache = [group["views"]] if name == "indexer" else group["views"]
         table = BlockTable(spec.block_size, 40, columns, 256, True, device, num_speculative_tokens=5)
         for row in range(batch):
+            owner = batch - 1 - row if reverse_pages else row
             table.add_row(
-                [1 + row * per_request + (per_request - 1 - col) % per_request for col in range(columns)], row
+                [1 + owner * per_request + (per_request - 1 - col) % per_request for col in range(columns)], row
             )
         table.commit_block_table(batch)
         table.compute_slot_mapping(batch, bounds, positions // ratio)
@@ -153,6 +161,7 @@ def make_fixture(config, attention, batch, history, seed, device):
     compact = {
         name: attention.dsa_attn.dsa_attn.impl._compute_compressor_metadata(metadata[groups[name]["prefix"]].decode)
         for name in ("compressed", "indexer")
+        if name in groups
     }
     for name, group in groups.items():
         slots = compact[name][2] if name in compact else metadata[group["prefix"]].decode.slot_mapping
@@ -644,7 +653,9 @@ def run(args, report):
         from pypto._torch_npu import storage_shape
 
         report["weight_storage_binding"] = {}
-        for name, layout in layouts.items():
+        # 四张同方向根权重要求复用；其余投影权重允许加载期转置。
+        for name in ("wq_a", "wq_b", "wo_a", "wo_b"):
+            layout = layouts[name]
             original = getattr(layer.self_attn, name).weight
             prepared = weights[name]
             source_format = int(torch_npu.get_npu_format(original))

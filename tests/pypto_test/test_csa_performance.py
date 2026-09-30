@@ -249,10 +249,12 @@ def test_steady_covers_sampling_and_rejects_unfinished_cycles(observer, monkeypa
     assert "tokens_per_second" not in result
 
 
+@pytest.mark.parametrize("attention", ["csa", "hca", "both"])
 @pytest.mark.parametrize("missing_worker", [False, True])
 @pytest.mark.parametrize("kernel_names", [False, True])
-def test_layer_mapping_counts_overlap_once_and_rejects_missing_tasks(missing_worker, kernel_names):
+def test_layer_mapping_counts_overlap_once_and_rejects_missing_tasks(missing_worker, kernel_names, attention):
     rows = []
+    targets = list({"csa": range(2, 43, 2), "hca": range(3, 43, 2), "both": range(2, 43)}[attention])
 
     def task(name, time, duration, model=49):
         if kernel_names and name in ("HcPre", "HcPost", "CompressorMetadata"):
@@ -262,12 +264,12 @@ def test_layer_mapping_counts_overlap_once_and_rejects_missing_tasks(missing_wor
 
     for layer in range(43):
         start = layer * 40
-        if layer >= 2 and layer % 2 == 0:
-            if layer == 2:
+        if layer in targets:
+            if layer == targets[0]:
                 task("CompressorMetadata", start - 4, 2)
                 task("CompressorMetadata", start - 2, 2)
             task("simpler_aicpu_kernel_exec_example", start, 10, None)
-            if not (missing_worker and layer == 4):
+            if not (missing_worker and layer == targets[1]):
                 task("aicore_kernel_mode_0_mix_aic", start + 1, 8, None)
         else:
             task("HcPre", start, 2)
@@ -277,10 +279,10 @@ def test_layer_mapping_counts_overlap_once_and_rejects_missing_tasks(missing_wor
     rows.sort(key=lambda row: row["start_ns"])
     if missing_worker:
         with pytest.raises(ValueError, match="runtime/worker 数量不符"):
-            layer_intervals(rows, "pto", steps=1)
+            layer_intervals(rows, "pto", steps=1, attention=attention)
     else:
-        result = layer_intervals(rows, "pto", steps=1)["intervals"]
-        assert len(result) == 21
+        result = layer_intervals(rows, "pto", steps=1, attention=attention)["intervals"]
+        assert [row["layer"] for row in result] == targets
         assert result[0]["us"] == 14
         assert result[0]["leading_metadata_tasks"] == 2
         assert all(row["body_us"] == 10 for row in result)

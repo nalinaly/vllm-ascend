@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Create a reproducible cache bank, run P4x4, then Native/PTO D1x16.
+"""生成并审计 P4×DP4 离线缓存，验证 Native/PTO D1×DP/EP16。
 
-The plan and audit commands are CPU only. Both execution commands require a
-16-device task-submit allocation. Logs/artifacts belong to --bank/--output.
+plan/audit 只使用 CPU；设备执行必须经 task-submit 分卡。
+HCA decode 可显式选择 DP/EP8 作资源受限时的预验证，不能替代 EP16 结果。
 """
 
 import argparse
@@ -407,6 +407,7 @@ def diagnose(args, llm, cases):
               for _ in range(args.warmup_rounds)]
     common = {"command": args.command, "backend": args.backend, "rank": args.rank,
               "batch": args.batch, "max_num_seqs": args.max_num_seqs,
+              "pto_attention": args.pto_attention,
               "max_num_batched_tokens": args.max_num_batched_tokens,
               "submitted": args.rank_batch if args.rank_batch is not None else args.batch,
               "key": case["key"], "history": case["history"],
@@ -784,7 +785,10 @@ def worker(args):
     )
     overrides = {"sliding_window": 128}
     if not prefill and args.backend == "pto":
-        overrides["architectures"] = ["PyptoCSADeepseekV4ForCausalLM"]
+        overrides["architectures"] = [{
+            "csa": "PyptoCSADeepseekV4ForCausalLM", "hca": "PyptoHCADeepseekV4ForCausalLM",
+            "both": "PyptoCSAHCADeepseekV4ForCausalLM",
+        }[args.pto_attention]]
     llm = LLM(
         model=plan["model"], tokenizer_mode="deepseek_v4", trust_remote_code=True,
         worker_cls="offline_pd.worker.OfflineNPUWorker",
@@ -818,6 +822,7 @@ def worker(args):
         # weight_nz_mode 由 --weight-nz-mode 控制：0 全 ND，1 是 vllm-ascend 的默认值，
         # Native 会把量化权重转成 FRACTAL_NZ，PTO 按匹配的根签名直接借用存储。
         additional_config={"weight_nz_mode": args.weight_nz_mode, "enable_kv_nz": False, "enable_dsa_cp": False,
+                           "offline_pto_attention": args.pto_attention,
                            "offline_deterministic_level": int(args.deterministic),
                            "offline_event_work_mode": args.event_work_mode,
                            **({"offline_moe_routing_tokens": (args.rank_batch or args.batch)
@@ -895,7 +900,12 @@ def worker(args):
         # 提交数被忽略，所谓"不均衡负载"实际仍是均衡的（eager_pto_imbalanced 那轮
         # 16 个 rank 都提交了 40 条即为此）。max_num_seqs 仍统一取 args.batch。
         submitted = 1 if prefill else (args.rank_batch if args.rank_batch is not None else args.batch)
-        result = llm.generate([prompt] * submitted, params, use_tqdm=False)
+        if not prefill and args.pto_attention in ("hca", "both"):
+            from offline_pd.batch import generate_aligned_batch
+
+            result = generate_aligned_batch(llm, [prompt] * submitted, params)
+        else:
+            result = llm.generate([prompt] * submitted, params, use_tqdm=False)
         elapsed = time.perf_counter() - start
         observation = None if prefill else llm.collective_rpc("offline_end_observation")
         outputs.append({"key": case["key"], "submitted": submitted,
@@ -904,6 +914,9 @@ def worker(args):
                         "csa_observation": observation,
                         "spec_decode": None if prefill else spec_decode_metrics(llm)})
         write_json(args.output / f"rank{args.rank}.json", {"role": args.command, "backend": args.backend,
+                   "pto_attention": args.pto_attention,
+                   "decode_dp": args.decode_dp,
+                   "gpu_memory_utilization": args.gpu_memory_utilization,
                    "rank": args.rank, "batch": args.batch, "eplb_enabled": False,
                    "worker_runtime_config": args.worker_runtime_config, "cases": outputs})
         if observation is not None and args.backend == "pto":
@@ -913,12 +926,20 @@ def worker(args):
             for rank_stats in observation:
                 selection = (rank_stats or {}).get("capture_time_selection")
                 if not selection:
-                    raise RuntimeError("No capture-time CSA selection recorded; see csa_observation")
-                dead = [layer for layer, counts in selection.items()
-                        if not any(k.startswith("pto_") and v for k, v in counts.items())]
+                    raise RuntimeError("未记录目标 attention 的捕获期选择，不能证明 PTO 实际执行")
+                expected = rank_stats["target_layer_names"]
+                dead = [layer for layer in expected
+                        if not any(k.startswith("pto_") and v for k, v in selection.get(layer, {}).items())]
                 if dead:
-                    raise RuntimeError(f"These target CSA layers never selected PTO: {dead[:5]}; "
-                                       "see csa_observation")
+                    raise RuntimeError(f"这些 {args.pto_attention.upper()} 层未选中 PTO：{dead[:5]}")
+                if args.pto_attention in ("hca", "both") and args.graph_mode == "full_decode_only":
+                    replayed = rank_stats["model_forward_counts"]
+                    covered = sum(count for key, count in replayed.items()
+                                  if key.startswith("FULL_tokens") and all(
+                                      selection.get(layer, {}).get(key.replace("FULL_", "pto_"), 0)
+                                      for layer in expected))
+                    if not covered:
+                        raise RuntimeError(f"生成阶段未重放包含全部目标 PTO 层的图：{replayed}")
     # Engine shutdown tears down its owned workers; launcher checks all ranks.
     llm.llm_engine.engine_core.shutdown()
 
@@ -939,8 +960,10 @@ def launch(args):
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     devices = os.environ.get("TASK_DEVICE", "").split(",")
-    if len(devices) != 16 or any(not d.isdigit() for d in devices) or len(set(devices)) != 16:
-        raise RuntimeError("Run through task-submit --device auto --device-num 16")
+    device_count = args.decode_dp if args.command == "decode" else 16
+    if (len(devices) != device_count or any(not d.isdigit() for d in devices)
+            or len(set(devices)) != device_count):
+        raise RuntimeError(f"Run through task-submit --device auto --device-num {device_count}")
     if args.command in ("decode", "profile", "performance", "hostprofile", "swimlane", "padding-capture",
                         "steady", "bitcompare", "argdump", "moe-routing"):
         report = json.loads((args.bank / "audit.json").read_text())
@@ -972,7 +995,7 @@ def launch(args):
             if current.output.exists() and any(current.output.iterdir()):
                 raise FileExistsError(f"扫描目录已存在数据：{current.output}")
     prefill = args.command == "prefill"
-    tp, dp = (4, 4) if prefill else (1, 16)
+    tp, dp = (4, 4) if prefill else (1, args.decode_dp)
     rank_counts = rank_request_counts(args, dp)
     rank_tokens = rank_values(args.rank_decode_tokens, dp, args.decode_tokens)
     if any(value != args.decode_tokens for value in rank_tokens):
@@ -1026,6 +1049,8 @@ def launch(args):
                    "--rank", str(rank), "--batch", str(args.batch),
                    "--rank-batch", str(rank_counts[rank]),
                    "--rank-decode-token", str(rank_tokens[rank]), "--backend", args.backend,
+                   "--pto-attention", args.pto_attention,
+                   "--decode-dp", str(args.decode_dp),
                    "--gpu-memory-utilization", str(args.gpu_memory_utilization),
                    "--weight-nz-mode", str(args.weight_nz_mode),
                    "--decode-tokens", str(args.decode_tokens),
@@ -1101,6 +1126,10 @@ def main():
     parser.add_argument("--port", type=int, default=29683)
     parser.add_argument("--rank", type=int, default=-1)
     parser.add_argument("--backend", choices=["native", "pto"], default="native")
+    parser.add_argument("--pto-attention", choices=["csa", "hca", "both"], default="csa",
+                        help="选择本次对照的 attention 类型；both 同时启用 CSA/HCA，当前用于 decode token 验证")
+    parser.add_argument("--decode-dp", type=int, choices=[8, 16], default=16,
+                        help="正式验证为 DP/EP16；8 仅用于 HCA decode 预验证")
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--max-num-batched-tokens", type=int,
                         help="worker token 总容量，包含 DSpark 草稿预留；默认覆盖 --batch 的出5验6满档")
@@ -1169,6 +1198,12 @@ def main():
     parser.add_argument("--analyse-processes", type=int, default=16, help="离线解析使用的进程数上限")
     parser.add_argument("--compare-top", type=int, default=25, help="profile-compare列出的kernel差异条数")
     args = parser.parse_args()
+    if args.pto_attention in ("hca", "both") and args.command not in ("decode", "performance"):
+        parser.error("HCA 与联合入口只支持 decode、performance，不沿用 CSA 专有诊断钩子")
+    if args.decode_dp != 16 and (args.command != "decode" or args.pto_attention not in ("hca", "both")):
+        parser.error("DP/EP8 仅用于 HCA decode 预验证，其余流程保持 16 卡")
+    if not 0 < args.gpu_memory_utilization < 1:
+        parser.error("--gpu-memory-utilization 必须位于 (0,1)")
     if args.max_num_batched_tokens is not None and args.max_num_batched_tokens < 1:
         parser.error("--max-num-batched-tokens 必须大于 0")
     if args.sweep_batches:

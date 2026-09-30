@@ -1,0 +1,157 @@
+{
+  "source": {
+    "baseline_commit": "9c2ede34",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/base",
+      "mix_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/mix_sync",
+      "both_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/both_sync"
+    },
+    "change": "mix sync_start alone, then linked with concurrent Sinkhorn sync_start",
+    "invariants": "M4/D512 with D256 reductions, worker counts, stage2, arithmetic, buffer layout and dependencies"
+  },
+  "reports": {
+    "both_sync_h131072_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/both_sync"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 586.75,
+          "max_us": 640.0,
+          "mean_us": 605.5,
+          "p50_us": 604.75
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 567.5,
+          "max_us": 605.75,
+          "mean_us": 586.575,
+          "p50_us": 585.375
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_mix_schedule_20260930/both_sync_h131072_b16/report.json",
+      "purpose": "performance_screen"
+    },
+    "mix_sync_h131072_b16": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/base",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-mix-schedule-9c2ede34-20260930/mix_sync"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 574.25,
+          "max_us": 606.75,
+          "mean_us": 588.925,
+          "p50_us": 586.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 573.5,
+          "max_us": 602.75,
+          "mean_us": 586.35,
+          "p50_us": 585.625
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_mix_schedule_20260930/mix_sync_h131072_b16/report.json",
+      "purpose": "performance_screen"
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

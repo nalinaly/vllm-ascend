@@ -9,7 +9,8 @@ QUERY_TOKENS = 6
 
 
 def is_csa_model(config) -> bool:
-    return MODEL_ARCHITECTURE in getattr(config.model_config.hf_config, "architectures", ())
+    return any(name in (MODEL_ARCHITECTURE, "PyptoCSAHCADeepseekV4ForCausalLM")
+               for name in getattr(config.model_config.hf_config, "architectures", ()))
 
 
 def can_replay_csa_graph(*, num_tokens, num_reqs, uniform_decode, padded_tokens) -> bool:

@@ -1,0 +1,103 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1250 +1249,0 @@
+-            reduce_tmp = pl.create_tile([H_TILE, ATTN_K_TILE], dtype=pl.FP32)
+@@ -1270,5 +1269,9 @@
+-                seed_out0 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                seed_out1 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                seed_out2 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                seed_out3 = pl.tile.full([H, PV_N_TILE], dtype=pl.FP32, value=0.0)
+-                for vec_tick, (m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter, max_ring, sum_ring, softmax_m_iter) in pl.range(
++                seed_out0 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out1 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out2 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out3 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out4 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out5 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out6 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                seed_out7 = pl.tile.full([H, PV_N_TILE // 2], dtype=pl.FP32, value=0.0)
++                for vec_tick, (m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter, out4_iter, out5_iter, out6_iter, out7_iter, max_ring, sum_ring, softmax_m_iter) in pl.range(
+@@ -1276 +1279 @@
+-                    init_values=(seed_m, seed_l, seed_out0, seed_out1, seed_out2, seed_out3, seed_max, seed_sum, softmax_seed),
++                    init_values=(seed_m, seed_l, seed_out0, seed_out1, seed_out2, seed_out3, seed_out4, seed_out5, seed_out6, seed_out7, seed_max, seed_sum, softmax_seed),
+@@ -1284,0 +1288 @@
++                                reduce_tmp = pl.create_tile([H_TILE, ATTN_K_TILE], dtype=pl.FP32)
+@@ -1340,12 +1344,16 @@
+-                            pv_part0 = pl.load(values, [out_row, 0 * PV_N_TILE], [H, PV_N_TILE])
+-                            next_out0 = pl.add(pl.row_expand_mul(out0_iter, alpha),
+-                                                pv_part0)
+-                            pv_part1 = pl.load(values, [out_row, 1 * PV_N_TILE], [H, PV_N_TILE])
+-                            next_out1 = pl.add(pl.row_expand_mul(out1_iter, alpha),
+-                                                pv_part1)
+-                            pv_part2 = pl.load(values, [out_row, 2 * PV_N_TILE], [H, PV_N_TILE])
+-                            next_out2 = pl.add(pl.row_expand_mul(out2_iter, alpha),
+-                                                pv_part2)
+-                            pv_part3 = pl.load(values, [out_row, 3 * PV_N_TILE], [H, PV_N_TILE])
+-                            next_out3 = pl.add(pl.row_expand_mul(out3_iter, alpha),
+-                                                pv_part3)
++                            pv_part0 = pl.load(values, [out_row, 0 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out0 = pl.add(pl.row_expand_mul(out0_iter, alpha), pv_part0)
++                            pv_part1 = pl.load(values, [out_row, 1 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out1 = pl.add(pl.row_expand_mul(out1_iter, alpha), pv_part1)
++                            pv_part2 = pl.load(values, [out_row, 2 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out2 = pl.add(pl.row_expand_mul(out2_iter, alpha), pv_part2)
++                            pv_part3 = pl.load(values, [out_row, 3 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out3 = pl.add(pl.row_expand_mul(out3_iter, alpha), pv_part3)
++                            pv_part4 = pl.load(values, [out_row, 4 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out4 = pl.add(pl.row_expand_mul(out4_iter, alpha), pv_part4)
++                            pv_part5 = pl.load(values, [out_row, 5 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out5 = pl.add(pl.row_expand_mul(out5_iter, alpha), pv_part5)
++                            pv_part6 = pl.load(values, [out_row, 6 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out6 = pl.add(pl.row_expand_mul(out6_iter, alpha), pv_part6)
++                            pv_part7 = pl.load(values, [out_row, 7 * (PV_N_TILE // 2)], [H, PV_N_TILE // 2])
++                            next_out7 = pl.add(pl.row_expand_mul(out7_iter, alpha), pv_part7)
+@@ -1370,3 +1378,3 @@
+-                                    merged_left = pl.concat(
+-                                        pl.tile.slice(next_out0, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
+-                                        pl.tile.slice(next_out1, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
++                                    merged_quarter0 = pl.concat(
++                                        pl.tile.slice(next_out0, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                        pl.tile.slice(next_out1, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
+@@ -1374,3 +1382,3 @@
+-                                    merged_right = pl.concat(
+-                                        pl.tile.slice(next_out2, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
+-                                        pl.tile.slice(next_out3, [HEADS_PER_GROUP, PV_N_TILE], [head, 0]),
++                                    merged_quarter1 = pl.concat(
++                                        pl.tile.slice(next_out2, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                        pl.tile.slice(next_out3, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
+@@ -1377,0 +1386,10 @@
++                                    merged_quarter2 = pl.concat(
++                                        pl.tile.slice(next_out4, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                        pl.tile.slice(next_out5, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                    )
++                                    merged_quarter3 = pl.concat(
++                                        pl.tile.slice(next_out6, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                        pl.tile.slice(next_out7, [HEADS_PER_GROUP, PV_N_TILE // 2], [head, 0]),
++                                    )
++                                    merged_left = pl.concat(merged_quarter0, merged_quarter1)
++                                    merged_right = pl.concat(merged_quarter2, merged_quarter3)
+@@ -1389,2 +1407,2 @@
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3 = pl.yield_(
+-                                next_m, next_l, next_out0, next_out1, next_out2, next_out3,
++                            active_m, active_l, active_o0, active_o1, active_o2, active_o3, active_o4, active_o5, active_o6, active_o7 = pl.yield_(
++                                next_m, next_l, next_out0, next_out1, next_out2, next_out3, next_out4, next_out5, next_out6, next_out7,
+@@ -1393,2 +1411,2 @@
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3 = pl.yield_(
+-                                m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter,
++                            active_m, active_l, active_o0, active_o1, active_o2, active_o3, active_o4, active_o5, active_o6, active_o7 = pl.yield_(
++                                m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter, out4_iter, out5_iter, out6_iter, out7_iter,
+@@ -1396,2 +1414,2 @@
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after = pl.yield_(
+-                            active_m, active_l, active_o0, active_o1, active_o2, active_o3,
++                        m_after, l_after, o0_after, o1_after, o2_after, o3_after, o4_after, o5_after, o6_after, o7_after = pl.yield_(
++                            active_m, active_l, active_o0, active_o1, active_o2, active_o3, active_o4, active_o5, active_o6, active_o7,
+@@ -1400,2 +1418,2 @@
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after = pl.yield_(
+-                            m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter,
++                        m_after, l_after, o0_after, o1_after, o2_after, o3_after, o4_after, o5_after, o6_after, o7_after = pl.yield_(
++                            m_iter, l_iter, out0_iter, out1_iter, out2_iter, out3_iter, out4_iter, out5_iter, out6_iter, out7_iter,
+@@ -1403,2 +1421,2 @@
+-                    m_done, l_done, o0_done, o1_done, o2_done, o3_done, max_done, sum_done, softmax_done = pl.yield_(
+-                        m_after, l_after, o0_after, o1_after, o2_after, o3_after, updated_max, updated_sum, softmax_after,
++                    m_done, l_done, o0_done, o1_done, o2_done, o3_done, o4_done, o5_done, o6_done, o7_done, max_done, sum_done, softmax_done = pl.yield_(
++                        m_after, l_after, o0_after, o1_after, o2_after, o3_after, o4_after, o5_after, o6_after, o7_after, updated_max, updated_sum, softmax_after,

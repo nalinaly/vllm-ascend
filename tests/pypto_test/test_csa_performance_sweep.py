@@ -10,7 +10,8 @@ import pytest
 from offline_pd import run
 
 
-def test_sweep_forwarding_and_actual_batch(monkeypatch, tmp_path):
+@pytest.mark.parametrize("attention", ["csa", "hca", "both"])
+def test_sweep_forwarding_and_actual_batch(monkeypatch, tmp_path, attention):
     bank = tmp_path / "bank"
     bank.mkdir()
     (bank / "audit.json").write_text('{"status": "PASS"}')
@@ -29,7 +30,7 @@ def test_sweep_forwarding_and_actual_batch(monkeypatch, tmp_path):
     batches = [4, 8, 16, 24, 32, 40]
     monkeypatch.setattr(sys, "argv", [
         "run.py", "performance", "--bank", str(bank), "--output", str(tmp_path / "pto"),
-        "--backend", "pto", "--batch", "40", "--decode-tokens", "192", "--max-num-batched-tokens", "400",
+        "--backend", "pto", "--pto-attention", attention, "--batch", "40", "--decode-tokens", "192", "--max-num-batched-tokens", "400",
         "--event-work-mode", "1",
         "--sweep-batches", *map(str, batches), "--capture-sizes", *map(str, [b * 6 for b in batches])])
     run.main()
@@ -41,6 +42,7 @@ def test_sweep_forwarding_and_actual_batch(monkeypatch, tmp_path):
         run.main()
         parsed = worker.call_args.args[0]
         assert parsed.rank == rank
+        assert parsed.pto_attention == attention
         assert parsed.max_num_batched_tokens == 400
         assert parsed.event_work_mode == 1
         cases = list(run.diagnostic_runs(parsed))

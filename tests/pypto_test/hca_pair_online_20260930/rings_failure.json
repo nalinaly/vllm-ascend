@@ -1,0 +1,119 @@
+{
+  "source": "tests/pypto_test/results/hca_pair_online_20260930/long/failure.json",
+  "failure": {
+    "status": "CORRECTNESS_FAILED",
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+      "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-online-e8bd858e-20260930/softmax16_publish8_n64_rings"
+    },
+    "operators": {
+      "base": "hca_pair_base.attention.default",
+      "candidate": "hca_pair_candidate.attention.default"
+    },
+    "case": [
+      131072,
+      16
+    ],
+    "device": 0,
+    "scope": "same-process PTO-root screening, not Native or production-service acceptance",
+    "nz_mode": 2,
+    "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+    "options": {
+      "dynamic": false,
+      "inplace_pass": true,
+      "static_kernel_compile": true,
+      "super_kernel_optimize": false
+    },
+    "runtime_shapes": {
+      "base": {
+        "tokens": 96,
+        "cmp_table": [
+          16,
+          34
+        ],
+        "attention_path": "long"
+      },
+      "candidate": {
+        "tokens": 96,
+        "cmp_table": [
+          16,
+          34
+        ],
+        "attention_path": "long"
+      }
+    },
+    "cross_variant_exact": {
+      "x_out": false,
+      "swa.0": true,
+      "compressed.0": true,
+      "state.0": true
+    },
+    "differences": {
+      "x_out": {
+        "status": "FAIL",
+        "shape": [
+          96,
+          4,
+          4096
+        ],
+        "dtype": "torch.bfloat16",
+        "expected_shape": [
+          96,
+          4,
+          4096
+        ],
+        "expected_dtype": "torch.bfloat16",
+        "atol": 0,
+        "rtol": 0,
+        "elements": 1572864,
+        "comparison": "tolerance",
+        "nonfinite": 0,
+        "max_abs": 0.015625,
+        "rmse": 0.0006755666660304695,
+        "mismatches": 105094,
+        "first_mismatches": [
+          [
+            0,
+            0,
+            4
+          ],
+          [
+            0,
+            0,
+            30
+          ],
+          [
+            0,
+            0,
+            45
+          ],
+          [
+            0,
+            0,
+            67
+          ],
+          [
+            0,
+            0,
+            70
+          ],
+          [
+            0,
+            0,
+            81
+          ],
+          [
+            0,
+            0,
+            94
+          ],
+          [
+            0,
+            0,
+            104
+          ]
+        ]
+      }
+    }
+  }
+}

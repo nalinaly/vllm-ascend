@@ -1,0 +1,13 @@
+{
+  "baseline_commit": "f14d8d90 (production operator unchanged from 9015d45a)",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-post-gates-f14d8d90-20260930/base",
+    "transpose": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-post-gates-f14d8d90-20260930/transpose",
+    "combo": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-post-gates-f14d8d90-20260930/combo",
+    "combo_base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/ready_v2"
+  },
+  "reference": "ops-transformer28f40354 mhc/mhc_post/op_kernel/arch22/mhc_post_arch22.h:203-238",
+  "change": "two UB transposes replace twenty coefficient gathers per eight token rows",
+  "invariants": "task partition, INT32 dequant reduction order, BF16 attention rounding, post sum order unchanged",
+  "combo_scope": "baseline is ready_v2 Q grouping; candidate adds only post coefficient transpose"
+}

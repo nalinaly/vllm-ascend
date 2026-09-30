@@ -27,10 +27,14 @@ Q_PROJ_TILE = 128
 QPROJ_MM_N_TILE = 256 if QUANT_WEIGHT_NZ else 512
 MATMUL_T_TILE = 16
 QPROJ_M_TILE = 64
-QPROJ_WORKERS = 24
+QPROJ_WORKERS = 20  # 留余量：QPROJ_N_BLOCKS=128 时 24 个 worker 只比核数少一点，派发时若有核
+# 还被占着（实测 hca_kv_score_proj 会占掉 4 个 AIC 核）就要付两波的钱，wall 翻倍。20 块
+# 换成 7 轮但恒为一波。2026-09-29 同卡六样本实测 −16.5 μs，与 allow_early_resolve 合计 −34.75。
 QPROJ_TAIL_M_TILE = QPROJ_M_TILE if QUANT_WEIGHT_NZ else MATMUL_T_TILE
 QPROJ_T_PAD = ((PREFILL_DENSE_TILE + QPROJ_TAIL_M_TILE - 1) // QPROJ_TAIL_M_TILE) * QPROJ_TAIL_M_TILE
 QPROJ_N_BLOCKS = H * HEAD_DIM // QPROJ_MM_N_TILE
+QPROJ_PIPE_M_TILE = 128
+QPROJ_PIPE_K_TILE = 256
 
 assert QPROJ_MM_N_TILE * QPROJ_M_TILE * 4 <= 128 * 1024
 assert QPROJ_M_TILE % QPROJ_TAIL_M_TILE == 0
@@ -87,9 +91,12 @@ def _q_proj_q_matmul_nz(
     tile_rows: pl.Scalar[pl.INDEX],
     qproj_dep: pl.Scalar[pl.TASK_ID],
 ):
-    """Use upstream's full-K resident weight and compact tail matmul on Native NZ."""
+    """N256 列块内按 K256 双缓冲：下一段权重搬运与本段 Cube 计算重叠。
+
+    原实现每轮先整段读入 K1024×N256 权重再计算，搬运与计算串行；这里对每个 M128 行块
+    按 K 顺序 matmul_acc。INT8×INT8→INT32 累加精确，分块不改变结果。
+    """
     qproj_t_matmul = pl.tensor.dim(q_proj_i32, 0)
-    qproj_full_rows = (tile_rows // QPROJ_M_TILE) * QPROJ_M_TILE
     with pl.spmd(QPROJ_WORKERS, name_hint="qproj_matmul", deps=[qproj_dep]) as qproj_tid:
         # Match upstream weight streaming; arithmetic is unchanged.
         pl.set_cache_policy(wq_b, pl.CachePolicy.BYPASS)
@@ -98,18 +105,19 @@ def _q_proj_q_matmul_nz(
         for qproj_round in pl.range(0, (QPROJ_N_BLOCKS - qproj_worker + QPROJ_WORKERS - 1) // QPROJ_WORKERS):
             qproj_n_idx = qproj_worker + qproj_round * QPROJ_WORKERS
             w_col0 = qproj_n_idx * QPROJ_MM_N_TILE
-            wq_full = wq_b[0:Q_LORA, w_col0 : w_col0 + QPROJ_MM_N_TILE]
-            for t0 in pl.range(0, qproj_full_rows, QPROJ_M_TILE):
-                qr_full = qr_i8_matmul[t0 : t0 + QPROJ_M_TILE, 0:Q_LORA]
-                col_acc = pl.matmul(qr_full, wq_full, out_dtype=pl.INT32)
-                q_proj_i32[t0 : t0 + QPROJ_M_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE] = col_acc
-            for tail_t0 in pl.range(qproj_full_rows, qproj_t_matmul, QPROJ_TAIL_M_TILE):
-                tail_rows = pl.min(QPROJ_TAIL_M_TILE, tile_rows - tail_t0)
-                qr_tail = pl.slice(qr_i8_matmul, [QPROJ_TAIL_M_TILE, Q_LORA], [tail_t0, 0],
-                                   valid_shape=[tail_rows, Q_LORA])
-                tail_acc = pl.matmul(qr_tail, wq_full, out_dtype=pl.INT32)
-                q_proj_i32[tail_t0 : tail_t0 + QPROJ_TAIL_M_TILE,
-                           w_col0 : w_col0 + QPROJ_MM_N_TILE] = tail_acc
+            for t0 in pl.range(0, qproj_t_matmul, QPROJ_PIPE_M_TILE):
+                m_rows = pl.min(QPROJ_PIPE_M_TILE, tile_rows - t0)
+                qr_first = pl.slice(qr_i8_matmul, [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE], [t0, 0],
+                                    valid_shape=[m_rows, QPROJ_PIPE_K_TILE])
+                wq_first = wq_b[0:QPROJ_PIPE_K_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE]
+                # 首段由 matmul 生成累加器，携带有效行的 compact 形态。
+                col_acc = pl.matmul(qr_first, wq_first, out_dtype=pl.INT32)
+                for k0 in pl.pipeline(QPROJ_PIPE_K_TILE, Q_LORA, QPROJ_PIPE_K_TILE, stage=2):
+                    qr_chunk = pl.slice(qr_i8_matmul, [QPROJ_PIPE_M_TILE, QPROJ_PIPE_K_TILE], [t0, k0],
+                                        valid_shape=[m_rows, QPROJ_PIPE_K_TILE])
+                    wq_chunk = wq_b[k0 : k0 + QPROJ_PIPE_K_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE]
+                    col_acc = pl.matmul_acc(col_acc, qr_chunk, wq_chunk)
+                q_proj_i32[t0 : t0 + QPROJ_PIPE_M_TILE, w_col0 : w_col0 + QPROJ_MM_N_TILE] = col_acc
     return q_proj_i32, qproj_tid
 
 

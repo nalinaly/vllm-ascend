@@ -1,0 +1,44 @@
+{
+  "baseline_commit": "9015d45a",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/base",
+    "mixed20": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed20",
+    "mixed20_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed20_v2",
+    "mixed24": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed24",
+    "mixed20_mte2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed20_mte2",
+    "mixed24_sync": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed24_sync",
+    "mixed16": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed16",
+    "mixed24_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/mixed24_late",
+    "streamed4": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4",
+    "streamed4_unroll": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_unroll",
+    "streamed4_const": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_const",
+    "streamed4_views": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_views",
+    "streamed4_stride": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_stride",
+    "streamed4_function": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_function",
+    "streamed4_store": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_store",
+    "streamed4_valid": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_valid",
+    "streamed4_edges": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_edges",
+    "base_edges": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/base",
+    "streamed2_edges": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed2_edges",
+    "streamed4_flat": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_flat"
+  },
+  "change": "20 MIX groups, M128/N256/K256 integer Cube, two-slot GM head handoff, two AIV lanes per group",
+  "invariants": "full INT32 dot product; row scale then channel scale; full-head RMS; BF16 and tail math unchanged",
+  "native_reference": "ops-nn19614968 quant_batch_matmul_v3_pertoken_basic.h CV buffer and epilogue",
+  "cpu_failures": {
+    "mixed20": "parser rejects float(64); replaced by precomputed ROPE_DIM_SCALE in v2",
+    "streamed4": "NZ head-group offset loses nonnegative proof after outlining; static four-group unroll used in streamed4_unroll",
+    "streamed4_unroll": "unroll still fails the NZ offset proof; explicit constants compiled",
+    "streamed4_stride": "jit rejects TensorView layout annotations; try supported pl.function",
+    "streamed4_function": "indexed Tensor assignment loses the explicit TensorView type",
+    "streamed4_store": "direct pl.function rejects reassignment with changed Tile valid_shape",
+    "streamed4_valid": "JIT dependency discovery only includes JITFunction; direct pl.function helper is unresolved"
+  },
+  "streamed_change": "four head groups; each has 5 Cube and 12 AIV workers, linked by its own INT32 tensor",
+  "streamed_const_status": "CPU compile passes, but orchestration has four InOut references to the full Q; not submitted to NPU",
+  "device_failures": {
+    "streamed4_views": "candidate eager/graph mismatch before timing; generated Q store uses 8192 rather than 32768 stride"
+  },
+  "streamed_edges": "Q remains [T,64,512] with correct full stride; lifetime manual_dep on private Q only; four producer TaskIds directly feed both short/long attention; groups write disjoint heads",
+  "streamed_edges_limit": "Q root manual_dep is true but orchestration reshape resets it to false; DFX proves four dequant groups serialize, so edges/two-group results do not validate independent publishing"
+}

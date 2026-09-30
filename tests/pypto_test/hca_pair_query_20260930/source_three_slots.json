@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "ad0e6bbe",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-flat-sync-ad0e6bbe-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-query-ad0e6bbe-20260930/pair_three_slots",
+  "change": "three KV slots and two-step lookahead; Q reloads per block to share L1 with probabilities",
+  "invariants": "same per-query compressed-before-raw order, block maxima, BF16 probabilities, sink/causal masks and RoPE; 24 MIX groups and task dependencies unchanged",
+  "reference": "ops-transformer 28f40354 SplitBalanced mBaseSize and sparse_attn_sharedkv_swa_block_vector.h:757–826 GM FP32 accumulation",
+  "limits": "extra Q loads versus pair_v2; requires CPU capacity and NPU checks",
+  "parent_candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-query-ad0e6bbe-20260930/pair_v2"
+}

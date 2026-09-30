@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "ad0e6bbe",
+  "baseline": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-flat-sync-ad0e6bbe-20260930/base",
+  "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-query-ad0e6bbe-20260930/pair_hybrid_reload",
+  "change": "pair query with two N128 FP32 accumulator tiles in UB and remaining half in GM",
+  "invariants": "same per-query compressed-before-raw order, block maxima, BF16 probabilities, sink/causal masks and RoPE; 24 MIX groups and task dependencies unchanged",
+  "reference": "ops-transformer 28f40354 SplitBalanced mBaseSize and sparse_attn_sharedkv_swa_block_vector.h:757–826 GM FP32 accumulation",
+  "limits": "four-quarter UB candidate exceeded configured Vec limit; hybrid requires CPU/NPU validation",
+  "parent_candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-pair-query-ad0e6bbe-20260930/pair_ub"
+}

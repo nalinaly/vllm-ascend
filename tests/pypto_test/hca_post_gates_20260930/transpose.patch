@@ -1,0 +1,47 @@
+--- a/deepseek_v4_flash_hca/o_proj_hc_post.py
++++ b/deepseek_v4_flash_hca/o_proj_hc_post.py
+@@ -59,2 +58,0 @@
+-        row_ids = pl.cast(pl.tile.arange(0, [1, TOKEN_TILE], dtype=pl.INT32), pl.FP32)
+-        gather_tmp = pl.create_tile([1, TOKEN_TILE], dtype=pl.INT32)
+@@ -91,0 +90,2 @@
++            post_columns = pl.transpose(post_rows, axis1=0, axis2=1)
++            comb_columns = pl.transpose(comb_rows, axis1=0, axis2=1)
+@@ -93,2 +93,3 @@
+-                post_index = pl.cast(pl.add(pl.mul(row_ids, 8.0), pl.cast(pl.cast(out_h, pl.INT32), pl.FP32)), pl.INT32)
+-                post_weight = pl.reshape(pl.tile.gather(post_rows, post_index, gather_tmp), [TOKEN_TILE, 1])
++                post_weight = pl.reshape(
++                    pl.tile.slice(post_columns, [1, TOKEN_TILE], [out_h, 0]), [TOKEN_TILE, 1],
++                )
+@@ -96,4 +96,0 @@
+-                # 顺序仍为 post*x，随后按输入 HC 0、1、2、3 逐项相加。
+-                comb_index_0 = pl.cast(pl.add(
+-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(0 * HC_MULT + out_h, pl.INT32), pl.FP32),
+-                ), pl.INT32)
+@@ -101 +98,2 @@
+-                    pl.tile.gather(comb_rows, comb_index_0, gather_tmp), [TOKEN_TILE, 1],
++                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [0 * HC_MULT + out_h, 0]),
++                    [TOKEN_TILE, 1],
+@@ -104,3 +101,0 @@
+-                comb_index_1 = pl.cast(pl.add(
+-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(1 * HC_MULT + out_h, pl.INT32), pl.FP32),
+-                ), pl.INT32)
+@@ -108 +103,2 @@
+-                    pl.tile.gather(comb_rows, comb_index_1, gather_tmp), [TOKEN_TILE, 1],
++                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [1 * HC_MULT + out_h, 0]),
++                    [TOKEN_TILE, 1],
+@@ -111,3 +106,0 @@
+-                comb_index_2 = pl.cast(pl.add(
+-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(2 * HC_MULT + out_h, pl.INT32), pl.FP32),
+-                ), pl.INT32)
+@@ -115 +108,2 @@
+-                    pl.tile.gather(comb_rows, comb_index_2, gather_tmp), [TOKEN_TILE, 1],
++                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [2 * HC_MULT + out_h, 0]),
++                    [TOKEN_TILE, 1],
+@@ -118,3 +111,0 @@
+-                comb_index_3 = pl.cast(pl.add(
+-                    pl.mul(row_ids, 16.0), pl.cast(pl.cast(3 * HC_MULT + out_h, pl.INT32), pl.FP32),
+-                ), pl.INT32)
+@@ -122 +113,2 @@
+-                    pl.tile.gather(comb_rows, comb_index_3, gather_tmp), [TOKEN_TILE, 1],
++                    pl.tile.slice(comb_columns, [1, TOKEN_TILE], [3 * HC_MULT + out_h, 0]),
++                    [TOKEN_TILE, 1],

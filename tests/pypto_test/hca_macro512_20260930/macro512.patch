@@ -1,0 +1,279 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -70,0 +71,4 @@
++MACRO_K = 512
++MACRO_PARTS = 4
++MACRO_SLOTS = 2
++MACRO_PRELAUNCH = 1
+@@ -1165,3 +1169,3 @@
+-    transfer_rows = NUM_QK_CORES * QK_TRANSFER_SLOTS * H
+-    scores = pl.create_tensor([transfer_rows, ATTN_K_TILE], dtype=pl.FP32)
+-    probs = pl.create_tensor([transfer_rows, ATTN_K_TILE], dtype=pl.BF16)
++    transfer_rows = NUM_QK_CORES * MACRO_SLOTS * H
++    scores = pl.create_tensor([transfer_rows, MACRO_K], dtype=pl.FP32)
++    probs = pl.create_tensor([transfer_rows, MACRO_K], dtype=pl.BF16)
+@@ -1177,5 +1181,6 @@
+-        # QK进入下一query时保留上一query的KV槽；只在本worker最后一条query排空。
+-        kv_l1 = pl.create_tile([QK_TRANSFER_SLOTS * ATTN_K_TILE, HEAD_DIM],
+-                              dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
+-        for token, (work_offset,) in pl.range(
+-            worker, t_dim, NUM_QK_CORES, init_values=(pl.cast(0, pl.INDEX),),
++        qk_kv = pl.create_tile([ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
++        pv_kv = pl.create_tile([ATTN_K_TILE, HEAD_DIM], dtype=pl.BF16, target_memory=pl.MemorySpace.Mat)
++        for token, (work_offset, old_request, old_block, old_parts, old_drop) in pl.range(
++            worker, t_dim, NUM_QK_CORES,
++            init_values=(pl.cast(0, pl.INDEX), pl.cast(0, pl.INDEX), pl.cast(0, pl.INDEX),
++                         pl.cast(1, pl.INDEX), pl.cast(0, pl.INDEX)),
+@@ -1189,2 +1194,2 @@
+-            cmp_blocks = pl.min(cmp_work_count, (cmp_rows + ATTN_K_TILE - 1) // ATTN_K_TILE)
+-            work_count = 1 + cmp_blocks
++            cmp_blocks = (cmp_rows + MACRO_K - 1) // MACRO_K
++            work_count = cmp_blocks + 1
+@@ -1192 +1197 @@
+-            raw_drop = pl.max(first_length + token % S - WIN, 0)
++            raw_drop = pl.cast(pl.max(first_length + token % S - WIN, 0), pl.INDEX)
+@@ -1195 +1200 @@
+-                extra = pl.yield_(QK_PRE_LAUNCH)
++                extra = pl.yield_(1)
+@@ -1198 +1203,3 @@
+-            for tick in pl.range(work_count + extra):
++            for tick, (prev_request, prev_block, prev_parts, prev_drop) in pl.range(
++                work_count + extra, init_values=(old_request, old_block, old_parts, old_drop),
++            ):
+@@ -1201 +1208 @@
+-                    l1_row = (global_tick % QK_TRANSFER_SLOTS) * ATTN_K_TILE
++                    row = (worker * MACRO_SLOTS + global_tick % MACRO_SLOTS) * H
+@@ -1203 +1210 @@
+-                        kv_l1 = pl.gather_row(kv_l1, raw_kv, [l1_row, 0],
++                        qk_kv = pl.gather_row(qk_kv, raw_kv, [0, 0],
+@@ -1204,0 +1212,6 @@
++                        raw_key = pl.tile.transpose_view(qk_kv)
++                        raw_qk = pl.matmul(query, raw_key, out_dtype=pl.FP32)
++                        pl.store(raw_qk, [row, 0], scores)
++                        next_request, next_block, next_parts, next_drop = pl.yield_(
++                            request, pl.cast(-1, pl.INDEX), pl.cast(1, pl.INDEX), raw_drop,
++                        )
+@@ -1206,7 +1219,8 @@
+-                        cmp_row = (request * cmp_work_count + tick) * ATTN_K_TILE
+-                        kv_l1 = pl.gather_row(kv_l1, cmp_work_kv, [l1_row, 0], [cmp_row, 0],
+-                                             [ATTN_K_TILE, HEAD_DIM])
+-                    key_t = pl.tile.slice(pl.tile.transpose_view(kv_l1), [HEAD_DIM, ATTN_K_TILE], [0, l1_row])
+-                    qk = pl.matmul(query, key_t, out_dtype=pl.FP32)
+-                    row = (worker * QK_TRANSFER_SLOTS + global_tick % QK_TRANSFER_SLOTS) * H
+-                    pl.store(qk, [row, 0], scores)
++                        parts = pl.min(MACRO_PARTS, (cmp_rows - tick * MACRO_K + ATTN_K_TILE - 1) // ATTN_K_TILE)
++                        for part in pl.range(parts):
++                            cmp_row = (request * cmp_work_count + tick * MACRO_PARTS + part) * ATTN_K_TILE
++                            qk_kv = pl.gather_row(qk_kv, cmp_work_kv, [0, 0], [cmp_row, 0], [ATTN_K_TILE, HEAD_DIM])
++                            key = pl.tile.transpose_view(qk_kv)
++                            qk = pl.matmul(query, key, out_dtype=pl.FP32)
++                            pl.store(qk, [row, part * ATTN_K_TILE], scores)
++                        next_request, next_block, next_parts, next_drop = pl.yield_(request, tick, parts, raw_drop)
+@@ -1214,3 +1228,9 @@
+-                if global_tick >= QK_PRE_LAUNCH:
+-                    pv_work = global_tick - QK_PRE_LAUNCH
+-                    pv_row = (worker * QK_TRANSFER_SLOTS + pv_work % QK_TRANSFER_SLOTS) * H
++                    saved_request, saved_block, saved_parts, saved_drop = pl.yield_(
++                        next_request, next_block, next_parts, next_drop,
++                    )
++                else:
++                    saved_request, saved_block, saved_parts, saved_drop = pl.yield_(
++                        prev_request, prev_block, prev_parts, prev_drop,
++                    )
++                if global_tick >= 1:
++                    pv_row = (worker * MACRO_SLOTS + (global_tick - 1) % MACRO_SLOTS) * H
+@@ -1217,0 +1238,6 @@
++                    if prev_block < 0:
++                        pv_kv = pl.gather_row(pv_kv, raw_kv, [0, 0],
++                                             [prev_request * REQUEST_KV_ROWS + prev_drop, 0], [ATTN_K_TILE, HEAD_DIM])
++                    else:
++                        pv_source = (prev_request * cmp_work_count + prev_block * MACRO_PARTS) * ATTN_K_TILE
++                        pv_kv = pl.gather_row(pv_kv, cmp_work_kv, [0, 0], [pv_source, 0], [ATTN_K_TILE, HEAD_DIM])
+@@ -1220,11 +1246,37 @@
+-                    pv_l1_row = (pv_work % QK_TRANSFER_SLOTS) * ATTN_K_TILE
+-                    right = pl.tile.extract(kv_l1, pv_l1_row, 0, [ATTN_K_TILE, PV_N_TILE],
+-                                            target_memory=pl.MemorySpace.Right)
+-                    previous = pl.tile.matmul(left, right)
+-                    for col in pl.unroll(1, HEAD_DIM // PV_N_TILE):
+-                        right_next = pl.tile.extract(kv_l1, pv_l1_row, col * PV_N_TILE,
+-                                                     [ATTN_K_TILE, PV_N_TILE], target_memory=pl.MemorySpace.Right)
+-                        current = pl.tile.matmul(left, right_next)
+-                        pl.store(previous, [pv_row, (col - 1) * PV_N_TILE], values)
+-                        previous = current
+-                    pl.store(previous, [pv_row, HEAD_DIM - PV_N_TILE], values)
++                    right0 = pl.tile.extract(pv_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
++                                                   target_memory=pl.MemorySpace.Right)
++                    first0 = pl.tile.matmul(left, right0)
++                    right1 = pl.tile.extract(pv_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
++                                                   target_memory=pl.MemorySpace.Right)
++                    first1 = pl.tile.matmul(left, right1)
++                    right2 = pl.tile.extract(pv_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
++                                                   target_memory=pl.MemorySpace.Right)
++                    first2 = pl.tile.matmul(left, right2)
++                    right3 = pl.tile.extract(pv_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
++                                                   target_memory=pl.MemorySpace.Right)
++                    first3 = pl.tile.matmul(left, right3)
++                    for part, (acc0, acc1, acc2, acc3) in pl.range(
++                        1, prev_parts, init_values=(first0, first1, first2, first3),
++                    ):
++                        source_row = (prev_request * cmp_work_count + prev_block * MACRO_PARTS + part) * ATTN_K_TILE
++                        pv_kv = pl.gather_row(pv_kv, cmp_work_kv, [0, 0], [source_row, 0], [ATTN_K_TILE, HEAD_DIM])
++                        probability_part = pl.load(probs, [pv_row, part * ATTN_K_TILE], [H, ATTN_K_TILE],
++                                                   target_memory=pl.MemorySpace.Mat)
++                        left_part = pl.tile.move(probability_part, target_memory=pl.MemorySpace.Left)
++                        right_update0 = pl.tile.extract(pv_kv, 0, 0, [ATTN_K_TILE, PV_N_TILE],
++                                                             target_memory=pl.MemorySpace.Right)
++                        update0 = pl.tile.matmul_acc(acc0, left_part, right_update0)
++                        right_update1 = pl.tile.extract(pv_kv, 0, 128, [ATTN_K_TILE, PV_N_TILE],
++                                                             target_memory=pl.MemorySpace.Right)
++                        update1 = pl.tile.matmul_acc(acc1, left_part, right_update1)
++                        right_update2 = pl.tile.extract(pv_kv, 0, 256, [ATTN_K_TILE, PV_N_TILE],
++                                                             target_memory=pl.MemorySpace.Right)
++                        update2 = pl.tile.matmul_acc(acc2, left_part, right_update2)
++                        right_update3 = pl.tile.extract(pv_kv, 0, 384, [ATTN_K_TILE, PV_N_TILE],
++                                                             target_memory=pl.MemorySpace.Right)
++                        update3 = pl.tile.matmul_acc(acc3, left_part, right_update3)
++                        done0, done1, done2, done3 = pl.yield_(update0, update1, update2, update3)
++                    pl.store(done0, [pv_row, 0], values)
++                    pl.store(done1, [pv_row, 128], values)
++                    pl.store(done2, [pv_row, 256], values)
++                    pl.store(done3, [pv_row, 384], values)
+@@ -1232,2 +1284,6 @@
+-
+-            work_offset_done = pl.yield_(work_offset + work_count)  # noqa: F841 -- PyPTO循环状态
++                end_request, end_block, end_parts, end_drop = pl.yield_(
++                    saved_request, saved_block, saved_parts, saved_drop,
++                )
++            end_offset, carried_request, carried_block, carried_parts, carried_drop = pl.yield_(
++                work_offset + work_count, end_request, end_block, end_parts, end_drop,
++            )
+@@ -1238 +1293,0 @@
+-            reduce_tmp = pl.create_tile([H // 2, ATTN_K_TILE], dtype=pl.FP32)
+@@ -1245,3 +1300,3 @@
+-            max_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
+-            sum_ring_init = pl.tile.full([QK_TRANSFER_SLOTS, H // 2], dtype=pl.FP32, value=0.0)
+-            query_ring = pl.tile.full([QK_TRANSFER_SLOTS, 8], dtype=pl.INT32, value=0)
++            max_ring_init = pl.tile.full([MACRO_SLOTS * (H // 2 // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
++            sum_ring_init = pl.tile.full([MACRO_SLOTS * (H // 2 // H_TILE), H_TILE], dtype=pl.FP32, value=0.0)
++            query_ring = pl.tile.full([MACRO_SLOTS, 8], dtype=pl.INT32, value=0)
+@@ -1259 +1314 @@
+-                cmp_blocks = pl.min(cmp_work_count, (cmp_rows + ATTN_K_TILE - 1) // ATTN_K_TILE)
++                cmp_blocks = (cmp_rows + MACRO_K - 1) // MACRO_K
+@@ -1264 +1319 @@
+-                    vec_extra = pl.yield_(QK_PRE_LAUNCH)
++                    vec_extra = pl.yield_(MACRO_PRELAUNCH)
+@@ -1274 +1329 @@
+-                        vec_row = (worker * QK_TRANSFER_SLOTS + vec_global % QK_TRANSFER_SLOTS) * H + head0
++                        vec_row = (worker * MACRO_SLOTS + vec_global % MACRO_SLOTS) * H + head0
+@@ -1276,31 +1331,48 @@
+-                        score = pl.load(scores, [vec_row, 0], [H // 2, ATTN_K_TILE])
+-                        if vec_tick == cmp_blocks:
+-                            raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
+-                            raw_bias = pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF)
+-                            raw_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), raw_bias)
+-                            raw_block_m = pl.row_max(raw_scaled, reduce_tmp)
+-                            raw_m = pl.maximum(softmax_m_iter, raw_block_m)
+-                            raw_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(raw_scaled, raw_m)), raw_mask)
+-                            maximum, exponent = pl.yield_(raw_m, raw_exp)
+-                        else:
+-                            cmp_work = vec_tick
+-                            cmp_mask = pl.load(cmp_work_valid, [request * cmp_work_count + cmp_work, 0],
+-                                               [1, ATTN_K_TILE])
+-                            cmp_bias = pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF)
+-                            cmp_scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE), cmp_bias)
+-                            valid_rows = pl.min(ATTN_K_TILE, cmp_rows - cmp_work * ATTN_K_TILE)
+-                            cmp_shaped = pl.set_validshape(cmp_scaled, H // 2, valid_rows)
+-                            cmp_masked = pl.fillpad(cmp_shaped, pad_value=pl.PadValue.min)
+-                            cmp_block_m = pl.row_max(cmp_masked, reduce_tmp)
+-                            cmp_m = pl.maximum(softmax_m_iter, cmp_block_m)
+-                            cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(cmp_masked, cmp_m)), cmp_mask)
+-                            maximum, exponent = pl.yield_(cmp_m, cmp_exp)
+-                        total = pl.row_sum(exponent, reduce_tmp)
+-                        vec_probability = pl.cast(exponent, pl.BF16, mode="rint")
+-                        pl.store(vec_probability, [vec_row, 0], probs)
+-                        next_max_ring = pl.tile.assemble(
+-                            max_ring, pl.reshape(maximum, [1, H // 2]), [vec_global % QK_TRANSFER_SLOTS, 0],
+-                        )
+-                        next_sum_ring = pl.tile.assemble(
+-                            sum_ring, pl.reshape(total, [1, H // 2]), [vec_global % QK_TRANSFER_SLOTS, 0],
+-                        )
++                        for head_part, (head_max_ring, head_sum_ring) in pl.range(
++                            H // 2 // H_TILE, init_values=(max_ring, sum_ring),
++                        ):
++                            head_offset = head_part * H_TILE
++                            previous_max = pl.reshape(pl.tile.extract(
++                                pl.reshape(softmax_m_iter, [H // 2 // H_TILE, H_TILE]),
++                                head_part, 0, [1, H_TILE], target_memory=pl.MemorySpace.Vec,
++                            ), [H_TILE, 1])
++                            if vec_tick == cmp_blocks:
++                                raw_tmp = pl.create_tile([H_TILE, ATTN_K_TILE], dtype=pl.FP32)
++                                raw_score = pl.load(scores, [vec_row + head_offset, 0], [H_TILE, ATTN_K_TILE])
++                                raw_mask = pl.load(raw_valid, [vec_token, 0], [1, ATTN_K_TILE])
++                                raw_scaled = pl.col_expand_add(pl.mul(raw_score, SOFTMAX_SCALE),
++                                                              pl.mul(pl.sub(raw_mask, 1.0), -NEG_INF))
++                                raw_max = pl.maximum(previous_max, pl.row_max(raw_scaled, raw_tmp))
++                                raw_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(raw_scaled, raw_max)), raw_mask)
++                                raw_sum = pl.row_sum(raw_exp, raw_tmp)
++                                pl.store(pl.cast(raw_exp, pl.BF16, mode="rint"), [vec_row + head_offset, 0], probs)
++                                maximum, total = pl.yield_(raw_max, raw_sum)
++                            else:
++                                cmp_tmp = pl.create_tile([H_TILE, MACRO_K], dtype=pl.FP32)
++                                valid_cols = pl.min(MACRO_K, cmp_rows - vec_tick * MACRO_K)
++                                mask_parts = (valid_cols + ATTN_K_TILE - 1) // ATTN_K_TILE
++                                mask_grid = pl.load(cmp_work_valid,
++                                                    [request * cmp_work_count + vec_tick * MACRO_PARTS, 0],
++                                                    [MACRO_PARTS, ATTN_K_TILE],
++                                                    valid_shape=[mask_parts, ATTN_K_TILE])
++                                mask_grid = pl.fillpad(mask_grid, pad_value=pl.PadValue.zero)
++                                cmp_mask = pl.reshape(mask_grid, [1, MACRO_K])
++                                score = pl.load(scores, [vec_row + head_offset, 0], [H_TILE, MACRO_K],
++                                                valid_shape=[H_TILE, valid_cols])
++                                scaled = pl.col_expand_add(pl.mul(score, SOFTMAX_SCALE),
++                                                           pl.mul(pl.sub(cmp_mask, 1.0), -NEG_INF))
++                                masked = pl.fillpad(pl.set_validshape(scaled, H_TILE, valid_cols),
++                                                    pad_value=pl.PadValue.min)
++                                cmp_max = pl.maximum(previous_max, pl.row_max(masked, cmp_tmp))
++                                cmp_exp = pl.col_expand_mul(pl.exp(pl.row_expand_sub(masked, cmp_max)), cmp_mask)
++                                cmp_sum = pl.row_sum(cmp_exp, cmp_tmp)
++                                pl.store(pl.cast(cmp_exp, pl.BF16, mode="rint"), [vec_row + head_offset, 0], probs)
++                                maximum, total = pl.yield_(cmp_max, cmp_sum)
++                            row_slot = (vec_global % MACRO_SLOTS) * (H // 2 // H_TILE) + head_part
++                            next_max_ring = pl.tile.assemble(head_max_ring, pl.reshape(maximum, [1, H_TILE]), [row_slot, 0])
++                            next_sum_ring = pl.tile.assemble(head_sum_ring, pl.reshape(total, [1, H_TILE]), [row_slot, 0])
++                            completed_max, completed_sum = pl.yield_(next_max_ring, next_sum_ring)
++                        softmax_complete = pl.reshape(pl.tile.extract(
++                            completed_max, (vec_global % MACRO_SLOTS) * (H // 2 // H_TILE), 0,
++                            [H // 2 // H_TILE, H_TILE], target_memory=pl.MemorySpace.Vec,
++                        ), [H // 2, 1])
+@@ -1308,3 +1380,3 @@
+-                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 0], pl.cast(vec_token, pl.INT32))
+-                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 1], pl.cast(vec_tick, pl.INT32))
+-                        pl.tile.write(query_ring, [vec_global % QK_TRANSFER_SLOTS, 2],
++                        pl.tile.write(query_ring, [vec_global % MACRO_SLOTS, 0], pl.cast(vec_token, pl.INT32))
++                        pl.tile.write(query_ring, [vec_global % MACRO_SLOTS, 1], pl.cast(vec_tick, pl.INT32))
++                        pl.tile.write(query_ring, [vec_global % MACRO_SLOTS, 2],
+@@ -1313 +1385 @@
+-                        updated_max_ring, updated_sum_ring, softmax_m_after = pl.yield_(next_max_ring, next_sum_ring, maximum)
++                        updated_max_ring, updated_sum_ring, softmax_m_after = pl.yield_(completed_max, completed_sum, softmax_complete)
+@@ -1316,3 +1388,3 @@
+-                    if vec_global >= QK_PRE_LAUNCH:
+-                        out_work = vec_global - QK_PRE_LAUNCH
+-                        out_row = (worker * QK_TRANSFER_SLOTS + out_work % QK_TRANSFER_SLOTS) * H + head0
++                    if vec_global >= MACRO_PRELAUNCH:
++                        out_work = vec_global - MACRO_PRELAUNCH
++                        out_row = (worker * MACRO_SLOTS + out_work % MACRO_SLOTS) * H + head0
+@@ -1321 +1393 @@
+-                            updated_max_ring, out_work % QK_TRANSFER_SLOTS, 0, [1, H // 2],
++                            updated_max_ring, (out_work % MACRO_SLOTS) * (H // 2 // H_TILE), 0, [H // 2 // H_TILE, H_TILE],
+@@ -1325 +1397 @@
+-                            updated_sum_ring, out_work % QK_TRANSFER_SLOTS, 0, [1, H // 2],
++                            updated_sum_ring, (out_work % MACRO_SLOTS) * (H // 2 // H_TILE), 0, [H // 2 // H_TILE, H_TILE],
+@@ -1328 +1400 @@
+-                        out_local = pl.tile.read(query_ring, [out_work % QK_TRANSFER_SLOTS, 1])
++                        out_local = pl.tile.read(query_ring, [out_work % MACRO_SLOTS, 1])
+@@ -1353 +1425 @@
+-                        remaining = pl.tile.read(query_ring, [out_work % QK_TRANSFER_SLOTS, 2])
++                        remaining = pl.tile.read(query_ring, [out_work % MACRO_SLOTS, 2])
+@@ -1356 +1428 @@
+-                                query_ring, [out_work % QK_TRANSFER_SLOTS, 0],
++                                query_ring, [out_work % MACRO_SLOTS, 0],

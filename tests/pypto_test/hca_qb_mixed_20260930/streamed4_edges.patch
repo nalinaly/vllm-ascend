@@ -1,0 +1,93 @@
+--- a/deepseek_v4_flash_hca/q_projection_streamed.py
++++ b/deepseek_v4_flash_hca/q_projection_streamed.py
+@@ -35 +35 @@
+-    for dq_worker in pl.spmd(
++    with pl.spmd(
+@@ -39 +39,2 @@
+-    ):
++    ) as dq_tid:
++        dq_worker = pl.tile.get_block_idx()
+@@ -204 +205 @@
+-    return q
++    return dq_tid
+@@ -217,0 +219 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -226 +228 @@
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[0]]):
+@@ -245 +247 @@
+-            q_proj_q_dequant_stream(
++            dq_tid = q_proj_q_dequant_stream(
+@@ -248,0 +251 @@
++            q_ready[0] = dq_tid
+@@ -252 +255 @@
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[1]]):
+@@ -271 +274 @@
+-            q_proj_q_dequant_stream(
++            dq_tid = q_proj_q_dequant_stream(
+@@ -274,0 +278 @@
++            q_ready[1] = dq_tid
+@@ -278 +282 @@
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[2]]):
+@@ -297 +301 @@
+-            q_proj_q_dequant_stream(
++            dq_tid = q_proj_q_dequant_stream(
+@@ -300,0 +305 @@
++            q_ready[2] = dq_tid
+@@ -304 +309 @@
+-            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep]):
++            with pl.spmd(STREAM_CUBE_WORKERS, name_hint="hca_qb_stream", deps=[qproj_dep, q_ready[3]]):
+@@ -323 +328 @@
+-            q_proj_q_dequant_stream(
++            dq_tid = q_proj_q_dequant_stream(
+@@ -326,0 +332 @@
++            q_ready[3] = dq_tid
+--- a/deepseek_v4_flash_hca/qkv_mixed.py
++++ b/deepseek_v4_flash_hca/qkv_mixed.py
+@@ -23 +23 @@
+-q_proj_q = q_proj_q_streamed if QUANT_WEIGHT_NZ else q_proj_q_separate
++q_proj_q = q_proj_q_streamed
+@@ -38,0 +39 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -56,0 +58 @@
++        q_ready,
+@@ -76,0 +79 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -95,0 +99 @@
++        q_ready,
+--- a/deepseek_v4_flash_hca/decode_hca.py
++++ b/deepseek_v4_flash_hca/decode_hca.py
+@@ -149 +149,4 @@
+-    q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16)
++    q = pl.create_tensor([tokens, H, HEAD_DIM], dtype=pl.BF16, manual_dep=True)
++    q_ready = pl.array.create(4, pl.TASK_ID)
++    for group in pl.unroll(4):
++        q_ready[group] = pl.system.task_invalid()
+@@ -157 +160 @@
+-            gamma_cq, gamma_ckv, q, kv, qr, qr_scale, ready,
++            gamma_cq, gamma_ckv, q, kv, qr, qr_scale, q_ready, ready,
+@@ -175 +178 @@
+-            freqs_cos, freqs_sin, packed, raw_tid, compressed_tid,
++            freqs_cos, freqs_sin, packed, raw_tid, compressed_tid, q_ready,
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -766,0 +767 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -901 +902 @@
+-        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid], allow_early_resolve=True,
++        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid, q_ready], allow_early_resolve=True,
+@@ -1037,0 +1039 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -1171 +1173 @@
+-        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid], allow_early_resolve=True,
++        deps=[raw_gather_tid, raw_valid_tid, cmp_gather_tid, rope_cs_tid, q_ready], allow_early_resolve=True,
+@@ -1418,0 +1421 @@
++    q_ready: pl.Array[4, pl.TASK_ID],
+@@ -1426 +1429 @@
+-            raw_cache_ready_dep, cmp_cache_ready_dep,
++            raw_cache_ready_dep, cmp_cache_ready_dep, q_ready,
+@@ -1433 +1436 @@
+-            raw_cache_ready_dep, cmp_cache_ready_dep,
++            raw_cache_ready_dep, cmp_cache_ready_dep, q_ready,

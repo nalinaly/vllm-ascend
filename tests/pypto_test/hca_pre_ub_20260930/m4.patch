@@ -1,0 +1,88 @@
+--- a/deepseek_v4_flash_hca/hc_pre_fused.py
++++ b/deepseek_v4_flash_hca/hc_pre_fused.py
+@@ -27 +27,2 @@
+-T_TILE = 8  # other values miscompare
++T_TILE = 8
++MIX_ROWS = 4
+@@ -278 +279,2 @@
+-    t_pad = ((t_dim + T_TILE - 1) // T_TILE) * T_TILE
++    t_pad = ((t_dim + MIX_ROWS - 1) // MIX_ROWS) * MIX_ROWS
++    x_mixed = pl.create_tensor([t_pad, D], dtype=pl.BF16)
+@@ -283,3 +285,3 @@
+-    with pl.spmd(t_pad // T_TILE, name_hint="mix_x_rms_norm", allow_early_resolve=True) as mixed_tid:
+-        t0 = pl.tile.get_block_idx() * T_TILE
+-        valid_rows = pl.min(T_TILE, t_dim - t0)
++    with pl.spmd(t_pad // MIX_ROWS, name_hint="mix_x_rms_norm", allow_early_resolve=True) as mixed_tid:
++        t0 = pl.tile.get_block_idx() * MIX_ROWS
++        valid_rows = pl.min(MIX_ROWS, t_dim - t0)
+@@ -287 +289 @@
+-        mixes_total = pl.load(mixes_partials, [t0, 0], [T_TILE, MIX_PAD])
++        pre_mixes_total = pl.load(mixes_partials, [t0, 0], [T_TILE, MIX_PAD], valid_shape=[valid_rows, MIX_PAD])
+@@ -289,3 +291,3 @@
+-            mixes_piece = pl.load(mixes_partials, [split * t_linear + t0, 0], [T_TILE, MIX_PAD])
+-            mixes_total = pl.add(mixes_total, mixes_piece)
+-        inv_col = pl.load(inv_rms, [t0, 0], [T_TILE, 1])
++            pre_mixes_piece = pl.load(mixes_partials, [split * t_linear + t0, 0], [T_TILE, MIX_PAD], valid_shape=[valid_rows, MIX_PAD])
++            pre_mixes_total = pl.add(pre_mixes_total, pre_mixes_piece)
++        inv_col = pl.load(inv_rms, [t0, 0], [T_TILE, 1], valid_shape=[valid_rows, 1])
+@@ -300 +302 @@
+-        pre_mixes = pl.tile.gather(mixes_total, pre_indices, pre_gather_tmp)
++        pre_mixes = pl.tile.gather(pre_mixes_total, pre_indices, pre_gather_tmp)
+@@ -305,2 +307 @@
+-        pl.store(pre_val, [t0, 0], pre_val_store)
+-        pre_tile = pl.load(pre_val_store, [t0, 0], [T_TILE, HC_PAD])
++        pre_tile = pre_val
+@@ -315 +316 @@
+-        post_mixes = pl.tile.gather(mixes_total, post_indices, post_gather_tmp)
++        post_mixes = pl.tile.gather(pre_mixes_total, post_indices, post_gather_tmp)
+@@ -320,15 +321,15 @@
+-        if valid_rows == T_TILE:
+-            pl.store(pl.set_validshape(post_pad, T_TILE, HC_MULT), [t0, 0], post)
+-        else:
+-            pl.store(post_pad, [0, 0], post_tail_store)
+-            post_tile = pl.load(post_tail_store, [0, 0], [T_TILE, HC_PAD], valid_shape=[valid_rows, HC_MULT], target_memory=pl.MemorySpace.Vec)
+-            pl.store(post_tile, [t0, 0], post)
+-
+-
+-        pre_tile_t = pl.transpose(pre_tile, axis1=0, axis2=1)
+-        pre0 = pl.reshape(pre_tile_t[0:1, 0:T_TILE], [T_TILE, 1])
+-        pre1 = pl.reshape(pre_tile_t[1:2, 0:T_TILE], [T_TILE, 1])
+-        pre2 = pl.reshape(pre_tile_t[2:3, 0:T_TILE], [T_TILE, 1])
+-        pre3 = pl.reshape(pre_tile_t[3:4, 0:T_TILE], [T_TILE, 1])
+-        # 保留已量化的混合值，后续 RMS 不再经过 GM。
+-        mixed_ub = pl.create_tile([D // D_TILE * T_TILE, D_TILE], dtype=pl.BF16)
++        pl.store(pl.set_validshape(post_pad, valid_rows, HC_MULT), [t0, 0], post)
++
++        gate_rows = pl.cast(pl.tile.arange(0, [1, T_TILE], dtype=pl.INT32), pl.FP32)
++        gate_idx0 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 0), pl.INT32)
++        gate_tmp0 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
++        pre0 = pl.reshape(pl.tile.gather(pre_tile, gate_idx0, gate_tmp0), [T_TILE, 1])
++        gate_idx1 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 1), pl.INT32)
++        gate_tmp1 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
++        pre1 = pl.reshape(pl.tile.gather(pre_tile, gate_idx1, gate_tmp1), [T_TILE, 1])
++        gate_idx2 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 2), pl.INT32)
++        gate_tmp2 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
++        pre2 = pl.reshape(pl.tile.gather(pre_tile, gate_idx2, gate_tmp2), [T_TILE, 1])
++        gate_idx3 = pl.cast(pl.add(pl.mul(gate_rows, HC_PAD), 3), pl.INT32)
++        gate_tmp3 = pl.create_tile([1, T_TILE], dtype=pl.INT32)
++        pre3 = pl.reshape(pl.tile.gather(pre_tile, gate_idx3, gate_tmp3), [T_TILE, 1])
+@@ -350 +351 @@
+-            mixed_ub = pl.tile.assemble(mixed_ub, y_bf16, [mix_db * T_TILE, 0])
++            pl.store(pl.set_validshape(y_bf16, valid_rows, D_TILE), [t0, d0], x_mixed)
+@@ -363,3 +364 @@
+-            mixed_input = pl.tile.extract(
+-                mixed_ub, norm_db * T_TILE, 0, [T_TILE, D_TILE], target_memory=pl.MemorySpace.Vec,
+-            )
++            mixed_input = pl.load(x_mixed, [t0, d0], [T_TILE, D_TILE], valid_shape=[valid_rows, D_TILE])
+@@ -371,9 +370,2 @@
+-            if valid_rows == T_TILE:
+-                pl.store(normed_bf16, [t0, d0], x_normed)
+-            else:
+-                pl.store(normed_bf16, [0, d0], x_normed_tail_store)
+-                normed_valid = pl.load(
+-                    x_normed_tail_store, [0, d0], [T_TILE, D_TILE],
+-                    valid_shape=[valid_rows, D_TILE], target_memory=pl.MemorySpace.Vec,
+-                )
+-                pl.store(normed_valid, [t0, d0], x_normed)
++            normed_valid = pl.set_validshape(normed_bf16, valid_rows, D_TILE)
++            pl.store(normed_valid, [t0, d0], x_normed)

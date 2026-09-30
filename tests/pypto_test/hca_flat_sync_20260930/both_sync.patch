@@ -1,0 +1,9 @@
+--- a/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
++++ b/deepseek_v4_flash_dspark_perf/qkv_proj_rope.py
+@@ -533,0 +534 @@
++        sync_start=True,
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1121 +1121 @@
+-    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep]) as cmp_gather_tid:
++    with pl.spmd(cmp_gather_blocks, name_hint="hca_cmp_work_gather", allow_early_resolve=True, deps=[cmp_cache_ready_dep], sync_start=True) as cmp_gather_tid:

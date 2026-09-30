@@ -1,0 +1,5 @@
+--- a/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
++++ b/deepseek_v4_flash_hca/decode_sparse_attn_hca.py
+@@ -1141 +1141 @@
+-                            pl.neg(pl.sub(page_indices, pl.cast(valid_rows, pl.FP32))), 0.0,
++                            pl.neg(pl.sub(page_indices, pl.cast(pl.cast(valid_rows, pl.INT32), pl.FP32))), 0.0,

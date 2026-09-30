@@ -1,0 +1,390 @@
+{
+  "scope": "C128 压缩子链；正式权重、合成输入与历史，不代表 HCA 整层通过",
+  "status": "MEASURED",
+  "weights": [
+    {
+      "name": "layers.3.attn.compressor.wkv.weight",
+      "shape": [
+        512,
+        4096
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00021-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.wgate.weight",
+      "shape": [
+        512,
+        4096
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00039-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.ape",
+      "shape": [
+        128,
+        512
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.float32",
+      "shard": "quant_model_weights-00030-of-00075.safetensors"
+    },
+    {
+      "name": "layers.3.attn.compressor.norm.weight",
+      "shape": [
+        512
+      ],
+      "checkpoint_dtype": "torch.float32",
+      "loaded_dtype": "torch.bfloat16",
+      "shard": "quant_model_weights-00011-of-00075.safetensors"
+    }
+  ],
+  "native_extension": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/vllm_ascend/vllm_ascend_C.cpython-310-aarch64-linux-gnu.so",
+  "cases": [
+    {
+      "batch": 1,
+      "active": 1,
+      "histories": [
+        124
+      ],
+      "compact_rows": 1,
+      "compressed_count": 1,
+      "comparisons": {
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            155712
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            155712
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 155712,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 2.384185791015625e-06,
+          "rmse": 4.6544608294493766e-08,
+          "mismatches": 5248,
+          "first_mismatches": [
+            [
+              16448
+            ],
+            [
+              16449
+            ],
+            [
+              16450
+            ],
+            [
+              16451
+            ],
+            [
+              16452
+            ],
+            [
+              16453
+            ],
+            [
+              16454
+            ],
+            [
+              16455
+            ]
+          ]
+        },
+        "compressed_cache": {
+          "status": "FAIL",
+          "shape": [
+            49216
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            49216
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 49216,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 3.0517578125e-05,
+          "rmse": 1.3756150168888453e-07,
+          "mismatches": 1,
+          "first_mismatches": [
+            [
+              16823
+            ]
+          ]
+        }
+      },
+      "outside_slot_elements": {
+        "native.state": 0,
+        "pto.state": 0,
+        "native.compressed_cache": 0,
+        "pto.compressed_cache": 0
+      },
+      "status": "MEASURED"
+    },
+    {
+      "batch": 1,
+      "active": 1,
+      "histories": [
+        128
+      ],
+      "compact_rows": 1,
+      "compressed_count": 0,
+      "comparisons": {
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            155712
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            155712
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 155712,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 2.1457672119140625e-06,
+          "rmse": 4.761914000187835e-08,
+          "mismatches": 5242,
+          "first_mismatches": [
+            [
+              16448
+            ],
+            [
+              16449
+            ],
+            [
+              16450
+            ],
+            [
+              16451
+            ],
+            [
+              16452
+            ],
+            [
+              16453
+            ],
+            [
+              16454
+            ],
+            [
+              16455
+            ]
+          ]
+        },
+        "compressed_cache": {
+          "status": "PASS",
+          "shape": [
+            49216
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            49216
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 49216,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "outside_slot_elements": {
+        "native.state": 0,
+        "pto.state": 0,
+        "native.compressed_cache": 0,
+        "pto.compressed_cache": 0
+      },
+      "status": "MEASURED"
+    },
+    {
+      "batch": 4,
+      "active": 4,
+      "histories": [
+        0,
+        122,
+        127,
+        255
+      ],
+      "compact_rows": 4,
+      "compressed_count": 3,
+      "comparisons": {
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            598080
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            598080
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 598080,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 3.5762786865234375e-06,
+          "rmse": 5.0235668520900646e-08,
+          "mismatches": 21031,
+          "first_mismatches": [
+            [
+              147520
+            ],
+            [
+              147521
+            ],
+            [
+              147522
+            ],
+            [
+              147523
+            ],
+            [
+              147524
+            ],
+            [
+              147525
+            ],
+            [
+              147526
+            ],
+            [
+              147527
+            ]
+          ]
+        },
+        "compressed_cache": {
+          "status": "PASS",
+          "shape": [
+            147520
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            147520
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 147520,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "outside_slot_elements": {
+        "native.state": 0,
+        "pto.state": 0,
+        "native.compressed_cache": 0,
+        "pto.compressed_cache": 0
+      },
+      "status": "MEASURED"
+    },
+    {
+      "batch": 4,
+      "active": 3,
+      "histories": [
+        124,
+        255,
+        128,
+        999999
+      ],
+      "compact_rows": 4,
+      "compressed_count": 2,
+      "comparisons": {
+        "state": {
+          "status": "FAIL",
+          "shape": [
+            598080
+          ],
+          "dtype": "torch.float32",
+          "expected_shape": [
+            598080
+          ],
+          "expected_dtype": "torch.float32",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 598080,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 3.814697265625e-06,
+          "rmse": 4.196764035896012e-08,
+          "mismatches": 15756,
+          "first_mismatches": [
+            [
+              16448
+            ],
+            [
+              16449
+            ],
+            [
+              16450
+            ],
+            [
+              16451
+            ],
+            [
+              16452
+            ],
+            [
+              16453
+            ],
+            [
+              16454
+            ],
+            [
+              16455
+            ]
+          ]
+        },
+        "compressed_cache": {
+          "status": "PASS",
+          "shape": [
+            147520
+          ],
+          "dtype": "torch.bfloat16",
+          "expected_shape": [
+            147520
+          ],
+          "expected_dtype": "torch.bfloat16",
+          "atol": 0,
+          "rtol": 0,
+          "elements": 147520,
+          "comparison": "tolerance",
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "mismatches": 0,
+          "first_mismatches": []
+        }
+      },
+      "outside_slot_elements": {
+        "native.state": 0,
+        "pto.state": 0,
+        "native.compressed_cache": 0,
+        "pto.compressed_cache": 0
+      },
+      "status": "MEASURED"
+    }
+  ]
+}

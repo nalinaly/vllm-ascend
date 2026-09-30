@@ -1,0 +1,160 @@
+{
+  "source": {
+    "sources": {
+      "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+      "cube_early": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early",
+      "cube_early_dq_late": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early_dq_late"
+    },
+    "baseline": "0742f07c + frozen online-softmax candidate (not production)",
+    "invariants": "four x4 Cube/x12 AIV, unchanged arithmetic, tiling, sync and TaskId",
+    "hypothesis": "publish Q completion early; DQ reservation may compete with compressed gather/Attention",
+    "limits": "same-window combined increment; never sum separate experiments' deltas"
+  },
+  "reports": {
+    "cube_early_dq_late_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early_dq_late"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 2,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 583.25,
+          "max_us": 630.5,
+          "mean_us": 597.975,
+          "p50_us": 596.125
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 588.25,
+          "max_us": 627.5,
+          "mean_us": 607.65,
+          "p50_us": 606.75
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qgroups_resolve_20260930/cube_early_dq_late_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    },
+    "cube_early_long": {
+      "sources": {
+        "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+        "candidate": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qgroups-resolve-online-20260930/cube_early"
+      },
+      "case": [
+        131072,
+        16
+      ],
+      "device": 0,
+      "cann": "/data/pyptouser/yejia/vllm-cann92-main/env/Ascend/cann-9.2.0-beta.2",
+      "summary": {
+        "base": {
+          "count": 10,
+          "min_us": 547.75,
+          "max_us": 596.0,
+          "mean_us": 563.125,
+          "p50_us": 559.875
+        },
+        "candidate": {
+          "count": 10,
+          "min_us": 559.5,
+          "max_us": 587.25,
+          "mean_us": 572.075,
+          "p50_us": 574.5
+        }
+      },
+      "cross_variant_exact": {
+        "x_out": true,
+        "swa.0": true,
+        "compressed.0": true,
+        "state.0": true
+      },
+      "state_exact": {
+        "base": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        },
+        "candidate": {
+          "x_out": true,
+          "swa.0": true,
+          "compressed.0": true,
+          "state.0": true
+        }
+      },
+      "guards": {
+        "swa": "PASS",
+        "compressed": "PASS",
+        "state": "PASS",
+        "metadata.positions": "PASS",
+        "metadata.swa.query_start_loc": "PASS",
+        "metadata.swa.seq_lens": "PASS",
+        "metadata.swa.block_table": "PASS",
+        "metadata.swa.slot_mapping": "PASS",
+        "metadata.swa.start_pos": "PASS",
+        "metadata.compressed.query_start_loc": "PASS",
+        "metadata.compressed.seq_lens": "PASS",
+        "metadata.compressed.block_table": "PASS",
+        "metadata.compressed.start_pos": "PASS",
+        "metadata.state.query_start_loc": "PASS",
+        "metadata.state.seq_lens": "PASS",
+        "metadata.state.block_table": "PASS",
+        "metadata.state.slot_mapping": "PASS",
+        "metadata.state.start_pos": "PASS",
+        "metadata.compressed.compact_slots": "PASS"
+      },
+      "source_report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/results/hca_qgroups_resolve_20260930/cube_early_long/report.json",
+      "nz_mode": 2,
+      "purpose": "performance_screen"
+    }
+  },
+  "limits": "每候选各自同进程ABBA；DFX独立采样，组跨度变化不等于整段收益；未新增Native或整机验收"
+}

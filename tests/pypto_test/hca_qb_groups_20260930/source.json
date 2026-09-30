@@ -1,0 +1,21 @@
+{
+  "baseline_commit": "f14d8d90 (production operator unchanged from 9015d45a)",
+  "parent_experiment": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-hca-pto-0251rc1/tests/pypto_test/hca_qb_mixed_20260930/source.json",
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/base",
+    "flat4": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-mixed-9015d45a-20260930/streamed4_flat",
+    "flat2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/flat2",
+    "flat4_c16": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/flat4_c16",
+    "ready": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/ready",
+    "ready_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-qb-groups-f14d8d90-20260930/ready_v2"
+  },
+  "scope": "HCA private packages only; correct 2D Q manual_dep and explicit producer edges",
+  "changes": {
+    "flat2": "two groups, each 10 Cube and 24 AIV; four-slot dependency array keeps two invalid entries",
+    "flat4_c16": "four groups, each 4 Cube and 12 AIV; preserve integer/RMS/RoPE arithmetic"
+  },
+  "ready_scope": "NZ uses four groups/16 Cube; ND retains original Q projection via a tracked 3D view",
+  "cpu_failures": {
+    "ready": "inline if with nested dim/reshape fallback leaves original dequant Q metadata uninferred"
+  }
+}

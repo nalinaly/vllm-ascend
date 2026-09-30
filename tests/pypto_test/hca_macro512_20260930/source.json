@@ -1,0 +1,19 @@
+{
+  "sources": {
+    "base": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/online",
+    "macro512": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512",
+    "production": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-online-softmax-0742f07c-20260930-v2/base",
+    "macro512_v2": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2",
+    "macro512_qkpipe": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_qkpipe",
+    "qkpipe_control": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hca-macro512-5a5b9bfb-20260930/macro512_v2"
+  },
+  "baseline": "single-query online candidate, not production",
+  "change": "S2=512 softmax; four 128-column QK chunks; PV K128 accumulation in four L0C tiles; cross-query stream",
+  "invariants": "cache/state, masks, sink, per-query identity, inverse RoPE; no shared toolchain changes",
+  "arithmetic": "larger softmax block before BF16 and Cube PV accumulation change rounding; diagnostic output only",
+  "tradeoff": "reload KV for PV instead of permanent L1 ring; cut PV GM round trips and FFTS handoffs",
+  "qkpipe_parent": "macro512_v2; same arithmetic and PV, QK tile loads local to stage-2 pipeline",
+  "dfx_aliases": {
+    "qkpipe_control": "same macro512_v2 frozen source in a new same-card DFX window"
+  }
+}

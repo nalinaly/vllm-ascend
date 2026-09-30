@@ -1,0 +1,31 @@
+--- a/deepseek_v4_flash_hca/o_proj_hc_post.py
++++ b/deepseek_v4_flash_hca/o_proj_hc_post.py
+@@ -14,9 +14,10 @@
+     PROJ_B_SMALL_T_TILE,
+     T_PAD,
+     D,
+-    _decode_o_proj_tp1_parts,
+ )
+ from ..deepseek_v4_flash_dspark_perf.nz_mode import QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
++
++from .whole_o_projection import o_parts_grouped as _decode_o_proj_tp1_parts
+ 
+ T_DYN = pl.dynamic("HCA_O_POST_TOKENS")
+ HC_MULT = 4
+@@ -58,12 +59,12 @@
+         weight_scale = pl.reshape(pl.load(wo_scale, [col0], [COL_TILE]), [1, COL_TILE])
+         for row in pl.range(row0, pl.min(row0 + TASK_TOKENS, tokens), TOKEN_TILE):
+             valid = pl.min(TOKEN_TILE, tokens - row)
+-            acc = pl.tile.full([TOKEN_TILE, COL_TILE], dtype=pl.FP32, value=0.0)
++            acc = pl.tile.full([TOKEN_TILE, COL_TILE], dtype=pl.INT32, value=0)
+             for group in pl.pipeline(O_GROUPS, stage=2):
+                 part = pl.load(partials, [row, group * D + col0], [TOKEN_TILE, COL_TILE])
+-                scale = pl.reshape(pl.load(scales, [group, row], [1, TOKEN_TILE]), [TOKEN_TILE, 1])
+-                acc = pl.add(acc, pl.row_expand_mul(pl.cast(part, pl.FP32), scale))
+-            attention = pl.col_expand_mul(acc, weight_scale)
++                acc = pl.add(acc, part)
++            scale = pl.reshape(pl.load(scales, [0, row], [1, TOKEN_TILE]), [TOKEN_TILE, 1])
++            attention = pl.row_expand_mul(pl.col_expand_mul(pl.cast(acc, pl.FP32), weight_scale), scale)
+             # 保留原先 attention 输出落 BF16、mHC post 再转 FP32 的舍入点。
+             attention = pl.cast(pl.cast(attention, pl.BF16, mode="rint"), pl.FP32)
+             # Native 门控是行主序；整块读取后收集各列，生成独立的连续权重向量。
