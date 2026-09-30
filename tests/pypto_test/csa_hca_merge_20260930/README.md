@@ -131,6 +131,25 @@ worker 新增 `OFFLINE_STATIC_KERNEL` 日志，记录实际静态模块是否加
 单卡算子功能不受这项多卡启动修正影响，不重复单卡；
 接下来重新执行联合功能和 token 对照，确认静态 kernel 生效后再采性能。
 
+## 静态 kernel 生效后的联合验证（2026-09-30 17:29）
+
+任务 `task_20260930_170831_68585232616` 完成，退出 0；执行代码为 `bc451fe1`。
+结果目录：`results/csa_hca_merge_20260930/validation_h131072_b16_v3_static`。
+继续使用正式 W8A8 权重、128K 历史、B16/S6、D TP1×DP/EP16。
+
+- 功能通过：16 个 rank 各恢复 16 条离线 KV；21 个 CSA 与 20 个 HCA 层全部使用 PTO，
+  每 rank 实际重放 T=96 联合图 33 次。见 `functional_h131072_b16_v3_static.json`。
+- 精度通过：49,152 个输出 token 与 Native 全部一致，16 个 rank 的 DSpark 接受计数也一致。
+  见 `tokens_h131072_b16_v3_static.json`。该结论不要求中间浮点逐 bit 一致。
+- 静态编译实际生效：两侧全部 16 个 worker 的 `LOCAL_WORLD_SIZE=16`，实际静态模块已加载，
+  组长分别成功安装 4 个编译包；未出现静态 kernel 自动关闭告警。
+  见 `static_kernel_h131072_b16_v3.json`。其余 rank 的安装计数为 0 是多卡共享安装的正常行为。
+
+功能和精度通过后，提交性能任务 `task_20260930_172911_254022111899`。
+新目录为 `results/csa_hca_merge_20260930/model_h131072_b16_v4_static`；
+每侧 10 个无 profiler 的纯 `_model_forward` 设备样本，另采 3 步 Level0 profiling。
+此处仅记录已提交，尚无静态配置下的性能结论。本轮仍仅代表 128K/B16 场景。
+
 ## 首次合并已完成的检查
 
 - 配置选择、批次参数传递、性能层映射、离线批次及 token 比较：51 项 CPU 检查通过。
@@ -182,7 +201,8 @@ worker 新增 `OFFLINE_STATIC_KERNEL` 日志，记录实际静态模块是否加
 功能阶段已经通过（11:53）：16 个 rank 全部恢复 16 条请求，共 256 条；
 每 rank 在实际 T=96 档位重放联合图 33 次，覆盖全部 41 层，生成 49,152 个 token。
 逐 rank 检查记录见 `functional_h131072_b16.json`。已复核原始 `pto/rank*.json`，
-16 个 rank 的实际运行配置一致，norm/quant 融合、静态 kernel 与 FULL_DECODE_ONLY 均开启。
+16 个 rank 的配置一致，请求开启 norm/quant 融合、静态 kernel 与 FULL_DECODE_ONLY；
+其中静态 kernel 的实际生效状态需另查编译和安装记录，不能仅凭配置字段认定。
 Native 精度对照未完成，进程已在机器重启前后消失；不记录 token 一致或性能通过。
 
 ## 配置及历史任务
