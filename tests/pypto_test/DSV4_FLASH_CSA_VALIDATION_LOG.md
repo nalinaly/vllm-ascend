@@ -14523,3 +14523,23 @@ CPU复现证明容量停滞机制；旧失败任务缺乏逐步状态，不能�
 
 [正式五组报告](low_acceptance_20261001/RESULTS.md)、[任务与源码](low_acceptance_20261001/source.json)、
 [HCA容量诊断](low_acceptance_20261001/hca_watermark_001_128k.json)。
+
+## 514. 2026-10-01：筛选三方一致请求，单卡检查后重新组成B9复现
+
+按用户指定的“精度CSA、性能CSA及Native全部一致”口径，读取同步加载修复后的64条请求、全部16个DP，
+逐token、计数、直方图及逐轮事件共同筛选，得到128K的q05/q11/q17和8K的q05/q11/q17/q23/q29/q35。
+沿用原Native导出的cache/state，创建只读复用的派生bank，不重新prefill或hash扫描。三方统一Native HCA。
+
+先单卡检查新B9/H131111形状：两版的8类状态自身重复、A/B/A图更新、9→8→1→9补位、写区保护及只读metadata全部通过。
+使用正式layer_index=2权重、合成历史，不冒充所选请求的逐层bit验收；本轮没有性能计时。
+
+随后3个16卡任务：总体PASS，三方一致性PASS，原批次参考复现PASS。
+两版直接比较0/27,648个token位置不同、0/144条DSpark统计不同、0/144条事件不同。
+完整结果、跨DP、抢占及运行配置见下方报告，不只比较平均接受数。
+
+所选请求全为easy_repeat，历史均值4.952055；6条仅首轮拒绝，3条全接受，缺少接受0/2及持续复杂回退。
+这是正向复现，不替换第513节的低接受率失败结果；不能据其通过证明原分歧都不是功能问题，也不据此删除精度版。
+生产算子和采样未改。首次单卡启动参数遗漏--checkpoint，在执行算子前退出；补齐后正式单卡任务通过，失败启动单列。
+
+[复现说明](matched_requests_20261001/README.md)、[结果](matched_requests_20261001/RESULTS.md)、
+[完整筛选](matched_requests_20261001/selection.json)、[任务和版本](matched_requests_20261001/source.json)。

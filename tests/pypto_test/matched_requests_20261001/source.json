@@ -1,0 +1,44 @@
+{
+  "toolchain_commits": {
+    "pypto": "cb24844712fa4329563a8cfbdd8d9f77ba0dc20c",
+    "simpler": "ef6812891575eaf2a15051fc9abc659f5415c2e2",
+    "vllm": "752a3a504485790a2e8491cacbb35c137339ad34"
+  },
+  "cann": "9.2.0-beta.2",
+  "ptoas": "0.66",
+  "graph_scope": "vLLM整模型FULL_DECODE_ONLY+npugraph_ex/static；不是单算子SK1性能测试入口。生产编译器inplace_pass=False。",
+  "event_mode_difference": "Native默认0，PTO初始化1；报告实际值，其余worker配置一致，不据此直接归因token差异。",
+  "base_commit": "a37df1fa",
+  "production_operator_commit": "84dc9a3f",
+  "frozen_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load",
+  "scope": "只新增筛选/复现测试，不修改算子及采样；原低接受率基准保留",
+  "output_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/matched_requests_20261001",
+  "batch": 9,
+  "tp": 1,
+  "dp": 16,
+  "ep": 16,
+  "decode_tokens": 192,
+  "atomic_add": 0,
+  "deterministic_level": 1,
+  "nz": 2,
+  "runtime": "tensormap_and_ringbuffer",
+  "hca": "native",
+  "capture_sizes": [
+    6,
+    54
+  ],
+  "gpu_memory_utilization": 0.95,
+  "watermark": 0,
+  "shape_guard": {
+    "batch": 9,
+    "history": 131111,
+    "layer_index": 2,
+    "source": "正式权重、合成输入/历史，非所选请求的逐层bit",
+    "status": "PASS",
+    "output": "shape_guard_v2"
+  },
+  "status": "PASS",
+  "completed_at": "2026-10-01 17:21 Asia/Shanghai",
+  "three_way_status": "PASS",
+  "original_reference_status": "PASS"
+}
