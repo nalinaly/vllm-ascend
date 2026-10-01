@@ -30,7 +30,8 @@ class AcceptanceScheduler(AsyncScheduler):
             events = self.acceptance_events.pop(request.request_id, [])
             record = {'request_id': request.request_id,
                       'key': (request.kv_transfer_params or {}).get('offline_key'),
-                      'events': events, 'output_tokens': len(request.output_token_ids)}
+                      'events': events, 'output_tokens': len(request.output_token_ids),
+                      'preemptions': request.num_preemptions}
             # 每个请求结束才写一次CPU记录；不读设备张量，不增加设备同步。
             with self.acceptance_path.open('a') as stream:
                 stream.write(json.dumps(record) + '\n')

@@ -1,0 +1,73 @@
+{
+  "label": "CSA性能版 + Native HCA",
+  "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/128k/csa_performance_native_hca",
+  "execution_status": "COMPLETE",
+  "validation_errors": [],
+  "acceptance": {
+    "qualified": true,
+    "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
+    "mean_range": [
+      3.0,
+      4.0
+    ],
+    "mean_accepted": 3.695959595959596,
+    "accepted_length_histogram": [
+      1232,
+      1520,
+      1456,
+      1280,
+      1488,
+      8864
+    ],
+    "full_five_draft_histogram": [
+      1232,
+      1520,
+      1456,
+      1280,
+      1488,
+      8864
+    ],
+    "num_drafts": 15840,
+    "num_draft_tokens": 79200,
+    "num_accepted_tokens": 58544,
+    "acceptance_rate": 0.7391919191919192,
+    "request_mean_min": 2.673076923076923,
+    "request_mean_max": 5.0,
+    "errors": []
+  },
+  "cross_dp_different_outputs_within_run": 0,
+  "cross_dp_different_acceptance_events_within_run": 0,
+  "graph_forwards_per_rank": [
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    102,
+    101
+  ],
+  "reused_legacy_both_evidence": false,
+  "static_kernel": {
+    "installed_packages": [
+      1
+    ],
+    "compiler_errors": 0
+  },
+  "task": "task_20261001_142251_220221019171",
+  "exit_code": 0,
+  "complete_ranks": 16,
+  "requests": 384,
+  "output_tokens_per_request": 192,
+  "total_output_tokens": 73728,
+  "total_preemptions": 0,
+  "production_operator_changed": false
+}

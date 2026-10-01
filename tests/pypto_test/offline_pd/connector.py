@@ -59,7 +59,6 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
         self.request_blocks = {}
         self.pending_loads = []
         self.saved = set()
-        self.received = set()
         self.caches = {}
         self.dp = vllm_config.parallel_config.data_parallel_rank
         self.tp = 0
@@ -109,7 +108,11 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
             raise ValueError("D prompt does not match the saved P prefix")
         # 扩展诊断可复用已审计的H-token前缀；其后完整问题由D侧真实prefill，
         # 不能把未计算的后缀也报成cache hit。派生bank的准备器核对前H个token。
-        return history, True
+        # start_load_kv 在本次 forward 前同步完成文件读取、H2D 和设备同步，
+        # 不是跨 scheduler step 的异步接收。声明同步加载，让调度器一次性为
+        # prefix、待计算 token 和 speculative lookahead 分配空间；否则长档
+        # 可能先把空闲块占满，所有请求停在 WAITING、没有 decode 空间可用。
+        return history, False
 
     def update_state_after_alloc(self, request, blocks, num_external_tokens):
         self.requests[request.request_id] = request
@@ -236,12 +239,11 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
                     ids = torch.tensor([b for _, b in pairs], dtype=torch.int64, device=cache.device)
                     cache.index_copy_(0, ids, value.index_select(0, rows).to(cache.device))
             torch.npu.synchronize()
-            self.received.add(request["request_id"])
             print(f"OFFLINE_CACHE_LOADED dp={self.dp} key={request['key']}", flush=True)
 
     def get_finished(self, finished_req_ids):
-        received, self.received = self.received, set()
-        return set(), received
+        # 同步加载不经过 WAITING_FOR_REMOTE_KVS，不能再发异步接收完成通知。
+        return set(), set()
 
     def wait_for_layer_load(self, layer_name):
         pass
