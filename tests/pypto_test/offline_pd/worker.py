@@ -88,7 +88,8 @@ class OfflineNPUWorker(NPUWorker):
             },
             "runtime_environment": {
                 name: os.environ.get(name)
-                for name in ("LOCAL_WORLD_SIZE", "OMP_NUM_THREADS", "OMP_PROC_BIND", "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
+                for name in ("LOCAL_WORLD_SIZE", "OMP_NUM_THREADS", "OMP_PROC_BIND",
+                             "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
                              "VLLM_BATCH_INVARIANT", "PYTORCH_NPU_ALLOC_CONF")
             },
             "scheduler": {
@@ -96,3 +97,18 @@ class OfflineNPUWorker(NPUWorker):
                 for name in ("max_num_seqs", "max_num_batched_tokens", "max_num_scheduled_tokens")
             },
         }
+
+    def offline_attention_implementations(self):
+        """只读取模型实际安装的runtime，证明五组组合的CSA/HCA选择，不读取设备张量。"""
+        rows = []
+        for index, layer in enumerate(self.model_runner.get_model().model.layers):
+            attention = layer.self_attn
+            ratio = attention.compress_ratio
+            if ratio not in (4, 128):
+                continue
+            kind = "csa" if ratio == 4 else "hca"
+            runtime = getattr(attention.dsa_attn, f"_pto_{kind}_runtime", None)
+            rows.append({"layer": index, "name": attention.dsa_attn.dsa_attn.layer_name,
+                         "kind": kind, "implementation": "pto" if runtime is not None else "native",
+                         "runtime_class": type(runtime).__module__ if runtime is not None else None})
+        return rows

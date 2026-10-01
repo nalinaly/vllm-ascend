@@ -776,12 +776,17 @@ def worker(args):
 
     plan = read_plan(args.bank)
     prefill = args.command == "prefill"
+    if prefill and plan.get("inherited_prefix_bank"):
+        raise ValueError("派生bank只复用源前缀，禁止向它的cache软链接写入prefill结果")
     args.max_num_batched_tokens = token_budget(args, plan)
-    cases = [c for c in plan["cases"] if c["p_dp_rank"] == args.rank % 4]
+    cases = (plan["cases"] if args.mixed_requests
+             else [c for c in plan["cases"] if c["p_dp_rank"] == args.rank % plan["prefill"]["dp"]])
     connector = KVTransferConfig(
         kv_connector="OfflineDSV4Connector", kv_connector_module_path="offline_pd.connector",
         kv_role="kv_producer" if prefill else "kv_consumer",
-        kv_connector_extra_config={"bank": str(args.bank.resolve())},
+        kv_connector_extra_config={"bank": str(args.bank.resolve()),
+                                   **({"save_extended_bank": str(args.save_extended_bank.resolve())}
+                                      if args.save_extended_bank else {})},
     )
     overrides = {"sliding_window": 128}
     if not prefill and args.backend == "pto":
@@ -792,9 +797,12 @@ def worker(args):
     llm = LLM(
         model=plan["model"], tokenizer_mode="deepseek_v4", trust_remote_code=True,
         worker_cls="offline_pd.worker.OfflineNPUWorker",
+        **({"scheduler_cls": "low_acceptance_20261001.scheduler.AcceptanceScheduler"}
+           if args.mixed_requests else {}),
         tensor_parallel_size=4 if prefill else 1, enable_expert_parallel=True,
         dtype="bfloat16", quantization="ascend", hf_overrides=overrides,
-        max_model_len=max(c["history"] for c in cases) + args.decode_tokens + 32,
+        max_model_len=max(c["history"] + c.get("decode_suffix_tokens", 1) - 1 for c in cases)
+        + args.decode_tokens + 32,
         max_num_seqs=1 if prefill else args.batch,
         max_num_batched_tokens=args.max_num_batched_tokens,
         enable_prefix_caching=False, enforce_eager=prefill or args.graph_mode == "eager", seed=1024,
@@ -825,6 +833,8 @@ def worker(args):
                            "offline_pto_attention": args.pto_attention,
                            "offline_deterministic_level": int(args.deterministic),
                            "offline_event_work_mode": args.event_work_mode,
+                           **({"offline_acceptance_output": str(args.output.resolve())}
+                              if args.mixed_requests else {}),
                            **({"offline_moe_routing_tokens": (args.rank_batch or args.batch)
                                * (plan["decode"]["speculative_tokens"] + 1)}
                               if args.command == "moe-routing" else {}),
@@ -886,13 +896,21 @@ def worker(args):
         finally:
             llm.llm_engine.engine_core.shutdown()
         return
+    if args.mixed_requests:
+        from low_acceptance_20261001.mixed import run_batches
+
+        try:
+            run_batches(llm, args, cases)
+        finally:
+            llm.llm_engine.engine_core.shutdown()
+        return
     outputs = []
     for case in cases:
         tokens = json.loads((args.bank / case["tokens"]).read_text())
         params = SamplingParams(temperature=0, max_tokens=1 if prefill else args.decode_tokens,
                                 ignore_eos=True,
                                 extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
-        prompt = {"prompt_token_ids": tokens[:-1] if prefill else tokens}
+        prompt = {"prompt_token_ids": tokens[:-1] if prefill or args.save_extended_bank else tokens}
         if not prefill:
             llm.collective_rpc("offline_begin_observation")
         start = time.perf_counter()
@@ -1074,6 +1092,10 @@ def launch(args):
                    "--graph-mode", args.graph_mode]
             if args.recompute_scheduler:
                 cmd.append("--recompute-scheduler")
+            if args.save_extended_bank:
+                cmd += ["--save-extended-bank", str(args.save_extended_bank.resolve())]
+            if args.mixed_requests:
+                cmd.append("--mixed-requests")
             if args.profile_forward_events:
                 cmd.append("--profile-forward-events")
             if args.embedding_tp:
@@ -1127,6 +1149,10 @@ def main():
                                             "swimlane", "swimlane-export",
                                             "padding-capture", "steady", "bitcompare", "argdump", "moe-routing"])
     parser.add_argument("--bank", type=Path, required=True)
+    parser.add_argument("--save-extended-bank", type=Path,
+                        help="仅Native/eager/B1或显式混合批次：加载旧前缀，prefill后缀并保存新的固定前缀")
+    parser.add_argument("--mixed-requests", action="store_true",
+                        help="同批提交bank中的不同请求，记录真实的逐请求DSpark接受事件；只用于decode精度诊断")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--histories", default="255,4095,32767,131071,131072,131073")
     parser.add_argument("--host", default="192.168.0.106")
@@ -1206,6 +1232,16 @@ def main():
     parser.add_argument("--analyse-processes", type=int, default=16, help="离线解析使用的进程数上限")
     parser.add_argument("--compare-top", type=int, default=25, help="profile-compare列出的kernel差异条数")
     args = parser.parse_args()
+    if args.save_extended_bank:
+        if (args.command != "decode" or args.backend != "native" or args.graph_mode != "eager"
+                or (args.batch != 1 and not args.mixed_requests)
+                or args.decode_tokens != 1 or args.decode_dp != 16):
+            parser.error("扩展bank只允许Native、eager、B1或显式混合批次、单个输出token、DP/EP16")
+        if args.save_extended_bank.resolve() == args.bank.resolve():
+            parser.error("扩展bank不能覆盖输入bank")
+    if args.mixed_requests and (args.command != "decode" or args.decode_dp != 16
+                               or args.rank_batches or args.rank_decode_tokens):
+        parser.error("混合请求诊断要求decode、DP/EP16、各rank统一batch及生成长度")
     if args.pto_attention in ("hca", "both") and args.command not in ("decode", "performance"):
         parser.error("HCA 与联合入口只支持 decode、performance，不沿用 CSA 专有诊断钩子")
     if args.decode_dp != 16 and (args.command != "decode" or args.pto_attention not in ("hca", "both")):

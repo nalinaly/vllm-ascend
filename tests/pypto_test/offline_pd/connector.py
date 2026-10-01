@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Test-only HMA file connector. Never used inside a timed decode step.
 
-P computes exactly H prompt tokens; D submits the same prefix plus one token,
-loads h(H), then computes that last token. All target AND draft cache groups
-are saved after the Native runner finalizes speculative decoding.
+P computes exactly H prompt tokens. D restores that exact prefix and computes
+the uncached prompt suffix (one token by default). All target AND draft cache
+groups are saved after the Native runner finalizes speculative decoding.
 """
 
 import json
@@ -14,7 +14,10 @@ from pathlib import Path
 import torch
 from safetensors.torch import load_file, save_file
 from vllm.distributed.kv_transfer.kv_connector.v1.base import (
-    KVConnectorBase_V1, KVConnectorMetadata, KVConnectorRole, SupportsHMA,
+    KVConnectorBase_V1,
+    KVConnectorMetadata,
+    KVConnectorRole,
+    SupportsHMA,
 )
 from vllm.v1.kv_cache_interface import UniformTypeKVCacheSpecs
 
@@ -49,6 +52,7 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
         super().__init__(vllm_config, role, kv_cache_config)
         extra = self._kv_transfer_config.kv_connector_extra_config
         self.root = Path(extra["bank"])
+        self.save_root = Path(extra["save_extended_bank"]) if extra.get("save_extended_bank") else None
         self.cases = {case["key"]: case for case in json.loads((self.root / "plan.json").read_text())["cases"]}
         self.producer = self._kv_transfer_config.is_kv_producer
         self.requests = {}
@@ -88,7 +92,7 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
             raise ValueError("Offline validation requires offline_key for every request")
         case = self.cases[key]
         tokens = json.loads((self.root / case["tokens"]).read_text())
-        expected_prompt = tokens[:-1] if self.producer else tokens
+        expected_prompt = tokens[:-1] if self.producer or self.save_root else tokens
         if request.prompt_token_ids != expected_prompt:
             raise ValueError("Request prompt differs from the planned offline P/D tokens")
         self.requests[request.request_id] = request
@@ -98,14 +102,18 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
             # No prefix sharing/recompute in this performance fixture.
             raise ValueError("Unexpected local prefix hit or preemption in offline decode")
         manifest = json.loads((self._folder(key, 0) / "manifest.json").read_text())
-        prefix = request.prompt_token_ids[:-1]
-        if len(prefix) != manifest["history"] or len(prefix) != case["history"]:
+        history = case["history"]
+        suffix_tokens = case.get("decode_suffix_tokens", 1) - int(self.save_root is not None)
+        if (manifest["history"] != history or suffix_tokens < 1
+                or len(request.prompt_token_ids) != history + suffix_tokens):
             raise ValueError("D prompt does not match the saved P prefix")
-        return len(prefix), True
+        # 扩展诊断可复用已审计的H-token前缀；其后完整问题由D侧真实prefill，
+        # 不能把未计算的后缀也报成cache hit。派生bank的准备器核对前H个token。
+        return history, True
 
     def update_state_after_alloc(self, request, blocks, num_external_tokens):
         self.requests[request.request_id] = request
-        if self.producer:
+        if self.producer or self.save_root:
             # vLLM 0.25.1 get_blocks() wraps the manager's live per-group lists.
             # Retain those lists, not a get_block_ids() snapshot: chunked
             # prefill extends them and SWA eviction replaces old entries with
@@ -123,7 +131,7 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
     def build_connector_meta(self, scheduler_output):
         meta = OfflineMetadata(loads=self.pending_loads)
         self.pending_loads = []
-        if self.producer:
+        if self.producer or self.save_root:
             if scheduler_output.preempted_req_ids:
                 raise ValueError("Offline P cache generation does not support preemption")
             computed = {r.req_id: r.num_computed_tokens for r in scheduler_output.scheduled_new_reqs}
@@ -157,10 +165,15 @@ class OfflineDSV4Connector(KVConnectorBase_V1, SupportsHMA):
                 yield f"{layer}__{part}", cache, gid, spec
 
     def wait_for_save(self):
-        if not self.producer or not self.has_connector_metadata():
+        if not (self.producer or self.save_root) or not self.has_connector_metadata():
             return
         for request in self._get_connector_metadata().saves:
-            folder = self._folder(request["key"])
+            # 扩展模式由DP/EP16共同执行Native后缀prefill，每个请求仅由指定rank保存。
+            # 其余rank只参与真实计算，避免向同一固定bank重复写入。
+            if self.save_root and self.dp != self.cases[request["key"]]["p_dp_rank"]:
+                continue
+            folder = (self.save_root / request["key"] / f"tp{self.tp}"
+                      if self.save_root else self._folder(request["key"]))
             folder.mkdir(parents=True, exist_ok=True)
             if (folder / "manifest.json").exists():
                 raise FileExistsError(f"Refusing to overwrite completed cache {folder}")

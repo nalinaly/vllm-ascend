@@ -173,7 +173,8 @@ class OfflineCSAObserver:
             raise RuntimeError(f"预期 {expected} 个 {attention_kind} 层，实际 {len(self._offline_csa_counts)}")
         self._offline_hca_forwards = Counter()
         self._offline_hca_forward_origin = None
-        if attention_kind in ("hca", "both"):
+        if (attention_kind in ("hca", "both")
+                or self.vllm_config.additional_config.get("offline_acceptance_output")):
             # 只统计生成窗口内真实调用的档位，不读取设备数据，也不额外计时。
             origin = self.model_runner._model_forward
 

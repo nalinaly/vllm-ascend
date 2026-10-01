@@ -1,0 +1,285 @@
+{
+  "bank": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/mixed128k_suffix",
+  "cases": [
+    {
+      "key": "h131072_q00",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([19, 7, 41, 13, 29, 3, 37])\ns = 23\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 17 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q01",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=0、寄存器R=137。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+31*a+17*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q02",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([20, 9, 40, 14, 30, 4, 39])\ns = 30\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 19 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q03",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-2*fee，然后计算 score=(net*7+fee*11)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q04",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=1、寄存器R=150。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+33*a+18*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q05",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话80次，用换行分隔，不编号、不解释、不省略：\n缓存保持一致。",
+      "suffix_tokens": 33,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q06",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([21, 11, 39, 15, 31, 5, 41])\ns = 37\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 21 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q07",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=2、寄存器R=163。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+35*a+19*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q08",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([22, 13, 38, 16, 32, 6, 43])\ns = 44\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 23 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q09",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-3*fee，然后计算 score=(net*9+fee*13)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q10",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=3、寄存器R=176。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+37*a+20*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q11",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话81次，用换行分隔，不编号、不解释、不省略：\nThe cache is consistent.",
+      "suffix_tokens": 35,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q12",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([23, 15, 37, 17, 33, 7, 45])\ns = 51\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 25 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q13",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=4、寄存器R=189。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+39*a+21*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q14",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([24, 17, 36, 18, 34, 8, 47])\ns = 58\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 17 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q15",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-4*fee，然后计算 score=(net*11+fee*15)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q16",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=5、寄存器R=202。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+41*a+22*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q17",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话82次，用换行分隔，不编号、不解释、不省略：\n先读取，再计算，最后写回。",
+      "suffix_tokens": 40,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q18",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([25, 19, 35, 19, 35, 9, 49])\ns = 65\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 19 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q19",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=6、寄存器R=215。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+43*a+23*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q20",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([26, 21, 34, 20, 36, 10, 51])\ns = 72\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 21 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q21",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-5*fee，然后计算 score=(net*13+fee*17)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q22",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=7、寄存器R=228。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+45*a+24*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q23",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话83次，用换行分隔，不编号、不解释、不省略：\n一个请求，一份状态。",
+      "suffix_tokens": 36,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q24",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([27, 23, 33, 21, 37, 11, 53])\ns = 79\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 23 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q25",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=8、寄存器R=241。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+47*a+25*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q26",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([28, 25, 32, 22, 38, 12, 55])\ns = 86\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 25 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q27",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-6*fee，然后计算 score=(net*15+fee*19)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q28",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=9、寄存器R=254。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+49*a+26*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q29",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话84次，用换行分隔，不编号、不解释、不省略：\nRead, compute, write.",
+      "suffix_tokens": 36,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q30",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([29, 27, 31, 23, 39, 13, 57])\ns = 93\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 17 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q31",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=10、寄存器R=267。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+51*a+27*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q32",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([30, 29, 30, 24, 40, 14, 59])\ns = 100\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 19 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q33",
+      "kind": "ledger_transform",
+      "question": "背景材料已经结束，下面是本题完整账本，字段为id,amount,fee,tag：\nk7,1837,41,B\np2,2941,67,A\nm9,1723,29,C\nv4,3829,83,B\na8,2153,47,A\nr1,3467,71,C\nc6,1289,37,B\nh3,4513,89,A\nt5,2671,53,C\nn0,3191,61,A\ne4,1597,43,C\nw8,4093,79,B\nb2,2381,59,C\ns6,3761,73,A\nj9,1879,31,B\nf1,4933,97,C\nz3,3259,65,B\nd5,2749,57,A\nu7,1423,23,C\ng0,3623,69,B\n对每行计算 net=amount-7*fee，然后计算 score=(net*17+fee*21)%1009。\n先按score降序排列全部记录；score相同则按id字典序升序。\n只输出一个JSON数组，每项依次含id、net、score、tag四个字段；不得遗漏记录。",
+      "suffix_tokens": 275,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q34",
+      "kind": "transition_trace",
+      "question": "此前材料结束，请只解答下面的离散状态机问题。\n初始状态S=0、寄存器R=280。输入依次为：\n8,3,17,6,21,4,13,9,2,19,7,25,11,5,23,16,1,14,27,12,20,10,26,15\n对第i个输入a（i从1开始），先以旧S、R计算 t=(R+53*a+28*S)%509。\n若t%4=0，新S=(S+a+3)%11；若t%4=1，新S=(2*S+5)%11；否则新S=(S*3+a)%11。\n然后新R=(t*7+新S*13+i)%521。对全部24个输入逐个更新。\n请直接输出24行，每行格式为 i|a|t|新S|新R；不要输出代码或省略中间步骤。最后给出所有新R的和。",
+      "suffix_tokens": 219,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q35",
+      "kind": "easy_repeat",
+      "question": "背景材料结束。请连续重复下面这句话85次，用换行分隔，不编号、不解释、不省略：\n天地玄黄，宇宙洪荒。",
+      "suffix_tokens": 37,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q36",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([31, 31, 29, 25, 41, 15, 61])\ns = 107\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 21 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q37",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([32, 33, 28, 26, 42, 16, 63])\ns = 114\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 23 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q38",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([33, 35, 27, 27, 43, 17, 65])\ns = 121\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 25 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    },
+    {
+      "key": "h131072_q39",
+      "kind": "python_trace",
+      "question": "前面的背景阅读已结束。请精确推演以下Python程序，不调用工具。\nfrom collections import deque\nq = deque([34, 37, 26, 28, 44, 18, 67])\ns = 128\nout = []\nfor i in range(1, 25):\n    q.rotate((i % 5) - 2)\n    a = q.popleft()\n    b = (a * 17 + s * 3 + i * i) % 257\n    if b % 3 == 0:\n        q.appendleft((b + i * 11) % 263)\n    else:\n        q.append(b)\n    s = (s ^ (b + i)) % 251\n    out.append([i, a, b, s])\nprint(out)\n请直接输出print得到的完整嵌套列表，不要贴代码、不要省略元素。之后给出最终q中元素的顺序。",
+      "suffix_tokens": 202,
+      "cached_history": 131072
+    }
+  ]
+}
