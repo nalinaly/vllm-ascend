@@ -4,13 +4,24 @@
 
 ## 封存内容与恢复
 
-[source.tar.gz](source.tar.gz) 由 `git archive` 直接生成，包含提交
-`23e10b1289bebc400053ec9d07ea6731bd6f376b` 中完整的
-`vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/`（22 个 Python 文件）。
-包含精度版 QKV、Compressor、Indexer、Sparse、O 投影、根入口和当时的公共辅助模块。
-归档放在测试目录，不属于 Python 运行时包，不会被生产入口加载。
+精度版源码已展开并迁到 [deepseek_v4_flash_dspark/](deepseek_v4_flash_dspark/)，可以直接浏览和检索。
+来源为提交 `23e10b1289bebc400053ec9d07ea6731bd6f376b` 中完整的
+`vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/`（22 个 Python 文件），内容保持原样。
+原压缩包已移除，避免维护两份相同封存内容；压缩包历史仍可通过提交 `e05bc83a` 查看。
 
-精度版也依赖同提交的性能包辅助函数、模型接入和测试脚本；仅解压此包到当前源码不能作为完整复现环境。
+| 精度版部件 | 封存源码 |
+| --- | --- |
+| CSA 根入口 | [decode_csa.py](deepseek_v4_flash_dspark/decode_csa.py) |
+| QKV 投影及 RoPE | [qkv_proj_rope.py](deepseek_v4_flash_dspark/qkv_proj_rope.py) |
+| 主 Compressor | [decode_compressor_ratio4.py](deepseek_v4_flash_dspark/decode_compressor_ratio4.py) |
+| Indexer Compressor | [decode_indexer_compressor.py](deepseek_v4_flash_dspark/decode_indexer_compressor.py) |
+| Indexer | [decode_indexer.py](deepseek_v4_flash_dspark/decode_indexer.py) |
+| Sparse Attention | [decode_sparse_attn_csa.py](deepseek_v4_flash_dspark/decode_sparse_attn_csa.py) |
+| O 投影 | [decode_o_proj.py](deepseek_v4_flash_dspark/decode_o_proj.py) |
+
+当时的公共辅助模块和适配也保存在同一目录。该目录不属于生产包，不由运行入口导入。
+这些是历史源码，保留原导入关系；精度版还依赖同提交的性能包辅助函数、模型接入和测试脚本，
+不能直接从新位置导入执行，或单独复制此目录到当前源码作为完整复现环境。
 需要复现历史时，在仓库内使用独立目录恢复整份对应提交：
 
 ```bash
@@ -56,6 +67,9 @@ TMR/HBG、ND/NZ 和长短档策略继续使用同一性能实现。HCA 的算术
 原完整低接受率基准不会被筛选后的简单题替代。
 
 ## 本次验证
+
+路径迁移仅展开原封存文件，22个Python文件语法解析及diff检查通过；未改运行时代码，未重跑CPU/NPU功能测试。
+过程见[验证日志 §518](../../DSV4_FLASH_CSA_VALIDATION_LOG.md)。以下为上一次封存入口变更的验证记录。
 
 结果及边界见[验证记录](verification.json)和[验证日志 §517](../../DSV4_FLASH_CSA_VALIDATION_LOG.md)。
 检查默认入口、退役配置拒绝、atomic 默认/覆盖/冻结、实际 ND/NZ 根签名、服务 metadata 绑定和 HBG schema；

@@ -14607,3 +14607,16 @@ TMR、atomic0、确定性level1/HCCL确定性、PTO event1、NZ2、各档显存�
 [封存源码及恢复](archive/csa_precision_20261001/README.md)、
 [定向验证结果](archive/csa_precision_20261001/verification.json)、
 [原七组精度结果](low_acceptance_20261001/RESULTS.md)。
+
+## 518. 2026-10-01：精度PTO源码迁到可浏览的封存目录
+
+按用户要求，把第517节的精度源码压缩包展开到
+`tests/pypto_test/archive/csa_precision_20261001/deepseek_v4_flash_dspark/`，22个Python文件内容保持归档时原样。
+精度QKV、两个Compressor、Indexer、Sparse、O投影及根入口现在都有独立可浏览的文件，封存README增加对应链接。
+移除冗余source.tar.gz，其历史由Git保留。当前生产包、性能默认入口和CSA/HCA公共依赖未改。
+封存源码保留原导入关系，仅作历史查看；完整运行复现仍需使用23e10b12对应的独立worktree。
+
+本轮只检查22个文件语法及git diff，不占卡、不重跑功能/性能测试；第517节验证结果及既有Native/PTO精度结论保持原样。
+
+[精度算子源码目录](archive/csa_precision_20261001/deepseek_v4_flash_dspark/)、
+[索引与恢复说明](archive/csa_precision_20261001/README.md)。
