@@ -126,7 +126,7 @@ from vllm_ascend.eplb.core.eplb_device_transfer_loader import D2DExpertWeightLoa
 from vllm_ascend.eplb.core.eplb_worker import EplbProcess
 from vllm_ascend.eplb.eplb_updator import EplbUpdator
 from vllm_ascend.model_executor.offloader import create_offloader
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import can_replay_csa_graph, is_csa_model
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service_config import can_replay_csa_graph, is_csa_model
 from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service_config import is_hca_model
 from vllm_ascend.ops.rotary_embedding import set_cos_and_sin, update_cos_sin
 from vllm_ascend.patch.worker.patch_draft_quarot import patch_load_weights

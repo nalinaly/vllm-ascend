@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """性能版使用自身根签名与共用布局转换，不另维护 NZ 权重名单。"""
 
-from ..deepseek_v4_flash_dspark.native_adapter import repack_weights
 from .decode_csa import _decode_csa_tp1_layer
+from .native_adapter import repack_weights
 from .nz_mode import root_weight_layouts, root_weight_shapes
 
 

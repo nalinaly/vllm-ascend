@@ -7,8 +7,9 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.host_metadata import (
-    CSAHostMetadata, validate_graph_replay,
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.host_metadata import (
+    CSAHostMetadata,
+    validate_graph_replay,
 )
 
 
@@ -37,10 +38,11 @@ def test_topology_boundaries_and_model_graph_guard():
 
 
 def test_separate_torch_schemas_preserve_legacy_tensor_abi():
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_csa import (
-        _decode_csa_tp1_layer, _decode_csa_tp1_layer_hbg,
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.decode_csa import (
+        _decode_csa_tp1_layer,
+        _decode_csa_tp1_layer_hbg,
     )
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.native_adapter import CSAOperators, HBGCSAOperators
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_adapter import CSAOperators, HBGCSAOperators
 
     legacy = CSAOperators.register().attention._schema
     hbg = HBGCSAOperators.register().attention._schema
@@ -59,6 +61,7 @@ def test_separate_torch_schemas_preserve_legacy_tensor_abi():
 def test_model_wrapper_checks_host_values_before_replay(monkeypatch):
     from vllm.config import CUDAGraphMode
     from vllm.forward_context import BatchDescriptor
+
     from vllm_ascend.compilation import acl_graph
 
     descriptor = BatchDescriptor(24)

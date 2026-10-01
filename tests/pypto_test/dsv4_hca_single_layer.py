@@ -190,9 +190,12 @@ def main():
             native = collect()
             report["native_output_nonfinite"] = int((~torch.isfinite(native["output"])).sum())
             report["native_guards"] = guard_checks(fixture)
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import HCAOperators, NativeHCACall, prepare_weights
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
-
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.reduction import ATOMIC_ADD
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import (
+                HCAOperators,
+                NativeHCACall,
+                prepare_weights,
+            )
             from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
 
             pypto.torch.init(

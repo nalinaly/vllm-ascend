@@ -11,8 +11,9 @@
 NPU 任务统一通过 `task-submit`，用 `--status` 查询，不用 `--wait`。
 任务排队或运行期间固定源码，不修改 JIT 会读取的文件。
 
-CSA 默认且唯一维护路径为性能版。`PTO_CSA_VARIANT` 可不设置，兼容 `performance/perf`；
+CSA 默认且唯一维护路径为 `ops/pypto/deepseek_v4_flash_csa/`（原性能版）。`PTO_CSA_VARIANT` 可不设置，兼容 `performance/perf`；
 `precision/prec` 已退役并明确报错。性能实验仍可使用 `pkg:<私有副本>`。
+算子及原有公共辅助实现均放在同一个 CSA 包内；HCA 直接复用，不保留旧精度目录、`*_perf` 或独立 `common` 包。
 精度版源码、恢复方法和历史证据见[封存说明](archive/csa_precision_20261001/README.md)。
 Native/PTO 的已知 token/DSpark 差异继续按[七组报告](low_acceptance_20261001/RESULTS.md)跟踪。
 

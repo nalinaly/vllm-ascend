@@ -246,7 +246,7 @@ class ACLGraphWrapper:
             return output
 
         if entry.csa_hbg_host_metadata:
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.host_metadata import validate_graph_replay
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.host_metadata import validate_graph_replay
 
             validate_graph_replay(entry.csa_hbg_host_metadata, forward_context.attn_metadata)
 

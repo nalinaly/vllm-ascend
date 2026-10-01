@@ -8,7 +8,7 @@
 
 import os
 
-_PERFORMANCE = "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf"
+_CSA_PACKAGE = "vllm_ascend.ops.pypto.deepseek_v4_flash_csa"
 _ENV = "PTO_CSA_VARIANT"
 
 
@@ -35,7 +35,7 @@ def variant_package() -> str:
 
     `PTO_CSA_VARIANT=pkg:<name>` 直接指定 `vllm_ascend.ops.pypto.<name>`，用于把同一
     份性能版拆成几个只差一处改动的副本、同时排进队列做定位。副本必须与性能版同构
-    （layout / native_storage / service_config使用共用基础模块），且只在定位期间
+    （连同layout / native_storage / service_config整包复制），且只在定位期间
     存在，定位完就删，不作为长期形态。
     """
     from vllm_ascend import envs
@@ -53,7 +53,7 @@ def variant_package() -> str:
         return f"vllm_ascend.ops.pypto.{name}"
     if value.lower() not in ("performance", "perf"):
         raise ValueError(f"{_ENV}只接受performance/perf或性能版实验pkg:<name>，得到{value!r}")
-    return _PERFORMANCE
+    return _CSA_PACKAGE
 
 
 _RING_CONFIG_KEY = "pto_csa_ring_config"

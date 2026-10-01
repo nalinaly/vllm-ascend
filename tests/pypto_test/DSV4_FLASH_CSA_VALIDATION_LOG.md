@@ -14620,3 +14620,29 @@ TMR、atomic0、确定性level1/HCCL确定性、PTO event1、NZ2、各档显存�
 
 [精度算子源码目录](archive/csa_precision_20261001/deepseek_v4_flash_dspark/)、
 [索引与恢复说明](archive/csa_precision_20261001/README.md)。
+
+## 519. 2026-10-01：公共实现合入唯一CSA包，使用中立目录名
+
+按用户补充要求，取消独立common包，将所有现用实现收敛至
+`vllm_ascend/ops/pypto/deepseek_v4_flash_csa/`；名称不带perf，也不复用旧精度版目录名。
+`deepseek_v4_flash_dspark`、`deepseek_v4_flash_dspark_perf`和临时common目录均已移除，不保留旧目录兼容导入。
+HCA仍是独立的另一种注意力算子，位于`deepseek_v4_flash_hca/`，直接复用唯一CSA包的投影、布局、归约及适配。
+另发现Git忽略的旧内存实验包`dsv4_mem_b24`；确认无排队/运行任务后，原样移至本地
+`results/csa_single_implementation_20261001/retired_private_packages/dsv4_mem_b24/`保留，不再留在ops运行目录。
+
+原公共HC_pre/HC_post、RMSNorm、Q展开、NZ、存储和配置代码直接放入CSA包，删除重导出包装及重复config/compact_metadata。
+Native adapter合并为一份实现，支持CSA默认根与HCA显式根权重准备；服务准入/metadata基类与CSA服务放在同一文件。
+清除Indexer仅供封存精度版使用的precision_coefficients参数、传递链和未启用分支，保留性能路径原先分别转FP16再乘的顺序。
+现用模型、runner、ACL Graph、HCA、快照回放及单卡工具导入同步更新。
+`PTO_CSA_VARIANT`仍兼容performance/perf并选择新CSA包，pkg实验副本改为整包复制；旧precision/prec继续拒绝。
+封存的22个精度源码文件及历史冻结输入、脚本和报告内容不改；历史脚本须配合对应Git提交或冻结源码复现。
+
+验证范围：合并后CSA/HCA的TMR、HBG四个根均通过CPU前端lowering，两个HBG入口的Host调度合同通过；
+中立目录改名后，51项CPU回归通过，覆盖实际注册ABI、服务绑定、HBG图保护、权重Host常量、atomic配置、快照/别名与默认路径。
+无NPU任务，无七档或16卡复测，不把此次代码整理作为新的数值或性能验收。
+修改Python通过语法、导入排序及Ruff关键错误检查，git diff检查通过；全量Ruff仍有迁入代码原有的长行/未使用变量等问题，
+不在目录整理中扩大算术代码改动；format.sh ci仍受环境缺少pre-commit限制。
+
+CPU日志：`/tmp/csa-single-impl-final-cpu.log`；
+四根lowering记录：`results/csa_single_implementation_20261001/cpu_lower.json`、同目录`cpu_lower.log`。
+[当前入口说明](README.md)、[封存索引及恢复](archive/csa_precision_20261001/README.md)。

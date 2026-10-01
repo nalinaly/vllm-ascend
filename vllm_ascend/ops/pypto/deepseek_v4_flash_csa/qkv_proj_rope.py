@@ -11,17 +11,6 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark.q_projection import (
-    PREFILL_DENSE_TILE,
-    QPROJ_M_TILE,
-    QPROJ_PIPE_M_TILE,
-    QPROJ_MM_N_TILE,
-    QPROJ_MM_T_DYN,
-    QPROJ_T_PAD,
-    QPROJ_TAIL_M_TILE,
-    q_proj_q_matmul,
-)
-from ..deepseek_v4_flash_dspark.reduction import ATOMIC_ADD, STORE_ATOMIC
 from .config import (
     FLASH as M,
 )
@@ -30,6 +19,17 @@ from .config import (
     INT8_SCALE_MAX,
 )
 from .nz_mode import BF16_WEIGHT_LAYOUT, BF16_WEIGHT_NZ, QUANT_WEIGHT_LAYOUT
+from .q_projection import (
+    PREFILL_DENSE_TILE,
+    QPROJ_M_TILE,
+    QPROJ_MM_N_TILE,
+    QPROJ_MM_T_DYN,
+    QPROJ_PIPE_M_TILE,
+    QPROJ_T_PAD,
+    QPROJ_TAIL_M_TILE,
+    q_proj_q_matmul,
+)
+from .reduction import ATOMIC_ADD, STORE_ATOMIC
 
 T_DYN = pl.dynamic("QKV_Q_T_DYN")  # T = B * S
 
@@ -425,7 +425,7 @@ def q_proj_qr_normalize(
 
     第一遍同时求平方和与 gamma 加权后的 amax：RMSNorm 是逐行常数缩放，
     amax(normed) = inv_rms * amax(qr * gamma)，所以不必为 amax 再扫一遍。
-    精度版为复刻 Native 的舍入，先把 FP32 落成 BF16、按 1024->...->64 折半规约、
+    已封存的精度版为复刻 Native 的舍入，先把 FP32 落成 BF16、按 1024->...->64 折半规约、
     再逐行用整数比较修正 sqrt 的末位并逐行做标量除法，这些本版都不需要。
     """
     t_dim = pl.tensor.dim(qr, 0)

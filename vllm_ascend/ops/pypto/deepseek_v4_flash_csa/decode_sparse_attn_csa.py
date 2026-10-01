@@ -100,7 +100,7 @@ QK_PROB_READY_EVENT = 2
 
 QK_PV_READY_EVENT = 3
 
-# 性能版取 128，与上游一致。精度版取 512 是为了复刻 Native A3 每 512 个候选更新一次
+# 性能版取 128，与上游一致。已封存的精度版取 512 是为了复刻 Native A3 每 512 个候选更新一次
 # softmax 的舍入节奏，块内再用一个常驻 FP32 累加器把四个 128 子块串起来；本版本放弃
 # 该性质。
 # 派生量与上游对齐：SPARSE_BLOCKS = 1 + ceil(512/128) = 5、PADDED_TOPK = 640，
@@ -572,7 +572,7 @@ def sparse_attn_csa(
                         qk_mi = pl.row_max(qk_masked, qk_reduce_tmp)
                         qk_exp = pl.exp(pl.row_expand_sub(qk_masked, qk_mi))
                         qk_li = pl.row_sum(qk_exp, qk_reduce_tmp)
-                        # 性能版用 rint（就近偶数），与上游一致。精度版用 round
+                        # 性能版用 rint（就近偶数），与上游一致。已封存的精度版用 round
                         # 是为了复刻 Native SAS 的 CAST_ROUND——半数远离零。
                         qk_probability = pl.cast(qk_exp, target_type=pl.BF16, mode="rint")
                         pl.store(qk_probability, [qk_transfer_row + qk_lane_head, 0], probability_transfer)

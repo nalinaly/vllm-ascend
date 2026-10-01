@@ -7,7 +7,7 @@ import torch
 from vllm.logger import logger
 
 from vllm_ascend.models.deepseek_v4 import AscendDeepseekV4ForCausalLM
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import validate_configuration
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service_config import validate_configuration
 
 
 def csa_layer_forward(layer, positions, hidden_states, residual, llama_4_scaling=None):
@@ -96,7 +96,7 @@ def prepare_csa_model(model):
     from vllm.config import get_current_vllm_config
 
     from vllm_ascend.ascend_config import get_ascend_config
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import (
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.nz_mode import (
         root_weight_layouts,
         validate_weight_nz_mode,
     )
@@ -113,7 +113,7 @@ def prepare_csa_model(model):
     CSAServiceRuntime = importlib.import_module(f"{package}.service").CSAServiceRuntime
     root_function = importlib.import_module(f"{package}.decode_csa")._decode_csa_tp1_layer
     layouts = root_weight_layouts(root_function)
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.reduction import ATOMIC_ADD
 
     reduction = importlib.import_module(f"{package}.qkv_proj_rope")
     logger.info(

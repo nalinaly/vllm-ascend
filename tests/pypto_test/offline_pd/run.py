@@ -392,7 +392,7 @@ def diagnose(args, llm, cases):
     """
     # 稳态构成直接取生产入口的 S，不在测试里另写一份常量。
     from vllm_ascend import envs as ascend_envs
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import QUERY_TOKENS
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service_config import QUERY_TOKENS
 
     case = cases[0]
     # 按 rank 的 decode 步数：让某个 rank 提前跑完，其余继续推进，

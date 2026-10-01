@@ -112,7 +112,7 @@ FixpResToGm（552行）只发布各query的有效行。上述MAC计算不包含D
   状态零容差通过，生成码去掉排序前GM中转；长Score AIC/AIV仅+0.065%/−0.294%，
   首轮长CSA−2.081%，同源码反向复测仅−0.151%，未形成稳定收益，暂不采用。
 - [源码入口和版本](DSV4_FLASH_CSA_ASCENDC_REFERENCES.md)：A3 arch22优先，不套用不兼容的arch35能力。
-- [当前PTO源码](../../vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_indexer.py)、
+- [当前PTO源码](../../vllm_ascend/ops/pypto/deepseek_v4_flash_csa/decode_indexer.py)、
   [Native调用接口](../../vllm_ascend/attention/dsa_v1.py)。
 
 [长S6 query分工候选](results/csa_score_query_split_20260929/RESULTS.md)已完成真机验证，未采用。

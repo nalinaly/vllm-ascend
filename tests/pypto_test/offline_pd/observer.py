@@ -101,7 +101,7 @@ class OfflineCSAObserver:
         from types import SimpleNamespace
 
         from vllm_ascend.ops.dsa import _build_kv_cache
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_storage import indexer_storage, physical_pages
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_storage import indexer_storage, physical_pages
 
         def describe(tensor):
             return {"shape": list(tensor.shape), "stride": list(tensor.stride()),
@@ -1146,7 +1146,7 @@ class OfflineCSAObserver:
 
         from dsv4_csa_replay import argument_roles, capture_tensors, save_snapshot
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import WEIGHT_NZ_MODE, root_weight_layouts
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.nz_mode import WEIGHT_NZ_MODE, root_weight_layouts
         from vllm_ascend.ops.pypto.variant import selected_variant, variant_package
 
         package = variant_package()

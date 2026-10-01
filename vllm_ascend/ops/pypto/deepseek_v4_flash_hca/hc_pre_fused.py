@@ -3,8 +3,8 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark.config import FLASH as M, DECODE_BATCH, DECODE_SEQ, TP
-
+from ..deepseek_v4_flash_csa.config import DECODE_BATCH, DECODE_SEQ, TP
+from ..deepseek_v4_flash_csa.config import FLASH as M
 
 # Dynamic shape variables.
 T_DYN = pl.dynamic("T_DYN")  # T = B * S

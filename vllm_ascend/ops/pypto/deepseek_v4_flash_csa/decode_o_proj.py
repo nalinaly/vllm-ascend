@@ -434,7 +434,7 @@ def _decode_o_proj_tp1_tiled(
     proj_b_padded_rows = proj_b_t_rows * ROW_TILE
 
     # Upstream performance arithmetic: per-group quantization and INT32 partials.
-    # The precision entry keeps Native's whole-token quantization separately.
+    # The archived precision entry kept Native's whole-token quantization separately.
     o_r_pad = pl.create_tensor([T_PAD, O_GROUPS * O_LORA], dtype=pl.FP32)
     o_r_i8_pad = pl.create_tensor([T_PAD, O_GROUPS * O_LORA], dtype=pl.INT8)
     act_scale_dq = pl.create_tensor([O_GROUPS, T_PAD], dtype=pl.FP32)
@@ -455,7 +455,7 @@ def _decode_o_proj_tp1_tiled(
 
             col_g = g * O_LORA
             # 性能版按上游把 amax 与量化融进同一个 SPMD，并让每个 group 用自己的标度。
-            # 精度版另起 oproj_token_scale 任务、跨全部 O_GROUPS 取同一个 amax，并多做
+            # 已封存的精度版另起 oproj_token_scale 任务、跨全部 O_GROUPS 取同一个 amax，并多做
             # 两次 BF16 往返，那是为复刻 Native A3 dynamic_quant 的语义；本版本不要求
             # 与 Native 逐 bit 一致，于是省掉那遍全量扫描和往返。
             with pl.spmd(

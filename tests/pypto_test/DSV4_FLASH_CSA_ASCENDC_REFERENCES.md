@@ -44,7 +44,7 @@ PTO按当前模型需求保留512对，借鉴四路/UB累计结构，并未照�
 尾部分别使用二路或三路，`validBit`区分有效输入。
 
 e58基线PTO的
-[indexer_topk_query_merge_one / merge2_top512_pairs](../../vllm_ascend/ops/pypto/deepseek_v4_flash_dspark_perf/decode_indexer.py)
+[indexer_topk_query_merge_one / merge2_top512_pairs](../../vllm_ascend/ops/pypto/deepseek_v4_flash_csa/decode_indexer.py)
 逐份二路归并，每轮把累计根写回pair_arena，下轮再读取。
 有H份半leaf时，当前H−1轮；四路累计归并可降至ceil((H−1)/3)轮。
 例如H=8时7→3轮，H=2仍是一轮。实际H取可见候选数，不能按128K标签硬编码。

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-POLICY = Path(__file__).resolve().parents[2] / "vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/reduction.py"
+POLICY = Path(__file__).resolve().parents[2] / "vllm_ascend/ops/pypto/deepseek_v4_flash_csa/reduction.py"
 
 
 @pytest.mark.parametrize(

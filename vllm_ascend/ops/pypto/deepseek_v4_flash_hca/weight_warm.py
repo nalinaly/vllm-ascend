@@ -10,7 +10,7 @@ L2，随后的矩阵乘从 L2 命中。NZ 权重只能以 Cube 操作数读入 M
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark_perf.nz_mode import WO_A_WEIGHT_LAYOUT
+from ..deepseek_v4_flash_csa.nz_mode import WO_A_WEIGHT_LAYOUT
 
 D = 4096
 HEAD_DIM = 512

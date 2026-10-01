@@ -636,11 +636,11 @@ def run(args, report):
 
         import pypto.torch
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import root_weight_layouts
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.nz_mode import root_weight_layouts
         from vllm_ascend.ops.pypto.variant import variant_package
 
         package = variant_package()
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.reduction import ATOMIC_ADD
 
         reduction = importlib.import_module(f"{package}.qkv_proj_rope")
         report["pto_reduction"] = {
@@ -681,7 +681,7 @@ def run(args, report):
         operators_type = adapter.CSAOperators
         host_kwargs = {}
         if args.runtime == "host_build_graph":
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.host_metadata import CSAHostMetadata
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.host_metadata import CSAHostMetadata
 
             if args.variant not in ("performance", "perf"):
                 raise ValueError("CSA HBG 单卡入口当前要求 --variant performance")

@@ -200,7 +200,7 @@ def indexer_compressor_pool_projected(
                     window_start = token_pos - STATE_LEN + 1
                     for h0 in pl.range(0, HEAD_DIM, HEAD_TILE):
                         # 在线 softmax（上游写法）：以本 token 自己这一格起步，再把其余
-                        # STATE_LEN-1 格逐个并入。精度版先把 8 格按 Native 的交错次序写进
+                        # STATE_LEN-1 格逐个并入。已封存的精度版先把 8 格按 Native 的交错次序写进
                         # GM 暂存、读回后先归一化概率再做 8->4->2->1 规约，只为复刻 Native 的舍入次序。
                         last_ape_row = pl.cast(token_pos % COMPRESS_RATIO, target_type=pl.INDEX)
                         mi = pl.add(
@@ -543,7 +543,7 @@ def indexer_compressor_write(
                     scale_value = pl.cast(pl.read(idx_kv_scale_values, [compact_token, 0]), pl.FP16)
                     # Native packs 32 FP16 scales into one aligned 64-byte
                     # region. Serialize read-modify-write to preserve the
-                    # neighboring history slots, just as the precision path.
+                    # neighboring history slots, as in the archived precision path.
                     native_scale_page = pl.cast(native_page, pl.INDEX)
                     native_scale_bytes = pl.tile.load(
                         idx_native_kv_cache, [native_scale_page, INDEXER_KEY_BYTES], [1, BLOCK_SIZE * 2]

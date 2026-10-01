@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """HCA 的整层服务调用，复用 CSA 的入口判定与按步缓存 metadata 策略。"""
 
-from ..deepseek_v4_flash_dspark.service import AttentionServiceBase
-from ..deepseek_v4_flash_dspark.service_config import MAX_BATCH_SIZE
+from ..deepseek_v4_flash_csa.service import AttentionServiceBase
+from ..deepseek_v4_flash_csa.service_config import MAX_BATCH_SIZE
 from .native_adapter import NativeHCACall, prepare_weights
 
 

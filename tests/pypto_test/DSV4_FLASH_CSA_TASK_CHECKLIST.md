@@ -1,6 +1,7 @@
 # DSV4 Flash CSA：执行清单
 
 **2026-10-01 维护策略更新**：按用户决定，CSA 精度版已封存；性能版成为默认且唯一持续维护的 PTO CSA 路径。
+当前唯一 CSA 目录为 `ops/pypto/deepseek_v4_flash_csa/`，原公共代码已并入，HCA 直接复用；不设 `common` 或旧目录兼容包。
 `PTO_CSA_VARIANT` 未设置时选择 `performance`；旧 `precision/prec` 配置明确报错，不静默改变算术。
 保留 `performance/perf` 和性能版私有实验副本 `pkg:<name>`，保留 TMR/HBG、ND/NZ、atomic 0/1 的现有能力。
 [封存源码与恢复方法](archive/csa_precision_20261001/README.md)、[七组精度及重复运行结果](low_acceptance_20261001/RESULTS.md)。
@@ -581,7 +582,7 @@ CPU 比较入口 `offline_pd/compare.py` 拒绝缺 rank、缺 token/统计及任
 | B1 | 性能版 QR/KV 等跨核累加增加固定顺序诊断路径；配置可控制 atomic add | 记录每个被控累加点；诊断路径从相同初态可重复，性能路径保留并量化差异；配置在编译前固定，不在 graph replay 期换 ABI | A5 | 进行中 |
 | B2 | 性能版逐阶段审查规约树、分块顺序、量化 scale/舍入与 BF16/FP16 转换 | 功能问题修复；能解释剩余误差；尽力对齐 Native，不以 token 一致替代层级检查 | A5、必要时 B1 | 进行中 |
 | B3 | 性能版采用 pypto-lib 精度策略的差异清单 | 每条区别有算法依据和独立逐元素/整模型结果，不能混入未归因寻址或布局错误 | A5 | 进行中 |
-| B4 | 封存精度版，性能版成为唯一默认入口；CSA/HCA保留共用适配 | 精度旧配置明确拒绝；公共模块不导入精度内核；默认入口、NZ绑定及图调用通过 | A1～A3，贯穿 C/D | 已实施，见归档说明与日志§517 |
+| B4 | 封存精度版，性能版成为唯一默认入口；CSA/HCA保留在唯一CSA包中复用适配 | 精度旧配置明确拒绝；旧精度/perf/common目录移除；默认入口、NZ绑定及图调用通过 | A1～A3，贯穿 C/D | 已实施，见归档说明与日志§517、§519 |
 
 固定顺序诊断可使用显式局部结果加固定归并，不预设其吞吐能满足部署目标。
 Native 的确定性开关是否影响 PTO 不能臆断，按实际实现和对照验证。

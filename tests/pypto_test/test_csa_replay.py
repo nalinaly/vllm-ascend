@@ -71,7 +71,7 @@ def test_unknown_layout_and_alias_breaking_conversion_are_rejected():
 
 @pytest.mark.parametrize("source_layout,target_layout", [("ND", "ND"), ("ND", "NZ"), ("NZ", "NZ")])
 def test_old_wo_b_orientation_migrates_without_changing_matmul(source_layout, target_layout):
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import _pack_nz, _unpack_nz
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_adapter import _pack_nz, _unpack_nz
 
     groups, rows, cols = 2, 32, 64
     logical = (torch.arange(rows * groups * cols).reshape(rows, groups * cols) % 97).to(torch.int8)
@@ -129,7 +129,7 @@ def _test_root(x_hc: int, state: _Direction.InOut[int], out: _Direction.Out[int]
 def test_argdump_captures_before_call_and_reference_after_call(monkeypatch, tmp_path):
     from offline_pd.observer import OfflineCSAObserver
 
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark import nz_mode
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa import nz_mode
     from vllm_ascend.ops.pypto.variant import variant_package
 
     class Call:

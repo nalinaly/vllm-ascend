@@ -3,8 +3,8 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark_perf.nz_mode import QUANT_WEIGHT_LAYOUT
-from ..deepseek_v4_flash_dspark_perf.qkv_proj_rope import (
+from ..deepseek_v4_flash_csa.nz_mode import QUANT_WEIGHT_LAYOUT
+from ..deepseek_v4_flash_csa.qkv_proj_rope import (
     EPS,
     HEAD_DIM,
     NOPE_DIM,

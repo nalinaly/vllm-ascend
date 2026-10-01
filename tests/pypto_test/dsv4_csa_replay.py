@@ -133,7 +133,7 @@ def materialize(meta, payload, device="cpu"):
 
 def convert_weight_layouts(tensors, meta, target_layouts, target_shapes=None):
     """来源布局/形状相同则不动字节；只转换独占的只读权重。"""
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import repack_weights
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_adapter import repack_weights
 
     converted = []
     for name, target in target_layouts.items():

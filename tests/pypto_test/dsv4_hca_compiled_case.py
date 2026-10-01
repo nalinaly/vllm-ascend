@@ -247,12 +247,12 @@ def main():
                 import pypto.torch
 
                 import vllm_ascend.ops.dsv4_hca  # noqa: F401  注册 dsv4_hca_forward
-                from vllm_ascend.ops.pypto.deepseek_v4_flash_hca import service as hca_service
-                from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import HCAOperators
 
                 # 缓存键定义在 CSA 的 service 里；HCA 的 HCAServiceRuntime 只是继承
                 # CSAServiceRuntime，本模块上没有这个名字。
-                from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import _COMPACT_METADATA_CACHE
+                from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service import _COMPACT_METADATA_CACHE
+                from vllm_ascend.ops.pypto.deepseek_v4_flash_hca import service as hca_service
+                from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import HCAOperators
 
                 compact_cache_key = _COMPACT_METADATA_CACHE
                 service = hca_service

@@ -13,7 +13,7 @@ def test_default_and_compatible_names_use_performance(monkeypatch, value):
     else:
         monkeypatch.setenv("PTO_CSA_VARIANT", value)
     assert selected_variant() == "performance"
-    assert variant_package() == "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf"
+    assert variant_package() == "vllm_ascend.ops.pypto.deepseek_v4_flash_csa"
 
 
 @pytest.mark.parametrize("value", ["precision", " PREC ", "pkg:deepseek_v4_flash_dspark"])

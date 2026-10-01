@@ -203,7 +203,7 @@ def compressor_ratio4_pool_projected(
                     window_start = token_pos - STATE_LEN + 1
                     for h0 in pl.range(0, HEAD_DIM, POOL_HEAD_TILE):
                         # 在线 softmax（上游写法）：以本 token 自己这一格起步，再把窗口里其余
-                        # STATE_LEN-1 格逐个并入。精度版把 8 格按 Native 的交错次序拼成
+                        # STATE_LEN-1 格逐个并入。已封存的精度版把 8 格按 Native 的交错次序拼成
                         # [8, tile]、先归一化概率再按 8->4->2->1 规约，只为复刻 Native 的舍入次序。
                         last_ape_row = pl.cast(token_pos % COMPRESS_RATIO, target_type=pl.INDEX)
                         mi = pl.add(

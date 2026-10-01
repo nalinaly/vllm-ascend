@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """HCA 的模型选择；与 CSA 共用 TP1/S6 配置和图重放约束。"""
 
-from ..deepseek_v4_flash_dspark.service_config import validate_configuration as _validate_configuration
+from ..deepseek_v4_flash_csa.service_config import validate_configuration as _validate_configuration
 
 MODEL_ARCHITECTURE = "PyptoHCADeepseekV4ForCausalLM"
 

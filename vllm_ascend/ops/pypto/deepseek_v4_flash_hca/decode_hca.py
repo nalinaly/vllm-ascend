@@ -10,17 +10,28 @@
 
 import pypto.language as pl
 
-from .hc_pre_fused import NORM_EPS, hc_pre_norm, hc_pre_norm_hbg
-from ..deepseek_v4_flash_dspark_perf.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
-from .qkv_proj_rope import qkv_proj_rope
+from ..deepseek_v4_flash_csa.nz_mode import BF16_WEIGHT_LAYOUT, QUANT_WEIGHT_LAYOUT, WO_A_WEIGHT_LAYOUT
 from .decode_compressor_ratio128 import (
-    B_DYN, BOUNDS_DYN, CMP_PAGES_DYN, COMPACT_ROWS_DYN, STATE_COLUMNS_DYN,
-    STATE_PAGE_ELEMENTS_DYN, STATE_PAGES_DYN, T_DYN, compressor_ratio128,
+    B_DYN,
+    BOUNDS_DYN,
+    CMP_PAGES_DYN,
+    COMPACT_ROWS_DYN,
+    STATE_COLUMNS_DYN,
+    STATE_PAGE_ELEMENTS_DYN,
+    STATE_PAGES_DYN,
+    T_DYN,
+    compressor_ratio128,
 )
 from .decode_sparse_attn_hca import (
-    ORI_BLOCK_NUM_DYN, ORI_TABLE_COLUMNS_DYN, CMP_TABLE_BLOCKS_DYN, T_PAD, sparse_attn_hca_tp1,
+    CMP_TABLE_BLOCKS_DYN,
+    ORI_BLOCK_NUM_DYN,
+    ORI_TABLE_COLUMNS_DYN,
+    T_PAD,
+    sparse_attn_hca_tp1,
 )
+from .hc_pre_fused import NORM_EPS, hc_pre_norm, hc_pre_norm_hbg
 from .o_proj_hc_post import o_proj_hc_post
+from .qkv_proj_rope import qkv_proj_rope
 from .weight_warm import SINK_BF16, WARM_WORKERS, warm_kv_weights
 
 D = 4096

@@ -177,11 +177,12 @@ def main():
                                      if not name.endswith("compact_slots")}}
                 return guard_checks(view)
 
-            from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
+            from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.reduction import ATOMIC_ADD
             from vllm_ascend.ops.pypto.deepseek_v4_flash_hca.native_adapter import (
-                HCAOperators, NativeHCACall, prepare_weights,
+                HCAOperators,
+                NativeHCACall,
+                prepare_weights,
             )
-
             from vllm_ascend.ops.pypto.variant import ring_sizing_kwargs
 
             pypto.torch.init(device=0, platform="a2a3", runtime=args.runtime, **ring_sizing_kwargs())

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Shared Native-storage binding for the active CSA and HCA implementations.
+"""CSA Native-storage binding, with weight/layout helpers reused by HCA.
 
 The caller retains Native metadata waits and cache lifecycle hooks. Allocation,
 weight preparation and operator registration happen before graph capture.
@@ -12,7 +12,9 @@ import torch
 from vllm.logger import logger
 
 from .config import DECODE_BATCH
-from .native_storage import physical_pages, table_storage
+from .decode_csa import _decode_csa_tp1_layer, decode_csa_tp1_layer_hbg, decode_csa_tp1_layer_test
+from .host_metadata import CSAHostMetadata
+from .native_storage import indexer_storage, physical_pages, table_storage
 from .nz_mode import root_weight_layouts
 
 _NZ_C0_BYTES = 32
@@ -98,10 +100,10 @@ class CSAOperators:
     attention: Any
 
     @classmethod
-    def register(cls, kernel) -> "CSAOperators":
+    def register(cls, kernel=decode_csa_tp1_layer_test) -> "CSAOperators":
         import pypto.torch
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import validate_reduction_mode
+        from .reduction import validate_reduction_mode
 
         validate_reduction_mode()
 
@@ -120,7 +122,7 @@ _ACL_FORMAT_FRACTAL_NZ = 29
 
 
 def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
-                    root_function) -> dict[str, torch.Tensor]:
+                    root_function=_decode_csa_tp1_layer) -> dict[str, torch.Tensor]:
     """Prepare the TP1 ABI from already-loaded Native parameters exactly once."""
     import torch_npu
 
@@ -237,7 +239,7 @@ class NativeCSACall:
     """
 
     def __init__(self, ops, weights, hidden, positions, groups, *, layer_name: str, compact_metadata, buffers=None,
-                 kernel, host_args=None):
+                 kernel=decode_csa_tp1_layer_test, host_args=None):
         # Each entry contains its own metadata and Native cache views. No shared
         # synthetic page table can stand in for another cache group.
         self.ops = ops
@@ -341,8 +343,43 @@ class NativeCSACall:
         self.core_args = tuple(self.args[name] for name in self.param_names)
 
     def _indexer_cache_arguments(self):
-        raise NotImplementedError("The active adapter must supply its indexer cache ABI")
+        native_cache = indexer_storage(*self.views["indexer"])
+        return {"idx_native_kv_cache": native_cache}
 
     def __call__(self):
         self.ops.attention(*self.core_args)
         return self.args["x_out"]
+
+
+class HBGCSAOperators(CSAOperators):
+    @classmethod
+    def register(cls):
+        import pypto.torch
+
+        from .reduction import validate_reduction_mode
+
+        validate_reduction_mode()
+        return cls(pypto.torch.register(decode_csa_tp1_layer_hbg, "dsv4_csa::attention_hbg"))
+
+
+class HBGNativeCSACall(NativeCSACall):
+    """Separate scalar ABI, sharing all Native tensor/cache/weight bindings.
+
+    ``host_metadata`` is required. The caller obtains it from this step's Native
+    CPU metadata and must select the matching topology before NPUGraph replay.
+    """
+
+    def __init__(self, *args, host_metadata: CSAHostMetadata, **kwargs):
+        if not isinstance(host_metadata, CSAHostMetadata):
+            raise TypeError("CSA HBG requires explicit CSAHostMetadata")
+        super().__init__(*args, host_args={"host_max_seq_len": host_metadata.max_seq_len}, **kwargs)
+        if "host_max_seq_len" not in self.param_names:
+            raise TypeError("HBGNativeCSACall requires HBGCSAOperators and its Host scalar ABI")
+        self.update_host_metadata(host_metadata)
+
+    def update_host_metadata(self, host_metadata: CSAHostMetadata):
+        if not isinstance(host_metadata, CSAHostMetadata):
+            raise TypeError("CSA HBG requires explicit CSAHostMetadata")
+        self.host_metadata = host_metadata
+        self.args["host_max_seq_len"] = host_metadata.max_seq_len
+        self.core_args = tuple(self.args[name] for name in self.param_names)

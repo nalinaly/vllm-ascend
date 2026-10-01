@@ -29,9 +29,9 @@ golden / build_tensor_specs / __main__ 属于上游 standalone 用例，不搬�
 
 import pypto.language as pl
 
-from .config import FLASH as M, DECODE_BATCH, DECODE_SEQ, TP
+from .config import DECODE_BATCH, DECODE_SEQ, TP
+from .config import FLASH as M
 from .rmsnorm import rms_norm_apply, rms_norm_inverse
-
 
 # Dynamic shape variables.
 T_DYN = pl.dynamic("T_DYN")  # T = B * S

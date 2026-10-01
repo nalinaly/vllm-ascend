@@ -1,14 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """HCA 的 Native 零拷贝描述符与一次整层调用。"""
 
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
 from typing import Any
 
 import torch
 
-from ..deepseek_v4_flash_dspark.native_adapter import prepare_weights as _prepare_weights
-from ..deepseek_v4_flash_dspark.native_storage import physical_pages, table_storage
+from ..deepseek_v4_flash_csa.native_adapter import prepare_weights as _prepare_weights
+from ..deepseek_v4_flash_csa.native_storage import physical_pages, table_storage
 from ..variant import csa_runtime
 from .decode_hca import _decode_hca_tp1_layer, decode_hca_tp1_layer_hbg, decode_hca_tp1_layer_test
 
@@ -25,7 +25,7 @@ class HCAOperators:
     def register(cls):
         import pypto.torch
 
-        from ..deepseek_v4_flash_dspark.reduction import ATOMIC_ADD, validate_reduction_mode
+        from ..deepseek_v4_flash_csa.reduction import ATOMIC_ADD, validate_reduction_mode
 
         validate_reduction_mode()
         if ATOMIC_ADD:

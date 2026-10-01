@@ -10,8 +10,8 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark_perf.config import DECODE_BATCH, DECODE_SEQ, FP32_NEG_INF
-from ..deepseek_v4_flash_dspark_perf.config import FLASH as M
+from ..deepseek_v4_flash_csa.config import DECODE_BATCH, DECODE_SEQ, FP32_NEG_INF
+from ..deepseek_v4_flash_csa.config import FLASH as M
 
 B_DYN = pl.dynamic("HCA_REQUESTS")
 T_DYN = pl.dynamic("HCA_TOKENS")

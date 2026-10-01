@@ -10,15 +10,15 @@ import torch
 from vllm.config import CUDAGraphMode
 from vllm.forward_context import BatchDescriptor
 
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import MODEL_ARCHITECTURE
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service import CSAServiceRuntime
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service import CSAServiceRuntime
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service_config import MODEL_ARCHITECTURE
 
 
 def test_prepare_weights_keeps_native_bf16_norm_storage(monkeypatch):
     """Both norm pointers reach the CSA ABI without a widened GM copy."""
     import torch_npu
 
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.native_adapter import prepare_weights
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_adapter import prepare_weights
 
     monkeypatch.setattr(torch_npu, "get_npu_format", lambda _: 2, raising=False)
     # Meta weights model the ABI only; layout casts must not initialize an NPU.
@@ -134,8 +134,8 @@ def test_service_gate_uses_host_metadata(case):
 def test_release_metadata_and_compact_buffers_bind_without_copy():
     """Use release dataclasses and Native storage views across the actual ABI."""
     from vllm_ascend.attention.dsa_v1 import AscendDSADecodeMetadata, AscendDSAMetadata
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_csa import decode_csa_tp1_layer_test
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.native_adapter import NativeCSACall
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.decode_csa import decode_csa_tp1_layer_test
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.native_adapter import NativeCSACall
 
     tokens, batch, pages = 6, 1, 4
     hidden = torch.empty((tokens, 4, 4096), dtype=torch.bfloat16)

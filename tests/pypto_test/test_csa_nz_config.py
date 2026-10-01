@@ -127,11 +127,11 @@ def test_real_roots_match_native_shapes_layouts_and_reject_conflicts(mode):
 import importlib
 import os
 import torch
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark import nz_mode
+from vllm_ascend.ops.pypto.deepseek_v4_flash_csa import nz_mode
 
 mode = int(os.environ["VLLM_ASCEND_ENABLE_NZ"])
 nz_mode.validate_weight_nz_mode(mode)
-module = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_csa")
+module = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_csa.decode_csa")
 root = module._decode_csa_tp1_layer
 expected_nz = ({"wq_a", "wo_a"} if mode == 2 else set())
 if mode >= 1:

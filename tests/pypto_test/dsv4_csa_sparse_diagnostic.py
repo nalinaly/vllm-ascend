@@ -13,7 +13,7 @@ from dsv4_csa_validation import compare_tensor
 def build_kernel(variant):
     import pypto.language as pl
 
-    mod = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_sparse_attn_csa")
+    mod = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_csa.decode_sparse_attn_csa")
     sparse = mod.sparse_attn_csa_tp1
     batch = pl.dynamic("DIAG_BATCH")
     tokens = pl.dynamic("DIAG_TOKENS")

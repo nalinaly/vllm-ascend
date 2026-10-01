@@ -11,15 +11,16 @@
 
 import pypto.language as pl
 
-from ..deepseek_v4_flash_dspark_perf.config import (
-    FLASH as M,
-    DECODE_BATCH,
-    TP,
-    DECODE_SEQ,
+from ..deepseek_v4_flash_csa.config import (
     BLOCK_SIZE,
+    DECODE_BATCH,
+    DECODE_SEQ,
     KV_ORI_BLOCK_NUM,
+    TP,
 )
-
+from ..deepseek_v4_flash_csa.config import (
+    FLASH as M,
+)
 
 CMP_STORAGE_BLOCK_SIZE = BLOCK_SIZE
 HCA_KV_CMP_BLOCK_NUM = 256

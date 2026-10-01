@@ -28,8 +28,8 @@ def main() -> None:
         config = __import__(f"{package}.config", fromlist=["config"])
         report["variant"] = selected_variant()
 
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import root_weight_layouts
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import ATOMIC_ADD
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.nz_mode import root_weight_layouts
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.reduction import ATOMIC_ADD
 
         assert tuple(sys.argv) == argv_before, "kernel import changed service argv"
         assert config.TP == 1 and config.DECODE_SEQ == 6
