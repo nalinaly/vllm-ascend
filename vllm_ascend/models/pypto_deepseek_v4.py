@@ -92,20 +92,20 @@ def prepare_csa_model(model):
     # The opt-in runner hook runs after Native per-layer quant finalization.
     # No PyPTO initialization or NPU allocation occurs during model inspection.
     import importlib
+
     from vllm.config import get_current_vllm_config
+
     from vllm_ascend.ascend_config import get_ascend_config
     from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.nz_mode import (
-        root_weight_layouts, validate_weight_nz_mode,
+        root_weight_layouts,
+        validate_weight_nz_mode,
     )
     from vllm_ascend.ops.pypto.variant import csa_runtime, selected_variant, variant_package
 
-    # 两套 CSA 算子并存，由 PTO_CSA_VARIANT 选择，默认精度版。只有算子与其适配层
-    # 按版本取；service_config 的档位与图重放闸门两套共用一份（性能版里是重导出），
-    # 因为 model_runner_v1.py 直接从精度版导入那些闸门，各留一份就会在判据上分叉。
+    # CSA只使用性能实现；pkg:仅选择同实现的私有实验副本。
+    # service_config与model_runner共用一份，保持档位和图重放闸门一致。
     package = variant_package()
     hbg = csa_runtime() == "host_build_graph"
-    if hbg and selected_variant() != "performance":
-        raise ValueError("CSA HBG requires PTO_CSA_VARIANT=performance and its Host scalar entry")
     effective_mode = get_ascend_config().weight_nz_mode
     validate_weight_nz_mode(effective_mode)
     adapter = importlib.import_module(f"{package}.native_adapter")

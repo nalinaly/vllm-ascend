@@ -1,10 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""从精度版重导出：本模块不含任何数值实现，两套必须完全一致。
-
-缓存布局常量由 Native 的存储格式决定，与选哪套算子无关。
-
-
-"""
+"""复用CSA/HCA公共基础模块layout，不另维护副本。"""
 
 from ..deepseek_v4_flash_dspark import layout as _source
 from ..deepseek_v4_flash_dspark.layout import *  # noqa: F401,F403

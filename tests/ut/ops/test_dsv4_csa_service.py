@@ -10,17 +10,19 @@ import torch
 from vllm.config import CUDAGraphMode
 from vllm.forward_context import BatchDescriptor
 
-from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service import CSAServiceRuntime
 from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.service_config import MODEL_ARCHITECTURE
+from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service import CSAServiceRuntime
 
 
 def test_prepare_weights_keeps_native_bf16_norm_storage(monkeypatch):
     """Both norm pointers reach the CSA ABI without a widened GM copy."""
     import torch_npu
 
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import prepare_weights
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.native_adapter import prepare_weights
 
     monkeypatch.setattr(torch_npu, "get_npu_format", lambda _: 2, raising=False)
+    # Meta weights model the ABI only; layout casts must not initialize an NPU.
+    monkeypatch.setattr(torch_npu, "npu_format_cast", lambda value, _: value)
 
     def weight(shape, dtype=torch.bfloat16, channels=None):
         module = NS(weight=torch.empty(shape, dtype=dtype, device="meta"))
@@ -67,10 +69,10 @@ def test_prepare_weights_keeps_native_bf16_norm_storage(monkeypatch):
         (6, 1, 6, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
         (5, 1, 6, True, MODEL_ARCHITECTURE, CUDAGraphMode.NONE),
         (24, 4, 24, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
-        (18, 3, 24, True, MODEL_ARCHITECTURE, CUDAGraphMode.NONE),
+        (18, 3, 24, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
         (23, 4, 24, True, MODEL_ARCHITECTURE, CUDAGraphMode.NONE),
         (24, 4, 24, False, MODEL_ARCHITECTURE, CUDAGraphMode.NONE),
-        (18, 3, 30, True, MODEL_ARCHITECTURE, CUDAGraphMode.NONE),
+        (18, 3, 30, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
         (18, 3, 18, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
         (30, 5, 30, True, MODEL_ARCHITECTURE, CUDAGraphMode.FULL),
         (18, 3, 24, True, "DeepseekV4ForCausalLM", CUDAGraphMode.FULL),
@@ -125,18 +127,18 @@ def test_service_gate_uses_host_metadata(case):
         context.is_draft_model = True
     elif case == "window":
         context.attn_metadata["swa"].decode.ori_win_left = 255
-    assert runtime.eligible(context, torch.empty((24, 4096), dtype=torch.bfloat16),
+    assert runtime.eligible(context, torch.empty((24, 4, 4096), dtype=torch.bfloat16),
                             torch.empty(24, dtype=torch.int64)) == (case == "supported")
 
 
 def test_release_metadata_and_compact_buffers_bind_without_copy():
     """Use release dataclasses and Native storage views across the actual ABI."""
     from vllm_ascend.attention.dsa_v1 import AscendDSADecodeMetadata, AscendDSAMetadata
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.decode_csa import decode_csa_tp1_attention_test
-    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.native_adapter import NativeCSACall
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_csa import decode_csa_tp1_layer_test
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.native_adapter import NativeCSACall
 
     tokens, batch, pages = 6, 1, 4
-    hidden = torch.empty((tokens, 4096), dtype=torch.bfloat16)
+    hidden = torch.empty((tokens, 4, 4096), dtype=torch.bfloat16)
     positions = torch.arange(tokens, dtype=torch.int64)
     bounds = torch.tensor([0, tokens], dtype=torch.int32)
     lengths = torch.tensor([tokens], dtype=torch.int32)
@@ -180,8 +182,9 @@ def test_release_metadata_and_compact_buffers_bind_without_copy():
     context = NS(attn_metadata={name: value[0] for name, value in groups.items()}, is_draft_model=False)
     assert runtime.eligible(context, hidden, positions)
     # Weight values are irrelevant to CPU descriptor binding; no kernel runs.
-    weights = dict.fromkeys(decode_csa_tp1_attention_test.param_names, torch.empty(0))
+    weights = dict.fromkeys(decode_csa_tp1_layer_test.param_names, torch.empty(0))
     submit = Mock()
+    submit._schema = None
     call = NativeCSACall(NS(attention=submit), weights, hidden, positions, groups,
                          layer_name=layer_name, compact_metadata=compact)
     assert call.args["position_ids"] is positions
@@ -191,7 +194,7 @@ def test_release_metadata_and_compact_buffers_bind_without_copy():
     assert call.args["cmp_freqs_cos"].data_ptr() == compact["compressed"][0].data_ptr()
     assert call.args["freqs_cos"].data_ptr() == cos.data_ptr()
     for key, group in (("compress_state", "state"), ("inner_compress_state", "indexer_state"),
-                       ("idx_kv_cache", "indexer")):
+                       ("idx_native_kv_cache", "indexer")):
         assert call.args[key].data_ptr() == groups[group][1][0].data_ptr()
-    assert call() is call.args["attn_out"]
+    assert call() is call.args["x_out"]
     submit.assert_called_once()

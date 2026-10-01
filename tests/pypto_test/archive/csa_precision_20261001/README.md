@@ -1,0 +1,62 @@
+# CSA 精度版封存（2026-10-01）
+
+按用户决定，CSA 性能版成为默认且唯一持续维护的 PTO CSA 实现。精度版停止接入、优化迁移和新增验收；历史源码和测试结论保留。
+
+## 封存内容与恢复
+
+[source.tar.gz](source.tar.gz) 由 `git archive` 直接生成，包含提交
+`23e10b1289bebc400053ec9d07ea6731bd6f376b` 中完整的
+`vllm_ascend/ops/pypto/deepseek_v4_flash_dspark/`（22 个 Python 文件）。
+包含精度版 QKV、Compressor、Indexer、Sparse、O 投影、根入口和当时的公共辅助模块。
+归档放在测试目录，不属于 Python 运行时包，不会被生产入口加载。
+
+精度版也依赖同提交的性能包辅助函数、模型接入和测试脚本；仅解压此包到当前源码不能作为完整复现环境。
+需要复现历史时，在仓库内使用独立目录恢复整份对应提交：
+
+```bash
+git worktree add --detach ../vllm-ascend-csa-precision-archive 23e10b1289bebc400053ec9d07ea6731bd6f376b
+```
+
+按原报告固定环境、权重、输入 bank 和运行配置。原七组实验的冻结源码
+`tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load` 保持不动；
+版本与任务见[原实验源码记录](../../low_acceptance_20261001/source.json)。
+历史精度脚本只能在对应完整历史源码环境中使用，不再纳入当前测试矩阵。
+
+## 当前运行规则
+
+| 配置 | 行为 |
+| --- | --- |
+| 未设置 `PTO_CSA_VARIANT` | 默认 `deepseek_v4_flash_dspark_perf` |
+| `performance` / `perf` | 同一性能实现 |
+| `precision` / `prec` / `pkg:deepseek_v4_flash_dspark` | 明确报错，提示封存位置；不会静默替换算术 |
+| `pkg:<name>` | 仅保留性能版私有实验副本工作流，避免排队任务读取正在编辑的 JIT 源码 |
+| 未设置 `VLLM_ASCEND_PTO_CSA_ATOMIC_ADD` | 默认 0；显式 0/1 能力不变 |
+
+TMR/HBG、ND/NZ 和长短档策略继续使用同一性能实现。HCA 的算术和 Native 接入流程不改。
+本次没有改动性能版 kernel 的算术、分块和调度策略。
+
+原 `deepseek_v4_flash_dspark` 名称空间仅保留仍被 CSA/HCA 使用的公共模块：配置、布局、Native 存储和权重绑定、
+服务准入/compact metadata、HC_pre/HC_post、RMSNorm、Q 展开、NZ 和归约配置。
+这不是保留精度入口：精度专有的 8 个内核/入口文件已从运行时包移除，公共适配基类要求显式传入实际 kernel。
+性能 CSA 与 HCA 共享 `AttentionServiceBase`，不再经由精度 CSA 服务继承。
+公共目录暂不改名，避免扩大模型、runner、HCA 和测试工具的导入变更范围。
+
+## 决策依据与未关闭项
+
+[七组完整低接受率结果](../../low_acceptance_20261001/RESULTS.md)显示：
+128K/B24、8K/B40 的 Native/Native2 和性能 CSA＋PTO HCA/PTO2，各自 token、DSpark 统计和逐轮事件完全复现；
+精度版和性能版均仍与 Native 存在差异，没有证据证明继续维护精度版能解决这些分歧。
+封存是用户确认的维护决策，**不代表 Native/PTO 精度已通过，也不自动把差异认定为可接受的量化误差**。
+
+性能版后续继续区分功能问题和数值策略差异，固定首分歧前相同输入，先查 metadata/cache/state/保护区，再查 hidden/logits。
+[原精度优化迁移](../../precision_port_20260930/RESULTS.md)、
+[旧迁移证据](../../results/csa_baseline_20260926/precision_port/migration.json)、
+[旧模型看护](../../results/csa_baseline_20260926/model_precision_migration/comparison.json)、
+[筛选请求三方一致复现](../../matched_requests_20261001/RESULTS.md)继续保留，各自适用范围不变。
+原完整低接受率基准不会被筛选后的简单题替代。
+
+## 本次验证
+
+结果及边界见[验证记录](verification.json)和[验证日志 §517](../../DSV4_FLASH_CSA_VALIDATION_LOG.md)。
+检查默认入口、退役配置拒绝、atomic 默认/覆盖/冻结、实际 ND/NZ 根签名、服务 metadata 绑定和 HBG schema；
+再做一轮 B4/H8192 单卡 CSA/HCA 图回放与补位检查。本次不重新跑七档性能或 16 卡精度矩阵。

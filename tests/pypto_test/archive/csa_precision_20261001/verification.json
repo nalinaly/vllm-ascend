@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-01",
+  "status": "PASS",
+  "scope": "仅封存、默认入口与公共适配回归；不代表Native/PTO精度或整模型验收",
+  "archive_commit": "23e10b1289bebc400053ec9d07ea6731bd6f376b",
+  "archive_python_files": 22,
+  "live_precision_modules_removed": 8,
+  "performance_kernel_arithmetic_changed": false,
+  "pypto_commit": "cb24844712fa4329563a8cfbdd8d9f77ba0dc20c",
+  "simpler_commit": "ef6812891575eaf2a15051fc9abc659f5415c2e2",
+  "environment": "env-dsv4-0251rc1.sh, CANN 9.2.0-beta.2, PTOAS 0.66",
+  "cpu": {
+    "status": "PASS",
+    "unique_cases": 50,
+    "tests": [
+      "test_csa_variant.py",
+      "test_csa_reduction.py",
+      "test_csa_nz_config.py",
+      "tests/ut/ops/test_dsv4_csa_service.py",
+      "tests/ut/ops/test_dsv4_csa_hbg.py"
+    ],
+    "note": "初跑后修正旧fixture：meta权重模拟NZ转换、当前完整层ABI、已支持padding及完整B操作数根签名；仅重跑失败/受影响项。没有改变生产算术或graph gate。",
+    "logs": [
+      "/tmp/csa-archive-cpu.log",
+      "/tmp/csa-archive-cpu-followup.log",
+      "/tmp/csa-archive-nz-final2.log"
+    ]
+  },
+  "static_checks": {
+    "ruff": "PASS（所有修改及新增Python文件）",
+    "git_diff_check": "PASS",
+    "format_sh_ci": "未完成：环境缺少pre-commit；已执行定向Ruff和diff检查"
+  },
+  "device": {
+    "task": "task_20261001_192512_591193211",
+    "exit_code": 0,
+    "device": "0",
+    "batch": 4,
+    "history": 8192,
+    "runtime": "tensormap_and_ringbuffer",
+    "nz_mode": 2,
+    "deterministic_level": 1,
+    "hccl_deterministic": true,
+    "environment_unset": [
+      "PTO_CSA_VARIANT",
+      "VLLM_ASCEND_PTO_CSA_ATOMIC_ADD"
+    ],
+    "frozen_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_precision_archive_20261001/source",
+    "launch_script": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_precision_archive_20261001/run.sh",
+    "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+    "earlier_attempt": {
+      "task": "task_20261001_192325_58322417435",
+      "status": "启动失败，未执行设备算子",
+      "reason": "单卡CLI提前校验variant，在activate之前导入了默认editable源码；将校验移到activate之后、NPU初始化之前后通过。",
+      "log": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_precision_archive_20261001/csa_activation_failed/run.log"
+    },
+    "csa": {
+      "status": "PASS",
+      "raw_report_status": "MEASURED",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_precision_archive_20261001/csa/report.json",
+      "checks": {
+        "pto_self": {
+          "PASS": 8
+        },
+        "native_self": {
+          "PASS": 8
+        },
+        "pto_guards": {
+          "PASS": 62
+        },
+        "native_guards": {
+          "PASS": 62
+        },
+        "graph": {
+          "PASS": 118
+        },
+        "padding_graph": {
+          "PASS": 181
+        }
+      },
+      "scope": "自身重复/调用适配/图/保护区检查；原始报告Native/PTO对照仍为MEASURED",
+      "variant": "performance",
+      "reduction": {
+        "atomic_add": 0,
+        "qr_split_k": 1,
+        "kv_split_k": 1
+      }
+    },
+    "hca": {
+      "status": "PASS",
+      "raw_report_status": "MEASURED",
+      "report": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/csa_precision_archive_20261001/hca/report.json",
+      "checks": {
+        "pto_guards": {
+          "PASS": 19
+        },
+        "native_guards": {
+          "PASS": 19
+        },
+        "padding_graph": {
+          "PASS": 101
+        },
+        "service_direct": {
+          "PASS": 4
+        },
+        "graph_eager": {
+          "PASS": 4
+        },
+        "graph_guards": {
+          "PASS": 19
+        }
+      },
+      "scope": "自身重复/调用适配/图/保护区检查；原始报告Native/PTO对照仍为MEASURED",
+      "atomic_add": 0
+    }
+  },
+  "not_run": [
+    "七档性能矩阵",
+    "16卡精度矩阵",
+    "跨封存前后输出bit对照"
+  ],
+  "accuracy_evidence": "../../low_acceptance_20261001/RESULTS.md"
+}

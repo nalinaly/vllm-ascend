@@ -3,13 +3,18 @@
 任务、约束和验收状态以 [任务清单](DSV4_FLASH_CSA_TASK_CHECKLIST.md) 为准。
 历史与当前执行过程持续记录在 [验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)，
 本轮从 [第 99 节](DSV4_FLASH_CSA_VALIDATION_LOG.md#log-20260926) 开始。
-当前基线为 vLLM 0.25.1 / vLLM-Ascend 0.25.1rc1、A3 / CANN 9.0，
+当前基线为 vLLM 0.25.1 / vLLM-Ascend 0.25.1rc1、A3 / CANN 9.2，
 正式权重固定为 `/data/model/DeepSeek-V4-Flash-0731-w8a8`。
 环境、PyPTO/Simpler 分支及 PTOAS/ISA 版本见清单第 2 节与 A4。
 
 所有测试先构造单卡 case；需要整模型证据时再使用正式权重 16 卡。
 NPU 任务统一通过 `task-submit`，用 `--status` 查询，不用 `--wait`。
 任务排队或运行期间固定源码，不修改 JIT 会读取的文件。
+
+CSA 默认且唯一维护路径为性能版。`PTO_CSA_VARIANT` 可不设置，兼容 `performance/perf`；
+`precision/prec` 已退役并明确报错。性能实验仍可使用 `pkg:<私有副本>`。
+精度版源码、恢复方法和历史证据见[封存说明](archive/csa_precision_20261001/README.md)。
+Native/PTO 的已知 token/DSpark 差异继续按[七组报告](low_acceptance_20261001/RESULTS.md)跟踪。
 
 ## 当前入口
 
@@ -35,7 +40,7 @@ NPU 任务统一通过 `task-submit`，用 `--status` 查询，不用 `--wait`�
 ```bash
 source ../env-dsv4-0251rc1.sh
 task-submit --device auto --max-time 1800 \
-  "bash $PWD/tests/pypto_test/run_csa_single_layer.sh $PWD/tests/pypto_test/results/single_layer_b4_h8192 --batch 4 --history 8192 --variant precision --weight-nz-mode 0 --save-case"
+  "bash $PWD/tests/pypto_test/run_csa_single_layer.sh $PWD/tests/pypto_test/results/single_layer_b4_h8192 --batch 4 --history 8192 --variant performance --weight-nz-mode 0 --save-case"
 ```
 
 结果为 `report.json`，其中 `weight_storage_binding` 记录实际逻辑/物理形状、格式及原地址复用；`--save-case` 另存调用前快照到 `case/`。
@@ -43,7 +48,7 @@ task-submit --device auto --max-time 1800 \
 Native/PTO 使用同一 mode。性能版使用 `--variant performance`，NZ 使用 mode=1/2；
 这些是可选配置，不表示每条路径已经验收。
 `--atomic-add 0` 选择固定规约，`1` 选择 split-K atomic add；
-未显式设置时，性能版默认 0，精度版保持默认 1。
+未显式设置时默认 0；显式 0/1 的诊断与性能能力继续保留。
 性能版固定规约已通过[七档真实EP16对照](results/csa_atomic_matrix_20260928/model/RESULTS.md)，
 正式forward、P95和每步最慢rank均优于Native，token/DSpark一致。
 等价环境变量为 `VLLM_ASCEND_PTO_CSA_ATOMIC_ADD`，必须在进程导入/编译算子前设置。
@@ -80,14 +85,16 @@ compact metadata，Native 保留其实际逐层生成路径。固定使用 `mode
 此单卡数据只筛选候选；16 卡完整模型的最终区间、token、DSpark 与层误差须另外验收。
 
 需要回放时先查看 `dsv4_csa_single_card_bench.py --help`；
-精度版/性能版、ND/NZ 和输入来源必须明确。格式 29 权重保存原始 NZ 字节，
+当前性能版源码、ND/NZ 和输入来源必须明确。精度版历史回放需使用封存提交对应的完整源码。格式 29 权重保存原始 NZ 字节，
 回放重建基础格式承载张量，不把 Tensor.cpu() 的逻辑解码当作原始快照。
 当前四张根几何对齐 Native；旧 schema=2 转置权重按明确形状迁移，未知形状直接拒绝。
 只运行受改动影响的测试；清单记录各项已完成的 CPU/设备证据，不为清理文件重复上卡。
 
 ## 保留的输入和证据
 
-- `results/csa_baseline_20260926/native_b4h8192_precision_nd_v2/`：当前单卡报告与调用前 schema=2 快照。
+以下记录按各自日期和源码解释；精度版条目仅为封存历史，不属于当前运行入口。
+
+- `results/csa_baseline_20260926/native_b4h8192_precision_nd_v2/`：历史单卡报告与调用前 schema=2 快照。
 - `results/csa_baseline_20260926/native_b4h8192_performance_nd/` 与 `native_b4h8192_performance_fixed/`：性能版默认/固定规约对照、Top-K 集合诊断及 Native QLI 输入；仍为 MEASURED。
 - `results/csa_baseline_20260926/native_b4h8192_precision_nz2/`：两侧 mode=2 的真实布局及固定规约图重放证据。
 - `results/csa_baseline_20260926/native_b4h8192_performance_nz1/`：性能版 mode=1 的真实布局及固定规约图重放证据。
@@ -100,7 +107,7 @@ compact metadata，Native 保留其实际逐层生成路径。固定使用 `mode
 - `results/csa_baseline_20260926/nz_native_padding/`：两版 mode=2、B4/H4095 固定规约图在 4→3→1→4 个有效请求下的输出、状态及保护区检查。
 - `results/csa_baseline_20260926/perf_qproj_upstream/`：性能版 NZ Q 展开优化，第二层完整区间 p50 843.53→817.22 μs；保留单卡尾块检查、泳道及未保留候选的精简记录。
 - `results/csa_baseline_20260926/model_b16h8192_nz2_perf_qproj/`：上述候选同 mode=2、atomic=1 的正式 16 卡看护，24576 token 与 DSpark 统计一致，含实际配置和 PTO 图路径证据；不是整模型性能验收。
-- `results/csa_baseline_20260926/toolchain/`：当前版本记录、最终编译及 11 项标量 API 回归日志。
+- `results/csa_baseline_20260926/toolchain/`：当时版本记录、最终编译及 11 项标量 API 回归日志。
 - `results/release_offline_pd_20260923/`：7 组正式权重 bank，供后续整模型复用，见离线 P/D 说明。
 - `results/cann90_20260921/tdiv_high_precision_repro_v1/`：未关闭的 A3 TDIV 能力问题证据；版本范围见复现说明。
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""性能版入口；权重准备、Native 存储/metadata 绑定与精度版共用。"""
+"""唯一CSA入口；权重准备和Native存储/metadata绑定复用公共基础模块。"""
 
 from ..deepseek_v4_flash_dspark.native_adapter import CSAOperators as _CSAOperators
 from ..deepseek_v4_flash_dspark.native_adapter import NativeCSACall as _NativeCSACall

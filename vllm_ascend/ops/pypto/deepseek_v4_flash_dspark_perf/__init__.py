@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""CSA 性能版，与 deepseek_v4_flash_dspark 精度版保留独立算术入口。
+"""CSA默认且唯一维护的性能实现；精度版已于2026-10-01封存。
 
 共享适配、metadata和数值中性实现；允许采用pypto-lib或Native的高效精度策略。
 性能优化先在单卡验证，再以真实权重整模型的decode forward和CSA完整区间验收。

@@ -14576,3 +14576,34 @@ TMR、atomic0、确定性level1/HCCL确定性、PTO event1、NZ2、各档显存�
 本轮只新增两个NPU任务，未重复旧组、筛选简单问题或进行hash扫描。
 
 [统一七组结果](low_acceptance_20261001/RESULTS.md)、[任务](low_acceptance_20261001/pto_repeat_tasks.json)。
+
+## 517. 2026-10-01：封存CSA精度版，性能版成为默认及唯一维护路径
+
+按用户基于第513～516节结果作出的决定执行。精度版完整目录以提交23e10b12的`git archive`保存，
+共22个Python文件；8个精度专有内核/入口文件从生产包移除。恢复历史需使用对应完整Git提交，
+不能只解压旧kernel到当前适配层。原七组报告、低接受率冻结源码及三方一致B9证据不改。
+
+运行时未设置PTO_CSA_VARIANT即选择performance，兼容performance/perf；precision/prec和旧精度包名明确拒绝。
+保留性能私有pkg副本、TMR/HBG、ND/NZ及显式atomic0/1；atomic默认0，与之前性能实验配置一致。
+公共目录仍保留CSA/HCA使用的配置、布局、存储/权重绑定及数值辅助函数，避免扩大导入修改范围。
+共享adapter要求显式kernel，服务提取AttentionServiceBase，性能CSA/HCA均不再依赖精度服务入口。
+没有改动性能kernel的算术、分块和调度。任务清单取消双版本优化迁移待办，未来只维护性能版。
+
+相关CPU用例共50项通过，覆盖默认/退役选择、atomic配置冻结、真实ND/NZ根签名、metadata/存储绑定、graph gate及HBG schema。
+测试中的旧fixture修正为当前层间残差ABI、已支持的padding及完整B操作数权重签名；不修改生产graph gate。
+初跑失败项只定向重跑，没有扩大测试矩阵。修改Python的Ruff与diff检查通过；`bash format.sh ci`因环境缺少pre-commit未完成。
+
+单卡任务task_20261001_192512_591193211完成，物理卡0，B4/H8192、正式layer2/3权重、NZ2、TMR、确定性level1。
+使用私有冻结源码，未设置variant和atomic环境变量，确认实际CSA为performance/atomic0，HCA为atomic0：
+
+- CSA：8类输出/状态同初态重复、A/B/A图更新、4→3→1→4补位、metadata只读和写区保护全部通过。
+- HCA：4类输出/状态服务直接调用与图重放一致，补位和保护区全部通过。
+
+原始单层Native/PTO报告仍为MEASURED；本轮仅验证封存与适配回归，不宣称跨实现精度通过。
+首次task_20261001_192325_58322417435在执行设备算子前因CLI校验早于源码activate而退出；
+已将variant校验移到activate之后、NPU初始化之前，重新冻结后上述正式任务通过。
+本轮不重测七档性能或16卡矩阵；现有Native/PTO低接受率差异继续开放，后续按首分歧前同输入诊断。
+
+[封存源码及恢复](archive/csa_precision_20261001/README.md)、
+[定向验证结果](archive/csa_precision_20261001/verification.json)、
+[原七组精度结果](low_acceptance_20261001/RESULTS.md)。

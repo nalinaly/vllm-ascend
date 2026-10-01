@@ -10,9 +10,9 @@ POLICY = Path(__file__).resolve().parents[2] / "vllm_ascend/ops/pypto/deepseek_v
 
 
 @pytest.mark.parametrize(
-    "variant, expected", [(None, 1), ("precision", 1), ("prec", 1), ("performance", 0), (" PERF ", 0), ("pkg:probe", 0)]
+    "variant, expected", [(None, 0), ("performance", 0), (" PERF ", 0), ("pkg:probe", 0)]
 )
-def test_variant_default_preserves_precision_and_selects_fixed_performance(monkeypatch, variant, expected):
+def test_performance_default_selects_fixed_reduction(monkeypatch, variant, expected):
     monkeypatch.delenv("VLLM_ASCEND_PTO_CSA_ATOMIC_ADD", raising=False)
     if variant is None:
         monkeypatch.delenv("PTO_CSA_VARIANT", raising=False)

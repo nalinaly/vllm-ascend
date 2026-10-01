@@ -421,7 +421,7 @@ def diagnose(args, llm, cases):
                                   if args.command in ("performance", "moe-routing") else "streaming_generate"),
               "deterministic": args.deterministic,
               "hccl_deterministic": os.environ.get("HCCL_DETERMINISTIC", "false"),
-              "variant": os.environ.get("PTO_CSA_VARIANT", "precision"),
+              "variant": os.environ.get("PTO_CSA_VARIANT", "performance"),
               "atomic_add": str(ascend_envs.VLLM_ASCEND_PTO_CSA_ATOMIC_ADD),
               "eplb_enabled": False,
               "dynamic_eplb_env": os.environ.get("DYNAMIC_EPLB", "false"),
@@ -933,7 +933,7 @@ def worker(args):
                         "spec_decode": None if prefill else spec_decode_metrics(llm)})
         write_json(args.output / f"rank{args.rank}.json", {"role": args.command, "backend": args.backend,
                    "pto_attention": args.pto_attention,
-                   "variant": os.environ.get("PTO_CSA_VARIANT", "precision"),
+                   "variant": os.environ.get("PTO_CSA_VARIANT", "performance"),
                    "atomic_add": os.environ.get("VLLM_ASCEND_PTO_CSA_ATOMIC_ADD"),
                    "pto_runtime": os.environ.get("PTO_CSA_RUNTIME", "tensormap_and_ringbuffer"),
                    "deterministic": args.deterministic,

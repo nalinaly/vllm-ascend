@@ -11,7 +11,7 @@ vllm 初始化完才拿得到。模型配置检查与算子注册前均校验环
 布局标注与 Native 存储绑定必须由同一个开关驱动，否则 kernel 读到的字节次序就是错的。
 
 注意 NZ 分支对 kernel 写法有额外要求：切片偏移必须能被证明非负、且行偏移是 16 的
-倍数、列偏移是一条 C0 线的倍数。两版四张目标权重均声明可选 NZ，
+倍数、列偏移是一条 C0 线的倍数。性能版四张目标权重均声明可选 NZ，
 真实布局读取根签名；四张根矩阵方向与 Native 加载后相同，wo_b 保留二维 [G*K, D]。
 """
 
@@ -43,7 +43,7 @@ def _native_keeps_3d_bf16_as_nz() -> bool:
     `wo_a` 是三维分组权重 `[O_GROUPS, O_GROUP_IN, O_LORA]`。它在 Native 侧最终是
     ND 还是 NZ，取决于当前 CANN 的 `npu_format_cast` 支不支持三维 BF16：
     CANN 9.0.0 不支持，于是 Native 侧留在 ND(2)；9.2.0 支持，于是是 NZ(29)。
-    vllm-ascend 侧的钩子代码两版相同，差异只来自 CANN。
+    CSA/HCA 在 vllm-ascend 侧共用钩子代码，差异只来自 CANN。
 
     这一项必须跟着 Native 走，写死任何一边都会在另一边付出代价：kernel 声明的
     布局与 Native 实际存法不一致时，`root_weight` 就要 npu_format_cast 出一份

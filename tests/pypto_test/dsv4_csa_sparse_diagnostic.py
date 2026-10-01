@@ -13,8 +13,7 @@ from dsv4_csa_validation import compare_tensor
 def build_kernel(variant):
     import pypto.language as pl
 
-    suffix = "_perf" if variant == "performance" else ""
-    mod = importlib.import_module(f"vllm_ascend.ops.pypto.deepseek_v4_flash_dspark{suffix}.decode_sparse_attn_csa")
+    mod = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_sparse_attn_csa")
     sparse = mod.sparse_attn_csa_tp1
     batch = pl.dynamic("DIAG_BATCH")
     tokens = pl.dynamic("DIAG_TOKENS")
@@ -75,7 +74,7 @@ def main():
     source.add_argument("--synthetic-batch", type=int, choices=(1, 3, 4),
                         help="零 Q 均匀 attention 回归：B1/3 覆盖尾块，B4 覆盖整块，输出要求 bit 一致")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--variant", choices=("precision", "performance"), required=True)
+    parser.add_argument("--variant", choices=("performance",), default="performance")
     parser.add_argument("--device", type=int, default=0,
                         help="task-submit 分配的单卡编号；诊断不自行选择其他设备")
     parser.add_argument("--pmu", type=int, choices=(0, 1, 2, 4, 5, 6, 7, 8), default=0,

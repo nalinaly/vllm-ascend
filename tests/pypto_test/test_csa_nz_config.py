@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""CPU 回归：真实启动器传参、导入前绑定、两版根布局及 Native 矩阵方向一致。"""
+"""CPU 回归：真实启动器传参、导入前绑定、性能版根布局及 Native 矩阵方向一致。"""
 
 import builtins
 import os
@@ -131,18 +131,18 @@ from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark import nz_mode
 
 mode = int(os.environ["VLLM_ASCEND_ENABLE_NZ"])
 nz_mode.validate_weight_nz_mode(mode)
-for suffix in ("", "_perf"):
-    module = importlib.import_module(f"vllm_ascend.ops.pypto.deepseek_v4_flash_dspark{suffix}.decode_csa")
-    root = module._decode_csa_tp1_layer
-    expected_nz = ({"wq_a", "wo_a"} if mode == 2 else set())
-    if mode >= 1:
-        expected_nz.update(("wq_b", "wo_b"))
-    layouts = nz_mode.root_weight_layouts(root)
-    assert {key for key, value in layouts.items() if value == "NZ"} == expected_nz
-    assert nz_mode.root_weight_shapes(root) == {
-        "wq_a": (1024, 4096), "wq_b": (1024, 32768),
-        "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096),
-    }
+module = importlib.import_module("vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.decode_csa")
+root = module._decode_csa_tp1_layer
+expected_nz = ({"wq_a", "wo_a"} if mode == 2 else set())
+if mode >= 1:
+    expected_nz.update(("wq_b", "wo_b"))
+layouts = nz_mode.root_weight_layouts(root)
+assert {key for key, value in layouts.items() if value == "NZ"} == expected_nz
+assert nz_mode.root_weight_shapes(root) == {
+    "wq_a": (1024, 4096), "wq_b": (1024, 32768),
+    "wo_a": (8, 4096, 1024), "wo_b": (8192, 4096),
+    "wkv": (4096, 512), "cmp_wkv": (1024, 4096), "cmp_wgate": (1024, 4096),
+}
 
 try:
     nz_mode.validate_weight_nz_mode((mode + 1) % 3)

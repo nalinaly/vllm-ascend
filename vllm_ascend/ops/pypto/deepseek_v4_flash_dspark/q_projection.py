@@ -7,7 +7,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-"""两版共用的 INT8 Q 展开：ND 分块 K，NZ 整段 K 常驻与有效尾行。
+"""CSA/HCA 共用的 INT8 Q 展开：ND 分块 K，NZ 整段 K 常驻与有效尾行。
 
 INT8×INT8 在本模型 K=1024 下不溢出 INT32；只改变搬运和整数矩阵分块。
 Native 的浮点规约、反量化及舍入继续由各自入口负责。

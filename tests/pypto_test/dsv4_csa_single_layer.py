@@ -489,7 +489,9 @@ def run(args, report):
 
     from vllm_ascend.ascend_forward_context import set_ascend_forward_context
     from vllm_ascend.ops.dsv4_csa import _native_attention_half
+    from vllm_ascend.ops.pypto.variant import selected_variant
 
+    selected_variant()  # 激活指定源码后，在权重加载/NPU初始化前拒绝已封存入口。
     current_platform.pre_register_and_update()
     torch.npu.set_device(args.device)
     # 与 Native NPUModelRunner 一致：必须在权重后处理前启用，否则 NZ 转换静默退回 ND。
@@ -915,8 +917,8 @@ def main():
     parser.add_argument("--runtime", choices=("tensormap_and_ringbuffer", "host_build_graph"),
                         default="tensormap_and_ringbuffer", help="HBG 使用独立 Host 标量入口")
     parser.add_argument("--weight-nz-mode", type=int, choices=(0, 1, 2), default=0)
-    parser.add_argument("--variant", default="precision",
-                        help="precision / performance，或 pkg:<包名> 指定实验包")
+    parser.add_argument("--variant", default="performance",
+                        help="performance（唯一维护实现），或 pkg:<包名> 指定性能实验副本")
     parser.add_argument("--save-case", action="store_true")
     parser.add_argument("--save-state", action="store_true", help="保存两侧 8 类逻辑输出/状态，供跨布局逐元素比较")
     parser.add_argument("--save-sparse-case", action="store_true",

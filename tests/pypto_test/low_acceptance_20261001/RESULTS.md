@@ -1,5 +1,8 @@
 # 七组CSA/HCA组合：完整混合接受精度与跨运行对照
 
+2026-10-01维护决定：按用户要求[封存CSA精度版](../archive/csa_precision_20261001/README.md)，
+性能版成为默认及唯一维护路径。下面七组数据、配置和未通过项保持原样；自身复现一致不等于Native/PTO精度已通过。
+
 两档中，Native与Native2、PTO CSA+HCA与PTO2各自的输出token、接受统计及逐轮事件完全一致；Native与PTO之间的差异仍在。
 
 已修复离线测试connector将同步KV加载误报为异步加载的问题，原五组采用相同修复后的冻结源码完整执行。

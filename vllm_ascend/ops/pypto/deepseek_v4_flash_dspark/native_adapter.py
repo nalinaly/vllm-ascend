@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Prepared Native-storage invocation of the reference-derived CSA chain.
+"""Shared Native-storage binding for the active CSA and HCA implementations.
 
 The caller retains Native metadata waits and cache lifecycle hooks. Allocation,
 weight preparation and operator registration happen before graph capture.
@@ -12,8 +12,7 @@ import torch
 from vllm.logger import logger
 
 from .config import DECODE_BATCH
-from .decode_csa import _decode_csa_tp1_layer, decode_csa_tp1_layer_test
-from .native_storage import indexer_storage, physical_pages, table_storage
+from .native_storage import physical_pages, table_storage
 from .nz_mode import root_weight_layouts
 
 _NZ_C0_BYTES = 32
@@ -99,7 +98,7 @@ class CSAOperators:
     attention: Any
 
     @classmethod
-    def register(cls, kernel=decode_csa_tp1_layer_test) -> "CSAOperators":
+    def register(cls, kernel) -> "CSAOperators":
         import pypto.torch
 
         from vllm_ascend.ops.pypto.deepseek_v4_flash_dspark.reduction import validate_reduction_mode
@@ -121,7 +120,7 @@ _ACL_FORMAT_FRACTAL_NZ = 29
 
 
 def prepare_weights(attention, hadamard: torch.Tensor | None, layer=None, *,
-                    root_function=_decode_csa_tp1_layer) -> dict[str, torch.Tensor]:
+                    root_function) -> dict[str, torch.Tensor]:
     """Prepare the TP1 ABI from already-loaded Native parameters exactly once."""
     import torch_npu
 
@@ -238,7 +237,7 @@ class NativeCSACall:
     """
 
     def __init__(self, ops, weights, hidden, positions, groups, *, layer_name: str, compact_metadata, buffers=None,
-                 kernel=decode_csa_tp1_layer_test, host_args=None):
+                 kernel, host_args=None):
         # Each entry contains its own metadata and Native cache views. No shared
         # synthetic page table can stand in for another cache group.
         self.ops = ops
@@ -342,7 +341,7 @@ class NativeCSACall:
         self.core_args = tuple(self.args[name] for name in self.param_names)
 
     def _indexer_cache_arguments(self):
-        return {"idx_kv_cache": indexer_storage(*self.views["indexer"])}
+        raise NotImplementedError("The active adapter must supply its indexer cache ABI")
 
     def __call__(self):
         self.ops.attention(*self.core_args)
