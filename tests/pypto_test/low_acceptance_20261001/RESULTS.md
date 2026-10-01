@@ -1,5 +1,7 @@
 # 五种CSA/HCA组合：同步加载修复后的混合接受精度对照
 
+新增[Native第二遍与六组对照](NATIVE_REPEAT.md)：两档Native与native2的逐token、接受统计及逐轮事件均完全一致。原五组及其差异保留。
+
 已修复离线测试connector将同步KV加载误报为异步加载的问题。原失败的128K/B24性能CSA＋Native HCA完整结束；
 两档五组均采用相同修复后的冻结源码重新执行。十组执行均完整，8个PTO组合/档位与Native的精度比较均未通过。
 问题机制、CPU回归和原失败组合恢复证据见[修复记录](sync_load_fix.md)。

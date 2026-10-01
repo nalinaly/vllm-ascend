@@ -14543,3 +14543,19 @@ CPU复现证明容量停滞机制；旧失败任务缺乏逐步状态，不能�
 
 [复现说明](matched_requests_20261001/README.md)、[结果](matched_requests_20261001/RESULTS.md)、
 [完整筛选](matched_requests_20261001/selection.json)、[任务和版本](matched_requests_20261001/source.json)。
+
+## 515. 2026-10-01：原完整低接受率基准补充Native第二遍
+
+按用户要求保持全部配置，在原128K/B24、8K/B40上各新增一次全Native 16卡运行，原五组复用。
+沿用source_v9_sync_load、原固定bank、确定性level1/HCCL确定性、temperature0、seed1024及各档显存/图配置；不筛选简单请求。
+
+两档Native与native2的逐token、接受统计及逐轮事件均完全一致。
+
+- 128K/B24：token差异0/73728，统计差异0/384，逐轮事件差异0/384。
+- 8K/B40：token差异0/122880，统计差异0/640，逐轮事件差异0/640。
+
+核对所有rank的启动参数、实际worker/event配置及执行完整性；自动KV容量、抢占、跨DP结果分别记录。
+同配置重复结果不等于所有中间浮点bit检查；不能仅凭该结果断言PTO功能错误或认定数值取舍已获验收。
+生产算子与采样不改。本轮仅两次新增NPU任务，无额外hash或性能测试。
+
+[六组结果与复现](low_acceptance_20261001/NATIVE_REPEAT.md)、[任务](low_acceptance_20261001/native_repeat_tasks.json)。

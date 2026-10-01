@@ -1,0 +1,55 @@
+{
+  "status": "COMPLETE",
+  "base_commit": "ce10de91",
+  "frozen_source": "tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load",
+  "baseline_root": "tests/pypto_test/results/low_acceptance_20261001/five_way_sync",
+  "repeat_root": "tests/pypto_test/results/low_acceptance_20261001/native_repeat",
+  "scope": "原128K/B24及8K/B40全部请求，保持原Native配置重启进程复测；原五组直接复用；不筛题、不重做prefill、不做hash扫描",
+  "tasks": {
+    "128k_b24": "task_20261001_173951_33656796408",
+    "8k_b40": "task_20261001_173951_336567717273"
+  },
+  "config": {
+    "cann": "9.2.0-beta.2",
+    "tp": 1,
+    "dp": 16,
+    "ep": 16,
+    "seed": 1024,
+    "temperature": 0,
+    "decode_tokens": 192,
+    "deterministic_level": 1,
+    "hccl_deterministic": true,
+    "event_mode": 0,
+    "nz": 2,
+    "eplb": false,
+    "watermark": 0,
+    "128k_b24": {
+      "utilization": 0.97,
+      "capture_sizes": [
+        144
+      ]
+    },
+    "8k_b40": {
+      "utilization": 0.95,
+      "capture_sizes": [
+        6,
+        240
+      ]
+    }
+  },
+  "vllm_commit": "752a3a504485790a2e8491cacbb35c137339ad34",
+  "vllm_worktree": "clean before launch",
+  "production_change": false,
+  "submitted_at": "2026-10-01 17:39:51 Asia/Shanghai",
+  "comparison_tool": "five_way.py --native-repeat <native2 directory>",
+  "completed_exit_codes": {
+    "8k_b40": 0,
+    "128k_b24": 0
+  },
+  "repeat_status": {
+    "128k": "PASS",
+    "8k": "PASS"
+  },
+  "completed_at": "2026-10-01T17:52:41.190781+08:00",
+  "report": "NATIVE_REPEAT.md"
+}
