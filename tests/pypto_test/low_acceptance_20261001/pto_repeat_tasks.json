@@ -1,0 +1,61 @@
+{
+  "status": "COMPLETE",
+  "submitted_at": "2026-10-01 18:14:21 Asia/Shanghai",
+  "base_commit": "7fc9d16e",
+  "frozen_source": "tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load",
+  "baseline_root": "tests/pypto_test/results/low_acceptance_20261001/five_way_sync",
+  "repeat_root": "tests/pypto_test/results/low_acceptance_20261001/pto_repeat",
+  "configuration": "csa_performance_pto_hca",
+  "tasks": {
+    "128k_b24": "task_20261001_181421_397622711657",
+    "8k_b40": "task_20261001_181421_397622228193"
+  },
+  "scope": "保持原完整低接受率128K/B24、8K/B40用例和配置，各补一次性能CSA+PTO HCA；原五组及Native2复用；结果汇总回原RESULTS.md",
+  "toolchain_commits": {
+    "pypto": "cb24844712fa4329563a8cfbdd8d9f77ba0dc20c",
+    "simpler": "ef6812891575eaf2a15051fc9abc659f5415c2e2",
+    "vllm": "752a3a504485790a2e8491cacbb35c137339ad34"
+  },
+  "worktrees_before_launch": "pypto/simpler/vllm均干净，提交与第一次相同",
+  "config": {
+    "cann": "9.2.0-beta.2",
+    "tp": 1,
+    "dp": 16,
+    "ep": 16,
+    "seed": 1024,
+    "temperature": 0,
+    "decode_tokens": 192,
+    "deterministic_level": 1,
+    "hccl_deterministic": true,
+    "event_mode": 1,
+    "nz": 2,
+    "eplb": false,
+    "watermark": 0,
+    "atomic_add": 0,
+    "runtime": "tensormap_and_ringbuffer",
+    "128k_b24": {
+      "utilization": 0.97,
+      "capture_sizes": [
+        144
+      ]
+    },
+    "8k_b40": {
+      "utilization": 0.95,
+      "capture_sizes": [
+        6,
+        240
+      ]
+    }
+  },
+  "production_change": false,
+  "completed_exit_codes": {
+    "8k_b40": 0,
+    "128k_b24": 0
+  },
+  "completed_at": "2026-10-01T18:27:31.703258+08:00",
+  "report": "RESULTS.md",
+  "repeat_status": {
+    "128k": "PASS",
+    "8k": "PASS"
+  }
+}

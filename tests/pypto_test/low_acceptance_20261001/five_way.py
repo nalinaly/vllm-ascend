@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""五种CSA/HCA组合以Native为参考；可补充同配置Native跨运行复现。"""
+"""五种CSA/HCA组合以Native为参考；可补充同配置Native/PTO跨运行复现。"""
 import argparse
 import gzip
 import itertools
@@ -139,11 +139,11 @@ def compare_rows(left, right):
             'details': details}
 
 
-def native_repeat_conditions(original, repeated, original_workers, repeated_workers):
+def repeat_conditions(original, repeated, original_workers, repeated_workers, labels):
     """重复运行保留相同自动容量策略；记录容量变化，不重配参数抹平差异。"""
     requested = [json.loads((root / 'configuration.json').read_text()) for root in (original, repeated)]
     capacities, startup_arguments = {}, {}
-    for label, root in (('native', original), ('native2', repeated)):
+    for label, root in zip(labels, (original, repeated)):
         capacities[label], startup_arguments[label] = [], []
         for rank in range(16):
             log = (root / f'rank{rank}.log').read_text(errors='replace')
@@ -160,21 +160,21 @@ def native_repeat_conditions(original, repeated, original_workers, repeated_work
                                       'kv_tokens': [int(value.replace(',', '')) for value in tokens]})
     errors = []
     if requested[0] != requested[1]:
-        errors.append('Native两次启动配置不同')
+        errors.append(f'{labels[0]}两次启动配置不同')
     if original_workers != repeated_workers:
-        errors.append('Native两次worker实际配置不同（包括event模式）')
+        errors.append(f'{labels[0]}两次worker实际配置不同（包括event模式）')
     startup_equal = [bool(left) and left == right for left, right in
-                     zip(startup_arguments['native'], startup_arguments['native2'])]
+                     zip(startup_arguments[labels[0]], startup_arguments[labels[1]])]
     if not all(startup_equal):
-        errors.append('Native两次启动日志参数不同或缺失（仅排除运行ID和输出目录）')
+        errors.append(f'{labels[0]}两次启动日志参数不同或缺失（仅排除运行ID和输出目录）')
     if any(not row['kv_memory_gib'] or not row['kv_tokens'] for rows in capacities.values() for row in rows):
-        errors.append('Native重复运行缺少自动KV容量记录')
+        errors.append(f'{labels[0]}重复运行缺少自动KV容量记录')
     return {'status': 'FAIL' if errors else 'PASS', 'errors': errors,
             'requested_configuration_equal': requested[0] == requested[1],
             'worker_configuration_equal_all_ranks': original_workers == repeated_workers,
             'startup_arguments_equal_per_rank': startup_equal,
-            'requested_configurations': dict(zip(('native', 'native2'), requested)),
-            'kv_capacity': capacities, 'kv_capacity_equal': capacities['native'] == capacities['native2'],
+            'requested_configurations': dict(zip(labels, requested)),
+            'kv_capacity': capacities, 'kv_capacity_equal': capacities[labels[0]] == capacities[labels[1]],
             'scope': '相同启动参数、冻结源码、固定bank与worker配置；自动KV容量可能随启动内存改变，'
                      '如实记录，不宣称调度轨迹或所有中间浮点结果逐bit一致。'}
 
@@ -191,15 +191,26 @@ def main():
                         help='完整逐rank明细压缩保存，可读JSON只保留汇总和明确标注的rank0样例')
     parser.add_argument('--native-repeat', type=Path,
                         help='相同配置再次运行全Native的结果目录；仅CPU合并为六组，不重跑旧五组')
+    parser.add_argument('--pto-repeat', type=Path,
+                        help='相同配置再次运行性能CSA+PTO HCA的结果目录；与Native第二遍合并为七组')
     args = parser.parse_args()
     report = {'configurations': {}, 'pairwise': {}, 'errors': [], 'batch': args.batch,
               'scope': '固定输入的整模型生成token与DSpark；首个分歧后上下文不同，不当作同输入逐层浮点误差',
               'acceptance_policy': '保持同一批输入，不为某个实现单独调题；逐项报告均值/六种边界资格'}
     outputs, configs = {}, {}
-    names = (('native', 'native2', *tuple(CONFIGURATIONS)[1:]) if args.native_repeat else tuple(CONFIGURATIONS))
+    repeats = {}
+    if args.native_repeat:
+        repeats['native2'] = ('native', args.native_repeat, 'Native2（全Native同配置第二遍）', 'native_repeat')
+    if args.pto_repeat:
+        repeats['pto2'] = ('csa_performance_pto_hca', args.pto_repeat,
+                           'PTO2（CSA性能版 + PTO HCA第二遍）', 'pto_repeat')
+    names = []
+    for original in CONFIGURATIONS:
+        names.append(original)
+        names.extend(name for name, repeat in repeats.items() if repeat[0] == original)
     for name in names:
-        configuration = 'native' if name == 'native2' else name
-        root = args.native_repeat if name == 'native2' else args.root / name
+        configuration = repeats[name][0] if name in repeats else name
+        root = repeats[name][1] if name in repeats else args.root / name
         try:
             check, outputs[name], configs[name] = validate(
                 root, args.bank, args.batch, configuration, tuple(args.mean_range))
@@ -213,8 +224,8 @@ def main():
                          str(rank): len((root / f'request_stats_rank{rank}.jsonl').read_text().splitlines())
                          if (root / f'request_stats_rank{rank}.jsonl').exists() else 0 for rank in range(16)}}
             outputs[name], configs[name] = None, None
-        if name == 'native2':
-            check['label'] = 'Native2（全Native同配置第二遍）'
+        if name in repeats:
+            check['label'] = repeats[name][2]
         report['configurations'][name] = check
         report['errors'].extend(f'{name}: {e}' for e in check['validation_errors'])
     # PyPTO初始化会将进程级event设为硬件模式。显式报告这项运行时差异，
@@ -236,11 +247,12 @@ def main():
         report['pairwise'][f'{left}__vs__{right}'] = (
             compare_rows(outputs[left], outputs[right]) if outputs[left] and outputs[right]
             else {'status': 'NOT_COMPARED', 'reason': '至少一组16卡执行不完整，不比较部分结果'})
-    if args.native_repeat and outputs['native'] and outputs['native2']:
-        report['native_repeat_conditions'] = native_repeat_conditions(
-            args.root / 'native', args.native_repeat, configs['native'], configs['native2'])
-        report['errors'].extend(report['native_repeat_conditions']['errors'])
-        report['native_repeat_status'] = report['pairwise']['native__vs__native2']['status']
+    for name, (original, repeated_root, _, prefix) in repeats.items():
+        if outputs[original] and outputs[name]:
+            report[prefix + '_conditions'] = repeat_conditions(
+                args.root / original, repeated_root, configs[original], configs[name], (original, name))
+            report['errors'].extend(report[prefix + '_conditions']['errors'])
+            report[prefix + '_status'] = report['pairwise'][f'{original}__vs__{name}']['status']
     report['status'] = ('FAIL' if report['errors'] or any(r['status'] != 'PASS'
                         for key, r in report['pairwise'].items() if key.startswith('native__vs__')) else 'PASS')
     if args.compact_details:

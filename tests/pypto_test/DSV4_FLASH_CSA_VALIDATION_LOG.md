@@ -14559,3 +14559,20 @@ CPU复现证明容量停滞机制；旧失败任务缺乏逐步状态，不能�
 生产算子与采样不改。本轮仅两次新增NPU任务，无额外hash或性能测试。
 
 [六组结果与复现](low_acceptance_20261001/NATIVE_REPEAT.md)、[任务](low_acceptance_20261001/native_repeat_tasks.json)。
+
+## 516. 2026-10-01：补测性能CSA＋PTO HCA第二遍，七组汇总回原RESULTS.md
+
+按用户要求，沿用原完整128K/B24、8K/B40低接受率用例和冻结源码，每档新增一次PTO CSA性能版＋PTO HCA整模型16卡运行。
+原五组与Native2复用，生产算子、采样和接受逻辑不变；PyPTO/Simpler/vLLM提交与首次相同且启动前工作区干净。
+TMR、atomic0、确定性level1/HCCL确定性、PTO event1、NZ2、各档显存利用率和图档位保持不变。
+
+两档中，Native与Native2、PTO CSA+HCA与PTO2各自的输出token、接受统计及逐轮事件完全一致；Native与PTO之间的差异仍在。
+
+- 128K/B24 PTO/PTO2：token差异0/73728，接受统计差异0/384，逐轮事件差异0/384。
+- 8K/B40 PTO/PTO2：token差异0/122880，接受统计差异0/640，逐轮事件差异0/640。
+
+原RESULTS.md已直接补齐七组主表、两类重复运行表、完整执行/抢占/跨DP和接受边界表。
+配置逐rank对照，自动KV容量变化独立保留；中间浮点bit未做全量检查，不据重复运行结果自动排除功能问题或接受数值差异。
+本轮只新增两个NPU任务，未重复旧组、筛选简单问题或进行hash扫描。
+
+[统一七组结果](low_acceptance_20261001/RESULTS.md)、[任务](low_acceptance_20261001/pto_repeat_tasks.json)。

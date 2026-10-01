@@ -1,6 +1,6 @@
 # 混合请求的DSpark接受边界基准
 
-新增[Native第二遍与六组对照](NATIVE_REPEAT.md)：两档Native与native2的逐token、接受统计及逐轮事件均完全一致。原五组及其差异保留。
+最新[七组对照与两种实现的第二遍复现](RESULTS.md)已汇总到原结果文档；原五组、Native2及PTO2使用相同完整请求。
 
 此前128K/B16两版49,152个输出token相同，但DSpark接受率100%，只能作为冒烟证据。
 本轮改用同批不同请求，覆盖拒绝、部分接受、全部接受以及请求间不同的回退位置。
@@ -43,18 +43,20 @@
 ## 配置与执行
 
 正式DeepSeek-V4-Flash-0731-w8a8，TP1/DP=EP16，每请求生成192个token，temperature=0。
-当前正式矩阵包含以下五种组合，均用相同输入与固定cache/state：
+当前正式矩阵包含以下七组（五种组合与两种重复运行），均用相同输入与固定cache/state：
 
 1. Native CSA + Native HCA。
 2. CSA精度版 + Native HCA。
 3. CSA性能版 + Native HCA。
 4. CSA性能版 + PTO HCA。
 5. Native CSA + PTO HCA。
+6. Native2：第1组同配置第二遍。
+7. PTO2：第4组同配置第二遍。
 
 CANN9.2、TMR、NZ2、atomic0、确定性level1、
 HCCL确定性，AIV保留，EPLB关闭。图模式为FULL_DECODE_ONLY，static kernel必须有实际安装证据。
 B24长档显存利用率0.97、capture_sizes=[144]；B40短档0.95、capture_sizes=[6,240]。
-五组主矩阵统一使用默认`watermark=0`；额外的HCA容量诊断使用`watermark=0.01`，单独记录，
+七组主矩阵统一使用默认`watermark=0`；额外的HCA容量诊断使用`watermark=0.01`，单独记录，
 不替换主矩阵中的某一组，也不据此改变生产配置。
 使用当前vLLM整模型编译入口（生产配置`inplace_pass=False`），不是单CSA的SK1性能基线。
 本轮只作精度验收，不给出性能结论。
@@ -65,7 +67,7 @@ B24长档显存利用率0.97、capture_sizes=[144]；B40短档0.95、capture_siz
 等待期间EngineCore继续参与其他DP的EP通信，不在worker内调用阻塞屏障。
 该处理覆盖低接受率导致的各DP结束轮数不同，避免先结束的进程破坏其他rank的收尾。
 此观测用来诊断正确性，不用来宣称性能收益。
-[mixed.py](mixed.py)提交不同请求并核对逐请求统计；[five_way.py](five_way.py)比较五组及全部两两组合。
+[mixed.py](mixed.py)提交不同请求并核对逐请求统计；[five_way.py](five_way.py)通过--native-repeat/--pto-repeat纳入重复运行，比较七组及全部两两组合。
 逐层读取实际runtime选择，并核对捕获层数，防止配置标签与实际运行路径不一致。
 Native默认event模式为0，PyPTO初始化切到1；此差异单独报告，其他worker配置须一致。
 本轮验收实际集成路径，尚未通过相同event模式对照排除该差异的影响。
@@ -90,7 +92,7 @@ PYTHONPATH=tests/pypto_test python tests/pypto_test/low_acceptance_20261001/five
 
 ## 结果与范围
 
-两档五组执行全部完成，8个PTO组合/档位的精度比较未通过；正式结果见[RESULTS.md](RESULTS.md)。
+两档七组执行全部完成；Native与PTO联合路径各自的第二遍均完全复现，但PTO相对Native精度仍未通过；正式结果见[RESULTS.md](RESULTS.md)。
 可读JSON中的明细样例仅rank0；计数覆盖全部16rank，完整逐rank差异保存于对应`.full.json.gz`。原始证据位于
 `../results/low_acceptance_20261001/five_way_sync/{128k,8k}/`。
 固定输入和真实0～5接受边界已建立；验收失败不能改写为基准通过。
