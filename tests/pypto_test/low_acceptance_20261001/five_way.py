@@ -26,6 +26,7 @@ def validate(root, bank, batch, configuration, mean_range=(3.0, 4.0)):
     targets = {f'model.layers.{i}.self_attn.attn' for i in range(2, 43)}
     expected_pto_count = sum(21 if kind == 'csa' else 20 for kind in pto_kinds)
     graph_counts, configs, selections = [], [], []
+    legacy_both_seen = False
     for rank in range(16):
         data = json.loads((root / f'rank{rank}.mixed.json').read_text())
         expected = {'backend': backend, 'variant': variant, 'batch': batch, 'decode_tokens': 192,
@@ -34,8 +35,10 @@ def validate(root, bank, batch, configuration, mean_range=(3.0, 4.0)):
         for field, value in expected.items():
             if data.get(field) != value:
                 errors.append(f'rank{rank}: {field}={data.get(field)!r}, expected={value!r}')
-        # 第4组复用先前的正式结果；当时尚未加描述符，但41层PTO捕获证据完整。
+        # 兼容修复前第4组的历史结果：当时没有描述符，但有41层PTO捕获证据。
+        # 当前同步加载矩阵全部重新执行，具有完整描述符，不走此分支。
         legacy_both = configuration == 'csa_performance_pto_hca' and 'attention_implementations' not in data
+        legacy_both_seen |= legacy_both
         if not legacy_both:
             if data.get('pto_attention') != attention:
                 errors.append(f'rank{rank}: attention选择不符')
@@ -100,7 +103,7 @@ def validate(root, bank, batch, configuration, mean_range=(3.0, 4.0)):
             'cross_dp_different_outputs_within_run': cross_dp,
             'cross_dp_different_acceptance_events_within_run': cross_dp_stats,
             'graph_forwards_per_rank': graph_counts, 'attention_implementations': selections,
-            'reused_legacy_both_evidence': configuration == 'csa_performance_pto_hca',
+            'reused_legacy_both_evidence': legacy_both_seen,
             'static_kernel': {'installed_packages': installed, 'compiler_errors': compile_errors}}, records, configs
 
 

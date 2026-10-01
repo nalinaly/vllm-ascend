@@ -14420,6 +14420,8 @@ CANN9.2、TMR、NZ2、atomic0、确定性level1、HCCL确定性，AIV保留，EP
 
 ## 511. 五种CSA/HCA组合的混合接受整模型对照（2026-10-01）
 
+本节为同步加载修复前的历史记录；当前完整结果及限制见第513节，不能混作同一入口的对照。
+
 按用户扩展口径比较全Native、精度CSA+Native HCA、性能CSA+Native HCA、性能CSA+PTO HCA、Native CSA+PTO HCA。
 固定第510节的40条不同请求与Native bank，128K取24条、8K取40条；每请求192个输出token，TP1/DP=EP16。
 CANN9.2、TMR、NZ2、atomic0、level1/HCCL确定性，AIV保留、EPLB关闭；生产算子仍为84dc9a3f，未作精度修复。
@@ -14488,3 +14490,36 @@ CPU复现证明容量停滞机制；旧失败任务缺乏逐步状态，不能�
 [问题与修复](low_acceptance_20261001/sync_load_fix.md)、
 [功能恢复数据](low_acceptance_20261001/sync_load_recovery_128k_b24.json)、
 [CPU回归](test_offline_connector_cpu.py)。修复后完整对照将更新原RESULTS报告，旧版结论只作历史。
+
+## 513. 2026-10-01：同步加载修复后五组合完整刷新与HCA容量诊断
+
+使用第512节修复后的冻结source_v9_sync_load，128K/B24与8K/B40五组均重新执行；不复用旧异步入口结果。
+10组16卡任务全部完成，每请求192 token；实际算子选择、图重放、静态安装、逐请求与框架统计核对通过。
+两档Native的逐请求token、统计及事件与原固定golden完全一致，未换参考。生产CSA/HCA仍为84dc9a3f。
+
+| 档位 | 组合 | 对Native输出不同题目 | 对Native统计不同题目 | 对Native事件不同题目 | 平均接受/轮 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 128K/B24 | Native CSA + Native HCA | 0/24 | 0/24 | 0/24 | 3.825182 |
+| 128K/B24 | CSA精度版 + Native HCA | 18/24 | 21/24 | 21/24 | 3.884089 |
+| 128K/B24 | CSA性能版 + Native HCA | 15/24 | 20/24 | 21/24 | 3.695960 |
+| 128K/B24 | CSA性能版 + PTO HCA | 19/24 | 20/24 | 21/24 | 3.970053 |
+| 128K/B24 | Native CSA + PTO HCA | 18/24 | 21/24 | 21/24 | 3.755235 |
+| 8K/B40 | Native CSA + Native HCA | 0/40 | 0/40 | 0/40 | 3.726161 |
+| 8K/B40 | CSA精度版 + Native HCA | 33/40 | 31/40 | 32/40 | 3.653221 |
+| 8K/B40 | CSA性能版 + Native HCA | 29/40 | 31/40 | 31/40 | 3.665461 |
+| 8K/B40 | CSA性能版 + PTO HCA | 30/40 | 32/40 | 33/40 | 3.648795 |
+| 8K/B40 | Native CSA + PTO HCA | 29/40 | 31/40 | 31/40 | 3.702128 |
+
+题目差异按任意DP与对应Native不同计入；16份副本不是额外独立题目。主矩阵全部实际0～5接受边界覆盖、均值3～4。
+首个输出分歧后上下文不同，不以位置差异比率代表同输入浮点误差。本轮没有新增五组逐层bit比较。
+
+长档精度CSA+Native HCA原跨DP输出差异在修复后消失；性能CSA+Native HCA从两次不完整变为384条请求完整、抢占0。
+长档Native CSA+PTO HCA仍有431次抢占，同次跨DP输出137/360、事件163/360不同；该组完成不代表执行条件已充分隔离。
+额外watermark=0.01诊断完整结束，抢占0次，跨DP输出0/360、事件0/360；
+对Native输出不同16/24、统计不同19/24，均值3.735444。只改私有测试副本，不替换主矩阵或更改生产默认。
+
+下一步以q08/q18首分歧前共同前缀固定同一步输入与调度，先查metadata/保护区/cache/state，再查hidden/logits。
+执行恢复与精度通过分开验收；当前仍不接受为量化权衡或宣称全部对齐。
+
+[正式五组报告](low_acceptance_20261001/RESULTS.md)、[任务与源码](low_acceptance_20261001/source.json)、
+[HCA容量诊断](low_acceptance_20261001/hca_watermark_001_128k.json)。

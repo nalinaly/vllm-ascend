@@ -3,6 +3,7 @@
 此前128K/B16两版49,152个输出token相同，但DSpark接受率100%，只能作为冒烟证据。
 本轮改用同批不同请求，覆盖拒绝、部分接受、全部接受以及请求间不同的回退位置。
 生产CSA/HCA算子不改，算子版本为`84dc9a3f`，测试起点为`7e57a5b4`。
+当前入口包含`976ebd77`的同步KV加载声明修复；旧异步声明版本的结果不能混入当前矩阵。
 
 ## 最新验收口径
 
@@ -32,6 +33,11 @@
 性能版和精度版恢复同一份bank，只重算最后一个prompt token。保存前缀时沿用既有逻辑屏蔽未来行，
 导出后只做一次边界/结构/覆盖检查；不增加hash和全量位差扫描。
 
+文件加载在当前forward之前同步完成，connector向调度器声明同步加载，
+入场时一并考虑prefix、当前计算token和DSpark lookahead空间。
+旧版误报异步加载可在容量临界点占满prefix块而无法继续decode；详见[修复与CPU复现](sync_load_fix.md)。
+逐请求完成记录含`preemptions`；汇总报告同时披露容量抢占，不能将其隐去后只谈浮点精度。
+
 ## 配置与执行
 
 正式DeepSeek-V4-Flash-0731-w8a8，TP1/DP=EP16，每请求生成192个token，temperature=0。
@@ -46,6 +52,8 @@
 CANN9.2、TMR、NZ2、atomic0、确定性level1、
 HCCL确定性，AIV保留，EPLB关闭。图模式为FULL_DECODE_ONLY，static kernel必须有实际安装证据。
 B24长档显存利用率0.97、capture_sizes=[144]；B40短档0.95、capture_sizes=[6,240]。
+五组主矩阵统一使用默认`watermark=0`；额外的HCA容量诊断使用`watermark=0.01`，单独记录，
+不替换主矩阵中的某一组，也不据此改变生产配置。
 使用当前vLLM整模型编译入口（生产配置`inplace_pass=False`），不是单CSA的SK1性能基线。
 本轮只作精度验收，不给出性能结论。
 
@@ -70,29 +78,28 @@ PYTHONPATH=tests/pypto_test python tests/pypto_test/low_acceptance_20261001/five
   --root /new/result --bank /fixed/bank --batch 40 --compact-details --output /new/result/comparison.json
 ```
 
-已有的第4组结果直接复用；其余四组各跑128K/B24与8K/B40，共补齐8个整模型结果；其中128K性能CSA+Native HCA因客户端提前退出，另重跑1次。
+修复前第4组曾复用既有结果，其余四组补跑两档；其中128K性能CSA+Native HCA两次未完成。
+客户端保活没有解除停滞，不能将提前退出作为唯一根因。
+当前已修复离线connector的同步加载声明，见[定位与回归](sync_load_fix.md)；
+两档五组已用同一修复入口全部重新完成，未混用修复前后的结果。
 两档分别提交24/40条不同请求，每卡使用相同题目顺序。全量输出为384/640条请求、
 73,728/122,880个token；16个DP副本不是384/640种不同题目。
 图档位包含padding，不能据此宣称全程有B条请求同时活跃。
 
 ## 结果与范围
 
-五组正式结果见[RESULTS.md](RESULTS.md)。
+两档五组执行全部完成，8个PTO组合/档位的精度比较未通过；正式结果见[RESULTS.md](RESULTS.md)。
 可读JSON中的明细样例仅rank0；计数覆盖全部16rank，完整逐rank差异保存于对应`.full.json.gz`。原始证据位于
-`../results/low_acceptance_20261001/five_way/{128k,8k}/`。
+`../results/low_acceptance_20261001/five_way_sync/{128k,8k}/`。
 固定输入和真实0～5接受边界已建立；验收失败不能改写为基准通过。
 同次16个DP副本一致也不能替代同版本跨运行复现性测试。
 
-此前两版CSA同时配PTO HCA的比较作为额外诊断保留：
-128K/B24有40,352/73,728个token位置不同；8K/B40有60,080/122,880个位置不同。
-这两组的“精度版+PTO HCA”不是本轮第2组，不能混为一谈。
-其证据为[128K两版对照](comparison_128k_b24.json)、[8K两版对照](comparison_8k_b40.json)。
+此前两版CSA同时配PTO HCA的历史对照见验证日志§510；其“精度版+PTO HCA”不是本轮第2组。
+旧[128K两版对照](comparison_128k_b24.json)、[8K两版对照](comparison_8k_b40.json)不属于当前同步加载矩阵。
 位置差异是在各自生成轨迹上的比较：首个token分歧后输入上下文不同，
 不能把后续大量位置差异等同于同输入浮点误差，更不能直接归因为功能错误或可接受量化误差。
 
-40条混合请求的早期8K筛选均值3.8280；它使用筛选阶段的缓存，正式报告使用固定Native bank结果。
-更早的“四类单问题复制批”与“两类问题准备”不符合当前请求多样性要求，
-只保留原始过程证据和冻结源码，不作为回归基准。
+早期筛选、单问题复制批和两类问题准备只作历史证据，不作为当前回归基准。
 
 ## 后续回归
 
@@ -113,7 +120,8 @@ python tests/pypto_test/low_acceptance_20261001/reference.py check \
 经16卡队列运行`extend_mixed.sh /new_output /frozen_source /suffix_bank /new_fixed_bank 24`
 （8K用40），脚本会完成Native导出和一次结构审计。日常回归直接复用已有固定bank，不重复prefill。
 
-长档`h131072_q07`是“token相同但DSpark分布不同”的固定样例：两侧均41轮、205个提出、153个接受，
-但0～5直方图分别为`[2,5,2,6,4,22]`和`[2,4,2,7,6,20]`。
-`h131072_q08`最早在第3个输出token分歧，可作为下一阶段首分歧诊断入口。
+同步加载矩阵的长档`h131072_q08`：精度CSA+Native HCA的输出与Native一致但接受事件不同，
+性能CSA+Native HCA在第3个输出token分歧；`h131072_q18`则是精度CSA在第3个token分歧、
+性能CSA输出与Native一致但接受事件不同。这两种CSA组合均无抢占、同次跨DP结果一致。
+不能根据“精度版”名称或不同token总量直接给算法精度排序。
 先核对同一步入参/状态及Native结果，再区分算术权衡与回退/状态功能错误；当前不先给原因定性。

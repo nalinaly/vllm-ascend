@@ -64,6 +64,7 @@ def collect(root, bank, batch, tokens, mean_range=(3.0, 4.0)):
     rows, errors, distributions = [], [], [0] * 6
     proposed_total = 0
     full_five_distribution = [0] * 6
+    preemptions = []
     for rank in range(16):
         data = json.loads((root / f'rank{rank}.mixed.json').read_text())
         events = [json.loads(line) for line in (root / f'request_stats_rank{rank}.jsonl').read_text().splitlines()]
@@ -74,6 +75,7 @@ def collect(root, bank, batch, tokens, mean_range=(3.0, 4.0)):
         per_pos = [0] * 5
         for request in data['requests']:
             record = by_key[request['key']]
+            preemptions.append(record.get('preemptions'))
             # vLLM input_processor会给内部ID追加UUID；输出仍使用外部数字ID。
             if (record['request_id'] != request['request_id']
                     and not record['request_id'].startswith(request['request_id'] + '-')):
@@ -113,6 +115,9 @@ def collect(root, bank, batch, tokens, mean_range=(3.0, 4.0)):
             'acceptance_rate': sum(i * value for i, value in enumerate(distributions)) / proposed_total,
             'request_mean_min': min(r['accepted_per_draft'] for r in rows),
             'request_mean_max': max(r['accepted_per_draft'] for r in rows),
+            'total_preemptions': (sum(preemptions) if all(v is not None for v in preemptions) else None),
+            'requests_with_preemption': (sum(v > 0 for v in preemptions)
+                                        if all(v is not None for v in preemptions) else None),
             'errors': errors, 'requests': rows}
 
 

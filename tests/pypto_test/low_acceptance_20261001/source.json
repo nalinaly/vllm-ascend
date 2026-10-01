@@ -45,51 +45,115 @@
     "8k_b40": "task_20261001_115511_117849711945"
   },
   "paired_wrapper_note": "最初两个串行任务均在性能版完成后，CPU汇总误将队列尾部--device当mean-range而exit=2；性能结果有效。修正参数解析，仅另排精度侧，不重跑性能侧。",
-  "five_way_source": "tests/pypto_test/results/low_acceptance_20261001/source_v6",
-  "five_way_tasks": {
-    "8k": {
-      "native": "task_20261001_121906_230833530715",
-      "csa_precision_native_hca": "task_20261001_122241_237772820677",
-      "csa_performance_native_hca": "task_20261001_125532_51768122396",
-      "native_csa_pto_hca": "task_20261001_125533_5178767625",
-      "csa_performance_pto_hca": "复用fixed8k_pair/performance"
-    },
-    "128k": {
-      "native": "task_20261001_121906_2308923482",
-      "csa_precision_native_hca": "task_20261001_122241_237773124380",
-      "csa_performance_native_hca": "task_20261001_125532_51741621198",
-      "native_csa_pto_hca": "task_20261001_125532_5174623492",
-      "csa_performance_pto_hca": "复用fixed128k_pair/performance"
-    }
-  },
   "initial_pair_frozen_source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/source_v5",
   "initial_pair_pto_attention": "both",
-  "five_way_scope": "全Native；CSA精度+Native HCA；CSA性能+Native HCA；CSA性能+PTO HCA；Native CSA+PTO HCA",
-  "five_way_observation_delta": "source_v6较v5只补测试worker的实际CSA/HCA runtime选择描述符与CSA-only的forward图计数；生产算子未改",
   "graph_scope": "vLLM整模型FULL_DECODE_ONLY+npugraph_ex/static；不是单算子SK1性能测试入口。生产编译器inplace_pass=False。",
   "event_mode_difference": "Native默认0，PTO初始化1；报告实际值，其余worker配置一致，不据此直接归因token差异。",
   "toolchain_rechecked_at": "2026-10-01 12:48 Asia/Shanghai，PyPTO/Simpler仍与本轮起点一致",
-  "five_way_incomplete_attempt": {
-    "task": "task_20261001_122609_27121998780",
-    "configuration": "128k/csa_performance_native_hca",
-    "status": "手动终止，exit130；仅10个rank有完整输出，不参与比较",
-    "evidence": "tests/pypto_test/results/low_acceptance_20261001/five_way/128k/csa_performance_native_hca_early_shutdown",
-    "finding": "发现本地完成客户端提前关闭EngineCore的生命周期缺口；补客户端保活后仍有rank不完成，提前关闭不是已证实的唯一根因。"
+  "sync_load_recovery": {
+    "fix_commit": "976ebd77",
+    "production_operator_commit": "84dc9a3f",
+    "frozen_source": "tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load",
+    "changes": "仅测试connector改为同步加载声明并取消异步完成通知；逐请求记录增加preemptions。生产算子及采样不改。",
+    "cpu_regression": "真实AsyncScheduler容量边界2项通过；旧声明零进展，同步声明可生成并让后续请求入场。",
+    "recovery_task": "task_20261001_142251_220221019171",
+    "recovery_result": "128K/B24性能CSA+Native HCA，16rank×24请求×192token完整结束；抢占0、同次跨DP token/event差异0。",
+    "diagnostic_task": "task_20261001_141029_197387125273",
+    "aborted_diagnostic_setup": "task_20261001_140843_196153128653：补齐schedule参数转发后重做，未纳入精度结果。",
+    "matrix_tasks": {
+      "128k": {
+        "csa_performance_native_hca": "task_20261001_142251_220221019171",
+        "native": "task_20261001_142602_223572316923",
+        "csa_precision_native_hca": "task_20261001_142602_223576325103",
+        "csa_performance_pto_hca": "task_20261001_142602_22358291997",
+        "native_csa_pto_hca": "task_20261001_142602_22358698461"
+      },
+      "8k": {
+        "native": "task_20261001_142602_22359093250",
+        "csa_precision_native_hca": "task_20261001_142602_22359494134",
+        "csa_performance_native_hca": "task_20261001_142602_223598912825",
+        "csa_performance_pto_hca": "task_20261001_142602_223604510747",
+        "native_csa_pto_hca": "task_20261001_142602_22361314386"
+      }
+    },
+    "matrix_result_root": "tests/pypto_test/results/low_acceptance_20261001/five_way_sync",
+    "status": "complete",
+    "toolchain_rechecked": "2026-10-01 14:35 Asia/Shanghai；PyPTO/Simpler HEAD及工作区仍与本轮起点相同。",
+    "hca_watermark_diagnostic": {
+      "task": "task_20261001_145435_380932827744",
+      "watermark": 0.01,
+      "source": "tests/pypto_test/results/low_acceptance_20261001/source_v10_watermark_diag",
+      "output": "tests/pypto_test/results/low_acceptance_20261001/hca_watermark_001_128k",
+      "scope": "仅额外诊断；五组主矩阵仍统一watermark=0，不用不同容量策略悄悄替换其中一行",
+      "status": "COMPLETE",
+      "report": "hca_watermark_001_128k.json",
+      "exit_code": 0,
+      "finding": "抢占431→0，同次跨DP token/event差异均归零；对Native仍有16/24题输出不同、19/24题统计不同。容量条件与精度未对齐分开报告。"
+    },
+    "matrix_task_exit_codes": {
+      "128k": {
+        "csa_performance_native_hca": 0,
+        "native": 0,
+        "csa_precision_native_hca": 0,
+        "csa_performance_pto_hca": 0,
+        "native_csa_pto_hca": 0
+      },
+      "8k": {
+        "native": 0,
+        "csa_precision_native_hca": 0,
+        "csa_performance_native_hca": 0,
+        "csa_performance_pto_hca": 0,
+        "native_csa_pto_hca": 0
+      }
+    },
+    "toolchain_final_recheck": "收尾复核PyPTO/Simpler提交与本轮起点一致，两仓工作区干净",
+    "matrix_result": "同步加载功能已修复；两档五组全部完整执行，8个PTO组合/档位的token与DSpark精度未通过",
+    "native_reference_revalidation": "两档Native逐请求token、接受统计与事件均与修复前固定参考一致，未覆盖或更换golden"
   },
-  "five_way_cancelled_before_start": [
-    "task_20261001_122609_27123437993",
-    "task_20261001_122609_271243923383",
-    "task_20261001_122609_271248626173"
-  ],
-  "five_way_completion_source": "tests/pypto_test/results/low_acceptance_20261001/source_v7",
-  "five_way_completion_delta": "仅mixed.py新增生成结束后的客户端文件屏障；16个客户端全部完成后才发观察RPC/关闭EngineCore。无NPU同步、不改生成/采样/算子。另核对外部request id与带UUID后缀的内部id。",
-  "five_way_retry_outcome": {
-    "task": "task_20261001_125532_51741621198",
-    "configuration": "128k/csa_performance_native_hca",
-    "source": "source_v7",
-    "status": "客户端保持存活300秒后超时，未完成DP=[1,3,5,7,9,11,15]；不得用已结束的9个rank填补16卡精度结果",
-    "root_cause": "未隔离；完成等待没有解决该组合的卡住现象，不定性为已定位的算子或通信bug"
+  "legacy_async_results": {
+    "five_way_source": "tests/pypto_test/results/low_acceptance_20261001/source_v6",
+    "five_way_tasks": {
+      "8k": {
+        "native": "task_20261001_121906_230833530715",
+        "csa_precision_native_hca": "task_20261001_122241_237772820677",
+        "csa_performance_native_hca": "task_20261001_125532_51768122396",
+        "native_csa_pto_hca": "task_20261001_125533_5178767625",
+        "csa_performance_pto_hca": "复用fixed8k_pair/performance"
+      },
+      "128k": {
+        "native": "task_20261001_121906_2308923482",
+        "csa_precision_native_hca": "task_20261001_122241_237773124380",
+        "csa_performance_native_hca": "task_20261001_125532_51741621198",
+        "native_csa_pto_hca": "task_20261001_125532_5174623492",
+        "csa_performance_pto_hca": "复用fixed128k_pair/performance"
+      }
+    },
+    "five_way_scope": "全Native；CSA精度+Native HCA；CSA性能+Native HCA；CSA性能+PTO HCA；Native CSA+PTO HCA",
+    "five_way_observation_delta": "source_v6较v5只补测试worker的实际CSA/HCA runtime选择描述符与CSA-only的forward图计数；生产算子未改",
+    "five_way_incomplete_attempt": {
+      "task": "task_20261001_122609_27121998780",
+      "configuration": "128k/csa_performance_native_hca",
+      "status": "手动终止，exit130；仅10个rank有完整输出，不参与比较",
+      "evidence": "tests/pypto_test/results/low_acceptance_20261001/five_way/128k/csa_performance_native_hca_early_shutdown",
+      "finding": "发现本地完成客户端提前关闭EngineCore的生命周期缺口；补客户端保活后仍有rank不完成，提前关闭不是已证实的唯一根因。"
+    },
+    "five_way_cancelled_before_start": [
+      "task_20261001_122609_27123437993",
+      "task_20261001_122609_271243923383",
+      "task_20261001_122609_271248626173"
+    ],
+    "five_way_completion_source": "tests/pypto_test/results/low_acceptance_20261001/source_v7",
+    "five_way_completion_delta": "仅mixed.py新增生成结束后的客户端文件屏障；16个客户端全部完成后才发观察RPC/关闭EngineCore。无NPU同步、不改生成/采样/算子。另核对外部request id与带UUID后缀的内部id。",
+    "five_way_retry_outcome": {
+      "task": "task_20261001_125532_51741621198",
+      "configuration": "128k/csa_performance_native_hca",
+      "source": "source_v7",
+      "status": "客户端保持存活300秒后超时，未完成DP=[1,3,5,7,9,11,15]；不得用已结束的9个rank填补16卡精度结果",
+      "root_cause": "未隔离；完成等待没有解决该组合的卡住现象，不定性为已定位的算子或通信bug"
+    },
+    "completed_at": "2026-10-01 13:27 Asia/Shanghai",
+    "final_scope": "2档×5组合，9组完整执行、7个PTO完整组与Native不一致，128K性能CSA+Native HCA未完成；其余CPU检查通过"
   },
-  "completed_at": "2026-10-01 13:27 Asia/Shanghai",
-  "final_scope": "2档×5组合，9组完整执行、7个PTO完整组与Native不一致，128K性能CSA+Native HCA未完成；其余CPU检查通过"
+  "current_status": "同步加载功能已修复；两档五组全部完整执行，8个PTO组合/档位的token与DSpark精度未通过",
+  "completed_at": "2026-10-01 15:31 Asia/Shanghai"
 }

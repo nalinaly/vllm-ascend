@@ -2,7 +2,7 @@
   "configurations": {
     "native": {
       "label": "Native CSA + Native HCA",
-      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/8k/native",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k/native",
       "execution_status": "COMPLETE",
       "validation_errors": [],
       "acceptance": {
@@ -35,6 +35,8 @@
         "acceptance_rate": 0.7452322738386308,
         "request_mean_min": 2.7115384615384617,
         "request_mean_max": 5.0,
+        "total_preemptions": 0,
+        "requests_with_preemption": 0,
         "errors": []
       },
       "cross_dp_different_outputs_within_run": 0,
@@ -356,7 +358,7 @@
     },
     "csa_precision_native_hca": {
       "label": "CSA精度版 + Native HCA",
-      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/8k/csa_precision_native_hca",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k/csa_precision_native_hca",
       "execution_status": "COMPLETE",
       "validation_errors": [],
       "acceptance": {
@@ -389,6 +391,8 @@
         "acceptance_rate": 0.7306441902468392,
         "request_mean_min": 2.5555555555555554,
         "request_mean_max": 5.0,
+        "total_preemptions": 0,
+        "requests_with_preemption": 0,
         "errors": []
       },
       "cross_dp_different_outputs_within_run": 0,
@@ -710,7 +714,7 @@
     },
     "csa_performance_native_hca": {
       "label": "CSA性能版 + Native HCA",
-      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/8k/csa_performance_native_hca",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k/csa_performance_native_hca",
       "execution_status": "COMPLETE",
       "validation_errors": [],
       "acceptance": {
@@ -743,6 +747,8 @@
         "acceptance_rate": 0.7330922242314647,
         "request_mean_min": 2.673076923076923,
         "request_mean_max": 5.0,
+        "total_preemptions": 0,
+        "requests_with_preemption": 0,
         "errors": []
       },
       "cross_dp_different_outputs_within_run": 0,
@@ -1064,7 +1070,7 @@
     },
     "csa_performance_pto_hca": {
       "label": "CSA性能版 + PTO HCA",
-      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/fixed8k_pair/performance",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k/csa_performance_pto_hca",
       "execution_status": "COMPLETE",
       "validation_errors": [],
       "acceptance": {
@@ -1097,6 +1103,8 @@
         "acceptance_rate": 0.7297590361445783,
         "request_mean_min": 2.6792452830188678,
         "request_mean_max": 5.0,
+        "total_preemptions": 0,
+        "requests_with_preemption": 0,
         "errors": []
       },
       "cross_dp_different_outputs_within_run": 0,
@@ -1119,8 +1127,296 @@
         51,
         51
       ],
-      "attention_implementations": [],
-      "reused_legacy_both_evidence": true,
+      "attention_implementations": [
+        {
+          "layer": 2,
+          "name": "model.layers.2.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 3,
+          "name": "model.layers.3.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 4,
+          "name": "model.layers.4.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 5,
+          "name": "model.layers.5.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 6,
+          "name": "model.layers.6.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 7,
+          "name": "model.layers.7.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 8,
+          "name": "model.layers.8.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 9,
+          "name": "model.layers.9.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 10,
+          "name": "model.layers.10.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 11,
+          "name": "model.layers.11.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 12,
+          "name": "model.layers.12.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 13,
+          "name": "model.layers.13.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 14,
+          "name": "model.layers.14.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 15,
+          "name": "model.layers.15.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 16,
+          "name": "model.layers.16.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 17,
+          "name": "model.layers.17.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 18,
+          "name": "model.layers.18.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 19,
+          "name": "model.layers.19.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 20,
+          "name": "model.layers.20.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 21,
+          "name": "model.layers.21.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 22,
+          "name": "model.layers.22.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 23,
+          "name": "model.layers.23.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 24,
+          "name": "model.layers.24.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 25,
+          "name": "model.layers.25.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 26,
+          "name": "model.layers.26.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 27,
+          "name": "model.layers.27.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 28,
+          "name": "model.layers.28.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 29,
+          "name": "model.layers.29.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 30,
+          "name": "model.layers.30.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 31,
+          "name": "model.layers.31.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 32,
+          "name": "model.layers.32.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 33,
+          "name": "model.layers.33.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 34,
+          "name": "model.layers.34.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 35,
+          "name": "model.layers.35.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 36,
+          "name": "model.layers.36.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 37,
+          "name": "model.layers.37.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 38,
+          "name": "model.layers.38.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 39,
+          "name": "model.layers.39.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 40,
+          "name": "model.layers.40.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        },
+        {
+          "layer": 41,
+          "name": "model.layers.41.self_attn.attn",
+          "kind": "hca",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_hca.service"
+        },
+        {
+          "layer": 42,
+          "name": "model.layers.42.self_attn.attn",
+          "kind": "csa",
+          "implementation": "pto",
+          "runtime_class": "vllm_ascend.ops.pypto.deepseek_v4_flash_dspark_perf.service"
+        }
+      ],
+      "reused_legacy_both_evidence": false,
       "static_kernel": {
         "installed_packages": [
           2
@@ -1130,7 +1426,7 @@
     },
     "native_csa_pto_hca": {
       "label": "Native CSA + PTO HCA",
-      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/8k/native_csa_pto_hca",
+      "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k/native_csa_pto_hca",
       "execution_status": "COMPLETE",
       "validation_errors": [],
       "acceptance": {
@@ -1163,6 +1459,8 @@
         "acceptance_rate": 0.7404255319148936,
         "request_mean_min": 2.803921568627451,
         "request_mean_max": 5.0,
+        "total_preemptions": 0,
+        "requests_with_preemption": 0,
         "errors": []
       },
       "cross_dp_different_outputs_within_run": 0,

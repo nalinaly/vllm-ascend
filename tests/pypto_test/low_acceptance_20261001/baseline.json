@@ -1,6 +1,6 @@
 {
-  "schema": 1,
-  "status": "inputs_qualified_accuracy_failures_and_one_incomplete_execution",
+  "schema": 2,
+  "status": "all_executions_complete_accuracy_comparison_fail",
   "purpose": "混合真实请求的token/DSpark回归；不以100%接受率替代边界覆盖",
   "definition": "每轮5个草稿的实际接受数0..5，不含目标模型追加token；按轮次加权平均",
   "pool_size": 40,
@@ -27,7 +27,7 @@
       "label": "128K/B24",
       "batch": 24,
       "bank": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/mixed128k_fixed",
-      "result_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/fixed128k_pair",
+      "result_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/128k",
       "capture_sizes": [
         144
       ],
@@ -130,121 +130,38 @@
           "kind": "easy_repeat"
         }
       ],
-      "performance_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.970053475935829,
-        "accepted_length_histogram": [
-          704,
-          1056,
-          1392,
-          1200,
-          1088,
-          9520
-        ],
-        "full_five_draft_histogram": [
-          704,
-          1056,
-          1392,
-          1200,
-          1088,
-          9520
-        ],
-        "num_drafts": 14960,
-        "num_draft_tokens": 74800,
-        "num_accepted_tokens": 59392,
-        "acceptance_rate": 0.7940106951871658,
-        "request_mean_min": 3.260869565217391,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
-      "comparison_status": "FAIL",
-      "precision_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.741573033707865,
-        "accepted_length_histogram": [
-          1152,
-          1248,
-          1824,
-          1184,
-          1120,
-          9136
-        ],
-        "full_five_draft_histogram": [
-          1152,
-          1248,
-          1824,
-          1184,
-          1120,
-          9136
-        ],
-        "num_drafts": 15664,
-        "num_draft_tokens": 78320,
-        "num_accepted_tokens": 58608,
-        "acceptance_rate": 0.748314606741573,
-        "request_mean_min": 2.82,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
       "native_reference": "reference_128k_b24_native.json.gz",
-      "five_way_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/128k",
-      "initial_pair_scope": "性能CSA+PTO HCA 对 精度CSA+PTO HCA；不等同五组矩阵里的精度CSA+Native HCA",
+      "five_way_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/128k",
       "five_way_report": "five_way_128k_b24.json",
       "five_way_status": "FAIL",
-      "native_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.825182101977107,
-        "accepted_length_histogram": [
-          928,
-          1328,
-          1344,
-          1360,
-          1360,
-          9056
-        ],
-        "full_five_draft_histogram": [
-          928,
-          1328,
-          1344,
-          1360,
-          1360,
-          9056
-        ],
-        "num_drafts": 15376,
-        "num_draft_tokens": 76880,
-        "num_accepted_tokens": 58816,
-        "acceptance_rate": 0.7650364203954214,
-        "request_mean_min": 2.823529411764706,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
       "five_way_execution": {
         "native": "COMPLETE",
         "csa_precision_native_hca": "COMPLETE",
-        "csa_performance_native_hca": "INCOMPLETE",
+        "csa_performance_native_hca": "COMPLETE",
         "csa_performance_pto_hca": "COMPLETE",
         "native_csa_pto_hca": "COMPLETE"
+      },
+      "native_reference_revalidated_after_sync_fix": true,
+      "total_preemptions": {
+        "native": 0,
+        "csa_precision_native_hca": 0,
+        "csa_performance_native_hca": 0,
+        "csa_performance_pto_hca": 0,
+        "native_csa_pto_hca": 431
+      },
+      "acceptance_qualified": {
+        "native": true,
+        "csa_precision_native_hca": true,
+        "csa_performance_native_hca": true,
+        "csa_performance_pto_hca": true,
+        "native_csa_pto_hca": true
       }
     },
     {
       "label": "8K/B40",
       "batch": 40,
       "bank": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/mixed8k_fixed",
-      "result_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/fixed8k_pair",
+      "result_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k",
       "capture_sizes": [
         6,
         240
@@ -412,117 +329,35 @@
           "kind": "python_trace"
         }
       ],
-      "performance_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.6487951807228916,
-        "accepted_length_histogram": [
-          1808,
-          2384,
-          3520,
-          2320,
-          2112,
-          14416
-        ],
-        "full_five_draft_histogram": [
-          1808,
-          2384,
-          3520,
-          2320,
-          2112,
-          14416
-        ],
-        "num_drafts": 26560,
-        "num_draft_tokens": 132800,
-        "num_accepted_tokens": 96912,
-        "acceptance_rate": 0.7297590361445783,
-        "request_mean_min": 2.6792452830188678,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
       "native_reference": "reference_8k_b40_native.json.gz",
-      "five_way_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way/8k",
-      "precision_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.645858343337335,
-        "accepted_length_histogram": [
-          1808,
-          2400,
-          3504,
-          2480,
-          1984,
-          14480
-        ],
-        "full_five_draft_histogram": [
-          1808,
-          2400,
-          3504,
-          2480,
-          1984,
-          14480
-        ],
-        "num_drafts": 26656,
-        "num_draft_tokens": 133280,
-        "num_accepted_tokens": 97184,
-        "acceptance_rate": 0.729171668667467,
-        "request_mean_min": 2.7450980392156863,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
-      "comparison_status": "FAIL",
-      "initial_pair_scope": "性能CSA+PTO HCA 对 精度CSA+PTO HCA；不等同五组矩阵里的精度CSA+Native HCA",
+      "five_way_root": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/five_way_sync/8k",
       "five_way_report": "five_way_8k_b40.json",
       "five_way_status": "FAIL",
-      "native_acceptance": {
-        "qualified": true,
-        "criterion": "同批不同请求，实际接受长度0..5均覆盖；主批均值3..4/目标约3.8，其他batch允许1..5",
-        "mean_range": [
-          3.0,
-          4.0
-        ],
-        "mean_accepted": 3.726161369193154,
-        "accepted_length_histogram": [
-          1632,
-          2560,
-          2832,
-          2192,
-          2064,
-          14896
-        ],
-        "full_five_draft_histogram": [
-          1632,
-          2560,
-          2832,
-          2192,
-          2064,
-          14896
-        ],
-        "num_drafts": 26176,
-        "num_draft_tokens": 130880,
-        "num_accepted_tokens": 97536,
-        "acceptance_rate": 0.7452322738386308,
-        "request_mean_min": 2.7115384615384617,
-        "request_mean_max": 5.0,
-        "errors": []
-      },
       "five_way_execution": {
         "native": "COMPLETE",
         "csa_precision_native_hca": "COMPLETE",
         "csa_performance_native_hca": "COMPLETE",
         "csa_performance_pto_hca": "COMPLETE",
         "native_csa_pto_hca": "COMPLETE"
+      },
+      "native_reference_revalidated_after_sync_fix": true,
+      "total_preemptions": {
+        "native": 0,
+        "csa_precision_native_hca": 0,
+        "csa_performance_native_hca": 0,
+        "csa_performance_pto_hca": 0,
+        "native_csa_pto_hca": 0
+      },
+      "acceptance_qualified": {
+        "native": true,
+        "csa_precision_native_hca": true,
+        "csa_performance_native_hca": true,
+        "csa_performance_pto_hca": true,
+        "native_csa_pto_hca": true
       }
     }
   ],
   "reference_scope": "固定Native实现的回归参考；不代表问答内容本身正确；schema2保存逐轮事件顺序",
-  "five_way_outstanding_runtime_failure": "128K/B24性能CSA+Native HCA，两次未完成；其余组合按最终报告为准"
+  "connector_load_mode": "synchronous; fix 976ebd77",
+  "source_snapshot": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/low_acceptance_20261001/source_v9_sync_load"
 }

@@ -1,0 +1,18 @@
+--- a/tests/pypto_test/offline_pd/run.py
++++ b/tests/pypto_test/offline_pd/run.py
+@@ -809,5 +809,5 @@
+         enable_prefix_caching=False, enforce_eager=prefill or args.graph_mode == "eager", seed=1024,
+         **({} if prefill else {"async_scheduling": True, "disable_hybrid_kv_cache_manager": False}),
+-        gpu_memory_utilization=args.gpu_memory_utilization, block_size=32,
++        gpu_memory_utilization=args.gpu_memory_utilization, block_size=32, watermark=0.01,
+         # 清单约定的 D 侧上线口径为 FULL_DECODE_ONLY；
+         # eager 只用于定位问题，其每步重入 Python 派发路径，不代表上线表现。
+--- a/tests/pypto_test/offline_pd/worker.py
++++ b/tests/pypto_test/offline_pd/worker.py
+@@ -94,5 +94,5 @@
+             "scheduler": {
+                 name: getattr(self.model_runner.scheduler_config, name)
+-                for name in ("max_num_seqs", "max_num_batched_tokens", "max_num_scheduled_tokens")
++                for name in ("max_num_seqs", "max_num_batched_tokens", "max_num_scheduled_tokens", "watermark")
+             },
+         }

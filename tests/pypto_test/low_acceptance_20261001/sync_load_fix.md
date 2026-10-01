@@ -55,6 +55,7 @@ VLLM_PLUGINS='' PYTHONPATH=/path/to/pinned/vllm:tests/pypto_test \
 先复测原失败的128K/B24性能CSA＋Native HCA，再用相同修复刷新两档五组对照。
 原始结果在`../results/low_acceptance_20261001/five_way_sync/`，任务ID见该目录的`tasks.json`。
 整模型完成情况和最终精度差异以[RESULTS.md](RESULTS.md)的更新记录为准。
+同一修复入口的两档五组均已完整结束，10个任务全部exit=0；四种含PTO的组合在两档上仍未通过精度对齐。
 
 首个修复后任务`task_20261001_142251_220221019171`正常结束（exit=0，5分46秒）。
 16个DP各完成24条不同请求，每条192个token，共384条、73,728个输出位置；
