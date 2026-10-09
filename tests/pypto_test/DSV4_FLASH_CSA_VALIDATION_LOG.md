@@ -14646,3 +14646,75 @@ Native adapter合并为一份实现，支持CSA默认根与HCA显式根权重准
 CPU日志：`/tmp/csa-single-impl-final-cpu.log`；
 四根lowering记录：`results/csa_single_implementation_20261001/cpu_lower.json`、同目录`cpu_lower.log`。
 [当前入口说明](README.md)、[封存索引及恢复](archive/csa_precision_20261001/README.md)。
+
+## 525. 2026-10-09：独立完整 HC_pre 入口与单卡性能基线
+
+按用户要求在 `vllm_ascend/ops/pypto/hc_pre.py` 增加独立动态 T 的 JIT 入口，
+复用现有 CSA HC 算术，BF16 残差由设备内部无损加宽，三份输出与 Native 形状/类型一致。
+范围对齐 cann-recipes-infer HcPre：内部 RMS 统计、投影、pre/post 门控、comb Sinkhorn 与残差混合；
+不包含 mixed 之后的 input_layernorm、attention 或 HC_post，不改正式 CSA/HCA forward。
+
+新增 `dsv4_hc_pre_bench.py`、`run_hc_pre_bench.sh` 和
+[独立范围与复现说明](HC_PRE_STANDALONE.md)，只加载正式第 2 层三份 HC 权重。
+运行时使用 TMR；图外 NPU Event 对两侧交替计时，5 次预热、20 次采样，另采 3-step PyTorch profiling。
+
+共享 PyPTO Python 源码与已安装扩展仍不一致，首轮 lower 因缺少 system.read_clock 注册失败。
+本次仅用测试参数 --pypto-core 将当前进程指向同一源码仓库 10 月 9 日已构建扩展，
+未修改/安装 PyPTO、Simpler，也未修改其他会话的 SuperKernel 草稿。随后 CPU lowering 与设备代码编译通过。
+
+单卡任务 task_20261009_212113_39961297584、task_20261009_212213_403559928607 均 exit=0。
+T=1/6/24/48/96/144/192 全部通过三输出容差门禁、各自 graph/eager 严格一致、同址换输入与输出保护行。
+跨实现 mixed 的最大绝对差最高 0.015625，post 约 1.824e-5，comb 约 1.228e-5，未宣称逐 bit 或整模型 token 一致。
+七档 Native/PTO p50 分别为 50.29/111.54、45.03/109.96、53.62/117.76、60.06/123.47、
+75.94/139.45、77.04/150.11、86.31/162.50 μs；首版仍慢于 Native，未开展性能优化或 Prefill 验收。
+
+证据在 `results/hc_pre_20261009/`，summary.json 记录七档和十二份 trace 路径。
+六档（T=24 除外）每侧三 step 的 trace 均核对到设备执行，但 CANN ACL→NPU flow 连线生成失败；
+仅据实际存在的事件解释 trace，profiling 不混入性能采样。
+
+## 526. 2026-10-09：HC_pre 改为用户指定 B/S 矩阵及 incore 首尾计时
+
+用户明确 batch_size=[2,4,8,16,20,24,28]、seqlen=[5,6]，共14个场景。
+T=B×S，仅是PTO入口合并后的token轴；用例显式保留B/S，Native使用[B,S,4,4096]，
+PTO使用零拷贝view，不将B20/S6与B24/S5因T相同而合并。生产HC_pre算术未改。
+
+默认计时改为L1泳道每场景3次replay：Worker记录排除local_setup，
+从最早incore kernel开始至最晚结束取跨度，不包含两端AICPU运行时区间。
+另列所有incore区间的并集和无incore执行的空隙，不把并行核时长相加，也不将空隙全部归因于AICPU；
+kernel内部等待仍保留。Native只取PyTorch profiler中的HcPre设备事件。
+旧图外Event计时保留为--timing replay，明确单独字段，不再用于当前incore对比。
+
+新增统计辅助与CPU边界测试，6 passed；B/S种子规则固定，使分卡提交可复现。
+任务task_20261009_214435_65284432152、task_20261009_214525_68514626895、
+task_20261009_214527_6860216646均exit=0，14场景数值容差、graph/eager严格一致、换输入和保护行全部通过。
+后13场景分两卡并行跑单卡case，没有双卡算子通信。各场景CPU/设备采样均为3step。
+
+结果在results/hc_pre_incore_20261009/，RESULTS.md/summary.csv/summary.json记录14档与来源，
+traces/合并42份重命名JSON（每场景Native PyTorch、PTO PyTorch、PTO L1），全部核对3个step/epoch，
+每个epoch完整7阶段，以及每侧3次真实设备执行。ACL→NPU flow连线仍缺失，没有人为补线。
+B2/S5 Native/PTO incore跨度为36.82/34.18μs，PTO执行并集30.12μs；
+B28/S6为70.06/84.42μs，并集74.98μs。完整表见HC_PRE_STANDALONE.md。
+这是开启采集后的单卡incore口径，不等于关闭采集的整图或整模型性能。
+
+## 527. 2026-10-09：HC_pre 完整搬入独立文件，消除对 CSA 算法及配置的引用
+
+按用户纠正，将第525～526节入口引用的HC_pre计算全部搬到`vllm_ascend/ops/pypto/hc_pre.py`：
+内部RMS、四段K投影与归约、pre/post门控、20次Sinkhorn、四路残差混合、BF16舍入和尾块写回。
+模型及分块常量也在本文件定义，唯一导入为`pypto.language`；本地inline辅助函数编译进同一JIT入口。
+测试脚本同时删除CSA配置引用，保留动态T=B×S的BF16接口、三份输出及默认14场景。
+未修改CSA/HCA生产入口、PyPTO、Simpler或pypto-lib。
+
+三个搬入函数参数与计算体的AST直接比较一致，忽略函数名、装饰器、文档字符串和位置。
+CPU完整设备代码编译通过；这不替代真机验证，也不证明与Native逐bit一致。
+使用正式第2层HC权重，分别重测最小B2/S5与最大B28/S6；没有重跑14场景。
+任务task_20261009_215759_11422676160、task_20261009_215800_114338827564均exit=0。
+两组的三输出容差、两侧各自graph/eager严格一致、同址换输入和PTO输出保护行全部通过。
+mixed最大绝对差均0.015625；post/comb最高约1.117e-5/1.130e-5，门禁保持不变。
+
+每组5次预热、3个step，Native/PTO incore首尾中位数分别为36.36/34.02、72.04/83.16μs，
+PTO执行区间并集30.40、73.44μs。新增六份trace，每组两份PyTorch trace和一份L1泳道；
+泳道每个epoch仍有完整七阶段，ACL→NPU flow缺失限制与上一节相同，不宣称搬运带来性能收益。
+
+证据：`results/hc_pre_standalone_copy_20261009/`，包含migration_comparison.json、CPU编译报告、
+两个真机report.json及各自traces/；[独立说明](HC_PRE_STANDALONE.md)已区分旧14场景基线与搬入后的验证。
+本次提交源码、脚本、说明和可读报告/trace JSON，权重、二进制及原始大体积采集文件不入Git。

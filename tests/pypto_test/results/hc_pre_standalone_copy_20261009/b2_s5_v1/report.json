@@ -1,0 +1,558 @@
+{
+  "status": "PASS",
+  "scope": "单卡独立 HC_pre；正式 HC 权重、合成输入；不代表整模型性能",
+  "implementation": "standalone_local_hc_pre",
+  "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+  "layer": 2,
+  "branch": "attn",
+  "batch_size": [
+    2
+  ],
+  "seqlen": [
+    5
+  ],
+  "seed": 20261009,
+  "case_seed_rule": "seed + batch_size * 100 + seqlen",
+  "warmup": 5,
+  "replay_iters": 20,
+  "timing": "incore",
+  "timing_scope": "PTO L1 incore 首次开始至最后结束；另列并行区间并集和无 incore 空隙；Native HcPre 设备事件",
+  "runtime": "tensormap_and_ringbuffer",
+  "cases": [
+    {
+      "batch_size": 2,
+      "seqlen": 5,
+      "tokens": 10,
+      "name": "B02_S5_T010",
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00018843670841306448,
+          "different": 295,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.5267086029052734e-06,
+          "rmse": 1.8795387859427137e-06,
+          "different": 30,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 3.2782554626464844e-06,
+          "rmse": 1.0239691619062796e-06,
+          "different": 159,
+          "out_of_tolerance": 0
+        }
+      },
+      "native_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "incore_timing": {
+        "scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
+        "native": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/traces/B02_S5_T010_Native_PyTorch_3steps.json",
+          "steps": 3,
+          "p50_us": 36.36,
+          "samples_us": [
+            35.9,
+            36.36,
+            36.46
+          ]
+        },
+        "pto": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/traces/B02_S5_T010_PTO_L1_3steps.json",
+          "level": 1,
+          "steps": 3,
+          "samples": [
+            {
+              "launch_epoch": 0,
+              "first_start_us": 37.94,
+              "last_end_us": 73.86,
+              "span_us": 35.92,
+              "active_union_us": 30.140000000000008,
+              "no_incore_gap_us": 5.779999999999994,
+              "blocks": 23,
+              "tasks": {
+                "hc_pre_widen": {
+                  "first_start_us": 37.94,
+                  "last_end_us": 44.800000000000004,
+                  "span_us": 6.8600000000000065,
+                  "active_union_us": 6.8600000000000065,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 10,
+                  "core_time_sum_us": 57.200000000000024
+                },
+                "hc_pre_rms": {
+                  "first_start_us": 48.660000000000004,
+                  "last_end_us": 57.160000000000004,
+                  "span_us": 8.5,
+                  "active_union_us": 8.5,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 14.739999999999995
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 48.04,
+                  "last_end_us": 54.14,
+                  "span_us": 6.100000000000001,
+                  "active_union_us": 6.100000000000001,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 22.879999999999995
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 55.660000000000004,
+                  "last_end_us": 57.28,
+                  "span_us": 1.6199999999999974,
+                  "active_union_us": 1.6199999999999974,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.6199999999999974
+                },
+                "split_pre_post": {
+                  "first_start_us": 60.42,
+                  "last_end_us": 63.120000000000005,
+                  "span_us": 2.700000000000003,
+                  "active_union_us": 2.700000000000003,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 4.740000000000002
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 59.82,
+                  "last_end_us": 73.86,
+                  "span_us": 14.04,
+                  "active_union_us": 14.04,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 27.839999999999996
+                },
+                "mix_x": {
+                  "first_start_us": 65.06,
+                  "last_end_us": 73.68,
+                  "span_us": 8.620000000000005,
+                  "active_union_us": 8.620000000000005,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 16.700000000000003
+                }
+              }
+            },
+            {
+              "launch_epoch": 1,
+              "first_start_us": 415.78000000000003,
+              "last_end_us": 449.8,
+              "span_us": 34.01999999999998,
+              "active_union_us": 30.959999999999923,
+              "no_incore_gap_us": 3.060000000000059,
+              "blocks": 23,
+              "tasks": {
+                "hc_pre_widen": {
+                  "first_start_us": 415.78000000000003,
+                  "last_end_us": 423.58,
+                  "span_us": 7.7999999999999545,
+                  "active_union_us": 7.7999999999999545,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 10,
+                  "core_time_sum_us": 54.26000000000022
+                },
+                "hc_pre_rms": {
+                  "first_start_us": 425.92,
+                  "last_end_us": 434.34000000000003,
+                  "span_us": 8.420000000000016,
+                  "active_union_us": 8.420000000000016,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 14.519999999999982
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 425.18,
+                  "last_end_us": 431.36,
+                  "span_us": 6.180000000000007,
+                  "active_union_us": 6.180000000000007,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 23.78000000000003
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 433.04,
+                  "last_end_us": 434.52,
+                  "span_us": 1.4799999999999613,
+                  "active_union_us": 1.4799999999999613,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.4799999999999613
+                },
+                "split_pre_post": {
+                  "first_start_us": 436.6,
+                  "last_end_us": 439.26,
+                  "span_us": 2.659999999999968,
+                  "active_union_us": 2.659999999999968,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 4.939999999999998
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 435.98,
+                  "last_end_us": 449.8,
+                  "span_us": 13.819999999999993,
+                  "active_union_us": 13.819999999999993,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 27.600000000000023
+                },
+                "mix_x": {
+                  "first_start_us": 440.56,
+                  "last_end_us": 448.96000000000004,
+                  "span_us": 8.400000000000034,
+                  "active_union_us": 8.400000000000034,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 16.30000000000001
+                }
+              }
+            },
+            {
+              "launch_epoch": 2,
+              "first_start_us": 661.94,
+              "last_end_us": 695.6,
+              "span_us": 33.65999999999997,
+              "active_union_us": 30.399999999999977,
+              "no_incore_gap_us": 3.259999999999991,
+              "blocks": 23,
+              "tasks": {
+                "hc_pre_widen": {
+                  "first_start_us": 661.94,
+                  "last_end_us": 669.12,
+                  "span_us": 7.17999999999995,
+                  "active_union_us": 7.17999999999995,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 10,
+                  "core_time_sum_us": 58.099999999999795
+                },
+                "hc_pre_rms": {
+                  "first_start_us": 671.9,
+                  "last_end_us": 680.34,
+                  "span_us": 8.440000000000055,
+                  "active_union_us": 8.440000000000055,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 14.420000000000073
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 671.1,
+                  "last_end_us": 677.46,
+                  "span_us": 6.360000000000014,
+                  "active_union_us": 6.360000000000014,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 24.339999999999918
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 678.82,
+                  "last_end_us": 680.28,
+                  "span_us": 1.4599999999999227,
+                  "active_union_us": 1.4599999999999227,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.4599999999999227
+                },
+                "split_pre_post": {
+                  "first_start_us": 682.66,
+                  "last_end_us": 685.64,
+                  "span_us": 2.980000000000018,
+                  "active_union_us": 2.980000000000018,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 5.659999999999968
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 681.62,
+                  "last_end_us": 695.5,
+                  "span_us": 13.879999999999995,
+                  "active_union_us": 13.879999999999995,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 27.459999999999923
+                },
+                "mix_x": {
+                  "first_start_us": 687.02,
+                  "last_end_us": 695.6,
+                  "span_us": 8.580000000000041,
+                  "active_union_us": 8.580000000000041,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 16.460000000000036
+                }
+              }
+            }
+          ],
+          "span_p50_us": 34.01999999999998,
+          "active_union_p50_us": 30.399999999999977,
+          "no_incore_gap_p50_us": 3.259999999999991
+        },
+        "dfx": {
+          "exported": true,
+          "kernel_config": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/dfx/kernel_config_source.py",
+          "merged_swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/dfx/merged_swimlane.json",
+          "name_map": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/dfx/name_map.json"
+        },
+        "native_over_pto_span": 1.0687830687830693,
+        "native_over_pto_active_union": 1.1960526315789481,
+        "pto_pytorch": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_standalone_copy_20261009/b2_s5_v1/traces/B02_S5_T010_PTO_PyTorch_3steps.json"
+      },
+      "native_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.0078125,
+          "rmse": 0.00014569828636012971,
+          "different": 227,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.67572021484375e-06,
+          "rmse": 1.7418107063349453e-06,
+          "different": 31,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.4185905456542969e-05,
+          "rmse": 2.2713261387252714e-06,
+          "different": 159,
+          "out_of_tolerance": 0
+        }
+      },
+      "output_guards": true,
+      "status": "PASS"
+    }
+  ],
+  "pypto_core": "/data/pyptouser/qinchuanyu/pto-eager/pypto/build/python/bindings/pypto_core.cpython-310-aarch64-linux-gnu.so",
+  "weights": [
+    {
+      "name": "layers.2.hc_attn_fn",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        24,
+        16384
+      ],
+      "dtype": "torch.float32"
+    },
+    {
+      "name": "layers.2.hc_attn_scale",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    {
+      "name": "layers.2.hc_attn_base",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        24
+      ],
+      "dtype": "torch.float32"
+    }
+  ],
+  "device_execution": true,
+  "physical_device": "0",
+  "pypto_path": "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/__init__.py",
+  "torch_version": "2.10.0+cpu",
+  "torch_npu_version": "2.10.0.post2"
+}

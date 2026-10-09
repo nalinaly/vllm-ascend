@@ -1,0 +1,476 @@
+{
+  "scope": "独立完整 HC_pre，正式层2 attention HC权重、合成BF16输入；单卡图重放",
+  "tasks": [
+    "task_20261009_212113_39961297584",
+    "task_20261009_212213_403559928607"
+  ],
+  "cases": [
+    {
+      "tokens": 1,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 50.289999693632126,
+      "pto_p50_us": 111.54000088572502,
+      "native_over_pto": 0.4508696368503282,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            1,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.00390625,
+          "rmse": 0.000120186508866027,
+          "different": 33,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            1,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 8.381903171539307e-06,
+          "rmse": 4.321338565205224e-06,
+          "different": 3,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            1,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.2516975402832031e-06,
+          "rmse": 6.423593958970741e-07,
+          "different": 16,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 6,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 45.02999968826771,
+      "pto_p50_us": 109.96000096201897,
+      "native_over_pto": 0.40951254360048084,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            6,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.0001547701540403068,
+          "different": 144,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            6,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 5.4389238357543945e-06,
+          "rmse": 1.9390270153962774e-06,
+          "different": 18,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            6,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.2278556823730469e-05,
+          "rmse": 2.5133513190667145e-06,
+          "different": 94,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 24,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/smoke_v1/report.json",
+      "native_p50_us": 53.619999438524246,
+      "pto_p50_us": 117.76000261306763,
+      "native_over_pto": 0.45533286556308317,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            24,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00014294743596110493,
+          "different": 543,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            24,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.1578202247619629e-05,
+          "rmse": 2.6359650746599073e-06,
+          "different": 73,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            24,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.2278556823730469e-05,
+          "rmse": 1.7697722114462522e-06,
+          "different": 381,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 48,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 60.06000004708767,
+      "pto_p50_us": 123.4700009226799,
+      "native_over_pto": 0.4864339483134757,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            48,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00014836723858024925,
+          "different": 1177,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            48,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.1578202247619629e-05,
+          "rmse": 2.413118863842101e-06,
+          "different": 145,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            48,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.718561053276062e-06,
+          "rmse": 1.2097555099899182e-06,
+          "different": 764,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 96,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 75.94000175595284,
+      "pto_p50_us": 139.44999873638153,
+      "native_over_pto": 0.5445679630267406,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            96,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00015450648788828403,
+          "different": 2208,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            96,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.703202724456787e-05,
+          "rmse": 2.505912789274589e-06,
+          "different": 290,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            96,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 7.748603820800781e-06,
+          "rmse": 1.2768128954121494e-06,
+          "different": 1530,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 144,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 77.03999802470207,
+      "pto_p50_us": 150.10999888181686,
+      "native_over_pto": 0.5132236266643133,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            144,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.0001561767712701112,
+          "different": 3323,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            144,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 9.804964065551758e-06,
+          "rmse": 2.2427589101425838e-06,
+          "different": 435,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            144,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 8.463859558105469e-06,
+          "rmse": 1.508721425125259e-06,
+          "different": 2286,
+          "out_of_tolerance": 0
+        }
+      }
+    },
+    {
+      "tokens": 192,
+      "status": "PASS",
+      "report": "tests/pypto_test/results/hc_pre_20261009/decode_v1/report.json",
+      "native_p50_us": 86.3099992275238,
+      "pto_p50_us": 162.50000149011612,
+      "native_over_pto": 0.5311384519142512,
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            192,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00015882746083661914,
+          "different": 4755,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            192,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.823902130126953e-05,
+          "rmse": 2.5664503482403234e-06,
+          "different": 579,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            192,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 8.58306884765625e-06,
+          "rmse": 1.273198904527817e-06,
+          "different": 3056,
+          "out_of_tolerance": 0
+        }
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t1/native/liteserver-hps-365a-00001_4036804_20261009212228288_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t1/pto/liteserver-hps-365a-00001_4036804_20261009212233069_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t144/native/liteserver-hps-365a-00001_4036804_20261009212307262_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t144/pto/liteserver-hps-365a-00001_4036804_20261009212312157_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t192/native/liteserver-hps-365a-00001_4036804_20261009212317483_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t192/pto/liteserver-hps-365a-00001_4036804_20261009212322415_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t48/native/liteserver-hps-365a-00001_4036804_20261009212247588_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t48/pto/liteserver-hps-365a-00001_4036804_20261009212252311_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t6/native/liteserver-hps-365a-00001_4036804_20261009212237879_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t6/pto/liteserver-hps-365a-00001_4036804_20261009212242607_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t96/native/liteserver-hps-365a-00001_4036804_20261009212257384_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "HcPre",
+      "device_events": 3
+    },
+    {
+      "path": "tests/pypto_test/results/hc_pre_20261009/decode_v1/profile/t96/pto/liteserver-hps-365a-00001_4036804_20261009212302112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "steps": 3,
+      "device_event": "aicore_kernel_mode_0",
+      "device_events": 3
+    }
+  ],
+  "profile_limitation": "CANN profiler ACL→NPU flow 连线生成失败；step、runtime与设备事件存在"
+}

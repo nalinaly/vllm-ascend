@@ -23,6 +23,7 @@ Native/PTO 的已知 token/DSpark 差异继续按[七组报告](low_acceptance_2
 | --- | --- |
 | `dsv4_csa_single_layer.py` / `run_csa_single_layer.sh` | 正式第 2 层权重、合成输入/历史的 Native/PTO 整层对照；同初态、metadata/保护区检查，图重放设备计时和可选 profiler，可保存 schema=2 快照 |
 | `dsv4_csa_single_card_bench.py` | schema=2 快照回放与性能采样；无参考记为 MEASURED，逐元素验收必须提供全部声明输出/状态的参考和容差 |
+| `dsv4_hc_pre_bench.py` / `run_hc_pre_bench.sh` | 独立完整 HC_pre；默认 B=2/4/8/16/20/24/28 × S=5/6，Native 设备时间与 PTO L1 incore 起止三次采样；只读取正式 HC 权重，见 [范围与复现](HC_PRE_STANDALONE.md) |
 | `dsv4_csa_replay.py` / `dsv4_csa_validation.py` | 共用快照、布局/别名/初态恢复与逐元素门禁 |
 | `dsv4_csa_weight_layout_probe.py` | 单卡核对 Native 格式 29 原始字节、pypto-lib pack_nz、设备打包与 NZ 快照；不加载整模型 |
 | `dsv4_csa_reference_lower.py` | 完整层 CPU lowering；`--build` 另做 PTOAS/CCE 编译，不执行设备或宣称数值验收 |

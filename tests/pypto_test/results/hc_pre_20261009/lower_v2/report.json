@@ -1,0 +1,22 @@
+{
+  "status": "LOWERED",
+  "scope": "单卡独立 HC_pre；正式 HC 权重、合成输入；不代表整模型性能",
+  "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+  "layer": 2,
+  "branch": "attn",
+  "tokens": [
+    24,
+    48,
+    96,
+    144,
+    192
+  ],
+  "seed": 20261009,
+  "warmup": 5,
+  "iters": 20,
+  "timing_scope": "图外 NPU Event 包含一次图重放、BF16 加宽及完整 HC_pre；无后续 RMSNorm",
+  "runtime": "tensormap_and_ringbuffer",
+  "cases": [],
+  "pypto_core": "/data/pyptouser/qinchuanyu/pto-eager/pypto/build/python/bindings/pypto_core.cpython-310-aarch64-linux-gnu.so",
+  "device_execution": false
+}
