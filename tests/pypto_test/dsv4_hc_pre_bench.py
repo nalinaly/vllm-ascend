@@ -2,6 +2,7 @@
 """正式 HC 权重、合成 BF16 输入的单卡 HC_pre 数值与性能对照。"""
 
 import argparse
+import importlib.util
 import itertools
 import json
 import math
@@ -130,8 +131,8 @@ def profile_graph(graph, output):
     return paths[0]
 
 
-def measure_incore(graphs, args, case_name, window):
-    """Native 取设备 HcPre，PTO 取 L1 泳道内 incore 起止；两侧各三个重放。"""
+def measure_incore(graphs, args, case_name, window, variant=None):
+    """Native 取设备 HcPre，PTO 取指定档位泳道内 incore 起止；两侧各三个重放。"""
     import pypto.torch
     import torch
     from dsv4_csa_single_card_bench import _export_swimlane
@@ -158,23 +159,37 @@ def measure_incore(graphs, args, case_name, window):
     exported = _export_swimlane(directory, kernel_pattern="_jit_hc_pre_*/kernel_config.py")
     if not exported["exported"]:
         raise RuntimeError(f"泳道导出失败：{exported}")
+    actual_level = json.loads((directory / "chip_swimlane_records.json").read_text())["chip_swimlane_level"]
+    if actual_level != args.swimlane_level:
+        raise ValueError(f"泳道实际档位 {actual_level} 与请求档位 {args.swimlane_level} 不一致")
     traces = args.output / "traces"
     traces.mkdir(exist_ok=True)
     native_copy = traces / f"{case_name}_Native_PyTorch_3steps.json"
-    swimlane_copy = traces / f"{case_name}_PTO_L1_3steps.json"
+    swimlane_copy = traces / f"{case_name}_PTO_L{actual_level}_3steps.json"
     shutil.copyfile(native_trace, native_copy)
     shutil.copyfile(exported["merged_swimlane"], swimlane_copy)
     native = summarize_native(native_copy, 3)
-    pto = summarize_swimlane(swimlane_copy, 3)
-    required = {"hc_pre_widen", "hc_pre_rms", "hc_pre_linear", "hc_pre_linear_reduce",
-                "split_pre_post", "comb_sinkhorn", "mix_x"}
+    pto = summarize_swimlane(swimlane_copy, 3, level=actual_level)
+    # 融合后阶段数会变化，以本进程实际编译的任务表检查每次重放完整性。
+    names = json.loads(Path(exported["name_map"]).read_text())["callable_id_to_name"]
+    required = {name.removesuffix("_spmd") for name in names.values()}
+    if variant is not None:
+        # 所有分支会一起编译，但一次重放只应执行当前形状的 AIC/AIV 对。
+        expected_compiled = set(variant["all_compiled_tasks"])
+        if required != expected_compiled:
+            raise ValueError(f"HC_pre 分支任务表不匹配：实际 {required}，预期 {expected_compiled}")
+        required = set(variant["required_tasks"])
     for sample in pto["samples"]:
         if not required.issubset(sample["tasks"]):
             raise ValueError(f"HC_pre 阶段缺失：{required - set(sample['tasks'])}")
+        if variant is not None and set(sample["tasks"]) != required:
+            raise ValueError(f"HC_pre 执行了其他分支：{set(sample['tasks']) - required}")
     result = {"scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
               "native": native, "pto": pto, "dfx": exported,
               "native_over_pto_span": native["p50_us"] / pto["span_p50_us"],
               "native_over_pto_active_union": native["p50_us"] / pto["active_union_p50_us"]}
+    if variant is not None:
+        result["variant"] = variant
     if args.profile:
         target = traces / f"{case_name}_PTO_PyTorch_3steps.json"
         shutil.copyfile(pto_trace, target)
@@ -186,6 +201,9 @@ def run(args, report):
     from pypto.runtime import RunConfig
 
     from vllm_ascend.ops.pypto.hc_pre import D, HC_EPS, HC_MULT, HC_SINKHORN_ITER, NORM_EPS, hc_pre
+
+    module = sys.modules["vllm_ascend.ops.pypto.hc_pre"]
+    variants = getattr(module, "HC_PRE_VARIANTS", ())
 
     if args.lower_only or args.build_only:
         config = RunConfig(platform="a2a3", save_kernels=True,
@@ -201,7 +219,14 @@ def run(args, report):
     import torch
     import torch_npu  # noqa: F401
 
-    import vllm_ascend.vllm_ascend_C  # noqa: F401
+    if args.native_backend == "recipes":
+        if args.native_library is None or args.native_opp is None:
+            raise ValueError("recipes 基线必须提供 --native-library 和 --native-opp，禁止静默回退旧版本")
+        torch.ops.load_library(str(args.native_library.resolve(strict=True)))
+        reference = args.native_library.parent / "reference.json"
+        report["native_reference"] = json.loads(reference.read_text())
+    else:
+        import vllm_ascend.vllm_ascend_C  # noqa: F401
 
     torch.npu.set_device(0)
     device = torch.device("npu:0")
@@ -209,7 +234,7 @@ def run(args, report):
     report.update(weights=records, device_execution=True, physical_device=os.environ["TASK_DEVICE"],
                   pypto_path=pypto.__file__, torch_version=torch.__version__, torch_npu_version=torch_npu.__version__)
     pypto.torch.init(device=0, platform="a2a3", runtime="tensormap_and_ringbuffer",
-                     **({"enable_chip_swimlane": 1, "enable_dep_gen": True,
+                     **({"enable_chip_swimlane": args.swimlane_level, "enable_dep_gen": True,
                          "output_dir": str(args.output / "dfx")} if args.timing == "incore" else {}))
     op = pypto.torch.register(hc_pre, "dsv4_hc_pre_bench::hc_pre")
     for window, (batch_size, seqlen) in enumerate(itertools.product(args.batch_size, args.seqlen)):
@@ -217,6 +242,15 @@ def run(args, report):
         case_name = f"B{batch_size:02d}_S{seqlen}_T{tokens:03d}"
         generator = torch.Generator().manual_seed(args.seed + batch_size * 100 + seqlen)
         row = {"batch_size": batch_size, "seqlen": seqlen, "tokens": tokens, "name": case_name}
+        variant = None
+        if variants:
+            selected = next(item for item in variants if item[0] is None or tokens <= item[0])
+            _, name, m_tile, k_tile = selected
+            variant = {"name": name, "m_tile": m_tile, "k_tile": k_tile,
+                       "selection": "动态 T=B×S；由 tensor shape 分派",
+                       "required_tasks": [f"{name}_aic", f"{name}_aiv"],
+                       "all_compiled_tasks": [f"{item[1]}_{core}" for item in variants for core in ("aic", "aiv")]}
+            row["variant"] = variant
         report["cases"].append(row)
         x = torch.randn(tokens, HC_MULT, D, generator=generator, dtype=torch.bfloat16).to(device)
         # B/S 只在入口用零拷贝 view 合并；Native 接收真实 [B,S,hc,D] 四维输入。
@@ -232,8 +266,13 @@ def run(args, report):
             value.fill_(float("nan"))
 
         def native():
-            values = torch.ops._C_ascend.npu_hc_pre_v2(
-                x_native, *weights, HC_MULT, HC_SINKHORN_ITER, NORM_EPS, HC_EPS)
+            if args.native_backend == "recipes":
+                values = torch.ops.custom.npu_hc_pre(
+                    x_native, *weights, hc_mult=HC_MULT, hc_sinkhorn_iters=HC_SINKHORN_ITER,
+                    norm_eps=NORM_EPS, hc_eps=HC_EPS)
+            else:
+                values = torch.ops._C_ascend.npu_hc_pre_v2(
+                    x_native, *weights, HC_MULT, HC_SINKHORN_ITER, NORM_EPS, HC_EPS)
             return tuple(value.flatten(0, 1) for value in values)
 
         def pto():
@@ -241,6 +280,13 @@ def run(args, report):
             return outputs
 
         native_eager = tuple(value.cpu() for value in native())
+        if args.native_backend == "recipes" and "native_loaded_api" not in report:
+            expected_api = (args.native_opp / "op_api/lib/libcust_opapi.so").resolve()
+            loaded = {Path(line.split()[-1]).resolve() for line in Path("/proc/self/maps").read_text().splitlines()
+                      if line.endswith("/libcust_opapi.so")}
+            if expected_api not in loaded:
+                raise RuntimeError(f"未加载指定上游 HcPre API：{expected_api}；实际 {loaded}")
+            report["native_loaded_api"] = str(expected_api)
         pto_eager = tuple(value.cpu() for value in pto())
         row["pto_native"] = compare(pto_eager, native_eager)
         require_pass(row["pto_native"])
@@ -250,7 +296,7 @@ def run(args, report):
             row[f"{name}_graph_eager"] = compare(graph_outputs[name], expected, exact=True)
             require_pass(row[f"{name}_graph_eager"])
         if args.timing == "incore":
-            row["incore_timing"] = measure_incore(graphs, args, case_name, window)
+            row["incore_timing"] = measure_incore(graphs, args, case_name, window, variant)
         else:
             row["replay_timing"] = measure_pair(graphs, args.warmup, args.iters)
             if args.profile:
@@ -296,7 +342,13 @@ def main():
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--iters", type=int, default=20, help="仅 replay 模式使用；incore 固定采三个 step")
     parser.add_argument("--profile", action="store_true", help="额外采集 PTO PyTorch 外部 trace，三个 step")
+    parser.add_argument("--swimlane-level", type=int, choices=(1, 4), default=1,
+                        help="incore 模式的泳道采集档位；L4 额外记录 AICPU 派发、调度与编排")
     parser.add_argument("--pypto-core", type=Path, help="仅本进程使用的本地调试扩展，须与当前 PyPTO 源码一致")
+    parser.add_argument("--kernel-file", type=Path, help="独立 HC_pre 源码快照，供优化候选隔离编译和采样")
+    parser.add_argument("--native-backend", choices=("recipes", "release"), default="recipes")
+    parser.add_argument("--native-library", type=Path, help="由指定 cann-recipes-infer 源码构建的 HC_pre 绑定")
+    parser.add_argument("--native-opp", type=Path, help="对应算子包的 vendors/customize 目录")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--lower-only", action="store_true")
     mode.add_argument("--build-only", action="store_true")
@@ -312,6 +364,12 @@ def main():
     if (args.output / "report.json").exists():
         parser.error("请使用新的输出目录，避免覆盖历史证据")
     activate()
+    if args.native_opp is not None:
+        opp = args.native_opp.resolve(strict=True)
+        if not (opp / "op_api/lib/libcust_opapi.so").is_file():
+            raise ValueError(f"Native 算子包不完整：{opp}")
+        # 在 NPU 初始化之前只选择本进程基线包，不覆盖共用安装。
+        os.environ["ASCEND_CUSTOM_OPP_PATH"] = str(opp)
     if args.pypto_core is not None:
         core = args.pypto_core.resolve(strict=True)
         # 共用环境的 editable 安装可能落后于已编译源码；只重绑定当前进程，不覆盖共享安装。
@@ -320,15 +378,28 @@ def main():
         if len(finders) != 1:
             raise RuntimeError("无法唯一定位 PyPTO editable 扩展映射")
         finders[0].known_wheel_files["pypto.pypto_core"] = str(core)
+    if args.kernel_file is not None:
+        source = args.kernel_file.resolve(strict=True)
+        name = "vllm_ascend.ops.pypto.hc_pre"
+        spec = importlib.util.spec_from_file_location(name, source)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
     report = {"status": "RUNNING", "scope": "单卡独立 HC_pre；正式 HC 权重、合成输入；不代表整模型性能",
               "implementation": "standalone_local_hc_pre",
+              "native_backend": args.native_backend,
               "checkpoint": str(args.checkpoint), "layer": args.layer, "branch": args.branch,
               "batch_size": args.batch_size, "seqlen": args.seqlen,
               "seed": args.seed, "case_seed_rule": "seed + batch_size * 100 + seqlen",
               "warmup": args.warmup, "replay_iters": args.iters, "timing": args.timing,
-              "timing_scope": ("PTO L1 incore 首次开始至最后结束；另列并行区间并集和无 incore 空隙；Native HcPre 设备事件"
+              "swimlane_level": args.swimlane_level if args.timing == "incore" else 0,
+              "timing_scope": (f"PTO L{args.swimlane_level} incore 首次开始至最后结束；另列并行区间并集和无 incore 空隙；Native HcPre 设备事件"
                                if args.timing == "incore" else "图外 NPU Event 包含一次完整图重放"),
               "runtime": "tensormap_and_ringbuffer", "cases": []}
+    if args.kernel_file is not None:
+        report["kernel_file"] = str(source)
+    if args.native_opp is not None:
+        report["native_opp"] = str(opp)
     if args.pypto_core is not None:
         report["pypto_core"] = str(core)
     try:

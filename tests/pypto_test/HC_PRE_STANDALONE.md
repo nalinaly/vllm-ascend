@@ -3,12 +3,16 @@
 ## 计算范围
 
 对齐 [cann-recipes-infer 的 HcPre 融合算子说明](https://gitcode.com/cann/cann-recipes-infer/blob/master/docs/models/deepseek_v4/deepseek_v4_mHC_guide.md)，
-Native 基线为本仓库 `npu_hc_pre_v2` 调用的 `aclnnHcPre`，不是拆分版 `npu_hc_pre`。
+当前 Native 基线改为从指定 cann-recipes-infer 源码单独构建的 `custom::npu_hc_pre`，
+它直接调用融合 `aclnnHcPre`，关闭可选 `pre_mix` 输入及 `pre` 输出，保持三输出范围。
+文末历史数据使用当时 release 包的 `npu_hc_pre_v2`，新旧基线分别标识。
+详见 [30 μs 优化过程](HC_PRE_OPTIMIZATION_LOG.md)。
 
 独立入口：`vllm_ascend/ops/pypto/hc_pre.py::hc_pre`。
 HC_pre 的完整计算和配置常量均在此文件，运行时只导入 `pypto.language`，
 不引用 CSA/HCA 实现或它们的配置模块。计算从本仓库 `deepseek_v4_flash_csa/hc_pre.py` 搬入，
-保留已验证的算术顺序、分块和尾块处理；原始算法来自 pypto-lib 的同名实现。
+原始算法来自 pypto-lib 的同名实现；当前独立版本已调整分块、归约顺序与任务划分，
+并按固定容差通过十四场景，详见优化日志。
 
 1. 将 BF16 残差无损加宽为 FP32，在算子内部完成，计时包含该步骤。
 2. 对每个 token 的全部 `hc × D` 元素计算 RMS 倒数。
@@ -17,19 +21,38 @@ HC_pre 的完整计算和配置常量均在此文件，运行时只导入 `pypto
 5. comb 为四行 softmax 加 `hc_eps`，再执行配置规定的 Sinkhorn 归一化。
 6. 用 pre 对四路残差加权求和，舍入为 BF16 mixed；同时输出 FP32 post 和 comb。
 
-本文件的调用链为 `hc_pre → _hc_pre_fp32 → hc_pre_gates → hc_pre_gates_from_rms`。
-后三个函数均为本地 `@pl.jit.inline`，编译时展开进独立入口；没有跨文件算子调用。
-测试脚本也从独立文件读取模型常量，不依赖 CSA 配置。环境初始化和泳道导出仍使用仓库通用测试工具。
+本文件有一个动态 `@pl.jit` 入口 `hc_pre`，完整计算在同文件的
+`@pl.jit.inline` 函数 `_hc_pre_variant` 中，按编译期分块参数展开。
+编排读取输入 tensor 描述符中的 T=B×S，每次只执行一个分支，不回读 device tensor 内容。
+reshape 仅构造视图，不增加搬运算子。不同 B/S 若具有同一 T，采用同一分块，仍分别验收。
+
+| 动态 T 范围 | 投影 M/K 分块 | K 分段数 | 跨核槽数 | 泳道任务前缀 |
+| --- | --- | ---: | ---: | --- |
+| 1～32 | 32/1536 | 11 | 1 | `hc_small` |
+| 33～48 | 48/1024 | 16 | 2 | `hc_medium48` |
+| 49～96 | 96/512 | 32 | 2 | `hc_medium96` |
+| 大于 96 | 32/1536 | 11 | 1 | `hc_large` |
+
+一个覆盖可用组核的 SPMD 完成 CV 投影与分段平方和，经 MIX 硬件屏障后，
+两个 AIV 分别计算 Sinkhorn、合并的 pre/post 门控与残差混合。
+每次只有所选分支的一对 AIC/AIV 任务，计算范围和同步均包含在 incore 首尾中。
+报告记录分支与分块；测试同时核对完整编译任务表以及每次实际执行的分支，防止漏阶段或误执行其他分支。
+
+验证采用 `cv_shape_dispatch_v3_all14` 全量十四场景与 `cv_shape_dispatch_v4_large`
+四个受影响场景的增量检查，均通过原数值门禁；未改分支的生成计算体已比对一致。
+这些是不同任务的采样，不能混称为同一轮十四场景性能结果。
+前四个场景在全量轮中三次均低于 30 μs；最后增量轮 T168 为 39.96 μs，完整性能目标尚未达成。
+数据位置和逐次结果见 [优化过程](HC_PRE_OPTIMIZATION_LOG.md)。
+
+七档 BS × 两档 seqlen 的 AscendC profiling 与 PTO L1/L4 泳道已归档到
+[十四场景对照目录](results/hc_pre_profiles_20261010/README.md)，每份包含三个 step。
+候选源码、成功及失败报告的索引见 [优化证据清单](results/hc_pre_opt_20261009/README.md)。
 
 **HC 内部的 RMS 统计包含在范围内；mixed 后的 input_layernorm 不包含。**
-Attention、FFN、HC_post、KV cache 和 metadata 均不在此入口中。
-这是一次 JIT/torch 算子调用，内部仍由多个 PTO 任务组成；没有宣称采用文档中同一套 CV 流水或单个物理 kernel。
+Attention、FFN、HC_post、KV cache 和 metadata 均不在此独立入口中。
+当前验证范围为 D=4096、hc=4、Sinkhorn 20 次的十四个 Decode 小 token 场景，未验收 Prefill 大 token 性能。
 
-当前专用于正式 Flash 配置：`D=4096`、`hc=4`、投影宽度 24、Sinkhorn 20 次。
-token 轴 `T` 动态，不固定 batch 或每请求 token 数；输入输出是连续 ND 存储。
-`T = batch_size × seqlen`，seqlen 是这一轮每请求处理的 token 数。
-测试显式保留 B/S：Native 接收 `[B,S,4,4096]`，PTO 使用零拷贝 view 合并前两轴。
-先验证 Decode 小 token 场景。文档中的 Prefill 大 token 模板及其性能不在本次验收范围内。
+接口张量均位于设备，输出由调用者预分配：
 
 | 参数 | shape | dtype | 角色 |
 | --- | --- | --- | --- |
@@ -70,9 +93,38 @@ TORCH_DEVICE_BACKEND_AUTOLOAD=0 python tests/pypto_test/dsv4_hc_pre_bench.py \
 把 `--build-only` 换为 `--lower-only` 则只生成 IR。真机统一走队列：
 
 ```bash
+# 当前独立上游包和绑定的本地构建位置；其他机器按下一节重新构建。
+hc_pre_recipe_root="$(realpath ../.cache/hc-pre-recipes-20261009)"
+hc_pre_library="$hc_pre_recipe_root/torch-hc-pre-build/hc_pre_recipes_reference.so"
+hc_pre_opp="$hc_pre_recipe_root/ops/ascendc/build/_CPack_Packages/Linux/External/CANN-custom_ops-none-linux.aarch64.run/packages/vendors/customize"
 task-submit --device auto --max-time 900 \
-  "bash $PWD/tests/pypto_test/run_hc_pre_bench.sh $PWD/tests/pypto_test/results/hc_pre_decode --batch-size 2 4 8 16 20 24 28 --seqlen 5 6 --timing incore --profile"
+  "bash $PWD/tests/pypto_test/run_hc_pre_bench.sh $PWD/tests/pypto_test/results/hc_pre_decode --batch-size 2 4 8 16 20 24 28 --seqlen 5 6 --timing incore --profile --native-library $hc_pre_library --native-opp $hc_pre_opp"
 ```
+
+默认 `--native-backend recipes`，基线文件缺失会报错，不能静默使用旧包。
+`--native-backend release` 仅用于复核历史结果。
+`--kernel-file /绝对路径/hc_pre候选.py` 可选择完整独立源码快照，供优化试验隔离使用。
+`--swimlane-level 4` 补采完整调度与编排泳道；默认仍为 L1。文件名和报告写入实际采集档位，
+并从原始记录核对档位。L1/L4 分开执行和统计，L4 额外记录可能影响耗时。
+
+### 构建指定 AscendC 基线
+
+本机源码已经下载到上述目录，版本及差异见优化过程文档。构建和测试绑定均不占用 NPU：
+
+```bash
+source ../env-dsv4-0251rc1.sh
+hc_pre_repo_root="$PWD"
+hc_pre_recipe_root="$(realpath ../.cache/hc-pre-recipes-20261009)"
+(
+  cd "$hc_pre_recipe_root/ops/ascendc"
+  OPS_CPU_NUMBER=16 bash build.sh -n hc_pre -c ascend910_93
+)
+TORCH_DEVICE_BACKEND_AUTOLOAD=0 python "$hc_pre_repo_root/tests/pypto_test/hc_pre_native_reference/build.py" \
+  --recipe-root "$hc_pre_recipe_root" --output "$hc_pre_recipe_root/torch-hc-pre-build"
+```
+
+绑定直接编译上游 `npu_hc_pre.cpp` 和 `ops_common.cpp`，本仓库只提供 schema 注册；不改算子源码。
+使用构建目录下的独立 vendor 包，不执行共享环境安装。每次报告记录源码 revision 和实际加载 API 路径。
 
 默认读取 `/data/model/DeepSeek-V4-Flash-0731-w8a8` 中第 2 层的三份 `hc_attn_*` FP32 权重。
 `--layer` 选择层，`--branch ffn` 选择 HC FFN 权重；不加载整模型。

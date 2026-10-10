@@ -1,0 +1,33 @@
+{
+  "status": "FAIL",
+  "scope": "单卡独立 HC_pre；正式 HC 权重、合成输入；不代表整模型性能",
+  "implementation": "standalone_local_hc_pre",
+  "native_backend": "recipes",
+  "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+  "layer": 2,
+  "branch": "attn",
+  "batch_size": [
+    2,
+    4,
+    8,
+    16,
+    20,
+    24,
+    28
+  ],
+  "seqlen": [
+    5,
+    6
+  ],
+  "seed": 20261009,
+  "case_seed_rule": "seed + batch_size * 100 + seqlen",
+  "warmup": 5,
+  "replay_iters": 20,
+  "timing": "incore",
+  "timing_scope": "PTO L1 incore 首次开始至最后结束；另列并行区间并集和无 incore 空隙；Native HcPre 设备事件",
+  "runtime": "tensormap_and_ringbuffer",
+  "cases": [],
+  "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/m32_expand.py",
+  "pypto_core": "/data/pyptouser/qinchuanyu/pto-eager/pypto/build/python/bindings/pypto_core.cpython-310-aarch64-linux-gnu.so",
+  "error": "Error(\"Verification failed after 'InferTileMemorySpace' for properties {TileMemoryInferred, AivSplitValid, AccToGmStoreValid, FixpipeEpilogueValid, AccCompactValid}:\\nIR Verification Report\\n======================\\nTotal diagnostics: 1 (1 errors, 0 warnings)\\n\\n[1] ERROR - AccCompactValid\\n  Message: 'tile.matmul_acc' accumulates t_rows_inline37_inline213__ssa_v0 valid rows into an accumulator that is not compact (function 'hc_pre_linear'). mad lays the product out at a pitch of ceil(validRow/16)*16, but a non-compact accumulator is read back at its physical row count 32, which skews every N-fractal above the first. The accumulator this op writes into never carried CompactMode::normal -- a seed built by tile.create declares it with compact=True, and tile.matmul derives it via StampCompactForNarrowedAccRows.\\n  Location: /data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/m32_expand.py:79:17\\n  Error Code: 1\\n\\nStatus: FAILED (1 error(s) found)\\n\")"
+}

@@ -1,0 +1,5343 @@
+[
+  {
+    "run": "bf16_pair_edges",
+    "status": "FAIL",
+    "error": "AssertionError(\"HC_pre 数值检查失败：{'mixed': {'passed': True, 'finite': True, 'shape': [140, 4096], 'dtype': 'torch.bfloat16', 'rtol': 0.01, 'atol': 0.01, 'max_abs': 0.015625, 'rmse': 0.0001636032247915864, 'different': 3342, 'out_of_tolerance': 0}, 'post': {'passed': True, 'finite': True, 'shape': [140, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 1.1771917343139648e-05, 'rmse': 2.3508766844315687e-06, 'different': 421, 'out_of_tolerance': 0}, 'comb': {'passed': False, 'finite': True, 'shape': [140, 4, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 1.6883015632629395e-05, 'rmse': 1.5689664678575355e-06, 'different': 2215, 'out_of_tolerance': 1}}\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/bf16_pair.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/bf16_pair_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.52,
+        "pto_us": 42.89999999999998,
+        "samples_us": [
+          46.760000000000005,
+          42.89999999999998,
+          42.39999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.42,
+        "pto_us": 42.77999999999997,
+        "samples_us": [
+          45.620000000000005,
+          42.77999999999997,
+          41.57999999999993
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": 67.22,
+        "pto_us": 63.95999999999992,
+        "samples_us": [
+          66.88,
+          63.34000000000003,
+          63.95999999999992
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "bf16_triple_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/bf16_triple.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/bf16_triple_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.5,
+        "pto_us": 42.039999999999964,
+        "samples_us": [
+          48.24,
+          41.620000000000005,
+          42.039999999999964
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.62,
+        "pto_us": 41.27999999999997,
+        "samples_us": [
+          44.42,
+          41.27999999999997,
+          41.01999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.16,
+        "pto_us": 66.48000000000002,
+        "samples_us": [
+          66.64,
+          66.48000000000002,
+          65.70000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.68,
+        "pto_us": 70.88,
+        "samples_us": [
+          68.96000000000001,
+          71.36000000000007,
+          70.88
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "bf16_triple_m64_flat_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/bf16_triple_m64_flat_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/bf16_triple_m64_flat_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.64,
+        "pto_us": 35.74000000000001,
+        "samples_us": [
+          36.36,
+          35.74000000000001,
+          34.780000000000086
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.84,
+        "pto_us": 35.460000000000036,
+        "samples_us": [
+          36.86000000000001,
+          35.460000000000036,
+          35.25999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.36,
+        "pto_us": 51.30000000000007,
+        "samples_us": [
+          52.7,
+          50.5,
+          51.30000000000007
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.48,
+        "pto_us": 54.80000000000007,
+        "samples_us": [
+          51.83999999999999,
+          54.80000000000007,
+          59.139999999999986
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_k1920_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_k1920.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_k1920_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.14,
+        "pto_us": 39.43999999999994,
+        "samples_us": [
+          41.88000000000001,
+          39.43999999999994,
+          34.62000000000012
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.86,
+        "pto_us": 56.379999999999995,
+        "samples_us": [
+          58.760000000000005,
+          56.379999999999995,
+          54.84000000000003
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_k2048_v3_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_k2048_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_k2048_v3_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.34,
+        "pto_us": 34.93999999999994,
+        "samples_us": [
+          36.68,
+          34.93999999999994,
+          34.74000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.68,
+        "pto_us": 60.200000000000045,
+        "samples_us": [
+          59.64000000000001,
+          63.379999999999995,
+          60.200000000000045
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_reduce_edges",
+    "status": "FAIL",
+    "error": "AssertionError(\"HC_pre 数值检查失败：{'mixed': {'passed': False, 'finite': True, 'shape': [12, 4096], 'dtype': 'torch.bfloat16', 'rtol': 0.01, 'atol': 0.01, 'max_abs': 0.4296875, 'rmse': 0.05081644281744957, 'different': 45679, 'out_of_tolerance': 23460}, 'post': {'passed': False, 'finite': True, 'shape': [12, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 0.046327143907547, 'rmse': 0.013801636174321175, 'different': 48, 'out_of_tolerance': 36}, 'comb': {'passed': False, 'finite': True, 'shape': [12, 4, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 0.12342530488967896, 'rmse': 0.020495213568210602, 'different': 192, 'out_of_tolerance': 169}}\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_reduce.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_reduce_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_reduce_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_reduce_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_reduce_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.38,
+        "pto_us": 36.41999999999996,
+        "samples_us": [
+          37.52,
+          33.22000000000003,
+          36.41999999999996
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.04,
+        "pto_us": 61.180000000000064,
+        "samples_us": [
+          61.36,
+          60.54000000000002,
+          61.180000000000064
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_reuse_rms_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_reuse_rms.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_reuse_rms_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.54,
+        "pto_us": 35.360000000000014,
+        "samples_us": [
+          37.02000000000001,
+          34.48000000000002,
+          35.360000000000014
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.02,
+        "pto_us": 60.200000000000045,
+        "samples_us": [
+          61.92,
+          60.200000000000045,
+          58.83999999999992
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_block_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_block_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_block_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.86,
+        "pto_us": 34.93999999999994,
+        "samples_us": [
+          34.38,
+          35.620000000000005,
+          34.93999999999994
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.64,
+        "pto_us": 57.47999999999996,
+        "samples_us": [
+          58.720000000000006,
+          57.47999999999996,
+          55.93999999999994
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_brc_gather_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_brc_gather.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_brc_gather_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.06,
+        "pto_us": 37.299999999999955,
+        "samples_us": [
+          37.900000000000006,
+          36.039999999999964,
+          37.299999999999955
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.46,
+        "pto_us": 55.559999999999945,
+        "samples_us": [
+          57.42,
+          55.559999999999945,
+          55.039999999999964
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_flat_gather_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_flat_gather.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_flat_gather_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.8,
+        "pto_us": 32.56000000000006,
+        "samples_us": [
+          30.519999999999996,
+          36.15999999999997,
+          32.56000000000006
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.56,
+        "pto_us": 50.56000000000006,
+        "samples_us": [
+          52.92000000000001,
+          50.56000000000006,
+          48.919999999999845
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused.py",
+    "native_backend": null,
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 72.76,
+        "pto_us": 80.63999999999999,
+        "samples_us": [
+          100.18,
+          80.63999999999999,
+          66.44000000000005
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_d1024_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_d1024.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_d1024_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.98,
+        "pto_us": 28.980000000000018,
+        "samples_us": [
+          28.6,
+          28.980000000000018,
+          29.200000000000045
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 77.22,
+        "pto_us": 49.78,
+        "samples_us": [
+          49.78,
+          49.91999999999996,
+          48.620000000000005
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_flat_edges",
+    "status": "FAIL",
+    "error": "RuntimeError('ACL stream synchronize failed, error code:507015')",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_flat.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_flat_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_flat_v2_all14",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_flat_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_flat_v2_all14/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.78,
+        "pto_us": 31.340000000000032,
+        "samples_us": [
+          32.74,
+          27.960000000000036,
+          31.340000000000032
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.14,
+        "pto_us": 28.40000000000009,
+        "samples_us": [
+          27.94,
+          28.960000000000036,
+          28.40000000000009
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S5_T020",
+        "batch_size": 4,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.8,
+        "pto_us": 28.02,
+        "samples_us": [
+          28.02,
+          27.939999999999998,
+          28.079999999999927
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S6_T024",
+        "batch_size": 4,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 39.46,
+        "pto_us": 29.04,
+        "samples_us": [
+          29.04,
+          31.560000000000002,
+          27.82000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 49.66,
+        "pto_us": 36.039999999999964,
+        "samples_us": [
+          34.879999999999995,
+          36.940000000000055,
+          36.039999999999964
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 53.24,
+        "pto_us": 36.860000000000014,
+        "samples_us": [
+          35.86,
+          36.860000000000014,
+          37.0
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 57.68,
+        "pto_us": 41.67999999999995,
+        "samples_us": [
+          41.78,
+          40.25999999999999,
+          41.67999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 61.42,
+        "pto_us": 41.299999999999955,
+        "samples_us": [
+          40.78,
+          41.299999999999955,
+          42.700000000000045
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S5_T100",
+        "batch_size": 20,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 61.08,
+        "pto_us": 43.58,
+        "samples_us": [
+          43.58,
+          42.95999999999992,
+          43.74000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S6_T120",
+        "batch_size": 20,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.48,
+        "pto_us": 44.860000000000014,
+        "samples_us": [
+          45.5,
+          44.860000000000014,
+          44.27999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S5_T120",
+        "batch_size": 24,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.9,
+        "pto_us": 44.64,
+        "samples_us": [
+          44.64,
+          45.639999999999986,
+          44.0
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S6_T144",
+        "batch_size": 24,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.9,
+        "pto_us": 46.96000000000001,
+        "samples_us": [
+          46.96000000000001,
+          48.319999999999936,
+          46.679999999999836
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.72,
+        "pto_us": 47.460000000000036,
+        "samples_us": [
+          47.14,
+          47.460000000000036,
+          48.700000000000045
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.58,
+        "pto_us": 49.01999999999998,
+        "samples_us": [
+          49.42000000000001,
+          49.01999999999998,
+          48.40000000000009
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_flat_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_flat_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_flat_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.4,
+        "pto_us": 27.779999999999973,
+        "samples_us": [
+          32.660000000000004,
+          27.779999999999973,
+          27.0
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.34,
+        "pto_us": 28.139999999999986,
+        "samples_us": [
+          27.4,
+          30.54000000000002,
+          28.139999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.42,
+        "pto_us": 48.139999999999986,
+        "samples_us": [
+          48.50000000000001,
+          47.21999999999997,
+          48.139999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.68,
+        "pto_us": 48.65999999999997,
+        "samples_us": [
+          48.44,
+          48.75999999999999,
+          48.65999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_pipe_k1024_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_pipe_k1024_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_pipe_k1024_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.14,
+        "pto_us": 29.960000000000036,
+        "samples_us": [
+          28.819999999999993,
+          29.960000000000036,
+          30.579999999999927
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.78,
+        "pto_us": 56.42,
+        "samples_us": [
+          56.42,
+          57.379999999999995,
+          50.43999999999994
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_rms_rows_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_rms_rows.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_rms_rows_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.74,
+        "pto_us": 27.979999999999997,
+        "samples_us": [
+          27.979999999999997,
+          30.600000000000023,
+          27.74000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.08,
+        "pto_us": 50.34,
+        "samples_us": [
+          50.34,
+          52.30000000000007,
+          50.139999999999986
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_fused_t16_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_fused_t16.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_fused_t16_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.78,
+        "pto_us": 29.5,
+        "samples_us": [
+          35.86000000000001,
+          29.5,
+          28.879999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.14,
+        "pto_us": 49.5,
+        "samples_us": [
+          49.620000000000005,
+          48.200000000000045,
+          49.5
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_gram_rms_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_gram_rms_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_gram_rms_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.8,
+        "pto_us": 32.440000000000055,
+        "samples_us": [
+          32.480000000000004,
+          27.519999999999982,
+          32.440000000000055
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.46,
+        "pto_us": 47.94,
+        "samples_us": [
+          47.18,
+          47.94,
+          48.059999999999945
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_group32_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_group32.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_group32_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.74,
+        "pto_us": 28.5,
+        "samples_us": [
+          31.1,
+          28.5,
+          28.019999999999982
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.42,
+        "pto_us": 27.639999999999986,
+        "samples_us": [
+          28.459999999999997,
+          27.139999999999986,
+          27.639999999999986
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.32,
+        "pto_us": 73.58,
+        "samples_us": [
+          73.58,
+          79.27999999999997,
+          72.72000000000003
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.42,
+        "pto_us": 83.53999999999996,
+        "samples_us": [
+          90.74,
+          77.25999999999999,
+          83.53999999999996
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_m16_fused_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_m16_fused.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_m16_fused_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 33.06,
+        "pto_us": 26.56000000000001,
+        "samples_us": [
+          26.56000000000001,
+          26.599999999999966,
+          25.75999999999999
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.56,
+        "pto_us": 50.639999999999986,
+        "samples_us": [
+          48.78,
+          50.95999999999998,
+          50.639999999999986
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_m64_flat_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_m64_flat.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_m64_flat_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 33.88,
+        "pto_us": 37.07999999999993,
+        "samples_us": [
+          37.919999999999995,
+          35.819999999999936,
+          37.07999999999993
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 71.18,
+        "pto_us": 53.95999999999998,
+        "samples_us": [
+          53.660000000000004,
+          53.95999999999998,
+          55.139999999999986
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_mix_stacked_d256_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_mix_stacked_d256.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_mix_stacked_d256_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.94,
+        "pto_us": 27.74000000000001,
+        "samples_us": [
+          31.979999999999997,
+          27.74000000000001,
+          27.24000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.18,
+        "pto_us": 50.379999999999995,
+        "samples_us": [
+          50.379999999999995,
+          51.39999999999998,
+          49.340000000000146
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_mix_stacked_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_mix_stacked_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_mix_stacked_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.56,
+        "pto_us": 29.75999999999999,
+        "samples_us": [
+          31.479999999999997,
+          29.67999999999995,
+          29.75999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.08,
+        "pto_us": 32.54000000000002,
+        "samples_us": [
+          33.28000000000001,
+          32.54000000000002,
+          29.600000000000023
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.78,
+        "pto_us": 50.599999999999994,
+        "samples_us": [
+          50.599999999999994,
+          50.700000000000045,
+          50.27999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.28,
+        "pto_us": 54.580000000000005,
+        "samples_us": [
+          54.580000000000005,
+          52.58000000000004,
+          54.879999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_shape_dispatch_v1_all14",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_shape_dispatch_v1.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_shape_dispatch_v1_all14/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 34.14,
+        "pto_us": 28.560000000000002,
+        "samples_us": [
+          28.120000000000005,
+          28.560000000000002,
+          28.639999999999986
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 33.92,
+        "pto_us": 27.90000000000009,
+        "samples_us": [
+          29.800000000000004,
+          27.599999999999966,
+          27.90000000000009
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S5_T020",
+        "batch_size": 4,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 35.3,
+        "pto_us": 28.340000000000032,
+        "samples_us": [
+          27.82,
+          28.760000000000048,
+          28.340000000000032
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S6_T024",
+        "batch_size": 4,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 36.42,
+        "pto_us": 29.54,
+        "samples_us": [
+          29.54,
+          28.74000000000001,
+          29.56000000000006
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium48",
+          "m_tile": 48,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium48_aic",
+            "hc_medium48_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 42.38,
+        "pto_us": 30.1,
+        "samples_us": [
+          30.1,
+          29.639999999999986,
+          32.67999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium48",
+          "m_tile": 48,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium48_aic",
+            "hc_medium48_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 46.38,
+        "pto_us": 29.98,
+        "samples_us": [
+          29.98,
+          29.579999999999984,
+          31.06000000000006
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 51.42,
+        "pto_us": 37.48000000000002,
+        "samples_us": [
+          35.940000000000005,
+          37.48000000000002,
+          38.120000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 53.88,
+        "pto_us": 37.15999999999997,
+        "samples_us": [
+          36.52,
+          37.15999999999997,
+          37.539999999999964
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S5_T100",
+        "batch_size": 20,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 56.56,
+        "pto_us": 35.80000000000001,
+        "samples_us": [
+          34.18,
+          35.80000000000001,
+          36.51999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S6_T120",
+        "batch_size": 20,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 60.54,
+        "pto_us": 37.620000000000005,
+        "samples_us": [
+          37.63999999999999,
+          37.620000000000005,
+          36.15999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S5_T120",
+        "batch_size": 24,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 61.52,
+        "pto_us": 36.480000000000004,
+        "samples_us": [
+          36.480000000000004,
+          38.379999999999995,
+          36.15999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S6_T144",
+        "batch_size": 24,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 64.04,
+        "pto_us": 37.799999999999955,
+        "samples_us": [
+          37.06,
+          37.84000000000003,
+          37.799999999999955
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 63.82,
+        "pto_us": 35.56000000000006,
+        "samples_us": [
+          35.440000000000005,
+          35.56000000000006,
+          36.120000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 70.78,
+        "pto_us": 38.160000000000004,
+        "samples_us": [
+          38.160000000000004,
+          38.77999999999997,
+          37.440000000000055
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_shape_dispatch_v2_paired_b16",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_shape_dispatch_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_shape_dispatch_v2_paired_b16/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 57.96,
+        "pto_us": 33.33999999999992,
+        "samples_us": [
+          33.00000000000001,
+          33.33999999999992,
+          33.639999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 59.2,
+        "pto_us": 33.51999999999998,
+        "samples_us": [
+          34.31999999999999,
+          33.379999999999995,
+          33.51999999999998
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_shape_dispatch_v3_all14",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_shape_dispatch_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_shape_dispatch_v3_all14/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 34.68,
+        "pto_us": 27.639999999999986,
+        "samples_us": [
+          28.159999999999997,
+          26.860000000000014,
+          27.639999999999986
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 35.74,
+        "pto_us": 28.339999999999975,
+        "samples_us": [
+          27.700000000000003,
+          28.339999999999975,
+          28.41999999999996
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S5_T020",
+        "batch_size": 4,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 38.56,
+        "pto_us": 29.720000000000027,
+        "samples_us": [
+          28.46,
+          29.879999999999995,
+          29.720000000000027
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S6_T024",
+        "batch_size": 4,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_small",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 40.6,
+        "pto_us": 29.17999999999995,
+        "samples_us": [
+          28.3,
+          29.17999999999995,
+          29.860000000000127
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium48",
+          "m_tile": 48,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium48_aic",
+            "hc_medium48_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 48.96,
+        "pto_us": 31.700000000000003,
+        "samples_us": [
+          31.700000000000003,
+          31.360000000000014,
+          31.960000000000036
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium48",
+          "m_tile": 48,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium48_aic",
+            "hc_medium48_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 50.12,
+        "pto_us": 31.879999999999992,
+        "samples_us": [
+          31.879999999999992,
+          31.480000000000018,
+          32.639999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 55.78,
+        "pto_us": 33.69999999999999,
+        "samples_us": [
+          32.440000000000005,
+          33.69999999999999,
+          34.280000000000086
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium96",
+          "m_tile": 96,
+          "k_tile": 512,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium96_aic",
+            "hc_medium96_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 60.16,
+        "pto_us": 33.879999999999995,
+        "samples_us": [
+          33.120000000000005,
+          34.0,
+          33.879999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S5_T100",
+        "batch_size": 20,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium128",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium128_aic",
+            "hc_medium128_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 61.36,
+        "pto_us": 35.400000000000034,
+        "samples_us": [
+          34.8,
+          35.400000000000034,
+          35.82000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S6_T120",
+        "batch_size": 20,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium128",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium128_aic",
+            "hc_medium128_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 66.06,
+        "pto_us": 35.21999999999997,
+        "samples_us": [
+          34.34,
+          35.21999999999997,
+          35.620000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S5_T120",
+        "batch_size": 24,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_medium128",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_medium128_aic",
+            "hc_medium128_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 66.92,
+        "pto_us": 35.379999999999995,
+        "samples_us": [
+          34.48,
+          35.379999999999995,
+          35.819999999999936
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S6_T144",
+        "batch_size": 24,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 68.8,
+        "pto_us": 38.579999999999984,
+        "samples_us": [
+          40.14,
+          38.579999999999984,
+          38.039999999999964
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 68.24,
+        "pto_us": 38.079999999999984,
+        "samples_us": [
+          39.099999999999994,
+          38.079999999999984,
+          37.5
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1024,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_medium128_aic",
+            "hc_medium128_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 75.54,
+        "pto_us": 41.14,
+        "samples_us": [
+          41.14,
+          41.5,
+          39.74000000000001
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_shape_dispatch_v4_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_shape_dispatch_v4.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_shape_dispatch_v4_large/report.json",
+    "cases": [
+      {
+        "name": "B24_S5_T120",
+        "batch_size": 24,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 61.84,
+        "pto_us": 35.48000000000002,
+        "samples_us": [
+          33.82,
+          35.97999999999996,
+          35.48000000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S6_T144",
+        "batch_size": 24,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 62.76,
+        "pto_us": 39.32000000000005,
+        "samples_us": [
+          37.74,
+          39.91999999999996,
+          39.32000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 62.6,
+        "pto_us": 38.799999999999955,
+        "samples_us": [
+          37.660000000000004,
+          39.18000000000001,
+          38.799999999999955
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": {
+          "name": "hc_large",
+          "m_tile": 32,
+          "k_tile": 1536,
+          "selection": "动态 T=B×S；由 tensor shape 分派",
+          "required_tasks": [
+            "hc_large_aic",
+            "hc_large_aiv"
+          ],
+          "all_compiled_tasks": [
+            "hc_small_aic",
+            "hc_small_aiv",
+            "hc_medium48_aic",
+            "hc_medium48_aiv",
+            "hc_medium96_aic",
+            "hc_medium96_aiv",
+            "hc_large_aic",
+            "hc_large_aiv"
+          ]
+        },
+        "native_us": 69.88,
+        "pto_us": 39.96,
+        "samples_us": [
+          39.96,
+          39.960000000000036,
+          39.10000000000002
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_gate_expand_d256_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_gate_expand_d256.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_gate_expand_d256_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.3,
+        "pto_us": 32.120000000000005,
+        "samples_us": [
+          31.119999999999997,
+          32.120000000000005,
+          32.27999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.62,
+        "pto_us": 43.30000000000001,
+        "samples_us": [
+          42.12,
+          43.30000000000001,
+          45.22000000000003
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_gate_expand_d512_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_gate_expand_d512.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_gate_expand_d512_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.4,
+        "pto_us": 30.680000000000064,
+        "samples_us": [
+          30.720000000000013,
+          30.300000000000068,
+          30.680000000000064
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 71.94,
+        "pto_us": 40.700000000000045,
+        "samples_us": [
+          39.480000000000004,
+          41.860000000000014,
+          40.700000000000045
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_half_shared_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_half_shared.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_half_shared_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.02,
+        "pto_us": 34.440000000000055,
+        "samples_us": [
+          33.74,
+          34.48000000000002,
+          34.440000000000055
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.48,
+        "pto_us": 34.84,
+        "samples_us": [
+          34.84,
+          34.1400000000001,
+          35.07999999999993
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 68.08,
+        "pto_us": 52.03999999999999,
+        "samples_us": [
+          52.03999999999999,
+          50.5,
+          52.879999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.3,
+        "pto_us": 54.18000000000001,
+        "samples_us": [
+          54.900000000000006,
+          54.18000000000001,
+          53.879999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_joint_gates_v4_all14",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_joint_gates_v4.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_joint_gates_v4_all14/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.72,
+        "pto_us": 27.659999999999968,
+        "samples_us": [
+          27.060000000000002,
+          27.659999999999968,
+          29.199999999999932
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.98,
+        "pto_us": 27.69999999999999,
+        "samples_us": [
+          26.32,
+          27.69999999999999,
+          28.800000000000068
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S5_T020",
+        "batch_size": 4,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.06,
+        "pto_us": 27.66,
+        "samples_us": [
+          27.66,
+          27.5,
+          28.840000000000032
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S6_T024",
+        "batch_size": 4,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 38.78,
+        "pto_us": 28.180000000000007,
+        "samples_us": [
+          28.139999999999997,
+          28.180000000000007,
+          28.379999999999995
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 45.12,
+        "pto_us": 31.440000000000055,
+        "samples_us": [
+          32.040000000000006,
+          31.440000000000055,
+          30.100000000000023
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 51.26,
+        "pto_us": 31.56,
+        "samples_us": [
+          31.56,
+          32.620000000000005,
+          30.039999999999964
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 54.22,
+        "pto_us": 34.80000000000007,
+        "samples_us": [
+          35.32,
+          34.80000000000007,
+          33.8599999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 59.36,
+        "pto_us": 34.839999999999975,
+        "samples_us": [
+          35.040000000000006,
+          34.839999999999975,
+          33.43999999999994
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S5_T100",
+        "batch_size": 20,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 59.46,
+        "pto_us": 34.18000000000001,
+        "samples_us": [
+          34.18000000000001,
+          34.69999999999999,
+          32.51999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B20_S6_T120",
+        "batch_size": 20,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 64.74,
+        "pto_us": 35.08000000000004,
+        "samples_us": [
+          36.08,
+          35.08000000000004,
+          32.940000000000055
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S5_T120",
+        "batch_size": 24,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 64.62,
+        "pto_us": 34.30000000000001,
+        "samples_us": [
+          34.480000000000004,
+          34.30000000000001,
+          33.65999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B24_S6_T144",
+        "batch_size": 24,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.04,
+        "pto_us": 38.339999999999975,
+        "samples_us": [
+          38.60000000000001,
+          38.339999999999975,
+          37.84000000000003
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.6,
+        "pto_us": 37.5,
+        "samples_us": [
+          38.519999999999996,
+          37.5,
+          37.440000000000055
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.86,
+        "pto_us": 39.81999999999999,
+        "samples_us": [
+          39.81999999999999,
+          39.960000000000036,
+          38.77999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_joint_gates_v4_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_joint_gates_v4.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_joint_gates_v4_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.4,
+        "pto_us": 26.840000000000032,
+        "samples_us": [
+          25.059999999999995,
+          27.139999999999986,
+          26.840000000000032
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.62,
+        "pto_us": 38.80000000000007,
+        "samples_us": [
+          39.22,
+          38.14000000000004,
+          38.80000000000007
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_joint_xor_v3_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_joint_xor_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_joint_xor_v3_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.16,
+        "pto_us": 31.800000000000068,
+        "samples_us": [
+          26.860000000000007,
+          33.34000000000003,
+          31.800000000000068
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.68,
+        "pto_us": 43.30000000000001,
+        "samples_us": [
+          40.9,
+          43.30000000000001,
+          43.960000000000036
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m16_k2048_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m16_k2048.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m16_k2048_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.92,
+        "pto_us": 29.540000000000077,
+        "samples_us": [
+          30.699999999999996,
+          28.360000000000014,
+          29.540000000000077
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.68,
+        "pto_us": 45.15999999999997,
+        "samples_us": [
+          44.760000000000005,
+          45.15999999999997,
+          45.919999999999845
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m16_k2048_s2_mid_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m16_k2048_s2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m16_k2048_s2_mid_large/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 57.94,
+        "pto_us": 36.25999999999999,
+        "samples_us": [
+          34.58,
+          36.26000000000005,
+          36.25999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 61.2,
+        "pto_us": 34.879999999999995,
+        "samples_us": [
+          34.75999999999999,
+          34.879999999999995,
+          36.83999999999992
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.72,
+        "pto_us": 37.98,
+        "samples_us": [
+          37.98,
+          37.21999999999997,
+          38.10000000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 78.18,
+        "pto_us": 41.66000000000008,
+        "samples_us": [
+          41.699999999999996,
+          41.30000000000001,
+          41.66000000000008
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m16_k2048_s2_reuse_rms_mid_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m16_k2048_s2_reuse_rms.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m16_k2048_s2_reuse_rms_mid_large/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 55.34,
+        "pto_us": 34.639999999999986,
+        "samples_us": [
+          31.659999999999997,
+          34.639999999999986,
+          34.639999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 58.58,
+        "pto_us": 38.079999999999984,
+        "samples_us": [
+          33.900000000000006,
+          38.079999999999984,
+          38.58000000000004
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.92,
+        "pto_us": 45.72000000000003,
+        "samples_us": [
+          42.74,
+          46.74000000000001,
+          45.72000000000003
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.2,
+        "pto_us": 49.200000000000045,
+        "samples_us": [
+          46.14,
+          49.94,
+          49.200000000000045
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m32_k1024_s2_mid_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m32_k1024_s2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m32_k1024_s2_mid_large/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 52.36,
+        "pto_us": 32.78,
+        "samples_us": [
+          32.78,
+          32.360000000000014,
+          33.960000000000036
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 55.52,
+        "pto_us": 33.900000000000034,
+        "samples_us": [
+          33.3,
+          33.900000000000034,
+          34.379999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.72,
+        "pto_us": 36.56000000000006,
+        "samples_us": [
+          37.7,
+          36.51999999999998,
+          36.56000000000006
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 72.94,
+        "pto_us": 37.5,
+        "samples_us": [
+          37.5,
+          37.319999999999936,
+          37.84000000000003
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m32_k1024_s2_reuse_rms_mid_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m32_k1024_s2_reuse_rms.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m32_k1024_s2_reuse_rms_mid_large/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 51.94,
+        "pto_us": 34.240000000000066,
+        "samples_us": [
+          31.580000000000005,
+          34.240000000000066,
+          34.89999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 55.9,
+        "pto_us": 33.28000000000003,
+        "samples_us": [
+          33.36000000000001,
+          33.28000000000003,
+          33.27999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 64.76,
+        "pto_us": 36.26,
+        "samples_us": [
+          36.26,
+          34.940000000000055,
+          36.37999999999988
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.22,
+        "pto_us": 37.39999999999998,
+        "samples_us": [
+          36.18000000000001,
+          37.39999999999998,
+          38.679999999999836
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m48_k1024_s2_b8",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m48_k1024_s2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m48_k1024_s2_b8/report.json",
+    "cases": [
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 44.36,
+        "pto_us": 30.079999999999984,
+        "samples_us": [
+          27.980000000000004,
+          30.079999999999984,
+          30.800000000000068
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 49.28,
+        "pto_us": 30.04000000000002,
+        "samples_us": [
+          30.040000000000003,
+          30.04000000000002,
+          31.139999999999986
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m48_k1024_s2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m48_k1024_s2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m48_k1024_s2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.34,
+        "pto_us": 31.399999999999977,
+        "samples_us": [
+          30.86,
+          31.399999999999977,
+          31.43999999999994
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.88,
+        "pto_us": 39.56,
+        "samples_us": [
+          39.56,
+          40.02000000000004,
+          38.84000000000003
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m48_k768_s2_b8",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m48_k768_s2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m48_k768_s2_b8/report.json",
+    "cases": [
+      {
+        "name": "B08_S5_T040",
+        "batch_size": 8,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 43.36,
+        "pto_us": 30.0,
+        "samples_us": [
+          28.060000000000002,
+          31.08000000000004,
+          30.0
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B08_S6_T048",
+        "batch_size": 8,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 46.34,
+        "pto_us": 30.64,
+        "samples_us": [
+          30.64,
+          31.220000000000027,
+          30.279999999999973
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m64_k768_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m64_k768.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m64_k768_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.28,
+        "pto_us": 35.180000000000064,
+        "samples_us": [
+          30.539999999999992,
+          35.180000000000064,
+          35.30000000000007
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.72,
+        "pto_us": 42.48,
+        "samples_us": [
+          42.48,
+          42.979999999999905,
+          42.319999999999936
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m96_k256_s2_reuse_rms_b16",
+    "status": "FAIL",
+    "error": "AssertionError(\"HC_pre 数值检查失败：{'mixed': {'passed': False, 'finite': True, 'shape': [80, 4096], 'dtype': 'torch.bfloat16', 'rtol': 0.01, 'atol': 0.01, 'max_abs': 0.1171875, 'rmse': 0.017203329131007195, 'different': 294746, 'out_of_tolerance': 87937}, 'post': {'passed': False, 'finite': True, 'shape': [80, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 0.04249835014343262, 'rmse': 0.006466521881520748, 'different': 320, 'out_of_tolerance': 240}, 'comb': {'passed': False, 'finite': True, 'shape': [80, 4, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 0.023016631603240967, 'rmse': 0.003069440135732293, 'different': 1280, 'out_of_tolerance': 1026}}\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m96_k256_s2_reuse_rms.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m96_k256_s2_reuse_rms_b16/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m96_k512_s2_v2_mid_large",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m96_k512_s2_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m96_k512_s2_v2_mid_large/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 54.04,
+        "pto_us": 31.699999999999996,
+        "samples_us": [
+          31.699999999999996,
+          31.859999999999957,
+          30.620000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 60.26,
+        "pto_us": 32.220000000000006,
+        "samples_us": [
+          32.220000000000006,
+          32.099999999999966,
+          32.520000000000095
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.22,
+        "pto_us": 37.08,
+        "samples_us": [
+          37.08,
+          37.18000000000001,
+          36.0
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.54,
+        "pto_us": 39.14000000000004,
+        "samples_us": [
+          38.53999999999999,
+          39.14000000000004,
+          39.30000000000007
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_m96_k512_s2_v2_paired_b16",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_m96_k512_s2_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_m96_k512_s2_v2_paired_b16/report.json",
+    "cases": [
+      {
+        "name": "B16_S5_T080",
+        "batch_size": 16,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 54.64,
+        "pto_us": 34.56000000000006,
+        "samples_us": [
+          32.919999999999995,
+          34.66000000000008,
+          34.56000000000006
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B16_S6_T096",
+        "batch_size": 16,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 58.52,
+        "pto_us": 35.27999999999997,
+        "samples_us": [
+          35.96,
+          34.860000000000014,
+          35.27999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_mix_scalar_rows_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_mix_scalar_rows.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_mix_scalar_rows_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.18,
+        "pto_us": 28.59999999999991,
+        "samples_us": [
+          27.78,
+          29.21999999999997,
+          28.59999999999991
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.4,
+        "pto_us": 37.620000000000005,
+        "samples_us": [
+          36.44,
+          37.620000000000005,
+          38.0
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_post_gram_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_post_gram.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_post_gram_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.28,
+        "pto_us": 32.379999999999995,
+        "samples_us": [
+          32.379999999999995,
+          31.980000000000018,
+          32.780000000000086
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 71.88,
+        "pto_us": 41.420000000000016,
+        "samples_us": [
+          41.18,
+          41.420000000000016,
+          41.460000000000036
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_post_packed_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_post_packed.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_post_packed_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.36,
+        "pto_us": 27.600000000000023,
+        "samples_us": [
+          26.659999999999997,
+          28.43999999999994,
+          27.600000000000023
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 77.2,
+        "pto_us": 37.559999999999945,
+        "samples_us": [
+          37.42,
+          37.559999999999945,
+          38.27999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_post_reinterpret_xor_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_post_reinterpret_xor.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_post_reinterpret_xor_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.84,
+        "pto_us": 28.119999999999997,
+        "samples_us": [
+          28.119999999999997,
+          27.360000000000014,
+          28.17999999999995
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.12,
+        "pto_us": 39.660000000000004,
+        "samples_us": [
+          39.660000000000004,
+          38.879999999999995,
+          39.98000000000002
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_spmd_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_spmd.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_spmd_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.06,
+        "pto_us": 31.779999999999973,
+        "samples_us": [
+          32.080000000000005,
+          31.74000000000001,
+          31.779999999999973
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.44,
+        "pto_us": 41.5,
+        "samples_us": [
+          41.84,
+          41.5,
+          40.69999999999993
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_single_stream_k_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_single_stream_k.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_single_stream_k_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.92,
+        "pto_us": 34.440000000000055,
+        "samples_us": [
+          31.86,
+          34.440000000000055,
+          35.299999999999955
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 77.2,
+        "pto_us": 44.51999999999998,
+        "samples_us": [
+          42.88,
+          45.200000000000045,
+          44.51999999999998
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "cv_tail_t1_v2_small",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/cv_tail_t1_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/cv_tail_t1_v2_small/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.4,
+        "pto_us": 27.180000000000007,
+        "samples_us": [
+          27.92,
+          27.180000000000007,
+          26.399999999999977
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.16,
+        "pto_us": 28.499999999999996,
+        "samples_us": [
+          28.499999999999996,
+          29.160000000000025,
+          28.0
+        ],
+        "all_three_below_30us": true
+      },
+      {
+        "name": "B04_S5_T020",
+        "batch_size": 4,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 38.82,
+        "pto_us": 36.18000000000001,
+        "samples_us": [
+          37.7,
+          36.18000000000001,
+          35.1400000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B04_S6_T024",
+        "batch_size": 4,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 40.34,
+        "pto_us": 38.379999999999995,
+        "samples_us": [
+          37.5,
+          41.95999999999998,
+          38.379999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_mix_edges",
+    "status": "FAIL",
+    "error": "ValueError(\"Lowering changed the kernel entry parameter ABI: #5 'post': fp32/Out/(-1, 4) -> 'post__ssa_v0': fp32/InOut/(-1, 4)\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_mix.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_mix_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_mix_m32_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_mix_m32.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_mix_m32_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.3,
+        "pto_us": 33.400000000000006,
+        "samples_us": [
+          33.400000000000006,
+          33.60000000000002,
+          32.04000000000008
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.68,
+        "pto_us": 33.30000000000001,
+        "samples_us": [
+          33.58,
+          33.30000000000001,
+          33.020000000000095
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.52,
+        "pto_us": 60.22000000000003,
+        "samples_us": [
+          58.82,
+          60.22000000000003,
+          61.379999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.22,
+        "pto_us": 60.940000000000055,
+        "samples_us": [
+          62.980000000000004,
+          60.940000000000055,
+          60.8599999999999
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_mix_sync_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_mix_sync.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_mix_sync_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.26,
+        "pto_us": 32.77999999999997,
+        "samples_us": [
+          34.36,
+          32.12000000000012,
+          32.77999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.14,
+        "pto_us": 31.819999999999936,
+        "samples_us": [
+          34.04,
+          31.819999999999936,
+          31.25999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.74,
+        "pto_us": 71.24000000000001,
+        "samples_us": [
+          72.96000000000001,
+          69.94000000000005,
+          71.24000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.12,
+        "pto_us": 74.18,
+        "samples_us": [
+          74.18,
+          73.91999999999996,
+          74.32000000000005
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_mix_v2_edges",
+    "status": "FAIL",
+    "error": "ValueError(\"Lowering changed the kernel entry parameter ABI: #5 'post': fp32/Out/(-1, 4) -> 'post__ssa_v0': fp32/InOut/(-1, 4)\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_mix_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_mix_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_mix_v3_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_mix_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_mix_v3_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.94,
+        "pto_us": 32.74000000000001,
+        "samples_us": [
+          33.58,
+          32.19999999999999,
+          32.74000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.06,
+        "pto_us": 32.3,
+        "samples_us": [
+          32.3,
+          32.079999999999984,
+          33.39999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.78,
+        "pto_us": 63.91999999999996,
+        "samples_us": [
+          62.28,
+          63.91999999999996,
+          65.63999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.12,
+        "pto_us": 66.51999999999998,
+        "samples_us": [
+          67.46,
+          66.51999999999998,
+          63.860000000000014
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "fused_tail_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/fused_tail_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/fused_tail_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.68,
+        "pto_us": 35.77999999999997,
+        "samples_us": [
+          40.0,
+          35.47999999999996,
+          35.77999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.8,
+        "pto_us": 35.620000000000005,
+        "samples_us": [
+          38.34,
+          35.60000000000002,
+          35.620000000000005
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.78,
+        "pto_us": 77.48000000000002,
+        "samples_us": [
+          79.25999999999999,
+          77.48000000000002,
+          71.93999999999994
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.66,
+        "pto_us": 77.67999999999995,
+        "samples_us": [
+          73.92,
+          80.69999999999999,
+          77.67999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "m32_seed_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/m32_seed.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/m32_seed_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.7,
+        "pto_us": 31.58000000000004,
+        "samples_us": [
+          34.620000000000005,
+          31.52000000000004,
+          31.58000000000004
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.32,
+        "pto_us": 31.720000000000027,
+        "samples_us": [
+          32.1,
+          31.720000000000027,
+          31.300000000000068
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 67.54,
+        "pto_us": 71.60000000000002,
+        "samples_us": [
+          73.62,
+          71.25999999999999,
+          71.60000000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.62,
+        "pto_us": 77.36000000000001,
+        "samples_us": [
+          73.54,
+          77.36000000000001,
+          79.77999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "micro32_flat_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/micro32_flat_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/micro32_flat_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.72,
+        "pto_us": 32.84000000000003,
+        "samples_us": [
+          34.900000000000006,
+          31.09999999999991,
+          32.84000000000003
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.88,
+        "pto_us": 33.38000000000011,
+        "samples_us": [
+          34.64,
+          32.460000000000036,
+          33.38000000000011
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.0,
+        "pto_us": 87.97999999999999,
+        "samples_us": [
+          87.97999999999999,
+          88.36000000000001,
+          82.59999999999991
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.48,
+        "pto_us": 96.55999999999995,
+        "samples_us": [
+          97.86000000000001,
+          96.55999999999995,
+          94.90000000000009
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "packed_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/packed_v4.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/packed_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.8,
+        "pto_us": 70.51999999999998,
+        "samples_us": [
+          72.16,
+          70.51999999999998,
+          36.700000000000045
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.9,
+        "pto_us": 70.88000000000005,
+        "samples_us": [
+          72.36,
+          70.88000000000005,
+          50.360000000000014
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 72.72,
+        "pto_us": 102.55999999999995,
+        "samples_us": [
+          118.62,
+          102.29999999999995,
+          102.55999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.18,
+        "pto_us": 98.58000000000004,
+        "samples_us": [
+          111.16,
+          98.58000000000004,
+          71.95999999999992
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "rms1024_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/rms1024.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/rms1024_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.44,
+        "pto_us": 33.34000000000003,
+        "samples_us": [
+          39.49999999999999,
+          33.34000000000003,
+          31.019999999999982
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.7,
+        "pto_us": 33.059999999999945,
+        "samples_us": [
+          36.9,
+          32.5,
+          33.059999999999945
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 68.2,
+        "pto_us": 66.41999999999996,
+        "samples_us": [
+          69.5,
+          62.01999999999998,
+          66.41999999999996
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.92,
+        "pto_us": 66.72000000000003,
+        "samples_us": [
+          67.67999999999999,
+          66.72000000000003,
+          65.33999999999992
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "rms2048_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/rms2048.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/rms2048_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.54,
+        "pto_us": 32.74000000000001,
+        "samples_us": [
+          33.64,
+          32.35999999999996,
+          32.74000000000001
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.4,
+        "pto_us": 34.200000000000045,
+        "samples_us": [
+          33.540000000000006,
+          45.400000000000034,
+          34.200000000000045
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.3,
+        "pto_us": 64.13999999999999,
+        "samples_us": [
+          63.84,
+          65.88,
+          64.13999999999999
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.36,
+        "pto_us": 68.80000000000007,
+        "samples_us": [
+          70.41999999999999,
+          66.72000000000003,
+          68.80000000000007
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "row_fused_mix_edges",
+    "status": "FAIL",
+    "error": "ValueError(\"Lowering changed the kernel entry parameter ABI: #5 'post': fp32/Out/(-1, 4) -> 'post__ssa_v0': fp32/InOut/(-1, 4)\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/row_fused_mix.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/row_fused_mix_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "row_fused_mix_v2_edges",
+    "status": "FAIL",
+    "error": "ValueError(\"Lowering changed the kernel entry parameter ABI: #5 'post': fp32/Out/(-1, 4) -> 'post__ssa_v0': fp32/InOut/(-1, 4)\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/row_fused_mix_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/row_fused_mix_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "row_fused_mix_v3_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/row_fused_mix_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/row_fused_mix_v3_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.86,
+        "pto_us": 34.51999999999998,
+        "samples_us": [
+          34.8,
+          34.51999999999998,
+          33.799999999999955
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 34.0,
+        "pto_us": 34.24000000000001,
+        "samples_us": [
+          34.5,
+          34.24000000000001,
+          32.98000000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 66.6,
+        "pto_us": 66.26,
+        "samples_us": [
+          66.26,
+          64.04000000000008,
+          67.77999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.96,
+        "pto_us": 69.96000000000004,
+        "samples_us": [
+          70.4,
+          69.96000000000004,
+          68.24000000000001
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "row_rms_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/row_rms_v3.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.06,
+        "pto_us": 89.71999999999997,
+        "samples_us": [
+          91.46,
+          89.71999999999997,
+          48.639999999999986
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.94,
+        "pto_us": 92.32,
+        "samples_us": [
+          93.0,
+          92.32,
+          50.5
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.16,
+        "pto_us": 117.83999999999997,
+        "samples_us": [
+          125.26,
+          117.83999999999997,
+          71.55999999999995
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.98,
+        "pto_us": 113.04000000000002,
+        "samples_us": [
+          136.98,
+          113.04000000000002,
+          78.12
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "single_bf16_triple_gram_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/single_bf16_triple_gram.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/single_bf16_triple_gram_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.52,
+        "pto_us": 33.680000000000064,
+        "samples_us": [
+          34.38,
+          33.680000000000064,
+          33.66000000000008
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.34,
+        "pto_us": 43.52,
+        "samples_us": [
+          43.52,
+          43.5,
+          44.0
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "single_weight_cv_hf32_pair_edges",
+    "status": "FAIL",
+    "error": "AssertionError(\"HC_pre 数值检查失败：{'mixed': {'passed': True, 'finite': True, 'shape': [10, 4096], 'dtype': 'torch.bfloat16', 'rtol': 0.01, 'atol': 0.01, 'max_abs': 0.0078125, 'rmse': 0.0002613841788843274, 'different': 558, 'out_of_tolerance': 0}, 'post': {'passed': True, 'finite': True, 'shape': [10, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 3.096461296081543e-05, 'rmse': 6.696534455841174e-06, 'different': 30, 'out_of_tolerance': 0}, 'comb': {'passed': False, 'finite': True, 'shape': [10, 4, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 1.7471611499786377e-05, 'rmse': 3.95481038140133e-06, 'different': 159, 'out_of_tolerance': 2}}\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/single_weight_cv_hf32_pair.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/single_weight_cv_hf32_pair_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": 35.42,
+        "pto_us": 30.060000000000002,
+        "samples_us": [
+          30.060000000000002,
+          30.460000000000036,
+          29.75999999999999
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "single_weight_cv_triple_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/single_weight_cv_triple_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/single_weight_cv_triple_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.12,
+        "pto_us": 36.900000000000006,
+        "samples_us": [
+          36.900000000000006,
+          36.5,
+          37.19999999999993
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.94,
+        "pto_us": 49.120000000000005,
+        "samples_us": [
+          49.120000000000005,
+          49.139999999999986,
+          48.280000000000086
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "sinkhorn_brc_mul_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/sinkhorn_brc_mul.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/sinkhorn_brc_mul_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.7,
+        "pto_us": 69.84000000000003,
+        "samples_us": [
+          73.72,
+          69.84000000000003,
+          68.07999999999993
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "sinkhorn_factors_edges",
+    "status": "FAIL",
+    "error": "AssertionError(\"HC_pre 数值检查失败：{'mixed': {'passed': True, 'finite': True, 'shape': [10, 4096], 'dtype': 'torch.bfloat16', 'rtol': 0.01, 'atol': 0.01, 'max_abs': 0.015625, 'rmse': 0.00018843670841306448, 'different': 295, 'out_of_tolerance': 0}, 'post': {'passed': True, 'finite': True, 'shape': [10, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': 6.5267086029052734e-06, 'rmse': 1.8795387859427137e-06, 'different': 30, 'out_of_tolerance': 0}, 'comb': {'passed': False, 'finite': False, 'shape': [10, 4, 4], 'dtype': 'torch.float32', 'rtol': 0.0001, 'atol': 1e-05, 'max_abs': nan, 'rmse': nan, 'different': 160, 'out_of_tolerance': 0}}\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/sinkhorn_factors.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/sinkhorn_factors_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "INCOMPLETE",
+        "variant": null,
+        "native_us": null,
+        "pto_us": null,
+        "samples_us": [],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "sinkhorn_factors_v2_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/sinkhorn_factors_v2.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/sinkhorn_factors_v2_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.62,
+        "pto_us": 34.780000000000086,
+        "samples_us": [
+          36.66,
+          34.780000000000086,
+          33.219999999999914
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.72,
+        "pto_us": 34.48000000000002,
+        "samples_us": [
+          35.42,
+          32.639999999999986,
+          34.48000000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 71.8,
+        "pto_us": 63.10000000000001,
+        "samples_us": [
+          63.10000000000001,
+          63.49999999999994,
+          62.77999999999997
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 77.14,
+        "pto_us": 64.4,
+        "samples_us": [
+          64.4,
+          64.38,
+          67.43999999999983
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "sinkhorn_gather_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/sinkhorn_gather.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/sinkhorn_gather_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 69.021375,
+        "pto_us": 78.80000000000007,
+        "samples_us": [
+          74.66000000000001,
+          80.48000000000002,
+          78.80000000000007
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "sinkhorn_transpose_b28",
+    "status": "FAIL",
+    "error": "ParserTypeError(\"Cannot reassign 'normalized' with a different type: was pl.Tile[[32, 8], pl.FP32, pl.Mem.Vec], got pl.Tile[[32, 8], pl.FP32, pl.Mem.Vec, pl.TileView(pad=pl.PadValue.zero)]\")",
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/sinkhorn_transpose.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/sinkhorn_transpose_b28/report.json",
+    "cases": []
+  },
+  {
+    "run": "stacked_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/stacked.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/stacked_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.32,
+        "pto_us": 30.91999999999996,
+        "samples_us": [
+          37.519999999999996,
+          30.91999999999996,
+          30.2800000000002
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.48,
+        "pto_us": 31.91999999999996,
+        "samples_us": [
+          32.519999999999996,
+          31.91999999999996,
+          31.460000000000036
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 70.9,
+        "pto_us": 65.08000000000004,
+        "samples_us": [
+          66.96000000000001,
+          64.28000000000003,
+          65.08000000000004
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.72,
+        "pto_us": 69.63999999999999,
+        "samples_us": [
+          70.30000000000001,
+          69.63999999999999,
+          69.05999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "stacked_expand_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/stacked_expand.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/stacked_expand_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.8,
+        "pto_us": 77.32000000000005,
+        "samples_us": [
+          82.2,
+          77.32000000000005,
+          75.9799999999999
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "stacked_recip_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/stacked_recip.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/stacked_recip_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S5_T010",
+        "batch_size": 2,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 36.76,
+        "pto_us": 32.41999999999996,
+        "samples_us": [
+          38.35999999999999,
+          32.41999999999996,
+          32.04000000000008
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 35.24,
+        "pto_us": 31.75999999999999,
+        "samples_us": [
+          34.31999999999999,
+          31.75999999999999,
+          31.659999999999854
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S5_T140",
+        "batch_size": 28,
+        "seqlen": 5,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 72.06,
+        "pto_us": 65.44,
+        "samples_us": [
+          65.44,
+          63.920000000000016,
+          67.01999999999998
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.24,
+        "pto_us": 68.58,
+        "samples_us": [
+          68.58,
+          71.55999999999995,
+          68.40000000000009
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "stacked_unroll_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/stacked_unroll.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/stacked_unroll_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 76.88,
+        "pto_us": 76.98000000000002,
+        "samples_us": [
+          75.96,
+          80.55999999999995,
+          76.98000000000002
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "upstream_baseline_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/wide.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/upstream_baseline_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 38.04,
+        "pto_us": 32.48000000000002,
+        "samples_us": [
+          36.8,
+          32.48000000000002,
+          31.960000000000036
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 75.66,
+        "pto_us": 72.25999999999999,
+        "samples_us": [
+          72.25999999999999,
+          77.16000000000008,
+          70.56000000000006
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "wide_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/wide.py",
+    "native_backend": null,
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/wide_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 74.82,
+        "pto_us": 73.17999999999995,
+        "samples_us": [
+          109.74000000000001,
+          73.17999999999995,
+          70.05999999999995
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "wide_cube_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/wide_cube.py",
+    "native_backend": null,
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/wide_cube_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.42,
+        "pto_us": 74.58000000000004,
+        "samples_us": [
+          99.97999999999999,
+          74.58000000000004,
+          67.12
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "wide_recip_b28",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/wide_recip.py",
+    "native_backend": null,
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/wide_recip_b28/report.json",
+    "cases": [
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 73.92,
+        "pto_us": 76.08000000000004,
+        "samples_us": [
+          113.52000000000001,
+          76.08000000000004,
+          71.65999999999997
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  },
+  {
+    "run": "widen4_m32_edges",
+    "status": "PASS",
+    "error": null,
+    "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/widen4_m32.py",
+    "native_backend": "recipes",
+    "report": "tests/pypto_test/results/hc_pre_opt_20261009/widen4_m32_edges/report.json",
+    "cases": [
+      {
+        "name": "B02_S6_T012",
+        "batch_size": 2,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 37.22,
+        "pto_us": 33.720000000000006,
+        "samples_us": [
+          33.720000000000006,
+          33.039999999999964,
+          33.84000000000003
+        ],
+        "all_three_below_30us": false
+      },
+      {
+        "name": "B28_S6_T168",
+        "batch_size": 28,
+        "seqlen": 6,
+        "status": "PASS",
+        "variant": null,
+        "native_us": 77.22,
+        "pto_us": 64.86,
+        "samples_us": [
+          64.86,
+          65.03999999999996,
+          63.34000000000003
+        ],
+        "all_three_below_30us": false
+      }
+    ]
+  }
+]

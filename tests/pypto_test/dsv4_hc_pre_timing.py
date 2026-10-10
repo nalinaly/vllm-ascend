@@ -29,7 +29,7 @@ def interval_metrics(intervals):
             "active_union_us": active, "no_incore_gap_us": max(0.0, last - first - active)}
 
 
-def summarize_swimlane(path, steps):
+def summarize_swimlane(path, steps, *, level=1):
     events = json.loads(Path(path).read_text())["traceEvents"]
     workers = {e["pid"] for e in events if e.get("ph") == "M" and e.get("name") == "process_name"
                and e.get("args", {}).get("name") == "Worker View"}
@@ -58,7 +58,7 @@ def summarize_swimlane(path, steps):
                             name: {**interval_metrics(intervals), "blocks": len(intervals),
                                    "core_time_sum_us": sum(end - start for start, end in intervals)}
                             for name, intervals in tasks.items()}})
-    return {"source": str(path), "level": 1, "steps": steps, "samples": samples,
+    return {"source": str(path), "level": level, "steps": steps, "samples": samples,
             **{f"{name}_p50_us": statistics.median(sample[f"{name}_us"] for sample in samples)
                for name in ("span", "active_union", "no_incore_gap")}}
 

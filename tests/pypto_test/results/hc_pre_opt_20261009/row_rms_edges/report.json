@@ -1,0 +1,1966 @@
+{
+  "status": "PASS",
+  "scope": "单卡独立 HC_pre；正式 HC 权重、合成输入；不代表整模型性能",
+  "implementation": "standalone_local_hc_pre",
+  "native_backend": "recipes",
+  "checkpoint": "/data/model/DeepSeek-V4-Flash-0731-w8a8",
+  "layer": 2,
+  "branch": "attn",
+  "batch_size": [
+    2,
+    28
+  ],
+  "seqlen": [
+    5,
+    6
+  ],
+  "seed": 20261009,
+  "case_seed_rule": "seed + batch_size * 100 + seqlen",
+  "warmup": 5,
+  "replay_iters": 20,
+  "timing": "incore",
+  "timing_scope": "PTO L1 incore 首次开始至最后结束；另列并行区间并集和无 incore 空隙；Native HcPre 设备事件",
+  "runtime": "tensormap_and_ringbuffer",
+  "cases": [
+    {
+      "batch_size": 2,
+      "seqlen": 5,
+      "tokens": 10,
+      "name": "B02_S5_T010",
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00018843670841306448,
+          "different": 295,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.5267086029052734e-06,
+          "rmse": 1.8795387859427137e-06,
+          "different": 30,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 3.2782554626464844e-06,
+          "rmse": 1.023977574732271e-06,
+          "different": 159,
+          "out_of_tolerance": 0
+        }
+      },
+      "native_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "incore_timing": {
+        "scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
+        "native": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B02_S5_T010_Native_PyTorch_3steps.json",
+          "steps": 3,
+          "p50_us": 37.06,
+          "samples_us": [
+            37.06,
+            37.1,
+            36.62
+          ]
+        },
+        "pto": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B02_S5_T010_PTO_L1_3steps.json",
+          "level": 1,
+          "steps": 3,
+          "samples": [
+            {
+              "launch_epoch": 0,
+              "first_start_us": 61.42,
+              "last_end_us": 152.88,
+              "span_us": 91.46,
+              "active_union_us": 87.09999999999998,
+              "no_incore_gap_us": 4.360000000000014,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 61.42,
+                  "last_end_us": 90.88,
+                  "span_us": 29.459999999999994,
+                  "active_union_us": 29.459999999999994,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 53.379999999999995
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 92.26,
+                  "last_end_us": 104.02,
+                  "span_us": 11.759999999999991,
+                  "active_union_us": 11.759999999999991,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 45.2
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 105.52,
+                  "last_end_us": 107.86,
+                  "span_us": 2.3400000000000034,
+                  "active_union_us": 2.3400000000000034,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 2.3400000000000034
+                },
+                "split_pre_post": {
+                  "first_start_us": 112.4,
+                  "last_end_us": 116.22,
+                  "span_us": 3.819999999999993,
+                  "active_union_us": 3.819999999999993,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 7.11999999999999
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 109.34,
+                  "last_end_us": 152.88,
+                  "span_us": 43.53999999999999,
+                  "active_union_us": 43.53999999999999,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 87.03999999999999
+                },
+                "mix_x": {
+                  "first_start_us": 118.2,
+                  "last_end_us": 132.18,
+                  "span_us": 13.980000000000004,
+                  "active_union_us": 13.980000000000004,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 23.36
+                }
+              }
+            },
+            {
+              "launch_epoch": 1,
+              "first_start_us": 320.84000000000003,
+              "last_end_us": 410.56,
+              "span_us": 89.71999999999997,
+              "active_union_us": 85.89999999999998,
+              "no_incore_gap_us": 3.819999999999993,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 320.84000000000003,
+                  "last_end_us": 349.3,
+                  "span_us": 28.45999999999998,
+                  "active_union_us": 28.45999999999998,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 51.17999999999995
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 350.24,
+                  "last_end_us": 361.90000000000003,
+                  "span_us": 11.660000000000025,
+                  "active_union_us": 11.660000000000025,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 45.72000000000003
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 363.86,
+                  "last_end_us": 366.2,
+                  "span_us": 2.339999999999975,
+                  "active_union_us": 2.339999999999975,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 2.339999999999975
+                },
+                "split_pre_post": {
+                  "first_start_us": 370.34000000000003,
+                  "last_end_us": 373.90000000000003,
+                  "span_us": 3.5600000000000023,
+                  "active_union_us": 3.5600000000000023,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 6.640000000000043
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 367.12,
+                  "last_end_us": 410.56,
+                  "span_us": 43.44,
+                  "active_union_us": 43.44,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 86.5
+                },
+                "mix_x": {
+                  "first_start_us": 375.58,
+                  "last_end_us": 389.68,
+                  "span_us": 14.100000000000023,
+                  "active_union_us": 14.100000000000023,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 23.200000000000045
+                }
+              }
+            },
+            {
+              "launch_epoch": 2,
+              "first_start_us": 550.32,
+              "last_end_us": 598.96,
+              "span_us": 48.639999999999986,
+              "active_union_us": 43.319999999999936,
+              "no_incore_gap_us": 5.32000000000005,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 550.32,
+                  "last_end_us": 565.22,
+                  "span_us": 14.899999999999977,
+                  "active_union_us": 14.899999999999977,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 26.700000000000045
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 566.46,
+                  "last_end_us": 572.86,
+                  "span_us": 6.399999999999977,
+                  "active_union_us": 6.399999999999977,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 23.719999999999914
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 574.38,
+                  "last_end_us": 575.78,
+                  "span_us": 1.3999999999999773,
+                  "active_union_us": 1.3999999999999773,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.3999999999999773
+                },
+                "split_pre_post": {
+                  "first_start_us": 579.1800000000001,
+                  "last_end_us": 582.0600000000001,
+                  "span_us": 2.8799999999999955,
+                  "active_union_us": 2.8799999999999955,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 5.100000000000023
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 578.34,
+                  "last_end_us": 598.96,
+                  "span_us": 20.620000000000005,
+                  "active_union_us": 20.620000000000005,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 39.539999999999964
+                },
+                "mix_x": {
+                  "first_start_us": 583.58,
+                  "last_end_us": 590.26,
+                  "span_us": 6.67999999999995,
+                  "active_union_us": 6.67999999999995,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 12.67999999999995
+                }
+              }
+            }
+          ],
+          "span_p50_us": 89.71999999999997,
+          "active_union_p50_us": 85.89999999999998,
+          "no_incore_gap_p50_us": 4.360000000000014
+        },
+        "dfx": {
+          "exported": true,
+          "kernel_config": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/kernel_config_source.py",
+          "merged_swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/merged_swimlane.json",
+          "name_map": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/name_map.json"
+        },
+        "native_over_pto_span": 0.41306286223807415,
+        "native_over_pto_active_union": 0.431431897555297
+      },
+      "native_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.0078125,
+          "rmse": 0.00014569828636012971,
+          "different": 227,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.67572021484375e-06,
+          "rmse": 1.7418107063349453e-06,
+          "different": 31,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            10,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.4185905456542969e-05,
+          "rmse": 2.2693564005749067e-06,
+          "different": 159,
+          "out_of_tolerance": 0
+        }
+      },
+      "output_guards": true,
+      "status": "PASS"
+    },
+    {
+      "batch_size": 2,
+      "seqlen": 6,
+      "tokens": 12,
+      "name": "B02_S6_T012",
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00017758391913957894,
+          "different": 267,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 5.930662155151367e-06,
+          "rmse": 2.129020458596642e-06,
+          "different": 36,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 4.351139068603516e-06,
+          "rmse": 1.217930162056291e-06,
+          "different": 190,
+          "out_of_tolerance": 0
+        }
+      },
+      "native_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "incore_timing": {
+        "scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
+        "native": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B02_S6_T012_Native_PyTorch_3steps.json",
+          "steps": 3,
+          "p50_us": 37.94,
+          "samples_us": [
+            37.94,
+            37.98,
+            37.68
+          ]
+        },
+        "pto": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B02_S6_T012_PTO_L1_3steps.json",
+          "level": 1,
+          "steps": 3,
+          "samples": [
+            {
+              "launch_epoch": 0,
+              "first_start_us": 28.400000000000002,
+              "last_end_us": 121.4,
+              "span_us": 93.0,
+              "active_union_us": 87.93999999999998,
+              "no_incore_gap_us": 5.0600000000000165,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 28.400000000000002,
+                  "last_end_us": 57.92,
+                  "span_us": 29.52,
+                  "active_union_us": 29.52,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 55.1
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 59.58,
+                  "last_end_us": 71.8,
+                  "span_us": 12.219999999999999,
+                  "active_union_us": 12.219999999999999,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 46.93999999999999
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 74.10000000000001,
+                  "last_end_us": 76.24,
+                  "span_us": 2.1399999999999864,
+                  "active_union_us": 2.1399999999999864,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 2.1399999999999864
+                },
+                "split_pre_post": {
+                  "first_start_us": 79.66,
+                  "last_end_us": 83.42,
+                  "span_us": 3.760000000000005,
+                  "active_union_us": 3.760000000000005,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 7.0800000000000125
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 77.34,
+                  "last_end_us": 121.4,
+                  "span_us": 44.06,
+                  "active_union_us": 44.06,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 87.62
+                },
+                "mix_x": {
+                  "first_start_us": 85.28,
+                  "last_end_us": 99.48,
+                  "span_us": 14.200000000000003,
+                  "active_union_us": 14.200000000000003,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 26.980000000000004
+                }
+              }
+            },
+            {
+              "launch_epoch": 1,
+              "first_start_us": 320.56,
+              "last_end_us": 412.88,
+              "span_us": 92.32,
+              "active_union_us": 87.33999999999997,
+              "no_incore_gap_us": 4.980000000000018,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 320.56,
+                  "last_end_us": 349.64,
+                  "span_us": 29.079999999999984,
+                  "active_union_us": 29.079999999999984,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 54.30000000000001
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 350.88,
+                  "last_end_us": 362.44,
+                  "span_us": 11.560000000000002,
+                  "active_union_us": 11.560000000000002,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 45.19999999999993
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 364.44,
+                  "last_end_us": 366.24,
+                  "span_us": 1.8000000000000114,
+                  "active_union_us": 1.8000000000000114,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.8000000000000114
+                },
+                "split_pre_post": {
+                  "first_start_us": 370.48,
+                  "last_end_us": 374.26,
+                  "span_us": 3.7799999999999727,
+                  "active_union_us": 3.7799999999999727,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 7.17999999999995
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 367.98,
+                  "last_end_us": 412.88,
+                  "span_us": 44.89999999999998,
+                  "active_union_us": 44.89999999999998,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 87.34000000000003
+                },
+                "mix_x": {
+                  "first_start_us": 375.52,
+                  "last_end_us": 389.24,
+                  "span_us": 13.720000000000027,
+                  "active_union_us": 13.720000000000027,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 25.58000000000004
+                }
+              }
+            },
+            {
+              "launch_epoch": 2,
+              "first_start_us": 538.58,
+              "last_end_us": 589.08,
+              "span_us": 50.5,
+              "active_union_us": 45.100000000000136,
+              "no_incore_gap_us": 5.399999999999864,
+              "blocks": 13,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 538.58,
+                  "last_end_us": 555.86,
+                  "span_us": 17.279999999999973,
+                  "active_union_us": 17.279999999999973,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 32.39999999999998
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 556.88,
+                  "last_end_us": 563.32,
+                  "span_us": 6.440000000000055,
+                  "active_union_us": 6.440000000000055,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 4,
+                  "core_time_sum_us": 24.100000000000023
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 565.1,
+                  "last_end_us": 566.44,
+                  "span_us": 1.3400000000000318,
+                  "active_union_us": 1.3400000000000318,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 1,
+                  "core_time_sum_us": 1.3400000000000318
+                },
+                "split_pre_post": {
+                  "first_start_us": 569.78,
+                  "last_end_us": 572.48,
+                  "span_us": 2.7000000000000455,
+                  "active_union_us": 2.7000000000000455,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 5.080000000000155
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 569.04,
+                  "last_end_us": 589.08,
+                  "span_us": 20.040000000000077,
+                  "active_union_us": 20.040000000000077,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 39.700000000000045
+                },
+                "mix_x": {
+                  "first_start_us": 574.32,
+                  "last_end_us": 581.04,
+                  "span_us": 6.719999999999914,
+                  "active_union_us": 6.719999999999914,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 2,
+                  "core_time_sum_us": 13.159999999999968
+                }
+              }
+            }
+          ],
+          "span_p50_us": 92.32,
+          "active_union_p50_us": 87.33999999999997,
+          "no_incore_gap_p50_us": 5.0600000000000165
+        },
+        "dfx": {
+          "exported": true,
+          "kernel_config": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_1/kernel_config_source.py",
+          "merged_swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_1/merged_swimlane.json",
+          "name_map": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_1/name_map.json"
+        },
+        "native_over_pto_span": 0.4109618717504333,
+        "native_over_pto_active_union": 0.4343943210441952
+      },
+      "native_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.0078125,
+          "rmse": 0.00014031273894943297,
+          "different": 340,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 7.12275505065918e-06,
+          "rmse": 2.1325670331862057e-06,
+          "different": 36,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            12,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 6.377696990966797e-06,
+          "rmse": 1.44210503094655e-06,
+          "different": 190,
+          "out_of_tolerance": 0
+        }
+      },
+      "output_guards": true,
+      "status": "PASS"
+    },
+    {
+      "batch_size": 28,
+      "seqlen": 5,
+      "tokens": 140,
+      "name": "B28_S5_T140",
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00016493661678396165,
+          "different": 3517,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 2.0205974578857422e-05,
+          "rmse": 2.466895693942206e-06,
+          "different": 423,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.5854835510253906e-05,
+          "rmse": 1.567141225677915e-06,
+          "different": 2218,
+          "out_of_tolerance": 0
+        }
+      },
+      "native_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "incore_timing": {
+        "scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
+        "native": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B28_S5_T140_Native_PyTorch_3steps.json",
+          "steps": 3,
+          "p50_us": 69.16,
+          "samples_us": [
+            69.16,
+            70.06,
+            67.52
+          ]
+        },
+        "pto": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B28_S5_T140_PTO_L1_3steps.json",
+          "level": 1,
+          "steps": 3,
+          "samples": [
+            {
+              "launch_epoch": 0,
+              "first_start_us": 30.86,
+              "last_end_us": 156.12,
+              "span_us": 125.26,
+              "active_union_us": 115.74000000000001,
+              "no_incore_gap_us": 9.519999999999996,
+              "blocks": 103,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 30.86,
+                  "last_end_us": 65.3,
+                  "span_us": 34.44,
+                  "active_union_us": 34.44,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 559.1400000000001
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 70.62,
+                  "last_end_us": 96.06,
+                  "span_us": 25.439999999999998,
+                  "active_union_us": 25.439999999999998,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 427.39999999999986
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 97.52,
+                  "last_end_us": 101.32000000000001,
+                  "span_us": 3.8000000000000114,
+                  "active_union_us": 3.8000000000000114,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 9,
+                  "core_time_sum_us": 22.920000000000044
+                },
+                "split_pre_post": {
+                  "first_start_us": 106.2,
+                  "last_end_us": 113.7,
+                  "span_us": 7.5,
+                  "active_union_us": 7.5,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 83.12
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 104.06,
+                  "last_end_us": 156.12,
+                  "span_us": 52.06,
+                  "active_union_us": 52.06,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 799.6600000000002
+                },
+                "mix_x": {
+                  "first_start_us": 118.3,
+                  "last_end_us": 135.6,
+                  "span_us": 17.299999999999997,
+                  "active_union_us": 17.299999999999997,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 276.42
+                }
+              }
+            },
+            {
+              "launch_epoch": 1,
+              "first_start_us": 397.40000000000003,
+              "last_end_us": 515.24,
+              "span_us": 117.83999999999997,
+              "active_union_us": 110.09999999999997,
+              "no_incore_gap_us": 7.740000000000009,
+              "blocks": 103,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 397.40000000000003,
+                  "last_end_us": 432.54,
+                  "span_us": 35.139999999999986,
+                  "active_union_us": 35.139999999999986,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 553.86
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 434.1,
+                  "last_end_us": 459.08,
+                  "span_us": 24.97999999999996,
+                  "active_union_us": 24.97999999999996,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 442.52000000000004
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 460.40000000000003,
+                  "last_end_us": 464.46000000000004,
+                  "span_us": 4.060000000000002,
+                  "active_union_us": 4.060000000000002,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 9,
+                  "core_time_sum_us": 29.220000000000027
+                },
+                "split_pre_post": {
+                  "first_start_us": 470.28000000000003,
+                  "last_end_us": 478.5,
+                  "span_us": 8.21999999999997,
+                  "active_union_us": 8.21999999999997,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 83.86000000000001
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 469.32,
+                  "last_end_us": 515.24,
+                  "span_us": 45.920000000000016,
+                  "active_union_us": 45.920000000000016,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 804.2
+                },
+                "mix_x": {
+                  "first_start_us": 480.86,
+                  "last_end_us": 497.44,
+                  "span_us": 16.579999999999984,
+                  "active_union_us": 16.579999999999984,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 271.8200000000001
+                }
+              }
+            },
+            {
+              "launch_epoch": 2,
+              "first_start_us": 704.72,
+              "last_end_us": 776.28,
+              "span_us": 71.55999999999995,
+              "active_union_us": 64.7399999999999,
+              "no_incore_gap_us": 6.82000000000005,
+              "blocks": 103,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 704.72,
+                  "last_end_us": 723.76,
+                  "span_us": 19.039999999999964,
+                  "active_union_us": 19.039999999999964,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 284.8599999999999
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 726.96,
+                  "last_end_us": 742.12,
+                  "span_us": 15.159999999999968,
+                  "active_union_us": 15.159999999999968,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 264.5999999999999
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 743.26,
+                  "last_end_us": 746.82,
+                  "span_us": 3.560000000000059,
+                  "active_union_us": 3.560000000000059,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 9,
+                  "core_time_sum_us": 21.91999999999996
+                },
+                "split_pre_post": {
+                  "first_start_us": 750.62,
+                  "last_end_us": 756.32,
+                  "span_us": 5.7000000000000455,
+                  "active_union_us": 5.7000000000000455,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 68.01999999999975
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 749.3000000000001,
+                  "last_end_us": 776.28,
+                  "span_us": 26.979999999999905,
+                  "active_union_us": 26.979999999999905,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 390.3399999999998
+                },
+                "mix_x": {
+                  "first_start_us": 760.9,
+                  "last_end_us": 770.44,
+                  "span_us": 9.540000000000077,
+                  "active_union_us": 9.540000000000077,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 18,
+                  "core_time_sum_us": 144.9400000000004
+                }
+              }
+            }
+          ],
+          "span_p50_us": 117.83999999999997,
+          "active_union_p50_us": 110.09999999999997,
+          "no_incore_gap_p50_us": 7.740000000000009
+        },
+        "dfx": {
+          "exported": true,
+          "kernel_config": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_2/kernel_config_source.py",
+          "merged_swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_2/merged_swimlane.json",
+          "name_map": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_2/name_map.json"
+        },
+        "native_over_pto_span": 0.5868974881194842,
+        "native_over_pto_active_union": 0.6281562216167123
+      },
+      "native_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00016462198982480913,
+          "different": 3345,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.1846423149108887e-05,
+          "rmse": 2.355689730393351e-06,
+          "different": 419,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            140,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.6644597053527832e-05,
+          "rmse": 1.5575529914713115e-06,
+          "different": 2217,
+          "out_of_tolerance": 0
+        }
+      },
+      "output_guards": true,
+      "status": "PASS"
+    },
+    {
+      "batch_size": 28,
+      "seqlen": 6,
+      "tokens": 168,
+      "name": "B28_S6_T168",
+      "pto_native": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.00016052993305493146,
+          "different": 4309,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.1160969734191895e-05,
+          "rmse": 2.563551788625773e-06,
+          "different": 508,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.1235475540161133e-05,
+          "rmse": 1.4718190186613356e-06,
+          "different": 2667,
+          "out_of_tolerance": 0
+        }
+      },
+      "native_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_graph_eager": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "incore_timing": {
+        "scope": "Native HcPre 设备事件与 PTO incore 起止；不计调用外层 AICPU 区间",
+        "native": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B28_S6_T168_Native_PyTorch_3steps.json",
+          "steps": 3,
+          "p50_us": 74.98,
+          "samples_us": [
+            74.98,
+            75.16,
+            74.98
+          ]
+        },
+        "pto": {
+          "source": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/traces/B28_S6_T168_PTO_L1_3steps.json",
+          "level": 1,
+          "steps": 3,
+          "samples": [
+            {
+              "launch_epoch": 0,
+              "first_start_us": 36.06,
+              "last_end_us": 173.04,
+              "span_us": 136.98,
+              "active_union_us": 129.3,
+              "no_incore_gap_us": 7.679999999999978,
+              "blocks": 114,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 36.06,
+                  "last_end_us": 72.3,
+                  "span_us": 36.239999999999995,
+                  "active_union_us": 36.239999999999995,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 648.4999999999999
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 75.38,
+                  "last_end_us": 101.28,
+                  "span_us": 25.900000000000006,
+                  "active_union_us": 25.900000000000006,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 504.23999999999995
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 102.98,
+                  "last_end_us": 107.10000000000001,
+                  "span_us": 4.1200000000000045,
+                  "active_union_us": 4.1200000000000045,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 11,
+                  "core_time_sum_us": 34.52000000000001
+                },
+                "split_pre_post": {
+                  "first_start_us": 114.10000000000001,
+                  "last_end_us": 121.94,
+                  "span_us": 7.839999999999989,
+                  "active_union_us": 7.839999999999989,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 81.62
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 110.0,
+                  "last_end_us": 157.78,
+                  "span_us": 47.78,
+                  "active_union_us": 47.78,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 952.8199999999999
+                },
+                "mix_x": {
+                  "first_start_us": 124.86,
+                  "last_end_us": 173.04,
+                  "span_us": 48.17999999999999,
+                  "active_union_us": 33.519999999999996,
+                  "no_incore_gap_us": 14.659999999999997,
+                  "blocks": 21,
+                  "core_time_sum_us": 304.1600000000001
+                }
+              }
+            },
+            {
+              "launch_epoch": 1,
+              "first_start_us": 400.40000000000003,
+              "last_end_us": 513.44,
+              "span_us": 113.04000000000002,
+              "active_union_us": 103.14000000000004,
+              "no_incore_gap_us": 9.899999999999977,
+              "blocks": 114,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 400.40000000000003,
+                  "last_end_us": 435.42,
+                  "span_us": 35.01999999999998,
+                  "active_union_us": 35.01999999999998,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 642.1999999999996
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 437.62,
+                  "last_end_us": 462.12,
+                  "span_us": 24.5,
+                  "active_union_us": 24.5,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 506.52
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 464.16,
+                  "last_end_us": 468.54,
+                  "span_us": 4.3799999999999955,
+                  "active_union_us": 4.3799999999999955,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 11,
+                  "core_time_sum_us": 37.01999999999998
+                },
+                "split_pre_post": {
+                  "first_start_us": 475.46000000000004,
+                  "last_end_us": 483.14,
+                  "span_us": 7.67999999999995,
+                  "active_union_us": 7.67999999999995,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 77.89999999999998
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 474.2,
+                  "last_end_us": 513.44,
+                  "span_us": 39.240000000000066,
+                  "active_union_us": 39.240000000000066,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 796.6199999999999
+                },
+                "mix_x": {
+                  "first_start_us": 486.7,
+                  "last_end_us": 501.40000000000003,
+                  "span_us": 14.700000000000045,
+                  "active_union_us": 14.700000000000045,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 280.63999999999993
+                }
+              }
+            },
+            {
+              "launch_epoch": 2,
+              "first_start_us": 738.0600000000001,
+              "last_end_us": 816.1800000000001,
+              "span_us": 78.12,
+              "active_union_us": 72.45999999999992,
+              "no_incore_gap_us": 5.660000000000082,
+              "blocks": 114,
+              "tasks": {
+                "hc_widen_rms": {
+                  "first_start_us": 738.0600000000001,
+                  "last_end_us": 759.86,
+                  "span_us": 21.799999999999955,
+                  "active_union_us": 21.799999999999955,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 330.94000000000005
+                },
+                "hc_pre_linear": {
+                  "first_start_us": 761.74,
+                  "last_end_us": 776.78,
+                  "span_us": 15.039999999999964,
+                  "active_union_us": 15.039999999999964,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 24,
+                  "core_time_sum_us": 297.5800000000004
+                },
+                "hc_pre_linear_reduce": {
+                  "first_start_us": 777.96,
+                  "last_end_us": 781.72,
+                  "span_us": 3.759999999999991,
+                  "active_union_us": 3.759999999999991,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 11,
+                  "core_time_sum_us": 27.800000000000068
+                },
+                "split_pre_post": {
+                  "first_start_us": 787.54,
+                  "last_end_us": 794.0600000000001,
+                  "span_us": 6.5200000000000955,
+                  "active_union_us": 6.5200000000000955,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 16,
+                  "core_time_sum_us": 63.98000000000013
+                },
+                "comb_sinkhorn": {
+                  "first_start_us": 784.32,
+                  "last_end_us": 808.52,
+                  "span_us": 24.199999999999932,
+                  "active_union_us": 24.199999999999932,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 470.8600000000001
+                },
+                "mix_x": {
+                  "first_start_us": 799.34,
+                  "last_end_us": 816.1800000000001,
+                  "span_us": 16.840000000000032,
+                  "active_union_us": 16.840000000000032,
+                  "no_incore_gap_us": 0.0,
+                  "blocks": 21,
+                  "core_time_sum_us": 160.84000000000003
+                }
+              }
+            }
+          ],
+          "span_p50_us": 113.04000000000002,
+          "active_union_p50_us": 103.14000000000004,
+          "no_incore_gap_p50_us": 7.679999999999978
+        },
+        "dfx": {
+          "exported": true,
+          "kernel_config": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_3/kernel_config_source.py",
+          "merged_swimlane": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_3/merged_swimlane.json",
+          "name_map": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/row_rms_edges/dfx/window_3/name_map.json"
+        },
+        "native_over_pto_span": 0.6633050247699929,
+        "native_over_pto_active_union": 0.7269730463447738
+      },
+      "native_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0,
+          "atol": 0.0,
+          "max_abs": 0.0,
+          "rmse": 0.0,
+          "different": 0,
+          "out_of_tolerance": 0
+        }
+      },
+      "pto_updated_input": {
+        "mixed": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4096
+          ],
+          "dtype": "torch.bfloat16",
+          "rtol": 0.01,
+          "atol": 0.01,
+          "max_abs": 0.015625,
+          "rmse": 0.000158490875037387,
+          "different": 4037,
+          "out_of_tolerance": 0
+        },
+        "post": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 1.0706484317779541e-05,
+          "rmse": 2.422516445221845e-06,
+          "different": 506,
+          "out_of_tolerance": 0
+        },
+        "comb": {
+          "passed": true,
+          "finite": true,
+          "shape": [
+            168,
+            4,
+            4
+          ],
+          "dtype": "torch.float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "max_abs": 8.64267349243164e-06,
+          "rmse": 1.296286313845485e-06,
+          "different": 2672,
+          "out_of_tolerance": 0
+        }
+      },
+      "output_guards": true,
+      "status": "PASS"
+    }
+  ],
+  "kernel_file": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/results/hc_pre_opt_20261009/kernels/row_rms_v3.py",
+  "native_opp": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hc-pre-recipes-20261009/ops/ascendc/build/_CPack_Packages/Linux/External/CANN-custom_ops-none-linux.aarch64.run/packages/vendors/customize",
+  "pypto_core": "/data/pyptouser/qinchuanyu/pto-eager/pypto/build/python/bindings/pypto_core.cpython-310-aarch64-linux-gnu.so",
+  "native_reference": {
+    "recipe_root": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hc-pre-recipes-20261009",
+    "revision": "4c3d1e1258053c4d810322198a7fd1722c89897e",
+    "source": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hc-pre-recipes-20261009/ops/ascendc/torch_ops_extension/custom_ops/csrc/npu_hc_pre.cpp",
+    "library": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hc-pre-recipes-20261009/torch-hc-pre-build/hc_pre_recipes_reference.so",
+    "operator": "custom::npu_hc_pre",
+    "scope": "上游融合 HcPre；pre_mix=None、pre_out=None，仅三份输出"
+  },
+  "weights": [
+    {
+      "name": "layers.2.hc_attn_fn",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        24,
+        16384
+      ],
+      "dtype": "torch.float32"
+    },
+    {
+      "name": "layers.2.hc_attn_scale",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        3
+      ],
+      "dtype": "torch.float32"
+    },
+    {
+      "name": "layers.2.hc_attn_base",
+      "shard": "quant_model_weights-00030-of-00075.safetensors",
+      "shape": [
+        24
+      ],
+      "dtype": "torch.float32"
+    }
+  ],
+  "device_execution": true,
+  "physical_device": "0",
+  "pypto_path": "/data/pyptouser/qinchuanyu/pto-eager/pypto/python/pypto/__init__.py",
+  "torch_version": "2.10.0+cpu",
+  "torch_npu_version": "2.10.0.post2",
+  "native_loaded_api": "/data/pyptouser/qinchuanyu/pto-eager/.cache/hc-pre-recipes-20261009/ops/ascendc/build/_CPack_Packages/Linux/External/CANN-custom_ops-none-linux.aarch64.run/packages/vendors/customize/op_api/lib/libcust_opapi.so"
+}
