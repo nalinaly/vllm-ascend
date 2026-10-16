@@ -1,0 +1,21 @@
+{
+  "base_commit": "eee187d0c284a482459136d28b13e952bade0108",
+  "base_pr": "https://github.com/mihudaner/vllm-ascend/pull/2",
+  "pto_isa_commit": "327cd5869f3a7c4d2c6a1b945b2aed06e7665c5d",
+  "case": "T96; Ascend910_9362 20 AIC / 40 AIV; logical device 0; private sequential runs",
+  "environment": {
+    "cann": "9.2.0",
+    "python": "3.11.4",
+    "torch": "2.12.0+cpu",
+    "torch_npu": "2.12.0+git5462a1b"
+  },
+  "build": "Private OPP built with 40 CPU jobs; all six HC_pre variants plus Add/Mul compiled; binding source and ABI unchanged",
+  "functional": "Two seeds; all three outputs match CPU reference within the existing tolerance; input and guard preservation pass; all three modes bitwise equal",
+  "measurement": "Each mode has 30 samples x 8 calls; profiler phase has exactly 240 complete SK tasks; Event and profiler are separate phases",
+  "native_early_start": "All three child capabilities set to 1; sk_entry_mix12_early_start; runtime sync rewriting and nonzero per-task funcConfig verified",
+  "final_audit": "Final strengthened audit was applied offline to all three raw runtime logs, including rejection of opposite-mode metadata",
+  "result": "Device mean +0.4310731144059776% with Early-Start enabled vs disabled in the same new package; no net speedup demonstrated; optional support remains off by default",
+  "limits": "Only T96 validated on device. Pipeline-level overlap was not measured. Generated tails and TPipe cleanup still drain outstanding work. No changes to shared CANN, PTO, TorchNPU or common runtime.",
+  "artifacts": "CSV copies normalize CRLF to LF; raw profiles, outputs, failed pre-timing audits and builds remain in the private artifacts directory",
+  "lint": "All applicable manual pre-commit hooks passed on the complete change, including formatting, spell checks, shellcheck and staged secret scan; git diff --check passed."
+}

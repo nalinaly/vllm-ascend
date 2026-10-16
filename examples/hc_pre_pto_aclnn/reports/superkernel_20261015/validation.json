@@ -1,0 +1,19 @@
+{
+  "base_commit": "3142f27651ae258cc733301236facbefb610065c",
+  "pto_isa_commit": "327cd5869f3a7c4d2c6a1b945b2aed06e7665c5d",
+  "case": "T96 only; Ascend910_9362 20 AIC / 40 AIV",
+  "cann": "9.2.0",
+  "python": "3.11.4",
+  "torch": "2.12.0+cpu",
+  "torch_npu": "2.12.0+git5462a1b",
+  "build": "Final formatted OPP source (all six HC_pre variants and Add/Mul) and Torch binding rebuilt successfully",
+  "test": "Two seeds, three outputs, input preservation and both input guards pass in graph and fused modes",
+  "fusion": "One SK containing HcPreAdd, HcPrePto and HcPreMul; updated graph has one sk_entry_mix12 task",
+  "fusion_audit_regression": "Offline positive evidence accepted, known fallback evidence rejected",
+  "performance": "30 samples x 8 calls, plus separate profiler phase with 240 complete chains per mode; within +/-30% for all three reported metrics",
+  "output_comparison": "Both seeds, all outputs bitwise identical between graph and SK",
+  "lint": "All applicable manual pre-commit hooks passed using private AArch64 gitleaks 8.24.3 and shellcheck 0.10.0; raw CANN Schem field and TBE terminology whitelisted",
+  "early_start": "Not implemented or enabled in this acceptance",
+  "shared_installations": "No source changes to system CANN, torch_npu, or external PTO checkout; final runs use private OPP roots and static packages cleaned up",
+  "artifact_note": "Committed CSV copies normalize CRLF to LF; numeric fields and profiler records are unchanged. Full raw outputs retained in the private artifacts directory."
+}

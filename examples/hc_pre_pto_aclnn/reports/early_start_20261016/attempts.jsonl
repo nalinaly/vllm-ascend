@@ -1,0 +1,9 @@
+{"attempt": "wrapper_wait_set", "decision": "保留为默认关闭的可选功能示例", "change": "三个算子每核一次 Wait/Set；HC_pre 六个 tiling key 共用包装边界；TPipe 构造放在 Wait 之后，生成核和收尾不变", "reason": "用户要求试用原生 Early-Start；先确认接通，不改计算或公共运行时"}
+{"attempt": "build_early_start", "decision": "通过", "result": "40 并行，独立 build_early_start；六档 HC_pre 与 Add/Mul 编译打包成功；沿用未变的 Torch binding ABI"}
+{"attempt": "early-no-hooks-20261016", "decision": "排除性能样本", "result": "两个种子输出与保护区通过；GenEntryInfo 审计误纳入没有配置字段的日志，计时前退出", "fix": "仅选择带 enableEarlyStart 字段的入口配置记录；旧日志正反例验证通过"}
+{"attempt": "early-no-hooks-v2-20261016", "decision": "保留原代码对照", "result": "eee187d0c 的原包；early_start=0；30×8 采样及独立 240 个 SK profiler 任务完整；设备 mean 44.65680833333333 μs"}
+{"attempt": "early-hooks-off-20261016", "decision": "保留同包关闭对照", "result": "新包，early_start=0；全部功能和融合审计通过；设备 mean 43.04954166666667 μs"}
+{"attempt": "early-hooks-on-20261016", "decision": "排除性能样本，保留诊断记录", "result": "两个种子输出与保护区通过；审计只接受 sk_entry_mix12，遇到实际 sk_entry_mix12_early_start 在计时前退出", "fix": "按开关严格选择入口名；开启和关闭的元数据反向误配均被拒绝"}
+{"attempt": "early-hooks-on-v2-20261016", "decision": "保留开启对照", "result": "新包，early_start=1；功能、真实三节点融合及原生入口通过；设备 mean 43.23511666666667 μs；相对关闭 +0.4310731144059776%"}
+{"attempt": "offline_runtime_audit", "decision": "通过", "result": "最终审计离线复核三组原始日志；开启时三个 funcConfig 为 0x10、0x71、0xa0；关闭时无 Early-Start 最终状态；三组反向开关检查均拒绝"}
+{"attempt": "comparison_and_retention", "decision": "功能保留，性能收益不成立，默认关闭", "result": "三组两种子的 mixed/post/comb 逐元素一致；原算法、计算量、依赖和计时范围保持不变", "reason": "HC_pre 的 Set 在 PIPE_ALL 尾部之后，Add/Mul 的 TPipe 仍等待队列事件；未测量流水级实际重叠，也未据单轮微小差异宣称稳定性能回退；没有继续叠加候选"}
