@@ -1,0 +1,144 @@
+{
+  "mode": "graph",
+  "tokens": 96,
+  "neighbours": "ascendc",
+  "chain": "Add(x, addend) -> torch.ops.hcpre_pto.hc_pre -> Mul(mixed, multiplier)",
+  "torch": "2.12.0+cpu",
+  "torch_npu": "2.12.0+git5462a1b",
+  "device": "_NPUDeviceProperties(name='Ascend910_9362', total_memory=62740MB, cube_core_num=20, vector_core_num=40, uuid=00cc0800-d001-0000-0000-48706ff27a08, L2_cache_size=168MB)",
+  "options": {
+    "static_kernel_compile": true,
+    "super_kernel_optimize": false,
+    "clone_input": false
+  },
+  "binding": "/mnt/workspace/inductor/pto_early_start/hc-pre-superkernel-20261015/vllm-ascend/examples/hc_pre_pto_aclnn/build/torch/hcpre_pto_torch.so",
+  "validation": [
+    {
+      "replay": 0,
+      "seed": 20261015,
+      "outputs": {
+        "mixed": {
+          "shape": [
+            96,
+            4096
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 0.015625,
+          "atol": 0.01,
+          "rtol": 0.01
+        },
+        "post": {
+          "shape": [
+            96,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 5.662441253662109e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        },
+        "comb": {
+          "shape": [
+            96,
+            4,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 2.473592758178711e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        }
+      },
+      "inputs_preserved": true,
+      "guards_preserved": true,
+      "compile_or_call_seconds": 14.212836948005133
+    },
+    {
+      "replay": 1,
+      "seed": 20261016,
+      "outputs": {
+        "mixed": {
+          "shape": [
+            96,
+            4096
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 0.0078125,
+          "atol": 0.01,
+          "rtol": 0.01
+        },
+        "post": {
+          "shape": [
+            96,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 3.2186508178710938e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        },
+        "comb": {
+          "shape": [
+            96,
+            4,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 2.7120113372802734e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        }
+      },
+      "inputs_preserved": true,
+      "guards_preserved": true,
+      "compile_or_call_seconds": 0.0008033750054892153
+    }
+  ],
+  "timing": {
+    "metric": "device event window per compiled-chain call, includes input handling and launch gaps",
+    "samples": 30,
+    "calls_per_sample": 8,
+    "min_us": 323.1174945831299,
+    "mean_us": 329.50441638628644,
+    "max_us": 334.5550000667572,
+    "samples_us": [
+      327.59249210357666,
+      328.57999205589294,
+      329.50249314308167,
+      328.962504863739,
+      323.1174945831299,
+      329.78248596191406,
+      334.5550000667572,
+      326.10249519348145,
+      332.9850137233734,
+      331.9399952888489,
+      328.05749773979187,
+      326.35998725891113,
+      331.2099874019623,
+      327.2925019264221,
+      332.2699964046478,
+      333.5125148296356,
+      330.73750138282776,
+      325.26999711990356,
+      334.03000235557556,
+      329.8875093460083,
+      324.9725103378296,
+      332.19000697135925,
+      332.85000920295715,
+      323.8525092601776,
+      329.91498708724976,
+      333.9250087738037,
+      330.57498931884766,
+      327.6275098323822,
+      330.44999837875366,
+      327.02749967575073
+    ]
+  },
+  "numerical_passed": true
+}

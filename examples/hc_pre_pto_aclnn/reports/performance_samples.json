@@ -1,0 +1,6799 @@
+{
+  "description": "Portable measured samples and accuracy checks; raw profiler files are runtime artifacts and are not committed.",
+  "source_commit": "f04320413804103fe31bedd5a2175b5021bcd91d",
+  "rounds": {
+    "previous_aclnn": {
+      "physical_device": "8",
+      "weights": [
+        {
+          "name": "layers.2.hc_attn_fn",
+          "shape": [
+            24,
+            16384
+          ],
+          "sha256": "0285ec2c6643a0fd32d281910000a864a854913fced77eb601188ea5566cb9b8"
+        },
+        {
+          "name": "layers.2.hc_attn_scale",
+          "shape": [
+            3
+          ],
+          "sha256": "79a7a8bb5c34ec2c507dc5c9c3b2811cad121bc6f6e306956ad91ddd32a70414"
+        },
+        {
+          "name": "layers.2.hc_attn_base",
+          "shape": [
+            24
+          ],
+          "sha256": "e6597fb821e362aa319d27a1908d2d4386e5fe51e1954170c51fd57a3bcd4483"
+        }
+      ],
+      "seed": "20261009 + B*100 + S",
+      "torch": "2.10.0+cpu",
+      "torch_npu": "2.10.0.post2",
+      "cases": [
+        {
+          "B": 2,
+          "S": 5,
+          "T": 10,
+          "name": "B02_S5_T010",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 6.541609764099121e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.337860107421875e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 6.541609764099121e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 3.3974647521972656e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0009765625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.086162567138672e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.766749382019043e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.794929504394531e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0001220703125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.725290298461914e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.7881393432617188e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 66.57000258564949,
+              "samples_us": [
+                213.4000062942505,
+                69.33999806642532,
+                69.77999955415726,
+                86.96000277996063,
+                68.060003221035,
+                67.56000220775604,
+                67.56000220775604,
+                65.58000296354294,
+                67.62000173330307,
+                67.74000078439713,
+                95.91999650001526,
+                53.16000059247017,
+                54.420001804828644,
+                54.5400008559227,
+                53.80000174045563,
+                46.00000008940697,
+                54.5400008559227,
+                53.41999977827072,
+                45.079998672008514,
+                54.35999855399132
+              ]
+            },
+            "pto": {
+              "median_us": 58.93999896943569,
+              "samples_us": [
+                69.2799985408783,
+                83.54000002145767,
+                63.47999721765518,
+                83.89999717473984,
+                67.03999638557434,
+                68.65999847650528,
+                68.42000037431717,
+                66.84000045061111,
+                67.19999760389328,
+                70.26000320911407,
+                46.81999981403351,
+                45.979999005794525,
+                45.29999941587448,
+                46.02000117301941,
+                46.03999853134155,
+                45.06000131368637,
+                54.4000007212162,
+                45.94000056385994,
+                45.04000023007393,
+                45.54000124335289
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                36.061,
+                35.861,
+                35.621
+              ],
+              "median_us": 35.861
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                29.161,
+                29.101,
+                28.86
+              ],
+              "median_us": 29.101
+            }
+          }
+        },
+        {
+          "B": 2,
+          "S": 6,
+          "T": 12,
+          "name": "B02_S6_T012",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.930662155151367e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.410743713378906e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.930662155151367e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.351139068603516e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.001953125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.5331974029541016e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.268522262573242e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.933906555175781e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0009765625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.4901161193847656e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.980232238769531e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 46.73000052571297,
+              "samples_us": [
+                150.14000236988068,
+                51.44000053405762,
+                52.06000059843063,
+                53.040001541376114,
+                51.72000080347061,
+                52.799999713897705,
+                52.01999843120575,
+                52.9399998486042,
+                46.84000089764595,
+                46.36000096797943,
+                46.220000833272934,
+                46.62000015377998,
+                45.32000049948692,
+                45.43999955058098,
+                46.28000035881996,
+                45.75999826192856,
+                46.36000096797943,
+                46.17999866604805,
+                46.959999948740005,
+                45.48000171780586
+              ]
+            },
+            "pto": {
+              "median_us": 39.59000110626221,
+              "samples_us": [
+                46.08000069856644,
+                45.1200008392334,
+                43.82000118494034,
+                43.800000101327896,
+                44.39999908208847,
+                44.24000158905983,
+                57.64000117778778,
+                44.520001858472824,
+                40.460001677274704,
+                37.11999952793121,
+                37.48000040650368,
+                38.72000053524971,
+                38.600001484155655,
+                38.40000182390213,
+                43.03999990224838,
+                38.040000945329666,
+                38.13999891281128,
+                38.30000013113022,
+                37.73999959230423,
+                38.15999999642372
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                37.161,
+                36.721,
+                36.721
+              ],
+              "median_us": 36.721
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                30.021,
+                29.9,
+                29.641
+              ],
+              "median_us": 29.9
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 5,
+          "T": 20,
+          "name": "B04_S5_T020",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.424984455108643e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0669231414794922e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.424984455108643e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.043081283569336e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.2782554626464844e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.980232238769531e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.033348083496094e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0799616575241089e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.5762786865234375e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.123415470123291e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 53.32999862730503,
+              "samples_us": [
+                129.70000505447388,
+                47.68000170588493,
+                54.94000017642975,
+                54.179999977350235,
+                54.55999821424484,
+                55.44000118970871,
+                47.1000000834465,
+                53.53999882936478,
+                53.119998425245285,
+                52.76000127196312,
+                52.99999937415123,
+                52.26000025868416,
+                55.22000044584274,
+                53.7399984896183,
+                54.80000004172325,
+                48.500001430511475,
+                54.37999963760376,
+                48.700001090765,
+                46.73999920487404,
+                46.76000028848648
+              ]
+            },
+            "pto": {
+              "median_us": 44.609999284148216,
+              "samples_us": [
+                53.279999643564224,
+                54.62000146508217,
+                45.239999890327454,
+                44.03999820351601,
+                45.9199994802475,
+                44.61999982595444,
+                46.02000117301941,
+                43.34000125527382,
+                45.159999281167984,
+                43.960001319646835,
+                44.599998742341995,
+                51.38000100851059,
+                45.579999685287476,
+                44.520001858472824,
+                46.10000178217888,
+                44.4599986076355,
+                38.05999830365181,
+                37.57999837398529,
+                39.400000125169754,
+                38.30000013113022
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                37.541,
+                37.101,
+                37.741
+              ],
+              "median_us": 37.541
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                30.12,
+                30.301,
+                30.181
+              ],
+              "median_us": 30.181
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 6,
+          "T": 24,
+          "name": "B04_S6_T024",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.82310962677002e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.880130290985107e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.912516593933105e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.842877388000488e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.6689300537109375e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 8.165836334228516e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.001953125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 55.35000003874302,
+              "samples_us": [
+                55.8600015938282,
+                55.720001459121704,
+                47.8999987244606,
+                59.92000177502632,
+                56.09999969601631,
+                55.22000044584274,
+                56.74000084400177,
+                56.15999922156334,
+                48.31999912858009,
+                48.0399988591671,
+                55.78000098466873,
+                54.579999297857285,
+                47.15999960899353,
+                54.60000038146973,
+                56.060001254081726,
+                55.479999631643295,
+                54.80000004172325,
+                59.42000076174736,
+                53.39999869465828,
+                54.12000045180321
+              ]
+            },
+            "pto": {
+              "median_us": 43.82999986410141,
+              "samples_us": [
+                47.47999832034111,
+                46.84000089764595,
+                47.540001571178436,
+                44.42000016570091,
+                47.46000096201897,
+                42.02000051736832,
+                43.379999697208405,
+                43.94000023603439,
+                40.300000458955765,
+                40.83999991416931,
+                45.32000049948692,
+                47.32000082731247,
+                43.63999888300896,
+                38.13999891281128,
+                40.86000099778175,
+                45.079998672008514,
+                39.799999445676804,
+                41.29999876022339,
+                44.81999948620796,
+                43.71999949216843
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                38.981,
+                39.321,
+                38.38
+              ],
+              "median_us": 38.981
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                29.261,
+                28.841,
+                28.94
+              ],
+              "median_us": 28.94
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 5,
+          "T": 40,
+          "name": "B08_S5_T040",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1682510375976562e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 5.0067901611328125e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1593103408813477e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.0067901611328125e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.001953125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.5331974029541016e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.03010368347168e-06
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 1.9848346710205078e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.427267074584961e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.7881393432617188e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 63.40000033378601,
+              "samples_us": [
+                63.66000324487686,
+                63.23999911546707,
+                64.0999972820282,
+                64.15999680757523,
+                62.780000269412994,
+                63.2999986410141,
+                62.6399964094162,
+                63.759997487068176,
+                63.519999384880066,
+                64.18000161647797,
+                62.66000121831894,
+                63.019998371601105,
+                64.92000073194504,
+                62.66000121831894,
+                63.50000202655792,
+                62.6399964094162,
+                62.33999878168106,
+                63.90000134706497,
+                63.519999384880066,
+                62.199998646974564
+              ]
+            },
+            "pto": {
+              "median_us": 45.739999040961266,
+              "samples_us": [
+                46.36000096797943,
+                45.1200008392334,
+                45.43999955058098,
+                45.75999826192856,
+                46.379998326301575,
+                45.239999890327454,
+                46.859998255968094,
+                45.260000973939896,
+                46.62000015377998,
+                45.13999819755554,
+                46.65999859571457,
+                46.00000008940697,
+                46.28000035881996,
+                45.71999981999397,
+                45.71999981999397,
+                45.21999880671501,
+                46.11999914050102,
+                45.579999685287476,
+                45.96000164747238,
+                45.43999955058098
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                47.101,
+                46.581,
+                47.121
+              ],
+              "median_us": 47.101
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                29.34,
+                29.121,
+                29.26
+              ],
+              "median_us": 29.26
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 6,
+          "T": 48,
+          "name": "B08_S6_T048",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.03010368347168e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.808208465576172e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.059906005859375e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 7.867813110351562e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.00390625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.682209014892578e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.640617847442627e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.2159347534179688e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 4.172325134277344e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 66.56000018119812,
+              "samples_us": [
+                59.780001640319824,
+                59.56000089645386,
+                58.69999900460243,
+                59.87999960780144,
+                59.25999954342842,
+                58.54000151157379,
+                66.84000045061111,
+                70.56000083684921,
+                63.97999823093414,
+                69.11999732255936,
+                66.57999753952026,
+                58.13999846577644,
+                68.25999915599823,
+                66.54000282287598,
+                67.90000200271606,
+                69.15999948978424,
+                65.76000154018402,
+                67.41999834775925,
+                66.95999950170517,
+                67.96000152826309
+              ]
+            },
+            "pto": {
+              "median_us": 45.78999988734722,
+              "samples_us": [
+                38.759998977184296,
+                38.49999979138374,
+                40.55999964475632,
+                36.89999878406525,
+                41.82000085711479,
+                39.400000125169754,
+                46.90000042319298,
+                45.820001512765884,
+                48.00000041723251,
+                45.32000049948692,
+                46.31999880075455,
+                44.61999982595444,
+                47.540001571178436,
+                46.160001307725906,
+                47.29999974370003,
+                46.42000049352646,
+                47.919999808073044,
+                45.180000364780426,
+                48.79999905824661,
+                45.75999826192856
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                50.461,
+                49.101,
+                52.401
+              ],
+              "median_us": 50.461
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                28.661,
+                29.14,
+                29.201
+              ],
+              "median_us": 29.14
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 5,
+          "T": 80,
+          "name": "B16_S5_T080",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.7181038856506348e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.212162017822266e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.6987323760986328e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 7.092952728271484e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0609626770019531e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.556510925292969e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.513429641723633e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.4959444999694824e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 73.18999990820885,
+              "samples_us": [
+                75.31999796628952,
+                74.47999715805054,
+                73.21999967098236,
+                75.13999938964844,
+                73.01999628543854,
+                73.2399970293045,
+                73.39999824762344,
+                75.3600001335144,
+                72.21999764442444,
+                73.91999661922455,
+                72.70000129938126,
+                75.30000060796738,
+                71.58000022172928,
+                72.95999675989151,
+                72.0599964261055,
+                73.16000014543533,
+                72.74000346660614,
+                72.76000082492828,
+                73.49999994039536,
+                72.89999723434448
+              ]
+            },
+            "pto": {
+              "median_us": 49.300000071525574,
+              "samples_us": [
+                49.3599995970726,
+                49.320001155138016,
+                49.4999997317791,
+                48.43999817967415,
+                49.27999898791313,
+                72.08000123500824,
+                50.50000175833702,
+                48.85999858379364,
+                49.400001764297485,
+                48.45999926328659,
+                49.07999932765961,
+                49.15999993681908,
+                50.119999796152115,
+                64.30000066757202,
+                48.59999939799309,
+                47.68000170588493,
+                48.259999603033066,
+                49.3599995970726,
+                56.34000152349472,
+                48.8400012254715
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                55.821,
+                54.982,
+                55.901
+              ],
+              "median_us": 55.821
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                31.76,
+                32.301,
+                31.301
+              ],
+              "median_us": 31.76
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 6,
+          "T": 96,
+          "name": "B16_S6_T096",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.5720725059509277e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.3716518878936768e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.5541911125183105e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.3470649719238281e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.2782554626464844e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.76837158203125e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2814998626708984e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 8.64267349243164e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.5762786865234375e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 81.39999955892563,
+              "samples_us": [
+                81.69999718666077,
+                86.22000366449356,
+                85.91999858617783,
+                80.48000186681747,
+                87.64000236988068,
+                84.85999703407288,
+                85.47999709844589,
+                94.89999711513519,
+                82.12000131607056,
+                81.39999955892563,
+                77.27999985218048,
+                77.4800032377243,
+                75.53999871015549,
+                81.39999955892563,
+                77.66000181436539,
+                81.16000145673752,
+                160.5599969625473,
+                68.46000254154205,
+                76.0200023651123,
+                78.81999760866165
+              ]
+            },
+            "pto": {
+              "median_us": 60.499999672174454,
+              "samples_us": [
+                63.47999721765518,
+                65.52000343799591,
+                68.55999678373337,
+                66.57999753952026,
+                62.25999817252159,
+                64.81999903917313,
+                64.240001142025,
+                211.60000562667847,
+                59.96000021696091,
+                54.48000133037567,
+                57.05999955534935,
+                57.72000178694725,
+                56.23999983072281,
+                55.52000179886818,
+                53.16000059247017,
+                82.87999778985977,
+                61.039999127388,
+                44.119998812675476,
+                50.620000809431076,
+                51.46000161767006
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                61.341,
+                61.081,
+                60.141
+              ],
+              "median_us": 61.081
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                35.641,
+                35.861,
+                35.701
+              ],
+              "median_us": 35.701
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 5,
+          "T": 100,
+          "name": "B20_S5_T100",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2770295143127441e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.043081283569336e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.3053417205810547e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.0311603546142578e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0713934898376465e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.679445505142212e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.599592208862305e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 83.28999951481819,
+              "samples_us": [
+                74.34000074863434,
+                88.33999931812286,
+                101.65999829769135,
+                77.50000059604645,
+                85.60000360012054,
+                83.49999785423279,
+                83.37999880313873,
+                83.33999663591385,
+                83.14000070095062,
+                84.95999872684479,
+                83.89999717473984,
+                83.24000239372253,
+                82.63999968767166,
+                83.5999995470047,
+                82.22000300884247,
+                83.20000022649765,
+                83.42000097036362,
+                82.4199989438057,
+                82.2800025343895,
+                83.0800011754036
+              ]
+            },
+            "pto": {
+              "median_us": 61.95000000298023,
+              "samples_us": [
+                58.639999479055405,
+                142.58000254631042,
+                57.81999975442886,
+                55.640000849962234,
+                62.460001558065414,
+                61.480000615119934,
+                62.60000169277191,
+                61.51999905705452,
+                65.88000059127808,
+                81.60000294446945,
+                62.39999830722809,
+                68.1999996304512,
+                57.47999995946884,
+                61.879999935626984,
+                61.8400014936924,
+                61.25999987125397,
+                61.400000005960464,
+                78.12000066041946,
+                62.16000020503998,
+                62.02000007033348
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                59.961,
+                60.062,
+                59.561
+              ],
+              "median_us": 59.961
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                40.66,
+                39.98,
+                39.761
+              ],
+              "median_us": 39.98
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 6,
+          "T": 120,
+          "name": "B20_S6_T120",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.998679161071777e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.2040138244628906e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.864568710327148e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1824071407318115e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.897615432739258e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.960464477539062e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0862946510314941e-05
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 3.153085708618164e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 4.76837158203125e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.76837158203125e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 74.51999932527542,
+              "samples_us": [
+                76.92000269889832,
+                72.7199986577034,
+                73.17999750375748,
+                73.61999899148941,
+                74.57999885082245,
+                73.78000020980835,
+                73.45999777317047,
+                73.73999804258347,
+                72.0599964261055,
+                80.49999922513962,
+                74.40000027418137,
+                83.42000097036362,
+                82.46000111103058,
+                80.6799978017807,
+                74.23999905586243,
+                80.08000254631042,
+                80.21999895572662,
+                81.45999908447266,
+                74.4599997997284,
+                85.35999804735184
+              ]
+            },
+            "pto": {
+              "median_us": 48.70999976992607,
+              "samples_us": [
+                48.239998519420624,
+                47.63999953866005,
+                48.14000055193901,
+                48.28000068664551,
+                48.259999603033066,
+                47.860000282526016,
+                49.04000088572502,
+                47.74000123143196,
+                48.43999817967415,
+                47.47999832034111,
+                55.22000044584274,
+                57.85999819636345,
+                48.71999844908714,
+                57.339999824762344,
+                48.700001090765,
+                55.959999561309814,
+                48.96000027656555,
+                56.01999908685684,
+                55.44000118970871,
+                55.1999993622303
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                63.942,
+                65.321,
+                65.321
+              ],
+              "median_us": 65.321
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                39.761,
+                40.261,
+                41.721
+              ],
+              "median_us": 40.261
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 5,
+          "T": 120,
+          "name": "B24_S5_T120",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.17570161819458e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.055002212524414e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1548399925231934e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.049041748046875e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 3.5762786865234375e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.7136335372924805e-05
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 1.436471939086914e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.60770320892334e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.172325134277344e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 73.92999902367592,
+              "samples_us": [
+                72.82000035047531,
+                73.3800008893013,
+                84.16000008583069,
+                74.1799995303154,
+                73.85999709367752,
+                73.55999946594238,
+                74.0400031208992,
+                73.49999994039536,
+                73.82000237703323,
+                81.67999982833862,
+                73.26000183820724,
+                84.21999961137772,
+                74.16000217199326,
+                73.63999634981155,
+                74.00000095367432,
+                75.15999674797058,
+                73.48000258207321,
+                74.22000169754028,
+                75.1200020313263,
+                73.17999750375748
+              ]
+            },
+            "pto": {
+              "median_us": 48.55000041425228,
+              "samples_us": [
+                208.37999880313873,
+                126.71999633312225,
+                48.259999603033066,
+                56.41999840736389,
+                48.259999603033066,
+                55.65999820828438,
+                48.05999994277954,
+                56.279998272657394,
+                58.18000063300133,
+                57.14000016450882,
+                47.940000891685486,
+                48.920001834630966,
+                48.5600009560585,
+                47.77999967336655,
+                47.88000136613846,
+                47.69999906420708,
+                47.77999967336655,
+                48.53999987244606,
+                57.28000029921532,
+                48.16000163555145
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                64.581,
+                63.881,
+                64.421
+              ],
+              "median_us": 64.421
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                39.801,
+                39.581,
+                39.22
+              ],
+              "median_us": 39.581
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 6,
+          "T": 144,
+          "name": "B24_S6_T144",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1712312698364258e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0967254638671875e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1667609214782715e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1026859283447266e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.662441253662109e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.76837158203125e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1846423149108887e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.1801719665527344e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.513429641723633e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.980232238769531e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 77.60000228881836,
+              "samples_us": [
+                76.77999883890152,
+                76.76000148057938,
+                77.72000133991241,
+                76.9599974155426,
+                76.70000195503235,
+                77.4800032377243,
+                91.30000323057175,
+                84.88000184297562,
+                82.8000009059906,
+                85.04000306129456,
+                83.95999670028687,
+                83.76000076532364,
+                83.52000266313553,
+                83.15999805927277,
+                83.64000171422958,
+                76.83999836444855,
+                76.60000026226044,
+                76.89999788999557,
+                75.9200006723404,
+                76.26000046730042
+              ]
+            },
+            "pto": {
+              "median_us": 53.679998964071274,
+              "samples_us": [
+                47.58000001311302,
+                48.48000034689903,
+                48.08000102639198,
+                47.40000143647194,
+                57.78000131249428,
+                57.19999969005585,
+                46.42000049352646,
+                53.89999970793724,
+                53.45999822020531,
+                54.69999834895134,
+                54.91999909281731,
+                54.32000011205673,
+                55.17999827861786,
+                55.02000078558922,
+                54.20000106096268,
+                55.10000139474869,
+                47.759998589754105,
+                47.26000130176544,
+                47.80000075697899,
+                47.540001571178436
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                67.841,
+                66.622,
+                67.721
+              ],
+              "median_us": 67.721
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                39.241,
+                39.601,
+                39.241
+              ],
+              "median_us": 39.241
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 5,
+          "T": 140,
+          "name": "B28_S5_T140",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.0250678062438965e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.5735626220703125e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.0205974578857422e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.627206802368164e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.427267074584961e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2874603271484375e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.37607479095459e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.0547380447387695e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.3155083656311035e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 96.48000076413155,
+              "samples_us": [
+                109.18000340461731,
+                96.00000083446503,
+                100.62000155448914,
+                96.44000232219696,
+                97.2599983215332,
+                95.91999650001526,
+                96.220001578331,
+                97.43999689817429,
+                96.51999920606613,
+                95.38000077009201,
+                96.7399999499321,
+                96.0799977183342,
+                96.13999724388123,
+                97.93999791145325,
+                96.40000015497208,
+                95.44000029563904,
+                97.06000238656998,
+                96.81999683380127,
+                96.3200032711029,
+                97.5399985909462
+              ]
+            },
+            "pto": {
+              "median_us": 70.47999650239944,
+              "samples_us": [
+                69.76000219583511,
+                97.40000218153,
+                87.77999877929688,
+                66.01999700069427,
+                89.80000019073486,
+                74.78000223636627,
+                66.51999801397324,
+                69.49999928474426,
+                71.96000218391418,
+                67.90000200271606,
+                68.52000206708908,
+                70.47999650239944,
+                71.52000069618225,
+                71.18000090122223,
+                70.47999650239944,
+                70.57999819517136,
+                68.03999841213226,
+                75.03999769687653,
+                69.89999860525131,
+                69.95999813079834
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                67.701,
+                68.621,
+                68.022
+              ],
+              "median_us": 68.022
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                38.681,
+                39.421,
+                39.221
+              ],
+              "median_us": 39.221
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 6,
+          "T": 168,
+          "name": "B28_S6_T168",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.11311674118042e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.119077205657959e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.119077205657959e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.2218952178955078e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.450580596923828e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1324882507324219e-06
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0147690773010254e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 9.953975677490234e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.066394805908203e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 84.18000116944313,
+              "samples_us": [
+                84.55999940633774,
+                84.20000225305557,
+                84.60000157356262,
+                83.86000245809555,
+                82.81999826431274,
+                91.48000180721283,
+                84.61999893188477,
+                82.69999921321869,
+                82.58000016212463,
+                83.52000266313553,
+                83.05999636650085,
+                93.47999840974808,
+                84.55999940633774,
+                84.16000008583069,
+                82.24000036716461,
+                84.21999961137772,
+                83.1800028681755,
+                85.50000190734863,
+                84.60000157356262,
+                82.87999778985977
+              ]
+            },
+            "pto": {
+              "median_us": 47.5000012665987,
+              "samples_us": [
+                108.15999656915665,
+                50.87999999523163,
+                49.4999997317791,
+                54.62000146508217,
+                45.779999345541,
+                54.96000126004219,
+                47.06000164151192,
+                48.62000048160553,
+                46.539999544620514,
+                45.94000056385994,
+                45.85999995470047,
+                48.87999966740608,
+                46.560000628232956,
+                46.51999846100807,
+                46.03999853134155,
+                47.540001571178436,
+                46.379998326301575,
+                47.46000096201897,
+                50.200000405311584,
+                50.119999796152115
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                74.522,
+                74.041,
+                74.361
+              ],
+              "median_us": 74.361
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                36.381,
+                36.78,
+                36.62
+              ],
+              "median_us": 36.62
+            }
+          }
+        }
+      ],
+      "original_report_sha256": "15319d07b9fc116d986971de7b07c7de9ce75db0053b0fc57fec8d2835cb2405"
+    },
+    "repeat_aclnn": {
+      "physical_device": "0",
+      "weights": [
+        {
+          "name": "layers.2.hc_attn_fn",
+          "shape": [
+            24,
+            16384
+          ],
+          "sha256": "0285ec2c6643a0fd32d281910000a864a854913fced77eb601188ea5566cb9b8"
+        },
+        {
+          "name": "layers.2.hc_attn_scale",
+          "shape": [
+            3
+          ],
+          "sha256": "79a7a8bb5c34ec2c507dc5c9c3b2811cad121bc6f6e306956ad91ddd32a70414"
+        },
+        {
+          "name": "layers.2.hc_attn_base",
+          "shape": [
+            24
+          ],
+          "sha256": "e6597fb821e362aa319d27a1908d2d4386e5fe51e1954170c51fd57a3bcd4483"
+        }
+      ],
+      "seed": "20261009 + B*100 + S",
+      "torch": "2.10.0+cpu",
+      "torch_npu": "2.10.0.post2",
+      "cases": [
+        {
+          "B": 2,
+          "S": 5,
+          "T": 10,
+          "name": "B02_S5_T010",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 6.541609764099121e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.337860107421875e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 6.541609764099121e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 3.3974647521972656e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0009765625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.086162567138672e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.766749382019043e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.794929504394531e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0001220703125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.725290298461914e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.7881393432617188e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 39.76999968290329,
+              "samples_us": [
+                38.97999972105026,
+                39.20000046491623,
+                40.55999964475632,
+                40.52000120282173,
+                39.659999310970306,
+                39.400000125169754,
+                40.44000059366226,
+                39.17999938130379,
+                40.780000388622284,
+                39.900001138448715,
+                39.59999978542328,
+                39.20000046491623,
+                39.88000005483627,
+                39.2800010740757,
+                39.17999938130379,
+                40.720000863075256,
+                40.16000032424927,
+                38.97999972105026,
+                40.780000388622284,
+                40.66000133752823
+              ]
+            },
+            "pto": {
+              "median_us": 38.07000070810318,
+              "samples_us": [
+                38.26000168919563,
+                38.15999999642372,
+                37.780001759529114,
+                38.13999891281128,
+                37.859998643398285,
+                38.040000945329666,
+                37.84000128507614,
+                38.38000074028969,
+                38.100000470876694,
+                38.13999891281128,
+                37.0200015604496,
+                38.94000127911568,
+                37.620000541210175,
+                37.73999959230423,
+                38.759998977184296,
+                37.39999979734421,
+                37.36000135540962,
+                38.66000100970268,
+                39.22000154852867,
+                37.98000141978264
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                30.92,
+                31.1,
+                30.34
+              ],
+              "median_us": 30.92
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                30.4,
+                29.5,
+                29.28
+              ],
+              "median_us": 29.5
+            }
+          }
+        },
+        {
+          "B": 2,
+          "S": 6,
+          "T": 12,
+          "name": "B02_S6_T012",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.930662155151367e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.410743713378906e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.930662155151367e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.351139068603516e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.001953125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.5331974029541016e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.268522262573242e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.933906555175781e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0009765625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.4901161193847656e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.980232238769531e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 39.86999951303005,
+              "samples_us": [
+                43.960001319646835,
+                57.90000036358833,
+                38.920000195503235,
+                39.17999938130379,
+                39.420001208782196,
+                40.18000140786171,
+                39.84000161290169,
+                39.96000066399574,
+                39.51999917626381,
+                39.639998227357864,
+                40.10000079870224,
+                40.16000032424927,
+                40.92000052332878,
+                39.88000005483627,
+                39.85999897122383,
+                39.17999938130379,
+                39.480000734329224,
+                40.19999876618385,
+                40.619999170303345,
+                39.659999310970306
+              ]
+            },
+            "pto": {
+              "median_us": 38.69999945163727,
+              "samples_us": [
+                39.239998906850815,
+                38.63999992609024,
+                39.56000134348869,
+                38.040000945329666,
+                39.77999836206436,
+                38.18000108003616,
+                38.040000945329666,
+                38.81999850273132,
+                39.25999999046326,
+                37.90000081062317,
+                39.400000125169754,
+                37.42000088095665,
+                40.50000011920929,
+                38.6199988424778,
+                38.05999830365181,
+                38.88000175356865,
+                38.759998977184296,
+                37.17999905347824,
+                38.63999992609024,
+                39.080001413822174
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                31.94,
+                31.38,
+                30.42
+              ],
+              "median_us": 31.38
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                29.0,
+                29.04,
+                29.18
+              ],
+              "median_us": 29.04
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 5,
+          "T": 20,
+          "name": "B04_S5_T020",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.424984455108643e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0669231414794922e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.424984455108643e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.043081283569336e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.2782554626464844e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.980232238769531e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.033348083496094e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0799616575241089e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.5762786865234375e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.123415470123291e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 48.03000018000603,
+              "samples_us": [
+                76.26000046730042,
+                45.35999894142151,
+                46.160001307725906,
+                46.31999880075455,
+                49.69999939203262,
+                49.69999939203262,
+                48.48000034689903,
+                49.81999844312668,
+                42.61999949812889,
+                43.76000165939331,
+                47.58000001311302,
+                44.47999969124794,
+                45.559998601675034,
+                51.4799989759922,
+                49.219999462366104,
+                50.34000054001808,
+                49.67999830842018,
+                46.98000103235245,
+                49.959998577833176,
+                44.22000050544739
+              ]
+            },
+            "pto": {
+              "median_us": 48.20999875664711,
+              "samples_us": [
+                52.91999876499176,
+                51.80000141263008,
+                48.76000061631203,
+                44.22000050544739,
+                42.61999949812889,
+                48.179998993873596,
+                54.80000004172325,
+                48.579998314380646,
+                47.919999808073044,
+                44.9800007045269,
+                48.239998519420624,
+                51.24000087380409,
+                45.00000178813934,
+                44.4599986076355,
+                47.47999832034111,
+                52.45999991893768,
+                43.5199998319149,
+                48.28000068664551,
+                46.98000103235245,
+                53.199999034404755
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                33.46,
+                33.32,
+                32.44
+              ],
+              "median_us": 33.32
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                31.84,
+                30.72,
+                30.8
+              ],
+              "median_us": 30.8
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 6,
+          "T": 24,
+          "name": "B04_S6_T024",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.82310962677002e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.880130290985107e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.912516593933105e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.842877388000488e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.6689300537109375e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 8.165836334228516e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.001953125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 42.889999225735664,
+              "samples_us": [
+                141.42000675201416,
+                62.380000948905945,
+                42.75999963283539,
+                43.09999942779541,
+                41.82000085711479,
+                43.18000003695488,
+                43.82000118494034,
+                42.419999837875366,
+                42.100001126527786,
+                42.59999841451645,
+                43.07999834418297,
+                42.53999888896942,
+                42.70000010728836,
+                42.660001665353775,
+                42.25999861955643,
+                41.88000038266182,
+                43.01999881863594,
+                52.20000073313713,
+                43.28000172972679,
+                43.01999881863594
+              ]
+            },
+            "pto": {
+              "median_us": 40.310001000761986,
+              "samples_us": [
+                61.1799992620945,
+                48.239998519420624,
+                40.800001472234726,
+                39.85999897122383,
+                39.99999910593033,
+                39.400000125169754,
+                41.49999842047691,
+                40.300000458955765,
+                41.56000167131424,
+                40.32000154256821,
+                40.35999998450279,
+                47.72000014781952,
+                40.35999998450279,
+                40.219999849796295,
+                39.420001208782196,
+                39.080001413822174,
+                40.92000052332878,
+                39.85999897122383,
+                40.139999240636826,
+                40.11999815702438
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                32.94,
+                32.74,
+                34.0
+              ],
+              "median_us": 32.94
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                32.28,
+                31.64,
+                32.14
+              ],
+              "median_us": 32.14
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 5,
+          "T": 40,
+          "name": "B08_S5_T040",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1682510375976562e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 5.0067901611328125e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1593103408813477e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.0067901611328125e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.001953125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.5331974029541016e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.03010368347168e-06
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 1.9848346710205078e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.427267074584961e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.7881393432617188e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 47.439999878406525,
+              "samples_us": [
+                47.15999960899353,
+                47.520000487565994,
+                48.45999926328659,
+                47.72000014781952,
+                47.74000123143196,
+                49.400001764297485,
+                47.13999852538109,
+                48.31999912858009,
+                47.600001096725464,
+                47.040000557899475,
+                47.279998660087585,
+                46.65999859571457,
+                49.07999932765961,
+                46.73999920487404,
+                46.36000096797943,
+                47.860000282526016,
+                47.18000069260597,
+                47.359999269247055,
+                48.68000000715256,
+                47.01999947428703
+              ]
+            },
+            "pto": {
+              "median_us": 43.43999922275543,
+              "samples_us": [
+                43.15999895334244,
+                43.299999088048935,
+                42.80000180006027,
+                45.180000364780426,
+                43.40000078082085,
+                43.460000306367874,
+                43.219998478889465,
+                44.119998812675476,
+                43.71999949216843,
+                43.07999834418297,
+                48.85999858379364,
+                43.460000306367874,
+                43.41999813914299,
+                43.699998408555984,
+                43.41999813914299,
+                43.140001595020294,
+                43.460000306367874,
+                43.71999949216843,
+                44.16000097990036,
+                43.12000051140785
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                36.92,
+                38.24,
+                37.66
+              ],
+              "median_us": 37.66
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                33.98,
+                33.76,
+                33.66
+              ],
+              "median_us": 33.76
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 6,
+          "T": 48,
+          "name": "B08_S6_T048",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.03010368347168e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.808208465576172e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.059906005859375e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 7.867813110351562e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.00390625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.682209014892578e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.640617847442627e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.2159347534179688e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 4.172325134277344e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 49.58999902009964,
+              "samples_us": [
+                48.28000068664551,
+                50.0200018286705,
+                49.240000545978546,
+                48.64000156521797,
+                49.240000545978546,
+                49.539998173713684,
+                49.3599995970726,
+                66.66000187397003,
+                50.42000114917755,
+                48.28000068664551,
+                51.7599992454052,
+                49.800001084804535,
+                49.10000041127205,
+                50.620000809431076,
+                49.639999866485596,
+                49.4999997317791,
+                49.26000162959099,
+                52.03999951481819,
+                50.06000027060509,
+                50.40000006556511
+              ]
+            },
+            "pto": {
+              "median_us": 44.74999941885471,
+              "samples_us": [
+                43.32000017166138,
+                50.360001623630524,
+                44.79999840259552,
+                43.34000125527382,
+                45.159999281167984,
+                42.75999963283539,
+                44.840000569820404,
+                44.70000043511391,
+                45.159999281167984,
+                43.55999827384949,
+                45.239999890327454,
+                43.91999915242195,
+                49.33999851346016,
+                42.8600013256073,
+                44.53999921679497,
+                43.57999935746193,
+                44.95999962091446,
+                43.800000101327896,
+                45.38000002503395,
+                44.81999948620796
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                39.42,
+                40.36,
+                41.46
+              ],
+              "median_us": 40.36
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                33.96,
+                33.78,
+                33.92
+              ],
+              "median_us": 33.92
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 5,
+          "T": 80,
+          "name": "B16_S5_T080",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.7181038856506348e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.212162017822266e-06
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.6987323760986328e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 7.092952728271484e-06
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.384185791015625e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.7881393432617188e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0609626770019531e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.556510925292969e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.513429641723633e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.4959444999694824e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 56.18000030517578,
+              "samples_us": [
+                56.040000170469284,
+                56.1399981379509,
+                55.640000849962234,
+                55.799998342990875,
+                54.63999882340431,
+                57.78000131249428,
+                56.20000138878822,
+                55.10000139474869,
+                56.15999922156334,
+                57.37999826669693,
+                56.68000131845474,
+                56.359998881816864,
+                55.53999915719032,
+                56.8000003695488,
+                57.56000056862831,
+                56.6600002348423,
+                55.02000078558922,
+                55.70000037550926,
+                56.8000003695488,
+                123.62000346183777
+              ]
+            },
+            "pto": {
+              "median_us": 41.07999987900257,
+              "samples_us": [
+                41.760001331567764,
+                40.64000025391579,
+                41.31999984383583,
+                41.019998490810394,
+                40.300000458955765,
+                41.17999970912933,
+                41.600000113248825,
+                42.02000051736832,
+                41.120000183582306,
+                41.00000113248825,
+                40.94000160694122,
+                40.47999903559685,
+                41.039999574422836,
+                41.439998894929886,
+                41.600000113248825,
+                41.34000092744827,
+                40.81999883055687,
+                40.6000018119812,
+                40.92000052332878,
+                41.57999902963638
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                47.06,
+                48.74,
+                47.26
+              ],
+              "median_us": 47.26
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                31.88,
+                32.42,
+                32.16
+              ],
+              "median_us": 32.16
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 6,
+          "T": 96,
+          "name": "B16_S6_T096",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.5720725059509277e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.3716518878936768e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.5541911125183105e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.3470649719238281e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.2782554626464844e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.76837158203125e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2814998626708984e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 8.64267349243164e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.5762786865234375e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 57.73000046610832,
+              "samples_us": [
+                58.13999846577644,
+                57.85999819636345,
+                57.679999619722366,
+                58.1200011074543,
+                70.85999846458435,
+                57.37999826669693,
+                58.54000151157379,
+                57.339999824762344,
+                57.339999824762344,
+                57.53999948501587,
+                58.320000767707825,
+                57.56000056862831,
+                57.95999988913536,
+                56.620001792907715,
+                58.97999927401543,
+                56.8000003695488,
+                57.739999145269394,
+                59.02000144124031,
+                57.100001722574234,
+                57.72000178694725
+              ]
+            },
+            "pto": {
+              "median_us": 38.25000114738941,
+              "samples_us": [
+                37.9600003361702,
+                38.21999952197075,
+                37.620000541210175,
+                38.440000265836716,
+                39.20000046491623,
+                38.26000168919563,
+                38.019999861717224,
+                38.419999182224274,
+                38.94000127911568,
+                38.419999182224274,
+                38.24000060558319,
+                38.21999952197075,
+                37.87999972701073,
+                39.09999877214432,
+                38.040000945329666,
+                38.80000114440918,
+                37.91999816894531,
+                40.58000072836876,
+                38.18000108003616,
+                39.56000134348869
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                49.66,
+                48.98,
+                49.46
+              ],
+              "median_us": 49.46
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                29.68,
+                29.4,
+                29.38
+              ],
+              "median_us": 29.4
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 5,
+          "T": 100,
+          "name": "B20_S5_T100",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2770295143127441e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.043081283569336e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.3053417205810547e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.0311603546142578e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0713934898376465e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 6.679445505142212e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 7.599592208862305e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 80.45000210404396,
+              "samples_us": [
+                62.940001487731934,
+                62.76000291109085,
+                61.68000027537346,
+                78.87999713420868,
+                80.48000186681747,
+                80.04000037908554,
+                80.33999800682068,
+                72.82000035047531,
+                79.53999936580658,
+                83.5999995470047,
+                82.31999725103378,
+                81.60000294446945,
+                82.09999650716782,
+                80.92000335454941,
+                79.40000295639038,
+                80.42000234127045,
+                83.03999900817871,
+                83.0800011754036,
+                82.69999921321869,
+                82.09999650716782
+              ]
+            },
+            "pto": {
+              "median_us": 65.51999971270561,
+              "samples_us": [
+                43.34000125527382,
+                44.61999982595444,
+                44.25999894738197,
+                201.36000216007233,
+                72.46000319719315,
+                75.09999722242355,
+                66.66000187397003,
+                71.74000144004822,
+                71.62000238895416,
+                63.79999965429306,
+                62.6399964094162,
+                64.37999755144119,
+                62.6399964094162,
+                77.69999653100967,
+                62.880001962184906,
+                67.5399973988533,
+                63.40000033378601,
+                66.67999923229218,
+                63.72000277042389,
+                70.1799988746643
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                53.82,
+                52.38,
+                51.92
+              ],
+              "median_us": 52.38
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                35.2,
+                35.2,
+                34.28
+              ],
+              "median_us": 35.2
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 6,
+          "T": 120,
+          "name": "B20_S6_T120",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 9.998679161071777e-06
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.2040138244628906e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 9.864568710327148e-06
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1824071407318115e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.897615432739258e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.960464477539062e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0862946510314941e-05
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 3.153085708618164e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 4.76837158203125e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.76837158203125e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 79.92000132799149,
+              "samples_us": [
+                96.72000259160995,
+                82.22000300884247,
+                79.34000343084335,
+                79.62000370025635,
+                79.7400027513504,
+                79.92000132799149,
+                78.40000092983246,
+                78.63999903202057,
+                81.29999786615372,
+                79.59999889135361,
+                86.40000224113464,
+                85.04000306129456,
+                78.44000309705734,
+                83.43999832868576,
+                79.64000105857849,
+                80.71999996900558,
+                79.92000132799149,
+                85.41999757289886,
+                78.84000241756439,
+                85.22000163793564
+              ]
+            },
+            "pto": {
+              "median_us": 73.6600011587143,
+              "samples_us": [
+                75.93999803066254,
+                71.93999737501144,
+                80.30000329017639,
+                69.5199966430664,
+                73.8999992609024,
+                75.1200020313263,
+                82.40000158548355,
+                72.31999933719635,
+                74.60000365972519,
+                72.08000123500824,
+                64.65999782085419,
+                78.25999706983566,
+                72.8600025177002,
+                84.7800001502037,
+                73.42000305652618,
+                74.85999912023544,
+                67.56000220775604,
+                71.03999704122543,
+                73.42000305652618,
+                74.16000217199326
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                56.16,
+                56.2,
+                56.1
+              ],
+              "median_us": 56.16
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                34.28,
+                35.08,
+                35.36
+              ],
+              "median_us": 35.08
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 5,
+          "T": 120,
+          "name": "B24_S5_T120",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.17570161819458e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.055002212524414e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1548399925231934e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.049041748046875e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 3.5762786865234375e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.7136335372924805e-05
+            },
+            "comb": {
+              "passed": false,
+              "max_abs": 1.436471939086914e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.60770320892334e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 4.172325134277344e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 65.60999900102615,
+              "samples_us": [
+                102.98000276088715,
+                66.2200003862381,
+                66.72000139951706,
+                65.71999937295914,
+                64.71999734640121,
+                65.95999747514725,
+                65.99999964237213,
+                65.60000032186508,
+                64.40000236034393,
+                64.65999782085419,
+                65.43999910354614,
+                64.43999707698822,
+                66.39999896287918,
+                65.45999646186829,
+                65.61999768018723,
+                65.0399997830391,
+                65.30000269412994,
+                66.20000302791595,
+                65.9400001168251,
+                64.92000073194504
+              ]
+            },
+            "pto": {
+              "median_us": 43.57999935746193,
+              "samples_us": [
+                105.99999874830246,
+                43.99999976158142,
+                43.90000179409981,
+                43.62000152468681,
+                44.38000172376633,
+                43.060000985860825,
+                43.60000044107437,
+                42.95999929308891,
+                43.55999827384949,
+                43.76000165939331,
+                42.93999820947647,
+                42.899999767541885,
+                43.26000064611435,
+                44.319998472929,
+                43.32000017166138,
+                43.90000179409981,
+                44.16000097990036,
+                43.540000915527344,
+                43.20000112056732,
+                42.93999820947647
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                57.1,
+                55.92,
+                55.64
+              ],
+              "median_us": 55.92
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                35.04,
+                34.18,
+                34.94
+              ],
+              "median_us": 34.94
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 6,
+          "T": 144,
+          "name": "B24_S6_T144",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1712312698364258e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.0967254638671875e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.1667609214782715e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1026859283447266e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 5.662441253662109e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 4.76837158203125e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.1846423149108887e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.1801719665527344e-05
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.513429641723633e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.980232238769531e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 68.95000115036964,
+              "samples_us": [
+                88.94000202417374,
+                85.78000217676163,
+                85.25999635457993,
+                86.74000203609467,
+                93.41999888420105,
+                85.17999947071075,
+                164.10000622272491,
+                67.91999936103821,
+                66.0799965262413,
+                81.88000321388245,
+                66.66000187397003,
+                66.39999896287918,
+                66.95999950170517,
+                69.08000260591507,
+                68.53999942541122,
+                66.67999923229218,
+                69.5199966430664,
+                68.81999969482422,
+                68.30000132322311,
+                67.0199990272522
+              ]
+            },
+            "pto": {
+              "median_us": 44.56000030040741,
+              "samples_us": [
+                61.820000410079956,
+                69.32000070810318,
+                62.16000020503998,
+                63.57999891042709,
+                60.72000041604042,
+                72.54000008106232,
+                59.059999883174896,
+                43.71999949216843,
+                45.260000973939896,
+                43.71999949216843,
+                43.76000165939331,
+                43.99999976158142,
+                43.49999874830246,
+                43.40000078082085,
+                44.360000640153885,
+                44.87999901175499,
+                43.94000023603439,
+                42.92000085115433,
+                44.759999960660934,
+                43.460000306367874
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                58.9,
+                59.12,
+                59.14
+              ],
+              "median_us": 59.12
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                35.38,
+                35.18,
+                35.64
+              ],
+              "median_us": 35.38
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 5,
+          "T": 140,
+          "name": "B28_S5_T140",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 2.0250678062438965e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.5735626220703125e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 2.0205974578857422e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.627206802368164e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 3.427267074584961e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 5.364418029785156e-07
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.2874603271484375e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 7.37607479095459e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 3.0547380447387695e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 3.3155083656311035e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 85.42999997735023,
+              "samples_us": [
+                100.56000202894211,
+                88.7800008058548,
+                83.93999934196472,
+                98.15999865531921,
+                87.93999999761581,
+                85.38000285625458,
+                85.28000116348267,
+                84.36000347137451,
+                89.34000134468079,
+                93.87999773025513,
+                85.41999757289886,
+                91.98000282049179,
+                84.32000130414963,
+                85.4400023818016,
+                84.89999920129776,
+                85.8599990606308,
+                85.13999730348587,
+                85.22000163793564,
+                85.38000285625458,
+                87.1800035238266
+              ]
+            },
+            "pto": {
+              "median_us": 71.66000083088875,
+              "samples_us": [
+                69.17999684810638,
+                70.96000015735626,
+                89.23999965190887,
+                75.15999674797058,
+                65.48000127077103,
+                82.31999725103378,
+                65.52000343799591,
+                74.23999905586243,
+                88.56000006198883,
+                66.01999700069427,
+                66.16000086069107,
+                71.13999873399734,
+                72.18000292778015,
+                83.9800015091896,
+                88.22000026702881,
+                70.35999745130539,
+                83.43999832868576,
+                65.58000296354294,
+                65.33999741077423,
+                86.34000271558762
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                59.42,
+                58.34,
+                58.36
+              ],
+              "median_us": 58.36
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                35.6,
+                35.38,
+                36.8
+              ],
+              "median_us": 35.6
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 6,
+          "T": 168,
+          "name": "B28_S6_T168",
+          "pto_vs_native": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.015625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.11311674118042e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 1.119077205657959e-05
+            }
+          },
+          "cpu": {
+            "native": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.015625
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 1.119077205657959e-05
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.2218952178955078e-05
+              }
+            },
+            "pto": {
+              "mixed": {
+                "passed": true,
+                "max_abs": 0.0078125
+              },
+              "post": {
+                "passed": true,
+                "max_abs": 7.450580596923828e-07
+              },
+              "comb": {
+                "passed": true,
+                "max_abs": 1.1324882507324219e-06
+              }
+            }
+          },
+          "native_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_graph_vs_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "native_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0078125
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 1.0147690773010254e-05
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 9.953975677490234e-06
+            }
+          },
+          "native_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "pto_updated_cpu": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.00390625
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 5.066394805908203e-07
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 2.384185791015625e-07
+            }
+          },
+          "pto_updated_eager": {
+            "mixed": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "post": {
+              "passed": true,
+              "max_abs": 0.0
+            },
+            "comb": {
+              "passed": true,
+              "max_abs": 0.0
+            }
+          },
+          "replay": {
+            "native": {
+              "median_us": 93.12999993562698,
+              "samples_us": [
+                95.21999955177307,
+                90.7600000500679,
+                91.1799967288971,
+                91.839998960495,
+                94.9999988079071,
+                95.16000002622604,
+                90.83999693393707,
+                95.660001039505,
+                94.70000118017197,
+                96.0799977183342,
+                88.04000169038773,
+                91.48000180721283,
+                93.00000220537186,
+                92.56000071763992,
+                95.51999717950821,
+                91.95999801158905,
+                93.25999766588211,
+                93.44000369310379,
+                93.71999651193619,
+                90.98000079393387
+              ]
+            },
+            "pto": {
+              "median_us": 67.42000207304955,
+              "samples_us": [
+                65.67999720573425,
+                72.37999886274338,
+                72.92000204324722,
+                66.20000302791595,
+                65.95999747514725,
+                73.16000014543533,
+                67.56000220775604,
+                65.89999794960022,
+                71.46000117063522,
+                67.28000193834305,
+                65.24000316858292,
+                64.53999876976013,
+                95.29999643564224,
+                80.20000159740448,
+                107.11999982595444,
+                67.56000220775604,
+                64.21999633312225,
+                65.140001475811,
+                75.15999674797058,
+                66.32000207901001
+              ]
+            }
+          },
+          "device": {
+            "native": {
+              "kernel": "HcPre",
+              "status": "parsed",
+              "samples_us": [
+                65.2,
+                65.68,
+                66.2
+              ],
+              "median_us": 65.68
+            },
+            "pto": {
+              "kernel": "HcPrePto",
+              "status": "parsed",
+              "samples_us": [
+                36.32,
+                35.96,
+                36.34
+              ],
+              "median_us": 36.32
+            }
+          }
+        }
+      ],
+      "original_report_sha256": "ce2bbcb8839711be4c5ed67c7c5b9cdcd7f8dbe08d44d47920f36352fecd2cdc"
+    },
+    "repeat_original_pto": {
+      "physical_device": "0",
+      "status": "PASS",
+      "original_report_sha256": "c72c5137cc38d099dd74cf922e0cf1d33f1c43f680a0bd1e1b31e3a5ec56e493",
+      "rows": [
+        {
+          "B": 2,
+          "S": 5,
+          "T": 10,
+          "pto_span_p50_us": 26.360000000000014,
+          "pto_span_samples_us": [
+            25.7,
+            26.399999999999977,
+            26.360000000000014
+          ],
+          "native_samples_us": [
+            36.62,
+            36.66,
+            36.48
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                10,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00018843577709048986,
+              "different": 296,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                10,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 6.541609764099121e-06,
+              "rmse": 1.8875132354878588e-06,
+              "different": 30,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                10,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 3.3974647521972656e-06,
+              "rmse": 1.0204317959505715e-06,
+              "different": 160,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 2,
+          "S": 6,
+          "T": 12,
+          "pto_span_p50_us": 26.54000000000002,
+          "pto_span_samples_us": [
+            26.380000000000003,
+            26.54000000000002,
+            27.220000000000027
+          ],
+          "native_samples_us": [
+            37.74,
+            37.6,
+            37.22
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                12,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.0001775847777025774,
+              "different": 268,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                12,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 5.930662155151367e-06,
+              "rmse": 2.1328264665498864e-06,
+              "different": 36,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                12,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 4.410743713378906e-06,
+              "rmse": 1.2166954093117965e-06,
+              "different": 190,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 5,
+          "T": 20,
+          "pto_span_p50_us": 28.300000000000068,
+          "pto_span_samples_us": [
+            27.78,
+            29.140000000000043,
+            28.300000000000068
+          ],
+          "native_samples_us": [
+            38.86,
+            37.82,
+            37.96
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                20,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.0078125,
+              "rmse": 0.00012205096572870389,
+              "different": 408,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                20,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 9.424984455108643e-06,
+              "rmse": 2.409559783700388e-06,
+              "different": 59,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                20,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.055002212524414e-05,
+              "rmse": 1.5244705764416722e-06,
+              "different": 320,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 4,
+          "S": 6,
+          "T": 24,
+          "pto_span_p50_us": 28.620000000000005,
+          "pto_span_samples_us": [
+            28.6,
+            28.620000000000005,
+            29.519999999999982
+          ],
+          "native_samples_us": [
+            40.1,
+            39.86,
+            40.82
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                24,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00014448363799601793,
+              "different": 617,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                24,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 7.82310962677002e-06,
+              "rmse": 2.832220616255654e-06,
+              "different": 74,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                24,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 4.887580871582031e-06,
+              "rmse": 1.015660927805584e-06,
+              "different": 382,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 5,
+          "T": 40,
+          "pto_span_p50_us": 30.200000000000045,
+          "pto_span_samples_us": [
+            29.2,
+            30.200000000000045,
+            30.40000000000009
+          ],
+          "native_samples_us": [
+            49.2,
+            48.34,
+            48.72
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                40,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00016266685270238668,
+              "different": 1028,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                40,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.1682510375976562e-05,
+              "rmse": 2.6775317110150354e-06,
+              "different": 121,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                40,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 5.0067901611328125e-06,
+              "rmse": 1.2553975921036908e-06,
+              "different": 635,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 8,
+          "S": 6,
+          "T": 48,
+          "pto_span_p50_us": 30.14,
+          "pto_span_samples_us": [
+            30.14,
+            29.519999999999868,
+            30.159999999999854
+          ],
+          "native_samples_us": [
+            51.38,
+            52.68,
+            53.12
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                48,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00015176611486822367,
+              "different": 993,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                48,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 9.03010368347168e-06,
+              "rmse": 2.4902308268792694e-06,
+              "different": 144,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                48,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 7.808208465576172e-06,
+              "rmse": 1.5374284885183442e-06,
+              "different": 764,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 5,
+          "T": 80,
+          "pto_span_p50_us": 29.28000000000003,
+          "pto_span_samples_us": [
+            28.259999999999998,
+            29.28000000000003,
+            31.32000000000005
+          ],
+          "native_samples_us": [
+            57.56,
+            56.38,
+            56.66
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                80,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.000161664531333372,
+              "different": 1923,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                80,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.7181038856506348e-05,
+              "rmse": 2.498831918273936e-06,
+              "different": 244,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                80,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 7.212162017822266e-06,
+              "rmse": 1.2683639170063543e-06,
+              "different": 1274,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 16,
+          "S": 6,
+          "T": 96,
+          "pto_span_p50_us": 28.71999999999997,
+          "pto_span_samples_us": [
+            28.86,
+            28.71999999999997,
+            26.799999999999955
+          ],
+          "native_samples_us": [
+            59.38,
+            61.2,
+            60.6
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                96,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00015635337331332266,
+              "different": 2339,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                96,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.5720725059509277e-05,
+              "rmse": 2.4611940716567915e-06,
+              "different": 292,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                96,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.3716518878936768e-05,
+              "rmse": 1.3995044128023437e-06,
+              "different": 1529,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 5,
+          "T": 100,
+          "pto_span_p50_us": 35.620000000000005,
+          "pto_span_samples_us": [
+            35.620000000000005,
+            37.14000000000004,
+            35.08000000000004
+          ],
+          "native_samples_us": [
+            61.56,
+            61.7,
+            61.34
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                100,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00016500739729963243,
+              "different": 2667,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                100,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.2770295143127441e-05,
+              "rmse": 2.6241966679663165e-06,
+              "different": 301,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                100,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.043081283569336e-05,
+              "rmse": 1.3820969115840853e-06,
+              "different": 1590,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 20,
+          "S": 6,
+          "T": 120,
+          "pto_span_p50_us": 37.379999999999995,
+          "pto_span_samples_us": [
+            34.81999999999999,
+            37.879999999999995,
+            37.379999999999995
+          ],
+          "native_samples_us": [
+            68.24,
+            66.6,
+            67.84
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00016176438657566905,
+              "different": 3035,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 9.998679161071777e-06,
+              "rmse": 2.2520709990203613e-06,
+              "different": 361,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.2040138244628906e-05,
+              "rmse": 1.4785565554120694e-06,
+              "different": 1912,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 5,
+          "T": 120,
+          "pto_span_p50_us": 34.81999999999999,
+          "pto_span_samples_us": [
+            35.019999999999996,
+            34.81999999999999,
+            34.77999999999997
+          ],
+          "native_samples_us": [
+            68.12,
+            66.34,
+            67.12
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00015972564870025963,
+              "different": 3063,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.17570161819458e-05,
+              "rmse": 2.5361748612340307e-06,
+              "different": 360,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                120,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.055002212524414e-05,
+              "rmse": 1.368065909446159e-06,
+              "different": 1906,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 24,
+          "S": 6,
+          "T": 144,
+          "pto_span_p50_us": 34.80000000000001,
+          "pto_span_samples_us": [
+            34.80000000000001,
+            35.639999999999986,
+            34.27999999999997
+          ],
+          "native_samples_us": [
+            70.54,
+            69.06,
+            69.36
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                144,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00016056127788033336,
+              "different": 3642,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                144,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.1712312698364258e-05,
+              "rmse": 2.3819002308300696e-06,
+              "different": 434,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                144,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.0967254638671875e-05,
+              "rmse": 1.5831818700462463e-06,
+              "different": 2289,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 5,
+          "T": 140,
+          "pto_span_p50_us": 35.89999999999998,
+          "pto_span_samples_us": [
+            36.84,
+            35.68000000000001,
+            35.89999999999998
+          ],
+          "native_samples_us": [
+            71.34,
+            69.68,
+            70.36
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                140,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.00016495282761752605,
+              "different": 3518,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                140,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 2.0250678062438965e-05,
+              "rmse": 2.4673813641129527e-06,
+              "different": 422,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                140,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.5735626220703125e-05,
+              "rmse": 1.5643439610357746e-06,
+              "different": 2221,
+              "out_of_tolerance": 0
+            }
+          }
+        },
+        {
+          "B": 28,
+          "S": 6,
+          "T": 168,
+          "pto_span_p50_us": 38.95999999999992,
+          "pto_span_samples_us": [
+            38.919999999999995,
+            40.28000000000003,
+            38.95999999999992
+          ],
+          "native_samples_us": [
+            76.52,
+            74.88,
+            76.04
+          ],
+          "pto_native": {
+            "mixed": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                168,
+                4096
+              ],
+              "dtype": "torch.bfloat16",
+              "rtol": 0.01,
+              "atol": 0.01,
+              "max_abs": 0.015625,
+              "rmse": 0.0001601245312485844,
+              "different": 4305,
+              "out_of_tolerance": 0
+            },
+            "post": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                168,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.11311674118042e-05,
+              "rmse": 2.5615483991714427e-06,
+              "different": 508,
+              "out_of_tolerance": 0
+            },
+            "comb": {
+              "passed": true,
+              "finite": true,
+              "shape": [
+                168,
+                4,
+                4
+              ],
+              "dtype": "torch.float32",
+              "rtol": 0.0001,
+              "atol": 1e-05,
+              "max_abs": 1.119077205657959e-05,
+              "rmse": 1.4714087228639983e-06,
+              "different": 2666,
+              "out_of_tolerance": 0
+            }
+          }
+        }
+      ]
+    }
+  }
+}

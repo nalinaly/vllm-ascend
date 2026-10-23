@@ -1,0 +1,154 @@
+{
+  "mode": "superkernel",
+  "tokens": 96,
+  "neighbours": "ascendc",
+  "chain": "Add(x, addend) -> torch.ops.hcpre_pto.hc_pre -> Mul(mixed, multiplier)",
+  "torch": "2.12.0+cpu",
+  "torch_npu": "2.12.0+git5462a1b",
+  "device": "_NPUDeviceProperties(name='Ascend910_9362', total_memory=62740MB, cube_core_num=20, vector_core_num=40, uuid=00cc0800-d001-0000-0000-48706ff27a08, L2_cache_size=168MB)",
+  "options": {
+    "static_kernel_compile": true,
+    "super_kernel_optimize": true,
+    "clone_input": false
+  },
+  "binding": "/mnt/workspace/inductor/pto_early_start/hc-pre-superkernel-20261015/vllm-ascend/examples/hc_pre_pto_aclnn/build/torch/hcpre_pto_torch.so",
+  "validation": [
+    {
+      "replay": 0,
+      "seed": 20261015,
+      "outputs": {
+        "mixed": {
+          "shape": [
+            96,
+            4096
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 0.015625,
+          "atol": 0.01,
+          "rtol": 0.01
+        },
+        "post": {
+          "shape": [
+            96,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 5.662441253662109e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        },
+        "comb": {
+          "shape": [
+            96,
+            4,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 2.473592758178711e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        }
+      },
+      "inputs_preserved": true,
+      "guards_preserved": true,
+      "compile_or_call_seconds": 25.26817496700096
+    },
+    {
+      "replay": 1,
+      "seed": 20261016,
+      "outputs": {
+        "mixed": {
+          "shape": [
+            96,
+            4096
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 0.0078125,
+          "atol": 0.01,
+          "rtol": 0.01
+        },
+        "post": {
+          "shape": [
+            96,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 3.2186508178710938e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        },
+        "comb": {
+          "shape": [
+            96,
+            4,
+            4
+          ],
+          "finite": true,
+          "passed": true,
+          "max_abs": 2.7120113372802734e-06,
+          "atol": 1e-05,
+          "rtol": 0.0001
+        }
+      },
+      "inputs_preserved": true,
+      "guards_preserved": true,
+      "compile_or_call_seconds": 0.0007810139941284433
+    }
+  ],
+  "fusion": {
+    "passed": true,
+    "members": [
+      "HcPreAdd",
+      "HcPrePto",
+      "HcPreMul"
+    ],
+    "device_task": "sk_entry_mix12",
+    "evidence": "/mnt/workspace/inductor/pto_early_start/hc-pre-superkernel-20261015/artifacts/fixed-input-sk/sk_meta/3157605/model_48_1"
+  },
+  "timing": {
+    "metric": "device event window per compiled-chain call, includes input handling and launch gaps",
+    "samples": 30,
+    "calls_per_sample": 8,
+    "min_us": 329.9050033092499,
+    "mean_us": 336.2781673669815,
+    "max_us": 346.7699885368347,
+    "samples_us": [
+      335.0425064563751,
+      339.75499868392944,
+      335.6024920940399,
+      337.3425006866455,
+      329.9050033092499,
+      337.2274935245514,
+      338.88500928878784,
+      342.9675102233887,
+      335.5650007724762,
+      338.96249532699585,
+      340.719997882843,
+      334.6799910068512,
+      331.8299949169159,
+      335.8350098133087,
+      333.032488822937,
+      338.76749873161316,
+      331.4650058746338,
+      333.3199918270111,
+      335.34500002861023,
+      330.89500665664673,
+      334.2300057411194,
+      331.5424919128418,
+      330.92498779296875,
+      334.14751291275024,
+      332.830011844635,
+      333.88251066207886,
+      346.7699885368347,
+      340.44501185417175,
+      345.47749161720276,
+      340.95001220703125
+    ]
+  },
+  "numerical_passed": true
+}
