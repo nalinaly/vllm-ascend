@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-"""原始 CSA ACLNN wheel 与当前共享 TND binding 之间的执行适配。
+"""CSA ACLNN wheel与共享TND binding的执行适配。
 
-外部 dsv4_csa_forward/Fake、Native 输入准备和策略选择仍只有一份。
-本模块不调用旧 wheel 的 PreparedAclnnCSA，不复制其旧版 binding；
-通过固定包清单、当前根 ABI 和完整 constexpr 策略验证接入合同。
-PyPTO Python 类型可用于读取 ABI，但不编译或初始化 Simpler。
+兼容原62档Host选档包，以及55 Tensor的94档设备选档包；新包可见时优先使用。
+外部dsv4_csa_forward/Fake及Native输入准备共用，不调用旧wheel的PreparedAclnnCSA。
+设备包的Host图键不含具体policy，调用固定tiling key 0。PyPTO类型仅用于读取ABI，
+本模块不编译或初始化Simpler。
 """
 
 import ast
@@ -13,6 +13,7 @@ import importlib
 import importlib.util
 import inspect
 import json
+import logging
 import platform
 import sys
 import textwrap
@@ -23,7 +24,8 @@ from types import MappingProxyType
 from typing import Any
 
 import torch
-from vllm.logger import logger
+
+logger = logging.getLogger(__name__)
 
 REFERENCE_COMMIT = "caed2c32896ddefdbcfab180b253d777bfab11e0"
 ALGORITHM_COMMIT = "1685da6914ae6196537d7f1a66e84e09a9c48ae5"
@@ -54,10 +56,10 @@ def _policy_key(constants) -> str:
     return json.dumps(constants, sort_keys=True, separators=(",", ":"))
 
 
-def _root_contract() -> list[dict[str, Any]]:
-    from .entry import decode_csa_spmd_debug
+def _root_contract(*, diagnostic=True) -> list[dict[str, Any]]:
+    from .entry import decode_csa_spmd, decode_csa_spmd_debug
 
-    function = decode_csa_spmd_debug._func
+    function = (decode_csa_spmd_debug if diagnostic else decode_csa_spmd)._func
     node = next(
         item for item in ast.parse(textwrap.dedent(inspect.getsource(function))).body
         if isinstance(item, ast.FunctionDef)
@@ -83,8 +85,8 @@ def _root_contract() -> list[dict[str, Any]]:
     return result
 
 
-def _check_root_contract(parameters) -> None:
-    actual = _root_contract()
+def _check_root_contract(parameters, *, diagnostic=True) -> None:
+    actual = _root_contract(diagnostic=diagnostic)
     if actual != parameters:
         names = [value["name"] for value in actual]
         expected_names = [value["name"] for value in parameters]
@@ -104,6 +106,7 @@ class KernelPackage:
     library: Path
     parameters: tuple
     policies: Any
+    device_policy: bool = False
 
 
 def _read_package(root: Path) -> KernelPackage:
@@ -144,6 +147,26 @@ def _read_package(root: Path) -> KernelPackage:
 
 @lru_cache(maxsize=1)
 def _load_kernel_package() -> KernelPackage:
+    device_spec = importlib.util.find_spec("csa_device_pto_ops")
+    if device_spec is not None and device_spec.origin is not None:
+        import torch_npu
+
+        module = importlib.import_module("csa_device_pto_ops")
+        root = Path(device_spec.origin).resolve().parent
+        metadata = json.loads((root / "package_manifest.json").read_text())
+        if (metadata.get("schema"), metadata.get("policy_mode"), metadata.get("policy_count")) != (1, "device", 94):
+            raise RuntimeError("CSA设备选档ACLNN包清单不匹配，要求schema=1/device/94")
+        if metadata["torch"] != torch.__version__ or metadata["torch_npu"] != torch_npu.__version__:
+            raise RuntimeError("CSA设备选档ACLNN包的Torch/TorchNPU版本不匹配")
+        if metadata["architecture"] != platform.machine() or metadata["python"] != list(sys.version_info[:2]):
+            raise RuntimeError("CSA设备选档ACLNN包的Python ABI/CPU架构不匹配")
+        parameters = json.loads((root / "interface.json").read_text())["params"]
+        _check_root_contract(parameters, diagnostic=False)
+        library = root / "lib/csa_device_pto_npu.so"
+        module.ensure_vendor()
+        torch.ops.load_library(str(library))
+        logger.info("PTO_CSA_ACLNN_READY policy=device policies=94 tiling_key=0 library=%s", library)
+        return KernelPackage(root, library, tuple(parameters), MappingProxyType({}), device_policy=True)
     spec = importlib.util.find_spec("csa_pto_ops")
     if spec is None or spec.origin is None:
         raise RuntimeError(
@@ -166,6 +189,11 @@ def validate_backend_installation() -> None:
     _load_kernel_package()
 
 
+def uses_device_policy() -> bool:
+    """包准备期查询；已加载包通过缓存复用，不读设备Tensor。"""
+    return _load_kernel_package().device_policy
+
+
 class AclnnExecutor:
     """消费同一个 PreparedDynamicCSA 的 buffers/policy，仅替换最终执行。"""
 
@@ -173,18 +201,18 @@ class AclnnExecutor:
         self.package = _load_kernel_package()
         constants = prepared.policy.constexprs()
         key = _policy_key(constants)
-        if key not in self.package.policies:
+        if not self.package.device_policy and key not in self.package.policies:
             raise NotImplementedError(
                 "当前 CSA ACLNN wheel 没有匹配的编译策略；原包覆盖 62 档，"
                 "当前 Python 选择器还可能命中新增的 32 档。请显式使用 python 后端或更新算子包。"
                 f" policy={constants}"
             )
-        self.variant = self.package.policies[key]
+        self.variant = 0 if self.package.device_policy else self.package.policies[key]
         self.auxiliary = {}
         # 原 ACLNN 包固定 57 Tensor 诊断 ABI；业务接口无 TopK 输出时在准备期
         # 分配两份稳定 buffer。它们不改变外部 Meta 或正常 Python 根入口。
         for name, dtype in (("topk_scores", torch.float32), ("topk_indices", torch.int32)):
-            if name not in prepared.buffers:
+            if not self.package.device_policy and name not in prepared.buffers:
                 self.auxiliary[name] = torch.empty(
                     (prepared.tokens, _TOPK_WIDTH), dtype=dtype, device=prepared.buffers["x"].device
                 )
@@ -217,4 +245,7 @@ class AclnnExecutor:
         self.arguments = arguments
 
     def __call__(self) -> None:
-        torch.ops.csa_pto.run(self.arguments, self.variant)
+        if self.package.device_policy:
+            torch.ops.csa_pto_device.run(self.arguments, 0)
+        else:
+            torch.ops.csa_pto.run(self.arguments, self.variant)

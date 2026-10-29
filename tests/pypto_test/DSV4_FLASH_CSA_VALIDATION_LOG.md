@@ -24294,3 +24294,47 @@ v2对象编译188/188通过，242.07秒；AIC镜像5,433,528字节、AIV镜像14
 不能当CSA性能。最新代码/镜像在csa_device_policy_20261029/probe/cpp94_v2，
 精简结果见同目录cpp_progress.json，执行设计见DESIGN.md。旧Python前端合并脚本
 及其过时workspace估算删除。后续接正式入口和ACLNN，再测稳定态开销。
+
+### 735.137 合并版稳定态L1与正式94档设备选档ACLNN接入（2026-10-29）
+
+按用户要求，先将详细中文提交617981dc7、89f541752推至原分支，再进行本阶段。
+公共SDK/CANN9.2未改变。成对稳定态采样：双方各预热10次，交替顺序各10个单次
+graph replay窗口，按完整CSA L1首尾统计；不包含测试恢复、编译和首次注册。
+
+| 场景 | 原策略中位数μs | 合并版中位数μs | 增量μs | 耗时变化 |
+|---|---:|---:|---:|---:|
+| 128K/B1/S6 | 382.12 | 362.07 | -20.05 | -5.25% |
+| 128K/B16/S6 | 779.19 | 782.83 | +3.64 | +0.47% |
+| 8K/B16/S6 | 647.95 | 651.50 | +3.55 | +0.55% |
+
+全部样本和min/mean/max/median见csa_device_policy_20261029/stable_performance.json。
+测试后精度检查通过。该表为PyPTO/Simpler路径，不是ACLNN性能；B1改善来源未细拆，
+不归因于单一因素。没有将三档代表采样说成八档全表或94档覆盖。
+
+新增独立CsaSpmdTndDevicePto算子/vendor和csa_pto_device Torch接口，业务ABI55项。
+Host只生成一份按描述符计算的workspace布局，tiling key固定0；原variant参数仅保留
+固定0兼容调用接口。94份数学代码来自已验收v2，重新包装为CANN参数约定，188路
+编译228.31秒全部通过，再并入CANN MIX镜像。使用本构建进程的私有链接扩展，不修改
+已安装CANN、PyPTO、PTOAS、Simpler或PTO-ISA。Host/命名适配错误均已修正，不计SDK问题。
+
+正式binding/backend识别新包，设备包不调用Host select_policy，使用不可变
+DeviceSelectedPolicy作为图键；真实Q/L变化不会产生不同policy图键。保留描述符/
+地址检查。MPMD保持现状，旧62档包仍可使用。新包不分配辅助TopK或外部常驻workspace，
+显式拒绝57项诊断TopK合同，防止输出未写却被当成有效结果。
+
+直接ACLNN的128K/B1、128K/B16、混长+集中padding，eager/replay输出及更新cache/state
+与原独立PTO策略逐bit一致，保护区/只读metadata正常。B16同址同图128K→8K，设备
+策略76→26仍逐bit一致。任务task_20261029_213201_66116713339、
+task_20261029_213850_102282529286、task_20261029_213850_102282428771。
+正式PreparedDynamicCSA→backend=aclnn→新包路径另验B16及同图跨档，Host key={}、
+allocations为空，全部通过；任务task_20261029_214451_12634753499。
+结果见aclnn_validation.json；35项CPU后端合同测试通过。
+
+独立wheel已生成并安装到私有target，正式loader检查55参数ABI通过，未初始化NPU；
+任务task_20261029_215105_149546220257、task_20261029_215423_167014910725。
+wheel路径：csa_device_policy_20261029/probe/aclnn_package_v1/dist/
+csa_device_pto_ops-0.2.0-cp310-cp310-linux_aarch64.whl。
+未全局覆盖三个session共用环境。使用/构建说明见ACLNN_AND_PERFORMANCE.md。
+
+本阶段未验证SuperKernel、npugraph_ex、整模型或ACLNN稳定态性能；不新增Native/token/
+DSpark结论。后续更改本地详细中文提交，未再次push。

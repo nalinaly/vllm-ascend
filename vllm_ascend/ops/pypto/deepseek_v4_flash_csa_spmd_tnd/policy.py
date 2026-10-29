@@ -54,6 +54,14 @@ FUSED_COEFFICIENT_MAX_TOKENS = 192
 
 
 @dataclass(frozen=True)
+class DeviceSelectedPolicy:
+    """统一设备入口的图缓存身份；具体策略不属于Host图键。"""
+
+    def constexprs(self) -> dict[str, int | bool]:
+        return {}
+
+
+@dataclass(frozen=True)
 class CSASPMDPolicy:
     query_group: int
     qk_panel: int

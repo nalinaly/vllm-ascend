@@ -13,7 +13,7 @@ import torch
 from vllm_ascend import envs
 
 from ..deepseek_v4_flash_csa.validation import validation_error
-from .policy import CSASPMDPolicy, select_policy
+from .policy import CSASPMDPolicy, DeviceSelectedPolicy, select_policy
 
 REQUIRED_CUBE_CORES = 24
 REQUIRED_VECTOR_CORES = 2 * REQUIRED_CUBE_CORES
@@ -41,7 +41,7 @@ class PreparedDynamicCSA:
         *,
         max_query_tokens: int,
         max_seq_len: int,
-        policy: CSASPMDPolicy | None = None,
+        policy: CSASPMDPolicy | DeviceSelectedPolicy | None = None,
     ):
         if envs.VLLM_ASCEND_ENABLE_NZ != 2:
             raise NotImplementedError(
@@ -59,7 +59,15 @@ class PreparedDynamicCSA:
             raise ValueError(
                 validation_error("cmp_block_table must be two-dimensional", cmp_block_table=native["cmp_block_table"])
             )
-        self.policy = policy or select_policy(
+        from ..variant import selected_csa_backend
+
+        self.execution_backend = selected_csa_backend()
+        device_policy = False
+        if self.execution_backend == "aclnn":
+            from .backend import uses_device_policy
+
+            device_policy = uses_device_policy()
+        self.policy = DeviceSelectedPolicy() if device_policy else policy or select_policy(
             tokens=t,
             requests=b,
             max_query_tokens=max_query_tokens,
@@ -129,6 +137,8 @@ class PreparedDynamicCSA:
             "wo_b_scale": "wo_b_scale",
         }
         self._diagnostic = "idx_topk" in native
+        if device_policy and ("idx_topk" in native or "idx_topk_scores" in native):
+            raise NotImplementedError("94档设备选档ACLNN目前提供55 Tensor业务ABI，不暴露诊断Top-K")
         if self._diagnostic != ("idx_topk_scores" in native):
             raise ValueError(
                 validation_error(
@@ -208,9 +218,6 @@ class PreparedDynamicCSA:
             raise ValueError(
                 validation_error("Indexer cache须为Native对齐INT8页，页内至少4096B key+64B scale", cache=cache)
             )
-        from ..variant import selected_csa_backend
-
-        self.execution_backend = selected_csa_backend()
         self._executor = None
         if self.execution_backend == "aclnn":
             from .backend import AclnnExecutor

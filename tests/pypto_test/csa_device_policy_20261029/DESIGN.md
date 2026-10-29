@@ -2,8 +2,8 @@
 
 2026-10-29。公共工具链`csa-shared-20261024-group-dims`，CANN9.2。
 最新可执行产物：`probe/cpp94_v2`。精简结果：`cpp_progress.json`。
-正式CSA、MPMD、共享SDK均未修改；PyTorch通过现有运行时加载预编译产物。
-ACLNN接入和正式服务路径尚未完成，不声称本轮已完成全部接入或性能验收。
+本文件记录原型阶段；后续稳定态性能与正式ACLNN接入已经完成单卡验证，详见
+[ACLNN_AND_PERFORMANCE.md](ACLNN_AND_PERFORMANCE.md)。MPMD和共享SDK仍未修改。
 
 ## 已确认实现
 

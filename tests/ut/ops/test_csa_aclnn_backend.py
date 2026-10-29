@@ -7,6 +7,7 @@ import json
 import platform
 import shutil
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace as NS
 
@@ -191,6 +192,36 @@ def test_current_root_abi_matches_unmodified_reference_interface():
         "topk_indices",
         "output",
     }
+
+
+def test_device_package_uses_normal_abi_and_ignores_host_policy(kernel_package, monkeypatch):
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd import binding
+
+    parameters = tuple(p for p in kernel_package.parameters if p["name"] not in ("topk_scores", "topk_indices"))
+    package = replace(kernel_package, parameters=parameters, policies={}, device_policy=True)
+    monkeypatch.setattr(backend, "_load_kernel_package", lambda: package)
+
+    def forbidden_host_policy(**kwargs):
+        pytest.fail("设备选档后端不应调用Host策略选择")
+
+    monkeypatch.setattr(binding, "select_policy", forbidden_host_policy)
+    calls = []
+    monkeypatch.setattr(torch.ops.csa_pto_device, "run", lambda *args: calls.append(args), raising=False)
+    native = native_inputs()
+    short = PreparedDynamicCSA(native, max_query_tokens=2, max_seq_len=8192)
+    long = PreparedDynamicCSA(native, max_query_tokens=6, max_seq_len=131072)
+    assert short.policy == long.policy and short.policy.constexprs() == {}
+    assert not short.allocations and not long.allocations
+    assert short() is native["x_out"]
+    assert len(calls[0][0]) == 55 and calls[0][1] == 0
+    backend._check_root_contract(list(parameters), diagnostic=False)
+
+
+def test_device_package_rejects_unwritten_diagnostic_outputs(kernel_package, monkeypatch):
+    package = replace(kernel_package, device_policy=True)
+    monkeypatch.setattr(backend, "_load_kernel_package", lambda: package)
+    with pytest.raises(NotImplementedError, match="不暴露诊断Top-K"):
+        PreparedDynamicCSA(native_inputs(diagnostic=True), max_query_tokens=2, max_seq_len=8192)
 
 
 @pytest.mark.parametrize(

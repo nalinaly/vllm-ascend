@@ -5,6 +5,8 @@ import argparse
 import copy
 import json
 import os
+import statistics
+import sys
 import time
 import traceback
 from pathlib import Path
@@ -18,7 +20,23 @@ def main():
     parser.add_argument("--device", type=int, default=int(os.environ.get("TASK_DEVICE", "0")))
     parser.add_argument("--selector-probe", action="store_true")
     parser.add_argument("--cross-policy-replay", action="store_true")
+    parser.add_argument("--profile-windows", type=int, default=0)
+    parser.add_argument("--aclnn-library", type=Path)
+    parser.add_argument("--aclnn-vendor", type=Path)
+    parser.add_argument("--formal-aclnn-package", type=Path)
     args = parser.parse_args()
+    if args.profile_windows and args.profile_windows < 10:
+        parser.error("稳定态L1每种实现至少10个窗口")
+    if args.aclnn_library:
+        if not args.aclnn_vendor or args.profile_windows:
+            parser.error("ACLNN验证需要独立vendor路径；不使用Simpler L1计时")
+        os.environ["ASCEND_CUSTOM_OPP_PATH"] = str(args.aclnn_vendor.resolve())
+    if args.formal_aclnn_package:
+        if args.aclnn_library or args.profile_windows:
+            parser.error("正式ACLNN入口验证不混用直接库或Simpler L1")
+        sys.path.insert(0, str(args.formal_aclnn_package.resolve()))
+        os.environ["VLLM_ASCEND_PTO_CSA_BACKEND"] = "aclnn"
+        os.environ["PTO_CSA_VARIANT"] = "spmd_tnd"
     args.output.mkdir(parents=True, exist_ok=False)
     repo = Path(__file__).resolve().parents[3]
     report = dict(case=args.case, status="initializing", jit_regeneration=False, model_test=False)
@@ -43,6 +61,15 @@ def main():
         from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.binding import PreparedDynamicCSA
         from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.policy import select_policy
 
+        if args.aclnn_library:
+            import ctypes
+
+            _vendor_handle = ctypes.CDLL(
+                str(args.aclnn_vendor / "op_api/lib/libcust_opapi.so"), mode=ctypes.RTLD_GLOBAL
+            )
+            torch.ops.load_library(str(args.aclnn_library))
+            report["candidate_backend"] = "ACLNN device policy, fixed tiling key 0"
+
         device_id = args.device
         torch.npu.set_device(device_id)
         torch.npu.config.allow_internal_format = True
@@ -54,6 +81,8 @@ def main():
             runtime="tensormap_and_ringbuffer",
             ring_heap=[64 * 1024**2, 512 * 1024**2, 64 * 1024**2, 32 * 1024**2],
             ring_task_window=[4096] * 4,
+            enable_chip_swimlane=int(bool(args.profile_windows)),
+            enable_dep_gen=False,
             output_dir=str(args.output / "dfx"),
         )
         bound = get_process_kernel_state().require_config()
@@ -134,6 +163,18 @@ def main():
                 return call
 
             reference_call, merged_call = load(reference["artifact"]), load(args.artifact)
+            if args.formal_aclnn_package:
+                assert prepared.execution_backend == "aclnn" and not prepared.allocations
+                assert prepared.policy.constexprs() == {}
+                merged_call = prepared
+                report["candidate_backend"] = "PreparedDynamicCSA backend=aclnn device_policy"
+                report["host_policy_key"] = prepared.policy.constexprs()
+            if args.aclnn_library:
+                parameters = json.loads((args.artifact / "compiled_meta.json").read_text())["params"]
+                candidate_arguments = [prepared.buffers[p["name"]] for p in parameters]
+
+                def merged_call():
+                    torch.ops.csa_pto_device.run(candidate_arguments, 0)
 
             def snapshot():
                 values = {"output": native["x_out"].cpu().clone()}
@@ -185,6 +226,68 @@ def main():
             replay, replay_guards = snapshot()
             report["replay_bitwise"] = {key: torch.equal(value, expected[key]) for key, value in replay.items()}
             assert all(report["replay_bitwise"].values()) and all(replay_guards.values())
+            if args.profile_windows:
+                from csa_tnd_nz_weights_20261027.l1 import export
+
+                baseline_graph = torch.npu.NPUGraph()
+                restore(native, groups)
+                with torch.npu.graph(baseline_graph):
+                    reference_call()
+                graphs = {"original": baseline_graph, "merged": graph}
+                for _ in range(10):
+                    for current in graphs.values():
+                        restore(native, groups)
+                        current.replay()
+                        torch.npu.synchronize()
+                report["performance"] = dict(
+                    warmup_per_side=10, replay_per_window=1, boundary="L1 incore首尾", samples=[]
+                )
+                save("stable_l1")
+                samples = report["performance"]["samples"]
+                for sample in range(args.profile_windows):
+                    order = ("original", "merged") if sample % 2 == 0 else ("merged", "original")
+                    for side in order:
+                        restore(native, groups)
+                        torch.npu.synchronize()
+                        pypto.torch.begin_dfx()
+                        try:
+                            graphs[side].replay()
+                        finally:
+                            pypto.torch.end_dfx()
+                        source = args.output / "dfx"
+                        if samples:
+                            source /= f"window_{len(samples)}"
+                        artifact_dir = Path(reference["artifact"]) if side == "original" else args.artifact
+                        samples.append(
+                            export(
+                                source,
+                                args.output / f"l1_{sample:02d}_{side}",
+                                side=side,
+                                variant="spmd",
+                                kernel_config=artifact_dir / "kernel_config.py",
+                            )
+                        )
+                summary = {}
+                for side in graphs:
+                    values = [s["incore_span_us"] for s in samples if s["side"] == side]
+                    summary[side] = dict(
+                        min=min(values),
+                        median=statistics.median(values),
+                        mean=statistics.mean(values),
+                        max=max(values),
+                        count=len(values),
+                    )
+                report["performance"]["statistics_us"] = summary
+                report["performance"]["median_change_percent"] = (
+                    summary["merged"]["median"] / summary["original"]["median"] - 1
+                ) * 100
+                restore(native, groups)
+                graph.replay()
+                torch.npu.synchronize()
+                last, last_guards = snapshot()
+                assert all(torch.equal(value, expected[key]) for key, value in last.items()) and all(
+                    last_guards.values()
+                )
             if args.cross_policy_replay:
                 assert args.case == "C04", "跨档测试固定B16/S6，容量和输入地址保持不变"
                 save("cross_policy_inputs")

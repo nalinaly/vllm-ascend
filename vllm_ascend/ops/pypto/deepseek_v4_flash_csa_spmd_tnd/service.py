@@ -73,6 +73,14 @@ class CSAServiceRuntime(AttentionServiceBase):
 
     @staticmethod
     def _select_policy(**descriptors):
+        from ..variant import selected_csa_backend
+
+        if selected_csa_backend() == "aclnn":
+            from .backend import uses_device_policy
+            from .policy import DeviceSelectedPolicy
+
+            if uses_device_policy():
+                return DeviceSelectedPolicy()
         return select_policy(**descriptors)
 
     @staticmethod
