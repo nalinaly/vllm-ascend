@@ -24883,3 +24883,81 @@ Simpler对照遗留的强制mode=1在纯ACLNN中是否仍合适。尚未有结�
 默认值；只有该实验改善才补同模式Native对照。已核对本机固定请求分配是
 16rank各重复同一组16题（共256请求、16种内容），向用户询问客户50ms负载的
 分配规则；在答复前不自行改输入来追求目标值，也不认定重复输入已造成性能差。
+
+### 2026-10-31：同源Native对照完成；event mode=0取得小幅改善
+
+`task_20261031_052739_1892558148`正常结束，和PTO使用相同的
+`model_decode_source_replay_async_v1`、event mode=1及固定输入：
+
+| 路径 | 最慢rank | rank mean（ms） | 全样本P95（ms） | 全样本max（ms） |
+| --- | ---: | ---: | ---: | ---: |
+| Native | 4 | 59.644832 | 60.193161 | 60.411758 |
+| PTO后置ACLNN | 4 | 53.258596 | 53.810219 | 54.276600 |
+
+PTO最慢rank均值相对Native下降 **10.7071%**，但48ms目标仍未达到。Native的
+256个192-token输出与上一轮Native全部一致，各rank DSpark统计也一致。
+Native本次没有69ms长尾，不能仅凭一次十步窗口宣布普遍长尾已解决。两侧
+完整样本、Host区间和独立三步图分段已补入`replay_async_validation.json`。
+
+离线解析已有16rank三步记录后，第二次主图replay（step=1）的两处迟到已定位：layer7/rank2的
+attention+router区间为1.907ms，其他rank约0.72～0.76ms；layer22/rank3为
+1.937ms，其他rank约0.91ms。前者在主要计算结束后至下一条MEM_WRITE之间
+约1.120ms没有其他已记录设备任务；后者在同步任务结束至下一MoE启动前约
+1.043ms空档。CSA所在SK在rank3为803.856us、rank0为798.980us，不能把约1ms
+迟到归为CSA核变慢。完整任务时间和Host调用计数见
+[replay_device_gaps.json](csa_aclnn_host_20261030/replay_device_gaps.json)。
+
+同期Host仍下发后续eager算子，但尚未隔离因果。进一步检查真实任务stream ID：
+主图使用93/94/95，后续eager使用37/39/47；不能从Python helper共享对象直接
+推导设备图复用了同一条流，因此不据此修改stream分配。draft enforce_eager=True
+也与用户此前要求对齐的Native服务模板一致，不静默切换draft图模式或MoE配置。
+
+event mode=0候选`task_20261031_053726_249854610230`正常完成，实际16个worker
+均报告mode=0且Simpler未初始化。最慢rank6 mean **52.616798ms**，160样本mean
+52.517355ms，P95 **53.238419ms**、max **53.499260ms**。相对上述mode=1，最慢
+rank均值减少0.641798ms（约1.21%）；Host提交mean0.181367ms基本不变。
+两侧为同一冻结源码，只改变event模式。256个192-token输出及DSpark统计全部
+一致。尚不能断言前述设备空档已消失，需结合该次已有trace；目标仍差4.616798ms。
+证据：[event_mode0_validation.json](csa_aclnn_host_20261030/event_mode0_validation.json)。
+
+按候选有收益才补Native同模式基线的原则，已提交
+`task_20261031_060526_412716420111`（`native_event0_v1`）。PTO mode=0的16rank
+trace解析任务为`task_20261031_060526_412723516154`，只解析已有采集，不新增
+profiling运行。Native mode=0尚无结果，暂不跨模式宣称新的Native/PTO收益。
+
+Native mode=0任务也已正常结束：最慢rank8 mean **60.624109ms**、P95
+**60.835461ms**、max **61.017479ms**，256请求与mode=1 Native逐token一致，
+16rank接受统计一致。同模式0下PTO相对Native下降13.2081%，但须同时披露：
+Native本身比mode=1慢0.979277ms，而PTO只改善0.641798ms，不能把13.21%全称为
+新增PTO优化收益。两种mode的原始结果均保留，PTO绝对目标仍差4.616798ms。
+
+mode=0已有三步trace中，第二步先前的两处约1ms迟到没有重现，但第三步仍有
+layer23/rank4约0.784ms和layer32/rank5约0.535ms的区间不齐。它是本次性能
+较好的候选，不是设备长尾已根治的证据；没有调整计时边界、删除样本或换题。
+
+进一步核对Host任务队列。已安装torch_npu 2.10.0.post2的导出getter实际返回
+`TASK_QUEUE_ENABLE=1`，CPU探针前后均未初始化NPU，见
+[task_queue_default.json](csa_aclnn_host_20261030/task_queue_default.json)。
+官方[OptionsManager实现](https://raw.githubusercontent.com/Ascend/pytorch/v2.10.0/torch_npu/csrc/core/npu/register/OptionsManager.cpp)
+及本地ACLNN宏显示还存在二级队列路径，因此只先做单卡静态/SK兼容验证。
+
+单卡任务`task_20261031_061413_55564516915`在`capture_begin`明确报错：
+`Do not support TASK_QUEUE_ENABLE = 2 during NPU graph capture`。这是SDK功能
+限制，未发生非法访存；不删SDK保护，不升级共享SDK，不扩大到16卡测试。
+官方[NPUGraph实现](https://raw.githubusercontent.com/Ascend/pytorch/v2.10.0/torch_npu/csrc/core/npu/NPUGraph.cpp)
+同样保留该限制。完整失败点见
+[task_queue2_validation.json](csa_aclnn_host_20261030/task_queue2_validation.json)。
+
+另一个有针对性的候选是保留一级队列、仅设置既有`PER_STREAM_QUEUE=1`来隔离
+Host队列，避免同一个Host下发队列互相牵制；这不等同于修改设备stream分配。
+先提交单卡兼容验证`task_20261031_062357_9457549129`，尚无性能结论。新增的
+getter和环境记录仅用于测试启动/配置报告，不进入CSA或逐步推理热路径。
+
+该per-stream单卡任务正常通过，实际报告一级队列、`PER_STREAM_QUEUE=1`、
+CANN event mode=0。输出和五组状态在padding→真实请求及两组无中间Host同步
+的连续replay中均与eager逐bit一致，未进入Simpler。证据见
+[per_stream_queue_validation.json](csa_aclnn_host_20261030/per_stream_queue_validation.json)。
+16卡候选`task_20261031_062542_9747189127`已提交，使用
+`model_decode_source_per_stream_queue_v1`和相同固定输入/算法/通信/SK配置；
+相对mode=0基线只改Host队列隔离，并在计时外记录实际队列配置。性能待结果，
+未提前接受或切换生产默认值。

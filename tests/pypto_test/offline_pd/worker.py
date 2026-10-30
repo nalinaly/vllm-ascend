@@ -7,7 +7,7 @@ import sys
 import torch
 import torch_npu
 
-from offline_pd.event_mode import get_event_work_mode, set_event_work_mode
+from offline_pd.event_mode import get_event_work_mode, get_task_queue_enable, set_event_work_mode
 from vllm_ascend.worker.worker import NPUWorker
 
 
@@ -83,6 +83,7 @@ class OfflineNPUWorker(NPUWorker):
             "hccl_deterministic": os.environ.get("HCCL_DETERMINISTIC", "false"),
             "dynamic_eplb": self.model_runner.dynamic_eplb,
             "cann_event_work_mode": get_event_work_mode() if torch_npu.npu.is_initialized() else None,
+            "task_queue_enable": get_task_queue_enable(),
             "decode_optimizations": {
                 "ascend_compilation_config": {
                     name: getattr(ascend.ascend_compilation_config, name)
@@ -102,7 +103,8 @@ class OfflineNPUWorker(NPUWorker):
                 name: os.environ.get(name)
                 for name in ("LOCAL_WORLD_SIZE", "OMP_NUM_THREADS", "OMP_PROC_BIND",
                              "HCCL_OP_EXPANSION_MODE", "HCCL_BUFFSIZE",
-                             "VLLM_BATCH_INVARIANT", "PYTORCH_NPU_ALLOC_CONF")
+                             "VLLM_BATCH_INVARIANT", "PYTORCH_NPU_ALLOC_CONF",
+                             "TASK_QUEUE_ENABLE", "PER_STREAM_QUEUE")
             },
             "scheduler": {
                 name: getattr(self.model_runner.scheduler_config, name)

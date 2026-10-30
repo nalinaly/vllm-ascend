@@ -68,9 +68,17 @@ def analyze(root):
         for layer in range(43):
             ds = [row["dispatches_ns"][layer] for row in rows]
             cs = [row["combines_ns"][layer] for row in rows]
+            preceding = [row["combines_ns"][layer - 1][1] if layer else row["graph_begin_ns"] for row in rows]
+            last_entry = max(rows, key=lambda row: row["dispatches_ns"][layer][0])["rank"]
+            last_exit = max(rows, key=lambda row: row["dispatches_ns"][layer][1])["rank"]
             layers.append({"layer": layer,
                            "dispatch_entry_spread_ms": spread_ms([x[0] for x in ds]),
                            "dispatch_exit_spread_ms": spread_ms([x[1] for x in ds]),
+                           "dispatch_last_entry_rank": last_entry,
+                           "dispatch_last_exit_rank": last_exit,
+                           "attention_and_router_span_ms": ranges([
+                               (current[0] - previous) / 1e6 for current, previous in zip(ds, preceding)
+                           ]),
                            "dispatch_fused_duration_ms": ranges([(x[1] - x[0]) / 1e6 for x in ds]),
                            "combine_entry_spread_ms": spread_ms([x[0] for x in cs]),
                            "combine_exit_spread_ms": spread_ms([x[1] for x in cs]),

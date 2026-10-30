@@ -230,3 +230,15 @@ max。22项CPU回归和单卡replay通过，两侧使用同一冻结源码成对
 mean为53.259ms（前一轮53.014ms），不能认定整网改善。256个192-token请求及
 DSpark统计与前一轮一致；Native同源对照运行中。event mode=0作为独立候选已
 排队，其余配置和固定输入保持不变，尚不替换默认mode=1。48ms目标仍未完成。
+
+最新同源mode=1对照完成：Native最慢rank mean59.645ms，PTO53.259ms，PTO下降
+10.71%；两侧各自与修改前的输出及接受统计均一致。event mode=0独立候选进一步
+得到PTO **52.617ms**、P95 **53.238ms**、max **53.499ms**，实际16worker均为
+mode=0且未运行Simpler，输出和接受统计不变。距离48ms仍差4.617ms；同模式
+Native任务已排队，未完成前不混用mode=1基线。三步trace中的迟到已定位到
+局部设备任务间隙，不能归为逐层Python检查，具体证据保存在本轮validation log。
+
+Native mode=0对照完成，最慢rank均值60.624ms；相比mode=1的59.645ms更慢。
+PTO mode=0为52.617ms，较自身mode=1改善0.642ms，不将Native的回退包装成PTO
+新增收益。二级Host队列在单卡捕图即被SDK明确拒绝，已停止该候选；只继续
+单卡验证一级队列下的per-stream队列隔离，未对生产或共享SDK做未验证切换。

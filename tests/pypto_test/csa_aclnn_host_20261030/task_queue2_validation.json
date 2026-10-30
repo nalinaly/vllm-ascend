@@ -1,0 +1,15 @@
+{
+  "passed": false,
+  "stage": "error",
+  "task_queue_enable": 2,
+  "cann_event_work_mode": 0,
+  "native_output_comparison": {
+    "max_abs": 0.0390625,
+    "relative_rmse": 0.004364285618066788,
+    "finite": true,
+    "bit_equal": false
+  },
+  "error": "Traceback (most recent call last):\n  File \"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/run_device.py\", line 277, in main\n    call(True)\n  File \"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/run_device.py\", line 237, in call\n    (wrapper if graph else forward)(fixture[\"hidden\"], fixture[\"positions\"], output)\n  File \"/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/vllm_ascend/compilation/acl_graph.py\", line 234, in __call__\n    with torch.npu.graph(aclgraph, pool=self.graph_pool):\n  File \"/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/npu/graphs.py\", line 528, in __enter__\n    self.npu_graph.capture_begin(\n  File \"/data/pyptouser/qinchuanyu/pto-eager/.venv-dsv4-0251rc1/lib/python3.10/site-packages/torch_npu/npu/graphs.py\", line 359, in capture_begin\n    super().capture_begin(pool=pool, capture_error_mode=capture_error_mode, report_shape=True)\nRuntimeError: Do not support TASK_QUEUE_ENABLE = 2 during NPU graph capture, please export TASK_QUEUE_ENABLE=1/0.\n[ERROR] 2026-10-31-06:19:39 (PID:870486, Device:0, RankID:-1) ERR00007 PTA feature not supported\n",
+  "task": "task_20261031_061413_55564516915",
+  "decision": "torch_npu在capture_begin明确拒绝TASK_QUEUE_ENABLE=2；未发生非法访存，不移除SDK保护，不进入16卡候选"
+}

@@ -82,6 +82,7 @@ def main():
         from csa_mpmd_tnd_20261021.scenarios import make_fixture
         from dsv4_csa_native_case import native_session
         from dsv4_csa_single_layer import guard_checks, make_layer, restore
+        from offline_pd.event_mode import get_event_work_mode, get_task_queue_enable
         from vllm.config import CUDAGraphMode
         from vllm.engine.arg_utils import EngineArgs
         from vllm.forward_context import BatchDescriptor, get_forward_context
@@ -98,6 +99,9 @@ def main():
         device_id = int(os.environ["TASK_DEVICE"])
         assert args.device is None or args.device == device_id
         torch.npu.set_device(device_id)
+        report["task_queue_enable"] = get_task_queue_enable()
+        report["per_stream_queue_env"] = os.environ.get("PER_STREAM_QUEUE")
+        report["cann_event_work_mode"] = get_event_work_mode()
         torch.npu.config.allow_internal_format = True
         torch_npu.npu.set_deterministic_level(1)
         current_platform.pre_register_and_update()

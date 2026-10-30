@@ -3,6 +3,21 @@
 import ctypes
 
 
+def get_task_queue_enable():
+    """读取已安装ACLNN封装的队列模式；只在测量外记录配置。"""
+    from pathlib import Path
+
+    import torch_npu
+
+    library = Path(torch_npu.__file__).parent / "lib/libtorch_npu.so"
+    # Installed op_api_common_base.h declares uint32_t OpApiGetTaskQueueEnable().
+    # The exported C++ symbol was confirmed with nm for this frozen SDK.
+    function = ctypes.CDLL(str(library))._Z23OpApiGetTaskQueueEnablev
+    function.argtypes = []
+    function.restype = ctypes.c_uint32
+    return function()
+
+
 def get_event_work_mode():
     runtime = ctypes.CDLL("libruntime.so")
     function = runtime.rtEventWorkModeGet

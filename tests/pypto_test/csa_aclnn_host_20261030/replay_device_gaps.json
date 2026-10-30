@@ -1,0 +1,765 @@
+{
+  "scope": "已有三步独立profiling，非稳态十步计时；首步含profiling初始化扰动。Host API通过connectionId关联MODEL_EXECUTE；整数ns沿profiler归一化时钟对齐。MoE融合task包含计算和通信等待，不能把持续时间或rank差异全部解释为通信。after_first_dispatch保留后续完整设备链，只作诊断，不能作为无profiler性能下界。",
+  "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_replay_async_v1/rank_launch_analysis.json",
+  "task_source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_replay_async_v1/delayed_layers_tasks.json",
+  "steps": [
+    {
+      "step": 0,
+      "host_launch_entry_spread_ms": 1.16242,
+      "host_launch_exit_spread_ms": 0.97176,
+      "device_graph_entry_spread_ms": 0.988086,
+      "device_graph_exit_spread_ms": 0.012739,
+      "graph_span_ms": {
+        "min": 54.949998,
+        "mean": 55.488383,
+        "max": 55.925897
+      },
+      "after_first_dispatch_ms": {
+        "min": 53.99976,
+        "mean": 54.1085259375,
+        "max": 54.15356
+      },
+      "selected_layers": [
+        {
+          "layer": 0,
+          "dispatch_entry_spread_ms": 1.010627,
+          "dispatch_exit_spread_ms": 0.15607,
+          "dispatch_last_entry_rank": 4,
+          "dispatch_last_exit_rank": 1,
+          "attention_and_router_span_ms": {
+            "min": 0.47694,
+            "mean": 0.49953312499999997,
+            "max": 0.526151
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.371008,
+            "mean": 0.8803239375,
+            "max": 1.3463
+          },
+          "combine_entry_spread_ms": 0.15655,
+          "combine_exit_spread_ms": 0.014522,
+          "combine_duration_ms": {
+            "min": 0.0646,
+            "mean": 0.166526125,
+            "max": 0.20864
+          }
+        },
+        {
+          "layer": 7,
+          "dispatch_entry_spread_ms": 0.042501,
+          "dispatch_exit_spread_ms": 0.24994,
+          "dispatch_last_entry_rank": 5,
+          "dispatch_last_exit_rank": 8,
+          "attention_and_router_span_ms": {
+            "min": 0.713934,
+            "mean": 0.7361389375,
+            "max": 0.759175
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.1459,
+            "mean": 0.2643401875,
+            "max": 0.387448
+          },
+          "combine_entry_spread_ms": 0.25046,
+          "combine_exit_spread_ms": 0.025554,
+          "combine_duration_ms": {
+            "min": 0.088302,
+            "mean": 0.20543,
+            "max": 0.33118
+          }
+        },
+        {
+          "layer": 22,
+          "dispatch_entry_spread_ms": 0.033043,
+          "dispatch_exit_spread_ms": 0.200902,
+          "dispatch_last_entry_rank": 12,
+          "dispatch_last_exit_rank": 15,
+          "attention_and_router_span_ms": {
+            "min": 0.901038,
+            "mean": 0.9144376875,
+            "max": 0.929415
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.17588,
+            "mean": 0.2621910625,
+            "max": 0.38458
+          },
+          "combine_entry_spread_ms": 0.201082,
+          "combine_exit_spread_ms": 0.015182,
+          "combine_duration_ms": {
+            "min": 0.089402,
+            "mean": 0.207234125,
+            "max": 0.28696
+          }
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "host_launch_entry_spread_ms": 1.43183,
+      "host_launch_exit_spread_ms": 1.42896,
+      "device_graph_entry_spread_ms": 1.425952,
+      "device_graph_exit_spread_ms": 0.021042,
+      "graph_span_ms": {
+        "min": 57.006859,
+        "mean": 57.8437913125,
+        "max": 58.422287
+      },
+      "after_first_dispatch_ms": {
+        "min": 56.05784,
+        "mean": 56.156899125,
+        "max": 56.228191
+      },
+      "selected_layers": [
+        {
+          "layer": 0,
+          "dispatch_entry_spread_ms": 1.450893,
+          "dispatch_exit_spread_ms": 0.16459,
+          "dispatch_last_entry_rank": 15,
+          "dispatch_last_exit_rank": 1,
+          "attention_and_router_span_ms": {
+            "min": 0.47796,
+            "mean": 0.499955625,
+            "max": 0.521291
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.367587,
+            "mean": 1.1869365625,
+            "max": 1.810356
+          },
+          "combine_entry_spread_ms": 0.16543,
+          "combine_exit_spread_ms": 0.01147,
+          "combine_duration_ms": {
+            "min": 0.06854,
+            "mean": 0.1590024375,
+            "max": 0.230394
+          }
+        },
+        {
+          "layer": 7,
+          "dispatch_entry_spread_ms": 1.18721,
+          "dispatch_exit_spread_ms": 0.262836,
+          "dispatch_last_entry_rank": 2,
+          "dispatch_last_exit_rank": 8,
+          "attention_and_router_span_ms": {
+            "min": 0.72036,
+            "mean": 0.8157626875,
+            "max": 1.90714
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.2051,
+            "mean": 1.3341121875,
+            "max": 1.539971
+          },
+          "combine_entry_spread_ms": 0.262436,
+          "combine_exit_spread_ms": 0.024629,
+          "combine_duration_ms": {
+            "min": 0.091221,
+            "mean": 0.205344875,
+            "max": 0.34006
+          }
+        },
+        {
+          "layer": 22,
+          "dispatch_entry_spread_ms": 1.034793,
+          "dispatch_exit_spread_ms": 0.215698,
+          "dispatch_last_entry_rank": 3,
+          "dispatch_last_exit_rank": 15,
+          "attention_and_router_span_ms": {
+            "min": 0.91086,
+            "mean": 0.9856100625,
+            "max": 1.936519
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.188764,
+            "mean": 1.2008438125,
+            "max": 1.395427
+          },
+          "combine_entry_spread_ms": 0.214918,
+          "combine_exit_spread_ms": 0.028186,
+          "combine_duration_ms": {
+            "min": 0.083402,
+            "mean": 0.2084028125,
+            "max": 0.29494
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "host_launch_entry_spread_ms": 1.04045,
+      "host_launch_exit_spread_ms": 1.04537,
+      "device_graph_entry_spread_ms": 1.054154,
+      "device_graph_exit_spread_ms": 0.017817,
+      "graph_span_ms": {
+        "min": 54.620971,
+        "mean": 55.1494920625,
+        "max": 55.66136
+      },
+      "after_first_dispatch_ms": {
+        "min": 53.66622,
+        "mean": 53.7662123125,
+        "max": 53.83744
+      },
+      "selected_layers": [
+        {
+          "layer": 0,
+          "dispatch_entry_spread_ms": 1.054624,
+          "dispatch_exit_spread_ms": 0.17211,
+          "dispatch_last_entry_rank": 15,
+          "dispatch_last_exit_rank": 1,
+          "attention_and_router_span_ms": {
+            "min": 0.47699,
+            "mean": 0.4984080625,
+            "max": 0.52324
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.270586,
+            "mean": 0.8848716875,
+            "max": 1.433608
+          },
+          "combine_entry_spread_ms": 0.17223,
+          "combine_exit_spread_ms": 0.015498,
+          "combine_duration_ms": {
+            "min": 0.06826,
+            "mean": 0.1600235,
+            "max": 0.23042
+          }
+        },
+        {
+          "layer": 7,
+          "dispatch_entry_spread_ms": 0.04989,
+          "dispatch_exit_spread_ms": 0.232552,
+          "dispatch_last_entry_rank": 2,
+          "dispatch_last_exit_rank": 8,
+          "attention_and_router_span_ms": {
+            "min": 0.715875,
+            "mean": 0.7335213125,
+            "max": 0.76284
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.16774,
+            "mean": 0.2771789375,
+            "max": 0.393908
+          },
+          "combine_entry_spread_ms": 0.233072,
+          "combine_exit_spread_ms": 0.02622,
+          "combine_duration_ms": {
+            "min": 0.089462,
+            "mean": 0.2017464375,
+            "max": 0.31594
+          }
+        },
+        {
+          "layer": 22,
+          "dispatch_entry_spread_ms": 0.02896,
+          "dispatch_exit_spread_ms": 0.198596,
+          "dispatch_last_entry_rank": 5,
+          "dispatch_last_exit_rank": 15,
+          "attention_and_router_span_ms": {
+            "min": 0.902778,
+            "mean": 0.91384,
+            "max": 0.92492
+          },
+          "dispatch_fused_duration_ms": {
+            "min": 0.16898,
+            "mean": 0.2759315,
+            "max": 0.368047
+          },
+          "combine_entry_spread_ms": 0.198316,
+          "combine_exit_spread_ms": 0.022735,
+          "combine_duration_ms": {
+            "min": 0.090122,
+            "mean": 0.1833035625,
+            "max": 0.28314
+          }
+        }
+      ]
+    }
+  ],
+  "late_rank_details": [
+    {
+      "step": 1,
+      "rank": 2,
+      "layer": 7,
+      "span_us": 1907.14,
+      "begin_ns": 1793396349400939205,
+      "end_ns": 1793396349402846345,
+      "tasks": [
+        {
+          "start_us": 0.7,
+          "end_us": 9.28,
+          "stream": 95,
+          "name": "aclnnAdd_AddAiCore_Add"
+        },
+        {
+          "start_us": 10.32,
+          "end_us": 69.66,
+          "stream": 95,
+          "name": "sk_469_none_start_static_kernel_HcPost_71eeac4a06021ccd90066e508651339731027ea9bea858360a4e3db3f62d8f68_1163353_d0__kernel0_end_static_kernel_RmsNorm_c3f471a8bbd07b2e5c6356b73deeb68ce332cd1b22703922118ce88565d29ec5_1163353_d0__kernel0"
+        },
+        {
+          "start_us": 70.42,
+          "end_us": 85.64,
+          "stream": 95,
+          "name": "aclnnMatmulWeightNz_MatMulCommon_MatMulV2"
+        },
+        {
+          "start_us": 81.02,
+          "end_us": 81.04,
+          "stream": 94,
+          "name": "EVENT_RECORD"
+        },
+        {
+          "start_us": 81.14,
+          "end_us": 81.14,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 81.16,
+          "end_us": 81.28,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 81.3,
+          "end_us": 86.72,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 85.66,
+          "end_us": 85.68,
+          "stream": 95,
+          "name": "EVENT_WAIT"
+        },
+        {
+          "start_us": 87.12,
+          "end_us": 97.94,
+          "stream": 95,
+          "name": "sk_797_none_start_static_kernel_RmsNormDynamicQuant_4b88e2ebdc17b343a05274ba15339ffa12ffd7ae0c70c00f0bc8f5ebf804df42_1354225_d0__kernel0_end_static_kernel_RmsNormDynamicQuant_4b88e2ebdc17b343a05274ba15339ffa12ffd7ae0c70c00f0bc8f5ebf804df42_1354225_d0__kernel0"
+        },
+        {
+          "start_us": 99.12,
+          "end_us": 99.24,
+          "stream": 95,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 99.28,
+          "end_us": 99.28,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 99.3,
+          "end_us": 99.44,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 99.46,
+          "end_us": 104.68,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 107.9,
+          "end_us": 120.02,
+          "stream": 94,
+          "name": "aclnnMatmulWeightNz_MatMulCommon_MatMulV2"
+        },
+        {
+          "start_us": 120.04,
+          "end_us": 120.04,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 120.06,
+          "end_us": 120.2,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 120.22,
+          "end_us": 121.44,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 122.82,
+          "end_us": 185.5,
+          "stream": 94,
+          "name": "sk_471_none_start_static_kernel_RmsNorm_b863779b028b52a446ca9b9ec5ef1d0be8aed7c3349bc9a88ee1902e92bf7dec_1354225_d0__kernel0_end_static_kernel_QuantBatchMatmulV3_803d6575314772359fb2c7a22d338032a70ca12f678404cf1571984a0c8216b9_1354225_d0"
+        },
+        {
+          "start_us": 186.44,
+          "end_us": 186.46,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 186.48,
+          "end_us": 186.6,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 186.62,
+          "end_us": 192.1,
+          "stream": 94,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 196.02,
+          "end_us": 196.2,
+          "stream": 95,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 196.22,
+          "end_us": 212.96,
+          "stream": 95,
+          "name": "triton_rms_kernel"
+        },
+        {
+          "start_us": 214.34,
+          "end_us": 276.46,
+          "stream": 95,
+          "name": "sk_716_none_start_static_kernel_InplacePartialRotaryMul_3ddbbf5511338f51f874aefa9be421dd4fe619acc911fa6648425ca029a4273d_1354225_d0__kernel0_end_static_kernel_Compressor_e8dd5b03c8b67ff716e88b0323a2b3e47feb4f92db4ac7e206bab9a457c2f8a8_2172846_d0"
+        },
+        {
+          "start_us": 279.28,
+          "end_us": 284.32,
+          "stream": 95,
+          "name": "sk_718_none_start_static_kernel_ScatterNdUpdateV2_62d787621239906dd7341661bb9f1fe96696624dfaa81954b0e998fdd55cea45_2172846_d0_end_static_kernel_ScatterNdUpdateV2_62d787621239906dd7341661bb9f1fe96696624dfaa81954b0e998fdd55cea45_2172846_d0"
+        },
+        {
+          "start_us": 287.14,
+          "end_us": 437.76,
+          "stream": 95,
+          "name": "sk_719_none_start_static_kernel_SparseAttnSharedkv_33d1a03e5ac7ffd4ca6c23e9e1c84d85b0ef239ae2215015fc0d675462432724_2172846_d0_end_static_kernel_SparseAttnSharedkv_33d1a03e5ac7ffd4ca6c23e9e1c84d85b0ef239ae2215015fc0d675462432724_2172846_d0"
+        },
+        {
+          "start_us": 438.48,
+          "end_us": 446.06,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_TensorMoveAiCore_TensorMove"
+        },
+        {
+          "start_us": 446.08,
+          "end_us": 447.9,
+          "stream": 95,
+          "name": "aclnnNeg_NegAiCore_Neg"
+        },
+        {
+          "start_us": 449.28,
+          "end_us": 582.04,
+          "stream": 95,
+          "name": "sk_473_none_start_static_kernel_InplacePartialRotaryMul_3ddbbf5511338f51f874aefa9be421dd4fe619acc911fa6648425ca029a4273d_1354225_d0__kernel0_end_static_kernel_QuantBatchMatmulV3_dffd5d73f117f35ad826f32893182e6d3528870c6d551ea636bdd66b4b1e4055_1354225_d0"
+        },
+        {
+          "start_us": 583.02,
+          "end_us": 587.84,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_TensorMoveAiCore_TensorMove"
+        },
+        {
+          "start_us": 589.08,
+          "end_us": 639.24,
+          "stream": 95,
+          "name": "sk_474_none_start_static_kernel_HcPost_71eeac4a06021ccd90066e508651339731027ea9bea858360a4e3db3f62d8f68_1163353_d0__kernel0_end_static_kernel_RmsNorm_c3f471a8bbd07b2e5c6356b73deeb68ce332cd1b22703922118ce88565d29ec5_1163353_d0__kernel0"
+        },
+        {
+          "start_us": 640.04,
+          "end_us": 648.0,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_CastAiCore_Cast"
+        },
+        {
+          "start_us": 648.02,
+          "end_us": 648.04,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 648.06,
+          "end_us": 648.18,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 648.2,
+          "end_us": 649.44,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 650.84,
+          "end_us": 699.08,
+          "stream": 95,
+          "name": "sk_475_none_start_static_kernel_MatMulV3_b095f5fbbf02b1383260811517f271b02ac72518109876dcc3e8132b8279ddca_1163353_d0__kernel0_end_static_kernel_QuantBatchMatmulV3_905668f087ffba342f568c38418a2fd2b04a3ac10892a0fd1e100b6e4929f794_1163353_d0__kernel0"
+        },
+        {
+          "start_us": 701.2,
+          "end_us": 702.18,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_CastAiCore_Cast"
+        },
+        {
+          "start_us": 702.2,
+          "end_us": 702.2,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 702.24,
+          "end_us": 702.38,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 702.4,
+          "end_us": 708.1,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 1827.64,
+          "end_us": 1827.84,
+          "stream": 93,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 1827.86,
+          "end_us": 1828.0,
+          "stream": 93,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 1828.02,
+          "end_us": 1828.04,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 1828.06,
+          "end_us": 1828.2,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 1828.22,
+          "end_us": 1833.56,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        }
+      ],
+      "all_tasks_in_gap": [
+        {
+          "start_us": 1827.64,
+          "end_us": 1827.84,
+          "stream": 93,
+          "model": 49,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 1827.86,
+          "end_us": 1828.0,
+          "stream": 93,
+          "model": 49,
+          "name": "MEM_WRITE_VALUE"
+        }
+      ],
+      "host_api_counts": {
+        "aclnnInplaceCopy": 14,
+        "aclrtGetStreamAttribute": 51,
+        "aclrtMemcpyAsync": 11,
+        "aclnnSub": 6,
+        "launch": 57,
+        "aclrtLaunchKernelWithHostArgs": 57,
+        "aclnnSubs": 2,
+        "aclnnClamp": 3,
+        "aclnnArange": 2,
+        "aclnnLtTensor": 2,
+        "aclnnAdd": 2,
+        "aclnnFloorDivides": 2,
+        "aclnnRemainderTensorScalar": 2,
+        "aclnnGather": 1,
+        "aclnnMuls": 1,
+        "aclnnInplaceFillScalar": 1,
+        "aclnnSWhere": 1,
+        "aclnnRepeatInterleaveWithDim": 2,
+        "aclrtGetResInCurrentThread": 22,
+        "aclnnSparseAttnSharedkvMetadataGetWorkspaceSize": 1,
+        "aclnnSparseAttnSharedkvMetadata": 1,
+        "aclrtRegisterCpuFunc": 1,
+        "aclnnInplaceCopyGetWorkspaceSize": 10,
+        "aclnnIndex": 8,
+        "aclnnStack": 1
+      }
+    },
+    {
+      "step": 1,
+      "rank": 3,
+      "layer": 22,
+      "span_us": 1936.519,
+      "begin_ns": 1793396349421131549,
+      "end_ns": 1793396349423068068,
+      "tasks": [
+        {
+          "start_us": 0.7,
+          "end_us": 8.4,
+          "stream": 95,
+          "name": "aclnnAdd_AddAiCore_Add"
+        },
+        {
+          "start_us": 9.701,
+          "end_us": 813.557,
+          "stream": 95,
+          "name": "sk_569_none_start_static_kernel_HcPost_71eeac4a06021ccd90066e508651339731027ea9bea858360a4e3db3f62d8f68_1163353_d0__kernel0_end_static_kernel_RmsNorm_c3f471a8bbd07b2e5c6356b73deeb68ce332cd1b22703922118ce88565d29ec5_1163353_d0__kernel0"
+        },
+        {
+          "start_us": 814.597,
+          "end_us": 822.497,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_CastAiCore_Cast"
+        },
+        {
+          "start_us": 822.537,
+          "end_us": 822.537,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 822.557,
+          "end_us": 822.697,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 822.717,
+          "end_us": 823.977,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 825.377,
+          "end_us": 874.018,
+          "stream": 95,
+          "name": "sk_570_none_start_static_kernel_MatMulV3_b095f5fbbf02b1383260811517f271b02ac72518109876dcc3e8132b8279ddca_1163353_d0__kernel0_end_static_kernel_QuantBatchMatmulV3_905668f087ffba342f568c38418a2fd2b04a3ac10892a0fd1e100b6e4929f794_1163353_d0__kernel0"
+        },
+        {
+          "start_us": 874.818,
+          "end_us": 875.758,
+          "stream": 95,
+          "name": "aclnnInplaceCopy_CastAiCore_Cast"
+        },
+        {
+          "start_us": 875.778,
+          "end_us": 875.798,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 875.818,
+          "end_us": 875.938,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 875.978,
+          "end_us": 881.838,
+          "stream": 95,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 886.598,
+          "end_us": 886.778,
+          "stream": 93,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 886.798,
+          "end_us": 886.938,
+          "stream": 93,
+          "name": "MEM_WRITE_VALUE"
+        },
+        {
+          "start_us": 886.958,
+          "end_us": 886.978,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 886.998,
+          "end_us": 887.118,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        },
+        {
+          "start_us": 887.158,
+          "end_us": 892.578,
+          "stream": 93,
+          "name": "MEM_WAIT_VALUE"
+        }
+      ],
+      "all_tasks_in_gap": [
+        {
+          "start_us": 1935.439,
+          "end_us": 2126.503,
+          "stream": 95,
+          "model": 4294967295,
+          "name": "AI_CORE"
+        }
+      ],
+      "host_api_counts": {
+        "aclnnGroupedMatmulSwigluQuantWeightNZ": 1,
+        "aclrtGetStreamAttribute": 13,
+        "launch": 13,
+        "aclrtGetHardwareSyncAddr": 6,
+        "aclrtLaunchKernelWithHostArgs": 13,
+        "aclrtCreateEventExWithFlag": 3,
+        "aclrtRecordEvent": 3,
+        "aclnnGroupedMatmulWeightNz": 1,
+        "aclnnInplaceCopy": 2,
+        "aclnnInnerMoeDistributeCombineV2GetWorkspaceSize": 1,
+        "aclrtGetResInCurrentThread": 6,
+        "aclnnInnerMoeDistributeCombineV2": 1,
+        "aclrtStreamGetId": 2,
+        "aclrtGetCurrentContext": 2,
+        "aclrtStreamWaitEvent": 5,
+        "aclnnDynamicQuantV2": 1,
+        "aclnnQuantMatmulWeightNz": 2,
+        "aclnnDequantSwigluQuantV2GetWorkspaceSize": 1,
+        "aclnnDequantSwigluQuantV2": 1,
+        "aclrtDestroyEvent": 6,
+        "aclnnAdd": 1,
+        "aclnnHcPostGetWorkspaceSize": 1,
+        "aclnnHcPost": 1,
+        "aclnnPowTensorScalar": 1,
+        "aclnnMean": 1
+      }
+    }
+  ],
+  "conclusion": "第1步layer7/rank2和layer22/rank3在计算后的本机任务启动区间变慢，带来其他rank的MoE等待。同期有后续eager算子Host提交，但未隔离因果；不能把间隙归因于CSA核变慢或逐层Python校验。",
+  "stream_check": {
+    "main_graph_streams": [
+      93,
+      94,
+      95
+    ],
+    "following_eager_compute_streams": [
+      37,
+      39,
+      47
+    ],
+    "ranks": [
+      2,
+      3
+    ],
+    "scope": "各rank零基step=1主图结束至step=2主图开始区间内modelId=4294967295的计算任务；不能据Python helper共享推断捕获图与eager使用同一条设备流。"
+  }
+}
