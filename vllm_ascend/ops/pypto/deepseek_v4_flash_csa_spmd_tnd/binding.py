@@ -224,7 +224,7 @@ class PreparedDynamicCSA:
 
             self._executor = AclnnExecutor(self)
 
-    def rebind(self, native: Mapping[str, torch.Tensor]) -> None:
+    def rebind(self, native: Mapping[str, torch.Tensor], *, validate=True) -> None:
         """替换同描述符的Native根参数；临时工作区由所选后端管理。"""
         roots = {target: native[source] for target, source in self._direct_names}
         roots.update(
@@ -235,7 +235,7 @@ class PreparedDynamicCSA:
             main_cache=native["cmp_kv"].view(-1, 512),
             attn_sink=native["attn_sink"].view(64, 1),
         )
-        for name, value in roots.items():
+        for name, value in (roots.items() if validate else ()):
             previous = self.buffers[name]
             if (
                 value.shape != previous.shape
@@ -252,7 +252,11 @@ class PreparedDynamicCSA:
                     )
                 )
         if self._executor is not None:
-            self._executor.rebind({**self.buffers, **roots})
+            updated = {**self.buffers, **roots}
+            if validate:
+                self._executor.rebind(updated)
+            else:
+                self._executor.rebind(updated, validate=False)
         self.native = dict(native)
         self.buffers.update(roots)
 

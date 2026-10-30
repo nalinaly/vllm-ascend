@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
-"""TND单SPMD服务：Native描述符判定、按描述符准备绑定、调用内申请工作区、直接提交。
+"""TND单SPMD服务：复用Native输入和图生命周期，调用内申请工作区。
 
 沿用Native的cache connector生命周期及同一步跨层compact metadata复用。
 与旧多task入口分开，绝不从token数反算请求数。已有Host字段只用于支持范围
-和策略选择，逐请求计算仍读device Q/L。首版短历史范围见service_config。
+和旧后端策略选择；设备选档ACLNN直接读取device Q/L，不做Host长度门槛。
 
 准备对象按根Tensor描述符和策略缓存，不持有外部工作区；capture可替换同描述符
 的输入/输出地址。临时Tensor及信号的初始化和生命周期均在PTO调用内部。图重放不会经过Python判定，因此
-服务路由集成还必须验证捕获的请求容量、策略和metadata地址合同。
+旧后端保留图合同；统一ACLNN不注册或逐层重算合同，由Native管理图容量与地址。
 """
 
 import torch
@@ -19,7 +19,7 @@ from .binding import PreparedDynamicCSA
 from .entry import decode_csa_spmd
 from .graph_contract import TNDGraphContract, compact_metadata_capacity, graph_compact_request, tensor_descriptor
 from .native_adapter import bind_native_inputs, token_capacity_view
-from .policy import select_policy
+from .policy import DeviceSelectedPolicy, select_policy
 from .service_config import MAX_QUERY_TOKENS, native_query_bound, supported_descriptor
 
 _TND_COMPACT_METADATA_CACHE = "pto_csa_tnd_compact_compressor_metadata"
@@ -63,6 +63,8 @@ def _native_token_views(requests, layer_name, tokens):
 
 
 class CSAServiceRuntime(AttentionServiceBase):
+    native_graph_lifecycle = False
+
     @staticmethod
     def _supported_descriptor(**descriptors):
         return supported_descriptor(**descriptors)
@@ -106,6 +108,13 @@ class CSAServiceRuntime(AttentionServiceBase):
             "indexer_state": attention.indexer.compressor.state_cache.prefix,
         }
         self.batch_capacity = max_num_seqs
+        from ..variant import selected_csa_backend
+
+        if selected_csa_backend() == "aclnn":
+            from .backend import uses_device_policy
+
+            self.native_graph_lifecycle = uses_device_policy()
+        self._device_policy = DeviceSelectedPolicy() if self.native_graph_lifecycle else None
         self._hadamard = None
         self._bindings = {}
         self.submissions = 0
@@ -114,6 +123,8 @@ class CSAServiceRuntime(AttentionServiceBase):
 
     def record_graph_route(self, context, hidden, positions):
         """先记下未确认路由；只有实际单SPMD提交路径才能覆盖为可重放合同。"""
+        if self.native_graph_lifecycle:
+            return
         if getattr(context, "capturing", False):
             context.additional_kwargs.setdefault("pto_csa_tnd_graph_contracts", {})[self.layer_name] = TNDGraphContract(
                 self, hidden.shape[0], None
@@ -126,7 +137,7 @@ class CSAServiceRuntime(AttentionServiceBase):
         cached = cache.get(key)
         if cached is not None and cached[0] is req:
             return cached[1]
-        adapted = graph_compact_request(req, tokens)
+        adapted = graph_compact_request(req, tokens, validate=not self.native_graph_lifecycle)
         value = self.wrapper.dsa_attn.impl._compute_compressor_metadata(adapted)
         cache[key] = (req, value)
         return value
@@ -231,6 +242,10 @@ class CSAServiceRuntime(AttentionServiceBase):
             output.copy_(hidden)
             self.empty_calls += 1
             return True
+        if self.native_graph_lifecycle:
+            # 有图容量时仍捕获真实ACLNN，让device Q/L处理全padding。
+            # 不能捕获一次Host判空的零输出分支后用于后续有效请求。
+            return False
         metadata = context.attn_metadata
         if metadata is None or getattr(context, "is_draft_model", False):
             return False
@@ -247,6 +262,11 @@ class CSAServiceRuntime(AttentionServiceBase):
         metadata = context.attn_metadata
         if metadata is None or getattr(context, "is_draft_model", False):
             return False
+        if self.native_graph_lifecycle:
+            # 沿Native的prefill/decode路由；长度、padding、策略由device处理。
+            # 首次绑定校验ABI；图replay不会再进入逐层描述符扫描。
+            item = metadata[self.prefixes["compressed"]]
+            return not item.num_prefills and item.decode is not None
         if hidden.ndim != 3 or hidden.shape[1:] != (4, 4096):
             return False
         if hidden.dtype != torch.bfloat16 or not hidden.is_contiguous():
@@ -359,19 +379,24 @@ class CSAServiceRuntime(AttentionServiceBase):
             layer_name=self.layer_name,
             compact_metadata=compact,
             output=output,
+            validate=not self.native_graph_lifecycle,
         )
         requests = native["kv_seq_lens"].numel()
         maximum = metadata["indexer"].decode.max_seq_lens
         # 固定的是本服务允许的query上界，真实Q/L仍可在1..6之间逐请求变化。
         # 不因当前max_q较小而把图容量误判为T > B*max_q。
-        policy = self._select_policy(
-            tokens=tokens,
-            requests=requests,
-            max_query_tokens=MAX_QUERY_TOKENS,
-            max_seq_len=maximum,
-            compressed_table_columns=native["cmp_block_table"].shape[1],
-        )
-        key = (_descriptor_key(native), policy)
+        if self.native_graph_lifecycle:
+            policy = self._device_policy
+            key = (tokens, requests)
+        else:
+            policy = self._select_policy(
+                tokens=tokens,
+                requests=requests,
+                max_query_tokens=MAX_QUERY_TOKENS,
+                max_seq_len=maximum,
+                compressed_table_columns=native["cmp_block_table"].shape[1],
+            )
+            key = (_descriptor_key(native), policy)
         if key not in self._bindings:
             if capturing:
                 raise RuntimeError(
@@ -394,9 +419,12 @@ class CSAServiceRuntime(AttentionServiceBase):
                 policy=policy,
             )
         else:
-            self._bindings[key].rebind(native)
+            if self.native_graph_lifecycle:
+                self._bindings[key].rebind(native, validate=False)
+            else:
+                self._bindings[key].rebind(native)
         prepared = self._bindings[key]
-        if capturing:
+        if capturing and not self.native_graph_lifecycle:
             signature = self.graph_signature(context, tokens)
             if signature is None:
                 raise RuntimeError(

@@ -24338,3 +24338,47 @@ csa_device_pto_ops-0.2.0-cp310-cp310-linux_aarch64.whl。
 
 本阶段未验证SuperKernel、npugraph_ex、整模型或ACLNN稳定态性能；不新增Native/token/
 DSpark结论。后续更改本地详细中文提交，未再次push。
+
+
+## 2026-10-30：后置94策略ACLNN移除稳态Host重复校验
+
+目标为本机128K/B16、DP16/TP1的target主模型验证forward≤48ms。draft候选生成、
+接受/拒绝及完整DSpark step不计入target。Host多做的检查可能延迟各rank下发，
+放大通信等待；不能把kernel节省直接当作整网收益。详见
+[本轮Goal](DSV4_CSA_ACLNN_END_TO_END_GOAL_20261030.md)。
+
+本阶段只改设备后置选档ACLNN：模型准备时缓存后端特征，Worker不再扫描长度、
+执行CSA附加replay门槛；service不注册/重算逐层图签名，不调用Host policy选择，
+绑定复用不再扫描全量Tensor描述符。Torch Run删除55个Tensor的重复校验，
+只保留TensorList参数数目检查；Meta/首次准备保留静态合同。Python/MPMD及旧62档
+后端保留其既有行为，PTO HCA仍保留自己的图条件。
+
+QLI/C4 SAS连同kwargs、cu-seqlens准备及克隆延迟到实际Native消费者，后置ACLNN
+捕图前不再统一准备这些计划。非C4 SAS、Native回退和Native消费者继续按需准备。
+后置ACLNN不再人为强制用max_model_len捕获图，沿Native原有dummy长度；没有扩大
+DSpark页表、截断有效token或屏蔽非法访问。
+
+单卡使用真实权重第4层、真实CSA service/ACLGraphWrapper、55 Tensor后置ACLNN，
+不初始化/调用Simpler。验证场景及结果：
+
+| 场景 | 有效Q/历史 | 验证 | 与Native输出相对RMSE |
+| --- | --- | --- | --- |
+| 短历史混长+padding，T24/R5 | Q=[1,6,3,1]，历史=[0,0,2046,8190] | PASS | 0.00271358 |
+| 128K/B16，T96/R16 | 全S6，历史131072 | PASS | 0.00436429 |
+
+两档均先全padding捕图，再在相同地址恢复有效请求重放：无Python重新派发，
+未生成CSA图合同，输出和五组cache/state与同输入eager逐bit相同，保护区保持。
+全padding重放未改写cache/state。测试把graph_signature及QLI/C4 SAS准备函数
+替换为报错函数，实际路径均未触发；Simpler worker/config均未创建。Native数值
+仍非bit一致，本轮不宣称改变原有数学精度策略。完整记录：
+[csa_aclnn_host_20261030/validation.json](csa_aclnn_host_20261030/validation.json)。
+
+测试首次失败来自NPU初始化后才设置OPP路径，尚未进入核；启动脚本改为进程
+初始化前配置普通自定义ACLNN的OPP路径后通过。没有改公共CANN或工具链。
+
+静态/SK首次离线编译7项，5项成功、2项失败，25.89秒；没有静态包可用。
+失败不是冷编译超时：CSA缺少188个策略对象的静态链接；本地Native
+CompressorMetadata的Init参数缺const兼容。已保留参数dump、缓存和日志，
+后续修复这两处，不能把普通ACLNN图通过当作静态/SK验收。
+
+本阶段未测16卡target网络，尚无≤48ms结论；不把以上单卡功能通过记作目标完成。

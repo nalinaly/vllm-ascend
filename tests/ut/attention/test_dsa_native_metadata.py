@@ -115,6 +115,19 @@ def test_fallback_shares_production_but_fills_each_builders_buffer(monkeypatch, 
     assert torch.equal(one.qli_metadata, two.qli_metadata)
 
 
+def test_unused_c4_plans_do_not_prepare_host_kwargs_or_lengths(monkeypatch, native_ops):
+    def unexpected(*args):
+        pytest.fail("PTO不消费QLI/C4 SAS，不应为它们准备Host kwargs或cu-seqlens")
+
+    for name in (
+        "get_dsa_sparse_attn_metadata_op", "get_dsa_sparse_attn_metadata_kwargs",
+        "get_dsa_decode_cu_seqlens_ori_kv", "get_dsa_decode_cu_seqlens_cmp_kv",
+    ):
+        monkeypatch.setattr(dsa.DeviceOperator, name, unexpected)
+    result = build(make_builder(monkeypatch, ratio=4, defer=True))
+    assert result.sas_metadata is None and result.qli_metadata is None
+
+
 def test_native_fallback_prepares_and_records_real_consumers(monkeypatch, native_ops):
     from vllm_ascend.ops import dsv4_csa
 

@@ -109,7 +109,10 @@ def prepare_csa_model(model):
     effective_mode = get_ascend_config().weight_nz_mode
     validate_weight_nz_mode(effective_mode)
     if backend == "aclnn":
-        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.backend import validate_backend_installation
+        from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.backend import (
+            uses_device_policy,
+            validate_backend_installation,
+        )
 
         # 在分层准备及捕获之前核对wheel、ABI和策略合同；显式选择不静默回退。
         validate_backend_installation()
@@ -143,6 +146,8 @@ def prepare_csa_model(model):
     logger.info("PTO_CSA_BACKEND backend=%s variant=%s", backend, variant)
     operators = CSAOperators.register() if CSAOperators is not None else None
     config = get_current_vllm_config()
+    # 仅在模型准备时识别一次；Worker稳态不再逐层查包/构造策略。
+    config._pto_csa_device_policy = backend == "aclnn" and uses_device_policy()
     max_num_seqs = config.scheduler_config.max_num_seqs
     count = 0
     for layer in model.model.layers:
@@ -152,7 +157,7 @@ def prepare_csa_model(model):
             count += 1
     if not count:
         raise ValueError("No target C4 attention layers found for PTO CSA")
-    if variant in ("spmd_tnd", "mpmd_tnd"):
+    if variant in ("spmd_tnd", "mpmd_tnd") and not config._pto_csa_device_policy:
         from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.service_config import (
             MAX_SEQUENCE_LENGTH,
             minimum_sequence_length,

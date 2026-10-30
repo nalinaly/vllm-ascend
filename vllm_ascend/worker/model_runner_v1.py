@@ -2716,7 +2716,8 @@ class NPUModelRunner(GPUModelRunner):
         )
         has_lora = num_active_loras > 0 if force_has_lora is None else force_has_lora
 
-        if force_uniform_decode is None and is_tnd_csa_model(self.vllm_config):
+        device_csa_graph = getattr(self.vllm_config, "_pto_csa_device_policy", False)
+        if force_uniform_decode is None and not device_csa_graph and is_tnd_csa_model(self.vllm_config):
             # Native eager uses effective TND rows. Unsupported real batches
             # must return to eager before graph padding adds dummy Q endpoints.
             # These arrays already belong to the scheduler's Host state.
@@ -2747,7 +2748,9 @@ class NPUModelRunner(GPUModelRunner):
                 num_active_loras=num_active_loras,
             )
             # 旧CSA/HCA保留S6合同；TND由图包装器核对容量、策略、地址和metadata生产者。
-            if mode == CUDAGraphMode.FULL and (is_csa_model(self.vllm_config) or is_hca_model(self.vllm_config)):
+            if mode == CUDAGraphMode.FULL and (
+                is_hca_model(self.vllm_config) or (not device_csa_graph and is_csa_model(self.vllm_config))
+            ):
                 if not can_replay_csa_graph(
                     num_tokens=csa_actual_tokens, num_reqs=num_reqs,
                     uniform_decode=uniform_decode, padded_tokens=descriptor.num_tokens,
@@ -2986,8 +2989,11 @@ class NPUModelRunner(GPUModelRunner):
                     decode_ratio_to_sas_metadata=decode_ratio_to_sas_metadata,
                     common_ratio_to_sas_metadata=common_ratio_to_sas_metadata,
                     block_size=attn_group.kv_cache_spec.block_size,
-                    # 捕获前保留Native计划；普通PTO decode按实际回退需求生成。
-                    defer_native_csa_metadata=is_csa_model(self.vllm_config) and not for_cudagraph_capture,
+                    # 设备选档ACLNN在capture期间也不预生成无消费者的QLI/C4 SAS。
+                    # Native实际消费者仍可调用ensure_native_metadata获取计划。
+                    defer_native_csa_metadata=is_csa_model(self.vllm_config) and (
+                        not for_cudagraph_capture or getattr(self.vllm_config, "_pto_csa_device_policy", False)
+                    ),
                 )
 
             if (for_cudagraph_capture

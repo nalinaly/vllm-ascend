@@ -1039,80 +1039,81 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
                 self.num_decodes,
             )
 
-        tp_size = get_tensor_model_parallel_world_size()
-        n_local_heads = self.model_config.hf_config.num_attention_heads // tp_size
-        index_topk = self.model_config.hf_config.index_topk
-
-        assert self.decode_sas_metadata is not None
-
-        cu_seqlens_ori_kv = DeviceOperator.get_dsa_decode_cu_seqlens_ori_kv(
-            self.decode_ratio_to_sas_metadata,
-            "cu_seqlens_ori_kv",
-            self.seq_lens,
-            self.num_decodes,
-            self._zero_i32,
-            self.cu_seqlens_ori_kv,
-        )
-        metadata_op = DeviceOperator.get_dsa_sparse_attn_metadata_op()
-        metadata_kwargs = DeviceOperator.get_dsa_sparse_attn_metadata_kwargs(self.seqused_q.device)
-        cu_seqlens_cmp_kv = DeviceOperator.get_dsa_decode_cu_seqlens_cmp_kv(self.cu_seqlens_cmp_kv)
-        assert self.decode_qli_metadata is not None
-        # 固定本步的缓存、输入和目标地址，惰性回退不再读取builder的可变字段。
+        # 后置ACLNN不消费QLI/C4 SAS；连同kwargs/cu-seqlens准备一起延迟到真实Native消费者。
         native_cache = self.decode_ratio_to_sas_metadata
         sas_target, qli_target = self.decode_sas_metadata, self.decode_qli_metadata
-        seq_lens = self.seq_lens[: self.num_decodes]
-        sas_kwargs = dict(
-            **metadata_kwargs,
-            num_heads_q=n_local_heads,
-            num_heads_kv=1,
-            head_dim=self.model_config.get_head_size(),
-            cu_seqlens_q=query_start_loc,
-            cu_seqlens_ori_kv=cu_seqlens_ori_kv,
-            cu_seqlens_cmp_kv=cu_seqlens_cmp_kv,
-            seqused_q=self.seqused_q,
-            seqused_kv=seq_lens,
-            max_seqlen_q=max_seqlen_q,
-            max_seqlen_kv=max_seqlen_kv,
-            batch_size=len(seq_lens),
-            cmp_ratio=1 if self.compressor_ratio <= 1 else (4 if self.compressor_ratio == 4 else 128),
-            ori_mask_mode=4,
-            cmp_mask_mode=3,
-            ori_win_left=self.model_config.hf_config.sliding_window - 1,
-            ori_win_right=0,
-            layout_q="TND",
-            layout_kv="PA_ND",
-            has_ori_kv=True,
-            has_cmp_kv=self.compressor_ratio > 1,
-        )
-        if self.compressor_ratio == 4:
-            sas_kwargs["cmp_topk"] = index_topk
-        qli_kwargs = dict(
-            num_heads_q=self.model_config.hf_config.index_n_heads,  # 64
-            num_heads_k=1,
-            head_dim=self.model_config.hf_config.index_head_dim,  # 128
-            query_quant_mode=0,
-            key_quant_mode=0,
-            batch_size=len(seq_lens),
-            max_seqlen_q=max_seqlen_q,
-            max_seqlen_k=max_seqlen_kv,
-            layout_query="TND",
-            layout_key="PA_BSND",
-            sparse_count=self.model_config.hf_config.index_topk,  # 512
-            sparse_mode=3,
-            pre_tokens=(1 << 63) - 1,
-            next_tokens=(1 << 63) - 1,
-            cmp_ratio=4,
-            device=str(self.seqused_q.device),
-        )
+        seq_lens_owner, num_decodes = self.seq_lens, self.num_decodes
+        seq_lens = seq_lens_owner[:num_decodes]
+        seqused_q, zero_i32 = self.seqused_q, self._zero_i32
+        cu_ori_target, cu_cmp_target = self.cu_seqlens_ori_kv, self.cu_seqlens_cmp_kv
+        model_config, compressor_ratio = self.model_config, self.compressor_ratio
 
         def prepare_sas():
             if native_cache.get(layer_name) is None:
+                tp_size = get_tensor_model_parallel_world_size()
+                n_local_heads = model_config.hf_config.num_attention_heads // tp_size
+                index_topk = model_config.hf_config.index_topk
+                cu_seqlens_ori_kv = DeviceOperator.get_dsa_decode_cu_seqlens_ori_kv(
+                    native_cache,
+                    "cu_seqlens_ori_kv",
+                    seq_lens_owner,
+                    num_decodes,
+                    zero_i32,
+                    cu_ori_target,
+                )
+                metadata_op = DeviceOperator.get_dsa_sparse_attn_metadata_op()
+                metadata_kwargs = DeviceOperator.get_dsa_sparse_attn_metadata_kwargs(seqused_q.device)
+                cu_seqlens_cmp_kv = DeviceOperator.get_dsa_decode_cu_seqlens_cmp_kv(cu_cmp_target)
+                sas_kwargs = dict(
+                    **metadata_kwargs,
+                    num_heads_q=n_local_heads,
+                    num_heads_kv=1,
+                    head_dim=model_config.get_head_size(),
+                    cu_seqlens_q=query_start_loc,
+                    cu_seqlens_ori_kv=cu_seqlens_ori_kv,
+                    cu_seqlens_cmp_kv=cu_seqlens_cmp_kv,
+                    seqused_q=seqused_q,
+                    seqused_kv=seq_lens,
+                    max_seqlen_q=max_seqlen_q,
+                    max_seqlen_kv=max_seqlen_kv,
+                    batch_size=len(seq_lens),
+                    cmp_ratio=1 if compressor_ratio <= 1 else (4 if compressor_ratio == 4 else 128),
+                    ori_mask_mode=4,
+                    cmp_mask_mode=3,
+                    ori_win_left=model_config.hf_config.sliding_window - 1,
+                    ori_win_right=0,
+                    layout_q="TND",
+                    layout_kv="PA_ND",
+                    has_ori_kv=True,
+                    has_cmp_kv=compressor_ratio > 1,
+                )
+                if compressor_ratio == 4:
+                    sas_kwargs["cmp_topk"] = index_topk
                 native_cache[layer_name] = metadata_op(**sas_kwargs)
             sas_target[:1024] = native_cache[layer_name]
             return sas_target
 
         def prepare_qli():
             if native_cache.get("qli") is None:
+                qli_kwargs = dict(
+                    num_heads_q=model_config.hf_config.index_n_heads,  # 64
+                    num_heads_k=1,
+                    head_dim=model_config.hf_config.index_head_dim,  # 128
+                    query_quant_mode=0,
+                    key_quant_mode=0,
+                    batch_size=len(seq_lens),
+                    max_seqlen_q=max_seqlen_q,
+                    max_seqlen_k=max_seqlen_kv,
+                    layout_query="TND",
+                    layout_key="PA_BSND",
+                    sparse_count=model_config.hf_config.index_topk,  # 512
+                    sparse_mode=3,
+                    pre_tokens=(1 << 63) - 1,
+                    next_tokens=(1 << 63) - 1,
+                    cmp_ratio=4,
+                    device=str(seqused_q.device),
+                )
+
                 native_cache["qli"] = torch.ops._C_ascend.npu_vllm_quant_lightning_indexer_metadata(
                     actual_seq_lengths_query=query_start_loc[1:].clone(),
                     actual_seq_lengths_key=seq_lens.clone(),

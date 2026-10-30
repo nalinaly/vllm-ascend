@@ -20,7 +20,7 @@ def compact_metadata_capacity(tokens, requests):
     return min(tokens, tokens // CSA_COMPRESS_RATIO + requests)
 
 
-def graph_compact_request(request, tokens):
+def graph_compact_request(request, tokens, *, validate=True):
     """固定图容量，用设备L屏蔽padding，不捕获某一步的实际请求数。
 
     Native compressor_metadata对start_pos<0的请求产生零行。只修改传给该
@@ -32,7 +32,7 @@ def graph_compact_request(request, tokens):
     import torch
 
     requests = request.seq_lens.numel()
-    if request.start_pos.shape != (requests,) or request.start_pos.dtype != torch.int32:
+    if validate and (request.start_pos.shape != (requests,) or request.start_pos.dtype != torch.int32):
         raise ValueError(validation_error("Native C4 start_pos须为INT32请求容量向量", request=request, tokens=tokens))
     adapted = copy(request)
     adapted.num_reqs_actual = requests

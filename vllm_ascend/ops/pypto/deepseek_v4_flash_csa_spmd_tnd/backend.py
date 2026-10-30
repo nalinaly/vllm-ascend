@@ -219,7 +219,10 @@ class AclnnExecutor:
         self.rebind(prepared.buffers)
         prepared.allocations.update({"aclnn_" + name: value for name, value in self.auxiliary.items()})
 
-    def rebind(self, buffers) -> None:
+    def rebind(self, buffers, *, validate=True) -> None:
+        if not validate:
+            self.arguments = [buffers[p["name"]] for p in self.package.parameters]
+            return
         import torch_npu
 
         arguments = []

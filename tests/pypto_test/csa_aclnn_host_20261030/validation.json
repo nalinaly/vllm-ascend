@@ -1,0 +1,182 @@
+{
+  "source_base": "60ceaf69c",
+  "runtime": "device-selected ACLNN only",
+  "cann": "9.2.0-beta.2",
+  "shared_toolchain": "csa-shared-20261024-group-dims",
+  "cpu_task": "task_20261030_232453_380416227890",
+  "device_tasks": {
+    "short_padding": "task_20261030_231902_346712910971",
+    "128K_B16": "task_20261030_232039_35497987704"
+  },
+  "checks": {
+    "short_padding": {
+      "passed": true,
+      "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收",
+      "stage": "complete",
+      "device": 0,
+      "histories": [
+        0,
+        0,
+        2046,
+        8190
+      ],
+      "queries": [
+        1,
+        6,
+        3,
+        1
+      ],
+      "tokens": 24,
+      "requests": 5,
+      "native_output_comparison": {
+        "max_abs": 0.017578125,
+        "relative_rmse": 0.002713576192036271,
+        "finite": true,
+        "bit_equal": false
+      },
+      "guards": {
+        "total": 31,
+        "passed": 31,
+        "failures": {}
+      },
+      "padding_cache_unchanged": {
+        "swa": true,
+        "compressed": true,
+        "state": true,
+        "indexer": true,
+        "indexer_state": true
+      },
+      "replay_bit_equal": {
+        "output": true,
+        "swa": true,
+        "compressed": true,
+        "state": true,
+        "indexer": true,
+        "indexer_state": true
+      },
+      "no_python_redispatch": true,
+      "no_simpler": {
+        "forbidden_calls": [],
+        "kernel_state": "uninitialized",
+        "worker_created": false,
+        "kernel_config_bound": false,
+        "generated_kernel_configs": [],
+        "passed": true
+      },
+      "full_result": "results/short_padding_v2/result.json"
+    },
+    "128K_B16": {
+      "passed": true,
+      "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收",
+      "stage": "complete",
+      "device": 0,
+      "histories": [
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072
+      ],
+      "queries": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+      ],
+      "tokens": 96,
+      "requests": 16,
+      "native_output_comparison": {
+        "max_abs": 0.0390625,
+        "relative_rmse": 0.004364285618066788,
+        "finite": true,
+        "bit_equal": false
+      },
+      "guards": {
+        "total": 31,
+        "passed": 31,
+        "failures": {}
+      },
+      "padding_cache_unchanged": {
+        "swa": true,
+        "compressed": true,
+        "state": true,
+        "indexer": true,
+        "indexer_state": true
+      },
+      "replay_bit_equal": {
+        "output": true,
+        "swa": true,
+        "compressed": true,
+        "state": true,
+        "indexer": true,
+        "indexer_state": true
+      },
+      "no_python_redispatch": true,
+      "no_simpler": {
+        "forbidden_calls": [],
+        "kernel_state": "uninitialized",
+        "worker_created": false,
+        "kernel_config_bound": false,
+        "generated_kernel_configs": [],
+        "passed": true
+      },
+      "full_result": "results/target_v1/result.json"
+    }
+  },
+  "static_compile": {
+    "task": "task_20261030_232252_36660339369",
+    "command": [
+      "op_compiler",
+      "-p",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/target_v1/static_aclnn/3549982_opcompile",
+      "-v",
+      "Ascend910_9391",
+      "-j",
+      "64",
+      "-o",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v1",
+      "-f",
+      "true",
+      "-l",
+      "info",
+      "--enable_super_kernel"
+    ],
+    "returncode": 1,
+    "wall_s": 25.887244234327227,
+    "packages": [],
+    "status": "FAILED",
+    "causes": [
+      "CSA静态/SK链接没有带入188个策略对象，csa_aiv_*未定义",
+      "Native CompressorMetadata Init接收非const tiling指针，与静态模板生成的const指针不兼容"
+    ],
+    "log": "results/static_v1/static_kernel_261030232257130856_3666404_compile_log/summary.txt"
+  },
+  "target_network_measurement": "尚未完成16卡target forward测试，不声称达到48ms",
+  "cpu_tests": {
+    "passed": 49,
+    "seconds": 11.69
+  }
+}

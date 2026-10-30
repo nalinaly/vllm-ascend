@@ -9,6 +9,17 @@ import shutil
 from pathlib import Path
 
 
+def simplify_torch_run(source: str) -> str:
+    """运行时保留TensorList参数数目检查；完整描述符验证仅用于Meta推导。"""
+    old = " Check(a,variant); const c10_npu::OptionalNPUGuard guard(a[0].device());"
+    new = (
+        ' TORCH_CHECK(a.size()==55,"Expected 55 CSA entry buffers");\n'
+        " const c10_npu::OptionalNPUGuard guard(a[0].device());"
+    )
+    assert source.count(old) == 1, "ACLNN Torch生成模板的Run入口已变化"
+    return source.replace(old, new)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, required=True)
@@ -217,6 +228,8 @@ const int selected=*reinterpret_cast<volatile __gm__ int32_t*>(state);
         path.write_text(text)
     (out / "op_host/csa_spmd_tnd_pto.cpp").rename(out / "op_host/csa_spmd_tnd_device_pto.cpp")
     (out / "op_kernel/csa_spmd_tnd_pto.cpp").rename(out / "op_kernel/csa_spmd_tnd_device_pto.cpp")
+    torch_binding = out / "torch/binding.cpp"
+    torch_binding.write_text(simplify_torch_run(torch_binding.read_text()))
     (out / "build.json").write_text(json.dumps(dict(completed=0, failed=0, results=[])))
     (out / "cpp_manifest.json").write_text(
         json.dumps(dict(tasks=tasks, policy_mode="device", policies=94, external_tensors=55), indent=2)

@@ -17,7 +17,7 @@ from ..deepseek_v4_flash_csa.native_storage import indexer_storage, physical_pag
 from ..deepseek_v4_flash_csa.validation import validation_error
 
 
-def token_capacity_view(value: torch.Tensor, tokens: int, width: int) -> torch.Tensor:
+def token_capacity_view(value: torch.Tensor, tokens: int, width: int, *, validate: bool = True) -> torch.Tensor:
     """Expose Native's existing capacity buffer behind its shorter decode view.
 
     Native builds RoPE and slot storage for num_input_tokens, then returns views
@@ -25,6 +25,8 @@ def token_capacity_view(value: torch.Tensor, tokens: int, width: int) -> torch.T
     while the initialized backing buffer still covers the input capacity.
     No new allocation, copy or tensor-value read is performed here.
     """
+    if not validate:
+        return value.as_strided((tokens, width), (width, 1), value.storage_offset())
     if value.ndim < 2 or value.numel() != value.shape[0] * width or not value.is_contiguous():
         raise ValueError(
             validation_error(
@@ -62,70 +64,73 @@ def bind_native_inputs(
     output: torch.Tensor,
     topk: torch.Tensor | None = None,
     topk_scores: torch.Tensor | None = None,
+    validate: bool = True,
 ) -> dict[str, torch.Tensor]:
     """绑定一个 Native decode 调用；不分配业务 Tensor，也不消费 metadata 值。"""
-    if hidden.ndim != 3 or hidden.shape[1:] != (4, 4096):
-        raise ValueError(validation_error("TND CSA入口要求hidden[T_capacity,4,4096]", hidden=hidden))
     tokens = hidden.shape[0]
-    if hidden.dtype != torch.bfloat16 or not hidden.is_contiguous():
-        raise ValueError(validation_error("TND CSA要求连续BF16 hidden", hidden=hidden))
-    if positions.shape != (tokens,) or positions.dtype != torch.int64:
-        raise ValueError(
-            validation_error("TND CSA要求Native INT64 positions覆盖token容量", positions=positions, tokens=tokens)
-        )
-    if output.shape != hidden.shape or output.dtype != hidden.dtype or not output.is_contiguous():
-        raise ValueError(validation_error("TND CSA输出须与hidden描述符一致", hidden=hidden, output=output))
-    if (topk is None) != (topk_scores is None):
-        raise ValueError(validation_error("诊断Top-K索引与分数必须同时提供", topk=topk, topk_scores=topk_scores))
-    outputs = [positions, output]
-    if topk is not None:
-        if topk.shape != (tokens, 512) or topk.dtype != torch.int32:
-            raise ValueError(validation_error("诊断Top-K要求INT32[T_capacity,512]", topk=topk, tokens=tokens))
-        if topk_scores.shape != (tokens, 512) or topk_scores.dtype != torch.float32:
+    if validate:
+        if hidden.ndim != 3 or hidden.shape[1:] != (4, 4096):
+            raise ValueError(validation_error("TND CSA入口要求hidden[T_capacity,4,4096]", hidden=hidden))
+        if hidden.dtype != torch.bfloat16 or not hidden.is_contiguous():
+            raise ValueError(validation_error("TND CSA要求连续BF16 hidden", hidden=hidden))
+        if positions.shape != (tokens,) or positions.dtype != torch.int64:
             raise ValueError(
-                validation_error("诊断scores要求FP32[T_capacity,512]", topk_scores=topk_scores, tokens=tokens)
+                validation_error("TND CSA要求Native INT64 positions覆盖token容量", positions=positions, tokens=tokens)
             )
-        outputs.extend((topk, topk_scores))
-    if any(value.device != hidden.device for value in outputs):
-        raise ValueError(
-            validation_error(
-                "TND CSA根输入输出须处于同一设备",
-                hidden=hidden,
-                positions=positions,
-                output=output,
-                topk=topk,
-                topk_scores=topk_scores,
+        if output.shape != hidden.shape or output.dtype != hidden.dtype or not output.is_contiguous():
+            raise ValueError(validation_error("TND CSA输出须与hidden描述符一致", hidden=hidden, output=output))
+        if (topk is None) != (topk_scores is None):
+            raise ValueError(validation_error("诊断Top-K索引与分数必须同时提供", topk=topk, topk_scores=topk_scores))
+        outputs = [positions, output]
+        if topk is not None:
+            if topk.shape != (tokens, 512) or topk.dtype != torch.int32:
+                raise ValueError(validation_error("诊断Top-K要求INT32[T_capacity,512]", topk=topk, tokens=tokens))
+            if topk_scores.shape != (tokens, 512) or topk_scores.dtype != torch.float32:
+                raise ValueError(
+                    validation_error("诊断scores要求FP32[T_capacity,512]", topk_scores=topk_scores, tokens=tokens)
+                )
+            outputs.extend((topk, topk_scores))
+        if any(value.device != hidden.device for value in outputs):
+            raise ValueError(
+                validation_error(
+                    "TND CSA根输入输出须处于同一设备",
+                    hidden=hidden,
+                    positions=positions,
+                    output=output,
+                    topk=topk,
+                    topk_scores=topk_scores,
+                )
             )
-        )
 
     req = {name: item[0].decode for name, item in groups.items()}
     views = {name: item[1] for name, item in groups.items()}
-    requests = req["indexer"].seq_lens.numel()
-    if requests <= 0 or tokens <= 0:
-        raise ValueError(
-            validation_error("空请求由服务执行安全回退，不构造SPMD工作区", tokens=tokens, requests=requests)
-        )
-    for name in ("swa", "compressed", "state", "indexer", "indexer_state"):
-        item = req[name]
-        if item.seq_lens.shape != (requests,) or item.query_start_loc.shape != (requests + 1,):
+    if validate:
+        requests = req["indexer"].seq_lens.numel()
+        if requests <= 0 or tokens <= 0:
             raise ValueError(
-                validation_error(
-                    f"{name}: Native请求容量不一致",
-                    group=name,
-                    seq_lens=item.seq_lens,
-                    query_start_loc=item.query_start_loc,
-                    requests=requests,
-                )
+                validation_error("空请求由服务执行安全回退，不构造SPMD工作区", tokens=tokens, requests=requests)
             )
-        if item.seq_lens.dtype != torch.int32 or item.query_start_loc.dtype != torch.int32:
-            raise ValueError(
-                validation_error(
-                    f"{name}: Native Q/L须为INT32",
-                    group=name,
-                    seq_lens=item.seq_lens,
-                    query_start_loc=item.query_start_loc,
+        for name in ("swa", "compressed", "state", "indexer", "indexer_state"):
+            item = req[name]
+            if item.seq_lens.shape != (requests,) or item.query_start_loc.shape != (requests + 1,):
+                raise ValueError(
+                    validation_error(
+                        f"{name}: Native请求容量不一致",
+                        group=name,
+                        seq_lens=item.seq_lens,
+                        query_start_loc=item.query_start_loc,
+                        requests=requests,
+                    )
                 )
-            )
+            if item.seq_lens.dtype != torch.int32 or item.query_start_loc.dtype != torch.int32:
+                raise ValueError(
+                    validation_error(
+                        f"{name}: Native Q/L须为INT32",
+                        group=name,
+                        seq_lens=item.seq_lens,
+                        query_start_loc=item.query_start_loc,
+                    )
+                )
 
     native = dict(weights)
     native.update(
@@ -134,13 +139,13 @@ def bind_native_inputs(
         position_ids=positions,
         kv_cache=views["swa"][0],
         cmp_kv=views["compressed"][0],
-        idx_native_kv_cache=indexer_storage(*views["indexer"]),
+        idx_native_kv_cache=indexer_storage(*views["indexer"], validate=validate),
         kv_seq_lens=req["indexer"].seq_lens,
         cmp_query_start_loc=req["compressed"].query_start_loc,
         cmp_seq_lens=req["compressed"].seq_lens,
         idx_query_start_loc=req["indexer"].query_start_loc,
-        compress_state=physical_pages(views["state"][0]),
-        inner_compress_state=physical_pages(views["indexer_state"][0]),
+        compress_state=physical_pages(views["state"][0], validate=validate),
+        inner_compress_state=physical_pages(views["indexer_state"][0], validate=validate),
     )
     if topk is not None:
         native.update(idx_topk=topk, idx_topk_scores=topk_scores)
@@ -151,14 +156,14 @@ def bind_native_inputs(
         ("state", "state"),
         ("indexer_state", "inner_state"),
     ):
-        native[prefix + "_block_table"] = table_storage(req[name].block_table)
+        native[prefix + "_block_table"] = table_storage(req[name].block_table, validate=validate)
     for name, prefix in (("swa", "ori"), ("state", "state"), ("indexer_state", "inner_state")):
         slots = req[name].slot_mapping
-        if slots.dtype != torch.int32:
+        if validate and slots.dtype != torch.int32:
             raise ValueError(
                 validation_error(f"{name}: Native slots须为INT32[T_capacity,2]", group=name, slots=slots, tokens=tokens)
             )
-        native[prefix + "_slot_mapping"] = token_capacity_view(slots, tokens, 2)
+        native[prefix + "_slot_mapping"] = token_capacity_view(slots, tokens, 2, validate=validate)
     for name, prefix, slot_prefix in (("compressed", "cmp", "cmp"), ("indexer", "inner", "idx")):
         cos, sin, slots = compact_metadata[name]
         native[prefix + "_freqs_cos"] = cos.view(-1, 64)
@@ -166,5 +171,5 @@ def bind_native_inputs(
         native[slot_prefix + "_slot_mapping"] = slots
     for kind in ("cos", "sin"):
         value = getattr(req["compressed"], kind)[layer_name]
-        native["freqs_" + kind] = token_capacity_view(value, tokens, 64)
+        native["freqs_" + kind] = token_capacity_view(value, tokens, 64, validate=validate)
     return native

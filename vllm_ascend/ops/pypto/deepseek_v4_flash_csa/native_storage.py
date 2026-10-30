@@ -7,8 +7,11 @@ from .layout import INDEXER_KEY_BYTES, INDEXER_MIN_PAGE_BYTES
 from .validation import validation_error
 
 
-def physical_pages(view: torch.Tensor) -> torch.Tensor:
+def physical_pages(view: torch.Tensor, *, validate: bool = True) -> torch.Tensor:
     """Expose the complete padded page without changing its owner or offset."""
+    if not validate:
+        stride = view.stride(0)
+        return view.as_strided((view.shape[0], stride), (stride, 1), view.storage_offset())
     if view.ndim != 4 or view.shape[2] != 1 or view.stride(-1) != 1:
         raise ValueError(
             validation_error(
@@ -39,8 +42,10 @@ def physical_pages(view: torch.Tensor) -> torch.Tensor:
     return view.as_strided((pages, stride), (stride, 1), view.storage_offset())
 
 
-def indexer_storage(key: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
+def indexer_storage(key: torch.Tensor, scale: torch.Tensor, *, validate: bool = True) -> torch.Tensor:
     """Use one INT8 carrier; kernels reinterpret only the small scale region."""
+    if not validate:
+        return physical_pages(key, validate=False)
     if key.dtype != torch.int8 or tuple(key.shape[1:]) != (32, 1, 128):
         raise ValueError(
             validation_error(
@@ -95,8 +100,11 @@ def indexer_storage(key: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     return physical_pages(key)
 
 
-def table_storage(table: torch.Tensor) -> torch.Tensor:
+def table_storage(table: torch.Tensor, *, validate: bool = True) -> torch.Tensor:
     """Include allocated row padding in a contiguous descriptor; do not copy."""
+    if not validate:
+        stride = table.stride(0)
+        return table.as_strided((table.shape[0], stride), (stride, 1), table.storage_offset())
     if table.dtype != torch.int32 or table.ndim != 2 or table.stride(1) != 1:
         raise ValueError(
             validation_error(
