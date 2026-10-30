@@ -11,6 +11,12 @@ source "$workspace/env-dsv4-0251rc1.sh"
 source "$repo/tests/pypto_test/csa_shared_toolchain/env.sh"
 frozen="$here/results/model_decode_source_v3"
 site="$here/results/aclnn_site"
+side=${stage##*_}
+cache_side=$side
+if [[ "$side" == pto ]]; then
+    site="$here/results/aclnn_rebased_site"
+    cache_side=pto_ndptr
+fi
 output="$here/results/$label"
 bank="$here/results/kv/mixed128k_fixed"
 export PYTHONPATH="$frozen:$frozen/tests/pypto_test:$workspace/csa-repro-20261024-current/vllm:$site:$PYTHONPATH"
@@ -23,8 +29,7 @@ export PTO_CSA_RUNTIME=tensormap_and_ringbuffer VLLM_ASCEND_PTO_CSA_ATOMIC_ADD=0
 export ASCEND_GLOBAL_LOG_LEVEL=3 HCCL_OP_EXPANSION_MODE=AIV OMP_PROC_BIND=false OMP_NUM_THREADS=10
 export ASCEND_WORK_PATH="$output/ascend" ASCEND_PROCESS_LOG_PATH="$output/ascend/log"
 export PYPTO_PROG_BUILD_DIR="$output/unused_pypto_build"
-side=${stage##*_}
-cache="$here/results/decode_cache_$side"
+cache="$here/results/decode_cache_$cache_side"
 export VLLM_CACHE_ROOT="$cache/vllm" ASCEND_CACHE_PATH="$cache/ascend"
 mkdir -p "$ASCEND_PROCESS_LOG_PATH" "$VLLM_CACHE_ROOT" "$ASCEND_CACHE_PATH" "$cache/compile"
 export ASCEND_OPP_PATH=$(python "$repo/tests/pypto_test/dsv4_hca_prepare_opp.py" --destination "$cache/private_opp")

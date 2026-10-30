@@ -73,21 +73,49 @@
     {
       "backend": "pto",
       "task": "task_20261031_020331_101930622580",
-      "status": "running",
+      "status": "terminated exit=130 after confirmed device program OOM",
       "source": "results/model_decode_source_v3",
       "change": "每个捕图容量在真实metadata下补齐静态核，replay不增加处理",
-      "output": "results/pto_perf_v3"
+      "output": "results/pto_perf_v3",
+      "cause": "T96静态捕获成功，T6加载99,119,112B程序二进制失败；driver error out of memory，非页表非法访问",
+      "error_log": "results/pto_perf_v3/ascend/log/debug/plog/plog-1968722_20261031024207948.log"
+    },
+    {
+      "backend": "pto",
+      "task": "task_20261031_030132_395472825302",
+      "status": "terminated exit=130",
+      "output": "results/pto_perf_v4",
+      "cause": "正式安装路径校验未完成即提前提交，已终止，不作为验证结果"
+    },
+    {
+      "backend": "pto",
+      "task": "task_20261031_030436_402595327699",
+      "status": "completed exit=0",
+      "output": "results/pto_perf_v5",
+      "source": "results/model_decode_source_v3",
+      "wheel": "0.4.0",
+      "change": "只规范CSA连续ND的ACLNN描述符，使用新的私有静态缓存；输入、SDK、94模板和运行配置不变",
+      "evidence": "target_capture_static_comparison.json"
     }
   ],
   "config_replace_regression_task": "task_20261031_013304_406685927401",
   "static_coverage": {
-    "status": "发现T96 attention缺失，不能按完整静态SK基线验收",
+    "status": "真实metadata补编译后Native/PTO均完成16卡；21层CSA捕获、无普通CSA dispatch；SK内部精确成员仍不能由端点名称穷举",
     "evidence": "static_capture_gap.json",
     "cpu_regression_task": "task_20261031_014550_49503228330",
     "cpu_regression_passed": 3,
     "device_validation_task": "task_20261031_014640_51236831811",
     "device_validation_status": "completed exit=0",
-    "next": "重测两侧完整静态SK的16卡target forward",
-    "device_validation_evidence": "capture_static_validation.json"
-  }
+    "next": "定位剩余约5.98ms，目标尚未达成",
+    "device_validation_evidence": "capture_static_validation.json",
+    "paired_evidence": "target_capture_static_comparison.json"
+  },
+  "descriptor_fix": {
+    "scope": "CSA私有ACLNN wrapper的连续ND转换等价表示；NZ保持原样，设备94模板不改",
+    "validation": "rebased_descriptor_validation.json",
+    "site": "results/aclnn_rebased_site",
+    "static_cache": "results/decode_cache_pto_ndptr"
+  },
+  "remaining_target_gap_ms": 5.978516006469725,
+  "next": "使用已有Host和Device记录定位下发偏差及通信等待；不新增CSA稳态校验，不扩大测试矩阵"
 }

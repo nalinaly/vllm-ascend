@@ -91,17 +91,19 @@ task-submit --device auto 'bash tests/pypto_test/csa_device_policy_20261029/run_
 2. build_aclnn_objects.py --output <绝对aclnn_v1路径> --jobs 188；run_aclnn_build.sh
    构建Host。二者可并行，均通过task-submit --no-device。
 3. run_aclnn_build.sh kernel等待对象齐全，构建MIX镜像、JSON和独立.run包。
-4. build_aclnn_torch.py构建Torch库到probe/aclnn_torch_v1；package_aclnn.py
-   --output <绝对probe/aclnn_package_v1路径>准备wheel内容。
+4. build_aclnn_torch.py构建Torch库；package_aclnn.py
+   --torch-library <本轮重建的csa_device_pto_npu.so绝对路径>
+   --output <新的绝对包目录>准备wheel内容，不隐式使用旧包装库。
 5. build_aclnn_wheel.sh打包；install_aclnn_wheel.sh安装到新的独立target并验证loader。
 
 两次构建脚本适配错误（namespace与函数同名、policy_state形状变量命名）已修正；
 不计作SDK缺陷。ACLNN的188对象成功编译228.31秒，未改变共享SDK。
 
 
-## 2026-10-31 当前包：0.3.0与自动静态编译
+## 2026-10-31 历史包：0.3.0与自动静态编译
 
-优先使用本轮`csa_aclnn_host_20261030/results/package_v4/dist/`下的0.3.0 wheel。
+0.3.0位于`csa_aclnn_host_20261030/results/package_v4/dist/`，保留作历史对照；
+当前应使用下节0.4.0，以解决整模型逐层重复加载程序导致的显存OOM。
 新Torch库删除逐调用55个Tensor重复校验；包含自动静态链接需要的策略对象
 和同版PTO-ISA头文件。运行仍是单个后置选档ACLNN，Host tiling key恒为0。
 服务进程须在NPU初始化前把包内`ascend/vendors/csa_spmd_tnd_device_pto`
@@ -115,3 +117,31 @@ task-submit --device auto 'bash tests/pypto_test/csa_device_policy_20261029/run_
 模型测试应同时设置`enable_static_kernel=true`与`enable_super_kernel=true`，
 Native/PTO使用同一完整图边界；旧默认不变。私有静态编译产物使用独立OPP目录，
 不能往其他session共用的CANN安装目录写入。
+
+## 2026-10-31 当前包：0.4.0与16卡真实target验证
+
+当前wheel：
+`tests/pypto_test/csa_aclnn_host_20261030/results/package_v5/dist/csa_device_pto_ops-0.4.0-cp310-cp310-linux_aarch64.whl`。
+本机独立安装在同目录的`results/aclnn_rebased_site`，不替换公共Python环境。
+
+本版本只调整CSA私有Torch转换头：连续ND使用当前data_ptr、零offset及numel
+描述同一块数据，NZ沿用原转换。没有设备复制、重排或新的逐调用检查；Native
+共用转换头不变。该等价表示避免21层共享storage的不同offset被静态编译成
+21份相同的94策略二进制。T96 rank0变体数21→1，16rank合并后6份；T96/T6
+捕获均成功，图内存0.91GiB。此前99MB程序加载OOM不再发生。
+
+构建仍走上述入口，`--torch-library`必须明确指向本轮重建库。包内
+`nd_storage_descriptor=current_data_ptr_zero_offset`记录这一表示方式；这不是
+Host policy选择，也不改变94份设备数学实现。
+
+单卡实际service/静态捕图/全padding→真实128K/B16 replay通过，输出及五组
+cache/state逐bit对齐eager。正式16卡、相同v3模型源码和固定输入的最慢rank
+mean：Native **59.635ms**、PTO **53.979ms**，下降**9.48%**；PTO P95
+54.974ms、max55.643ms，**尚未达到48ms**。三步trace中没有普通CSA派发，
+21层捕获均选择ACLNN；SK端点名称不能穷举融合组内部成员。
+
+证据：[描述符与功能验证](../csa_aclnn_host_20261030/rebased_descriptor_validation.json)、
+[16卡计时与精度披露](../csa_aclnn_host_20261030/target_capture_static_comparison.json)、
+[Host与主图分段分析](../csa_aclnn_host_20261030/target_wait_analysis.json)。
+性能窗口固定192输出token，不是正常EOS完整答案验证；Native/PTO复杂问题
+仍有输出差异，不将本轮包装修复写成数值对齐。

@@ -24609,3 +24609,94 @@ torch.compile(fullgraph=True, dynamic=False)，同时由vLLM显式标记需要�
 符号维度；动态维度日志不等于dynamic=True。该事实已补进计时口径文件。
 PTO同一v3源码任务仍在运行，未用新Native与旧PTO跨静态覆盖计算收益，
 48ms目标保持未完成。
+
+### 2026-10-31：完整静态覆盖触发程序显存OOM，规范CSA的ND描述符以消除逐层重复二进制
+
+PTO v3任务`task_20261031_020331_101930622580`完成T96静态捕获后，在T6
+预热加载静态CSA时失败。底层首错为`DevMemAllocHugePageManaged`申请
+99,119,112字节失败，驱动明确返回out of memory；随后BinaryLoad及
+BinaryGetFunction失败。日志位于
+`csa_aclnn_host_20261030/results/pto_perf_v3/ascend/log/debug/plog/plog-1968722_20261031024207948.log`。
+异步错误摘要里残留的invalid stream不是首因，也没有页表非法访问证据。
+已终止这次无法产生有效结果的任务（exit=130），未将等待超时当作结束，
+未删除缓存、缩短输入、关闭SK或舍弃94模板。
+
+逐层重复二进制已经阻断正常运行，需先处理这一运行门槛。改动仅在CSA
+Torch扩展的私有ACLNN转换头：连续ND原先由(storage基址, storage offset,
+storage容量)表示，现在等价表示为(当前data_ptr, 0, numel)。Tensor的
+逻辑shape/stride及物理数据地址不变；不构造新设备Tensor、不复制或重排，
+NZ分支沿原转换。现有格式判断复用一次，没有新增Host校验循环；Native
+共用转换头、公共SDK、所有设备数学对象均未修改。
+
+重建包装库及0.4.0 wheel。单卡128K/B16任务
+`task_20261031_025306_370253832019`通过：eager/静态捕获/真实请求replay，
+输出和5组cache/state逐bit一致，全padding不改cache，保护区及readonly
+检查通过，未初始化Simpler。实际编译输入确认5组cache/state offset均为0，
+7个NZ权重仍为FRACTAL_NZ。证据见
+[csa_aclnn_host_20261030/rebased_descriptor_validation.json](csa_aclnn_host_20261030/rebased_descriptor_validation.json)。
+
+安装流程有一次失误：队列安装任务返回0但未生成目标目录，随后加载检查
+在结果落盘时暴露目录缺失；我在检查完成前误提交了16卡重试，已主动终止，
+该任务不作为验证结果。之后直接完成本地wheel安装，正式加载检查
+`task_20261031_030302_399049232396`确认加载aclnn_rebased_site的55参数
+设备选档库，NPU未初始化。
+
+正式重试`task_20261031_030436_402595327699`使用同一v3模型源码和新私有
+静态缓存，保留旧安装与失败缓存。实际T96编译输入中rank0 CSA变体21→1，
+合并16rank后只有6份；Native Compressor的state_cache仍有原offset
+172032，确认修改未扩散到Native路径。T96捕图约106.7秒，T6仍在进行。
+这证明去重已生效，尚不能证明整网性能或48ms目标已达成。
+
+### 2026-10-31：0.4.0完整静态整网完成，最慢rank 59.635→53.979ms，继续定位下发偏差
+
+任务`task_20261031_030436_402595327699`已正常完成（exit=0）。T96/T6静态
+捕获共346秒、图内存0.91GiB，程序显存OOM消除。输入、21层94模板数学、
+公共SDK、v3模型源码、并行配置均沿用；只改变私有ACLNN的ND描述符表示。
+与Native完整静态任务`task_20261031_020254_1002097726`对照，各rank均有
+10个有效B16/T96样本，无慢样本剔除：
+
+| 指标 | Native | PTO |
+| --- | ---: | ---: |
+| 最慢rank mean，ms | 59.634626（rank10） | 53.978516（rank10） |
+| 全样本P95，ms | 60.036140 | 54.974499 |
+| 全样本max，ms | 60.625980 | 55.642559 |
+
+最慢rank均值下降9.48%，但仍高于48ms目标5.978516ms，未标完成。完整逐rank
+采样见[target_capture_static_comparison.json](csa_aclnn_host_20261030/target_capture_static_comparison.json)。
+真图B16走FULL_tokens96，21层捕获选择PTO，运行期间未初始化Simpler。
+PTO三步主图每步332个SK、43个dispatch及43个combine；没有普通CSA派发。
+仅1个SK的端点名称包含CSA，另外CSA在融合组中间，不能把名字数误当执行次数。
+精确融合组成员仍不能仅从当前端点级trace穷举，不夸大覆盖证据。
+
+直接复用现有输出披露数值差异：rank0的16个192-token请求中4个与Native
+逐token相同；自然平均接受数Native3.8000、PTO3.6701。两侧确定性0，未据此
+分离归约不确定性、原有数学差异及路由变化，也不是2048-token/EOS完整答案验证。
+单卡包装变更输出及cache/state逐bit对齐自身eager的证据仍成立。
+
+新增离线脚本`csa_aclnn_host_20261030/analyze_target_waits.py`，读取已有三步
+trace和16rank十步Host观测，不占卡、不新增运行时校验。按主流43次MoE
+dispatch/combine分割互斥时间区间；不是把多流kernel耗时相加。rank0三步均值：
+
+| 主图区间 | Native，ms | PTO，ms |
+| --- | ---: | ---: |
+| 21个CSA层的attention与router区间 | 25.9895 | 19.0435 |
+| 其他22层的attention与router区间 | 15.6849 | 15.6732 |
+| dispatch融合计算与等待 | 13.8535 | 13.1711 |
+| combine计算与等待 | 7.7467 | 7.7561 |
+
+CSA层区间包括相邻HCpost/HCpre、attention及router，不是纯CSA核；MoE融合
+区间含计算和等待，不是纯通信。独立profile有开销，不能用这些均值替换上表
+稳态target时间。全部三步与rank10结果保留在
+[target_wait_analysis.json](csa_aclnn_host_20261030/target_wait_analysis.json)。
+
+同机monotonic时钟按自然间隔对齐十组16rank（每组每rank恰好一次，未直接
+假定第N个样本对齐）：PTO batch协调结束的rank间偏差均值0.412ms、最大
+0.691ms；到forward入口扩大为均值1.512ms、最大3.088ms；Native对应入口
+均值0.931ms、最大1.832ms。PTO首个MoE dispatch融合区间在rank0三步为
+1.661/2.008/0.776ms。后续应核对metadata准备及下发偏差造成的通信等待；
+目前是关联证据，不能宣称全部时间已因果归属于某个Host函数。
+
+用户再次要求按普通ACLNN方式调用：本轮核对设备选档热路径不执行逐层
+allows_replay/graph_signature/Host policy匹配，绑定复用跳过55Tensor扫描，
+Torch Run只保留TensorList参数个数这类直接索引所需检查；真实replay不重新
+执行Python/C++包装。旧后端保留的合同未进入这条路径，没有换位置增加校验。

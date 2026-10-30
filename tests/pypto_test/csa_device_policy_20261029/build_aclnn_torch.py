@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 
 import torch_npu
+from csa_device_policy_20261029.nd_descriptor import normalize_nd_descriptors
 from torch.utils.cpp_extension import load
 
 parser = argparse.ArgumentParser()
@@ -14,6 +15,11 @@ args = parser.parse_args()
 repo = Path(__file__).resolve().parents[3]
 adapter = repo / "csrc/aclnn_torch_adapter"
 npu = Path(torch_npu.__file__).resolve().parent
+# Quotes in binding.cpp resolve this CSA-private header first. Native extensions
+# keep using the original adapter; no shared source or SDK is patched.
+(args.source / "torch/op_api_common.h").write_text(
+    normalize_nd_descriptors((adapter / "op_api_common.h").read_text())
+)
 args.output.mkdir(parents=True, exist_ok=True)
 load(
     name="csa_device_pto_npu",

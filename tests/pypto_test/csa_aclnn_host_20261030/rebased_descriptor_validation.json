@@ -1,0 +1,136 @@
+{
+  "passed": true,
+  "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收",
+  "stage": "complete",
+  "capture_static": true,
+  "device": 0,
+  "histories": [
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072
+  ],
+  "queries": [
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6
+  ],
+  "tokens": 96,
+  "requests": 16,
+  "native_output_comparison": {
+    "max_abs": 0.0390625,
+    "relative_rmse": 0.004364285618066788,
+    "finite": true,
+    "bit_equal": false
+  },
+  "padding_cache_unchanged": {
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "replay_bit_equal": {
+    "output": true,
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "no_python_redispatch": true,
+  "no_simpler": {
+    "forbidden_calls": [],
+    "kernel_state": "uninitialized",
+    "worker_created": false,
+    "kernel_config_bound": false,
+    "generated_kernel_configs": [],
+    "passed": true
+  },
+  "task": "task_20261031_025306_370253832019",
+  "build_task": "task_20261031_024927_343646330102",
+  "package_task": "task_20261031_025154_364895115376",
+  "wheel_task": "task_20261031_025306_370257921727",
+  "install_check_task": "task_20261031_030302_399049232396",
+  "wheel": "results/package_v5/dist/csa_device_pto_ops-0.4.0-cp310-cp310-linux_aarch64.whl",
+  "guards": "原始result.json所有保护区与readonly检查通过",
+  "limits": "已通过16卡T96/T6静态捕获及稳态执行，target最慢rank mean=53.978516ms，尚未达到48ms。",
+  "descriptor_evidence": [
+    {
+      "case": "capture_static_v1",
+      "source": "results/capture_static_v1/static_kernel_compile_outputs/ts20261031020114035937_pid896022_outputs/896022_opcompile_selected/CsaSpmdTndDevicePto_bfloat16_ND_96_16384_5.json",
+      "cache_offsets": {
+        "cache_rows": 64,
+        "main_state": 32,
+        "main_cache": 64,
+        "idx_state": 32,
+        "idx_cache": 128
+      },
+      "nz_formats": {
+        "wq_a": "FRACTAL_NZ",
+        "wq_b": "FRACTAL_NZ",
+        "wkv": "FRACTAL_NZ",
+        "idx_wq_b": "FRACTAL_NZ",
+        "weights_proj": "FRACTAL_NZ",
+        "wo_a": "FRACTAL_NZ",
+        "wo_b": "FRACTAL_NZ"
+      }
+    },
+    {
+      "case": "capture_rebased_v1",
+      "source": "results/capture_rebased_v1/static_kernel_compile_outputs/ts20261031025341781113_pid3702799_outputs/3702799_opcompile_selected/CsaSpmdTndDevicePto_bfloat16_ND_96_16384_5.json",
+      "cache_offsets": {
+        "cache_rows": 0,
+        "main_state": 0,
+        "main_cache": 0,
+        "idx_state": 0,
+        "idx_cache": 0
+      },
+      "nz_formats": {
+        "wq_a": "FRACTAL_NZ",
+        "wq_b": "FRACTAL_NZ",
+        "wkv": "FRACTAL_NZ",
+        "idx_wq_b": "FRACTAL_NZ",
+        "weights_proj": "FRACTAL_NZ",
+        "wo_a": "FRACTAL_NZ",
+        "wo_b": "FRACTAL_NZ"
+      }
+    }
+  ],
+  "model_compile_evidence": {
+    "task": "task_20261031_030436_402595327699",
+    "source": "results/decode_cache_pto_ndptr/compile/static_kernel_compile_outputs/ts20261031030842926416_pid4038849_outputs",
+    "rank0_CSA_variants": 1,
+    "all_rank_CSA_variants": 6,
+    "native_compressor_state_cache_offset": 172032,
+    "status": "completed exit=0；T96/T6捕获完成，程序显存OOM消除",
+    "capture_seconds": 346,
+    "graph_memory_gib": 0.91,
+    "target_evidence": "target_capture_static_comparison.json"
+  }
+}

@@ -16,8 +16,8 @@ import torch_npu
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
-parser.add_argument("--torch-library", type=Path, help="默认使用已有Torch库；可指定去除重复校验的新库")
-parser.add_argument("--version", default="0.3.0")
+parser.add_argument("--torch-library", type=Path, required=True, help="本轮重建、使用零offset ND描述符的CSA Torch库")
+parser.add_argument("--version", default="0.4.0")
 args = parser.parse_args()
 here = Path(__file__).resolve().parent
 project = here / "probe/aclnn_v1"
@@ -30,7 +30,7 @@ package = args.output / "csa_device_pto_ops"
 package.mkdir(parents=True, exist_ok=False)
 (package / "lib").mkdir()
 shutil.copytree(vendor, package / "ascend/vendors/csa_spmd_tnd_device_pto")
-torch_library = args.torch_library or here / "probe/aclnn_torch_v1/csa_device_pto_npu.so"
+torch_library = args.torch_library
 shutil.copy2(torch_library, package / "lib/csa_device_pto_npu.so")
 impl = package / "ascend/vendors/csa_spmd_tnd_device_pto/op_impl/ai_core/tbe/csa_spmd_tnd_device_pto_impl"
 shutil.copytree(project / "objects", impl / "objects")
@@ -85,6 +85,7 @@ shutil.copy2(project / "generated/interface.json", package / "interface.json")
             cann="9.2.0-beta.2",
             superkernel_validated=False,
             static_policy_link="package_compiler",
+            nd_storage_descriptor="current_data_ptr_zero_offset",
             shared_toolchain=shared["release"],
         ),
         indent=2,

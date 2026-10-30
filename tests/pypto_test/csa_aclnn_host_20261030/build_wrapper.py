@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """只重编Torch包装；复用已验证的设备二进制，不触碰公共安装。"""
 
+import argparse
 import runpy
 import shutil
 import sys
@@ -10,7 +11,10 @@ from csa_device_policy_20261029.prepare_aclnn import simplify_torch_run
 
 here = Path(__file__).resolve().parent
 previous = here.parent / "csa_device_policy_20261029/probe"
-output = here / "results/wrapper"
+parser = argparse.ArgumentParser()
+parser.add_argument("--name", default="wrapper", help="独立构建目录，保留旧版库作对照")
+args = parser.parse_args()
+output = here / "results" / args.name
 source = output / "source"
 source.mkdir(parents=True, exist_ok=True)
 shutil.copytree(previous / "aclnn_v1/include", source / "include", dirs_exist_ok=True)
@@ -18,7 +22,7 @@ shutil.copytree(previous / "aclnn_v1/include", source / "include", dirs_exist_ok
 (source / "torch/binding.cpp").write_text(simplify_torch_run((previous / "aclnn_v1/torch/binding.cpp").read_text()))
 sys.argv = ["build_aclnn_torch.py", "--source", str(source), "--output", str(output / "build")]
 runpy.run_path(str(previous.parent / "build_aclnn_torch.py"), run_name="__main__")
-site = here / "results/site/csa_device_pto_ops"
+site = (here / "results/site" if args.name == "wrapper" else output / "site") / "csa_device_pto_ops"
 site.mkdir(parents=True, exist_ok=True)
 old = previous / "aclnn_installed_v1/csa_device_pto_ops"
 for name in ("__init__.py", "interface.json", "package_manifest.json"):

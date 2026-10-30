@@ -114,9 +114,9 @@
 - [x] 删除后置ACLNN的8K/长度Host门槛、逐层签名和policy多图逻辑。
 - [x] 删除无Native消费者的QLI/C4 SAS推导及其冗余准备。
 - [x] 精简绑定/包装热路径，将必要静态合同检查移入已有准备或重建阶段。
-- [ ] 单卡验证短历史、混长、padding、同容量跨长度replay及受影响状态写回。
+- [x] 单卡验证短历史、混长、padding、同容量跨长度replay及受影响状态写回。
 - [ ] 验证静态编译和与Native等价的SK融合覆盖；记录实际执行证据。
-- [ ] 在本机启动真实16-worker服务，重取同口径Native/PTO对照及Host/Device时间线。
+- [x] 在本机启动真实16-worker服务，重取同口径Native/PTO对照及Host/Device时间线。
 - [ ] 达到≤48 ms，并给出21层kernel收益、metadata消除、Host变化与端到端结果的对应关系。
 
 首先集中128K/B16端到端目标。功能验证先尽量使用单卡场景，再做真实服务验收。
@@ -175,3 +175,16 @@ profile缺少真实attention metadata，编译器提前将该shape标为已编�
 padding→真实请求replay通过，输出/五组cache状态逐bit对齐eager。
 两侧已冻结同一修复版源码重新排队，48ms、完整SK范围与通信收益仍待验收。
 详见本轮validation log及`csa_aclnn_host_20261030/model_progress.json`。
+
+2026-10-31最新：0.4.0包用等价的连续ND描述符消除了逐层重复静态二进制及
+程序显存OOM；T96/T6图均完成捕获。相同v3模型源码、真实输入和配置下，
+最慢rank mean为Native **59.635ms**、PTO **53.979ms**，下降**9.48%**，
+距离48ms仍差**5.979ms**。完整原始采样与局限见
+[target_capture_static_comparison.json](csa_aclnn_host_20261030/target_capture_static_comparison.json)。
+21层均捕获后置ACLNN，三步主图没有普通CSA派发；多数CSA位于SK名称中间，
+不能仅用端点名字穷举融合组成员，精确SK范围审计仍保留待办。
+
+现有稳态Host记录显示，PTO的16rank下发前时间差均值1.512ms、最大3.088ms，
+batch协调结束时仅均值0.412ms、最大0.691ms。后续沿metadata准备及下发
+偏差排查通信等待，不新增CSA专属Host校验、不换计时边界，也不把关联当因果。
+正常ACLNN热路径只保留必要参数传递与派发；现有旧后端合同不进入后置ACLNN。
