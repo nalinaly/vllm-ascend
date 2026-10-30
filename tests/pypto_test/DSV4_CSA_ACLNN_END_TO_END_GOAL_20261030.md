@@ -242,3 +242,9 @@ Native mode=0对照完成，最慢rank均值60.624ms；相比mode=1的59.645ms�
 PTO mode=0为52.617ms，较自身mode=1改善0.642ms，不将Native的回退包装成PTO
 新增收益。二级Host队列在单卡捕图即被SDK明确拒绝，已停止该候选；只继续
 单卡验证一级队列下的per-stream队列隔离，未对生产或共享SDK做未验证切换。
+
+Host队列隔离在16卡初始化出现`rtEventDestroy`相关Host堆错误，未进入性能
+采样，已停止该候选并恢复原队列；没有删除SDK检查或改共享工具链。进一步
+省略纯decode时C4/C128未被消费的原始slot格式化，保留SWA/state及prefill，
+24项CPU回归和单卡真实静态/SK异步replay通过。新一轮Native/PTO同源对照已
+排队，尚无性能结论，已有最好结果52.617ms及48ms目标保持不变。

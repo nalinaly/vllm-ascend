@@ -24961,3 +24961,42 @@ CANN event mode=0。输出和五组状态在padding→真实请求及两组无�
 `model_decode_source_per_stream_queue_v1`和相同固定输入/算法/通信/SK配置；
 相对mode=0基线只改Host队列隔离，并在计时外记录实际队列配置。性能待结果，
 未提前接受或切换生产默认值。
+
+### 2026-10-31：停止Host队列隔离候选，继续清理未消费的压缩slot准备
+
+16卡per-stream队列候选`task_20261031_062542_9747189127`以exit=1结束，尚未
+进入真实KV加载/稳态性能采样。T96捕获前的静态编译/安装初始化阶段，rank0
+出现`free(): invalid pointer`；rank11等记录了`malloc(): unaligned fastbin
+chunk detected`及Host栈`std::_Rb_tree_rebalance_for_erase → rtEventDestroy →
+aclrtDestroyEventImpl → c10::ThreadPool::main_loop`。现有device日志没有页表或
+slot地址异常证据，首个可见失败是Host堆错误；不能据此认定DSpark设备越界，
+也没有足够证据认定底层根因。单卡通过不代表16卡配置可用，本候选停止，不删
+SDK保护、不改共享SDK、不重复16卡试错，后续恢复原队列配置。完整状态补入
+[per_stream_queue_validation.json](csa_aclnn_host_20261030/per_stream_queue_validation.json)。
+
+独立检查输入消费者后，只再删除一项确实无用的准备：纯decode时C4和C128
+metadata均返回`slot_mapping=None`，实际压缩slot来自forward中的
+`CompressorMetadata`；此前只有PTO C4省略了原始slot格式化，Native C4和HCA
+仍启动除法、取模、stack及copy写入不被返回的私有buffer。现统一省略纯decode
+压缩缓存的这份中间结果，不改变真实compact slots、Native SAS/QLI消费者或
+cache布局。SWA及state slot确实被Native/PTO消费，保持原路径；prefill也保持。
+
+CPU回归中22项首先通过，另2项旧测试用`__new__`手工创建wrapper，缺少上轮
+新增的`requires_replay_sync`初始化；补齐测试对象后，这2项单独重跑通过。
+未为测试补任何生产热路径fallback或新校验。Native/PTO C4、C128及SWA路径
+均覆盖，检查原始压缩buffer不变、真实Native计划仍可生成、SWA/state slot值
+保持。受影响的Python lint通过。
+
+单卡`task_20261031_063627_142379813747`在原配置下正常通过：一级队列、
+`PER_STREAM_QUEUE=0`、event mode=0，真实静态核/SK、padding捕图→真实请求
+以及两组不同输入连续无Host同步replay，输出和五组状态均逐bit对齐eager。
+Native输出误差仍为relative RMSE0.0043642856/max_abs0.0390625，Simpler未初始化。
+一次先行启动命令把静态包时间戳路径写错，在imports阶段退出，未执行NPU测试；
+已纠正为上述任务，不将启动参数错误计作算子失败。详细证据见
+[unused_compressed_slots_validation.json](csa_aclnn_host_20261030/unused_compressed_slots_validation.json)。
+
+冻结源码`model_decode_source_unused_slots_v1`，PTO任务
+`task_20261031_063824_14555801437`、Native任务
+`task_20261031_063824_145563014817`使用相同源码与原队列/event mode=0成对验证。
+由于此次同时减少Native的无效工作，待两侧完成再计算相对收益。此前PTO最慢
+rank均值52.616798ms仍是已有最好结果，48ms目标未完成。

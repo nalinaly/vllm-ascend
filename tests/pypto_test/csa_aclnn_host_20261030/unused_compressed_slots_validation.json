@@ -1,0 +1,67 @@
+{
+  "passed": true,
+  "task_queue_enable": 1,
+  "per_stream_queue_env": "0",
+  "cann_event_work_mode": 0,
+  "native_output_comparison": {
+    "max_abs": 0.0390625,
+    "relative_rmse": 0.004364285618066788,
+    "finite": true,
+    "bit_equal": false
+  },
+  "superkernel_optimize_returned": true,
+  "padding_cache_unchanged": {
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "replay_bit_equal": {
+    "output": true,
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "queued_replay_bit_equal": [
+    {
+      "output": true,
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    },
+    {
+      "output": true,
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    }
+  ],
+  "no_python_redispatch": true,
+  "no_simpler": {
+    "forbidden_calls": [],
+    "kernel_state": "uninitialized",
+    "worker_created": false,
+    "kernel_config_bound": false,
+    "generated_kernel_configs": [],
+    "passed": true
+  },
+  "cpu_tests": 24,
+  "cpu_note": "先22项通过；2项旧的手工wrapper构造缺requires_replay_sync，补齐测试初始化后单独复跑通过",
+  "device_task": "task_20261031_063627_142379813747",
+  "setup_failure": {
+    "task": "task_20261031_063608_141822326945",
+    "reason": "静态包路径时间戳拼写错误；imports阶段失败，未进入NPU执行；已纠正新任务"
+  },
+  "model_source": "results/model_decode_source_unused_slots_v1",
+  "scope": "只去掉纯decode压缩缓存未返回的原始slot格式化，不省略真实compact slots、SWA/state slots或Native消费的metadata；整网待验收",
+  "pto_task": "task_20261031_063824_14555801437",
+  "native_task": "task_20261031_063824_145563014817",
+  "model_status": "已排队，无性能结论"
+}

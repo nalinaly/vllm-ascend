@@ -55,6 +55,21 @@
   "task": "task_20261031_062357_9457549129",
   "scope": "单卡128K/B16实际静态/SK/同图异步replay通过；不能替代16卡性能验收",
   "model_task": "task_20261031_062542_9747189127",
-  "model_status": "queued/running，无性能结论",
-  "model_source": "results/model_decode_source_per_stream_queue_v1"
+  "model_status": "completed exit=1；初始化期间Host堆错误，未进入性能采样，候选不采用",
+  "model_source": "results/model_decode_source_per_stream_queue_v1",
+  "failure": {
+    "rank0_message": "free(): invalid pointer",
+    "rank11_messages": [
+      "malloc(): unaligned fastbin chunk detected",
+      "Segfault encountered",
+      "std::_Rb_tree_rebalance_for_erase",
+      "rtEventDestroy",
+      "aclrtDestroyEventImpl",
+      "c10::ThreadPool::main_loop"
+    ],
+    "source": "results/pto_per_stream_queue_v1/rank11.log",
+    "stage": "T96 capture前静态编译/安装后的初始化",
+    "device_evidence": "现有device日志未发现页表/slot地址异常证据；不将Host堆错误认定为DSpark设备越界，也不宣称已找到底层根因",
+    "decision": "停止隔离候选，保留原队列配置，不改SDK或重复16卡试错"
+  }
 }

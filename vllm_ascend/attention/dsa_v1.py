@@ -692,10 +692,11 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
             self.query_lens = self.common_ratio_to_sas_metadata["query_lens"]
 
         self.defer_native_csa_metadata = kwargs.get("defer_native_csa_metadata", False) and not self.num_prefills
-        # C4 decode returns slot_mapping=None; its real compressed slots come
-        # from CompressorMetadata in forward. Avoid launching division/remainder,
-        # stack and copy for an unused buffer on the PTO route.
-        if not (self.defer_native_csa_metadata and self.compressor_ratio == 4):
+        # Compressed decode entries return slot_mapping=None. Both Native and
+        # PTO obtain real compressed slots from CompressorMetadata in forward;
+        # this raw slot buffer has no consumer for C4 or C128 decode.
+        # Keep prefill and the SWA/state buffers on their existing path.
+        if self.num_prefills or self.compressor_ratio <= 1:
             slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
             self.slot_mapping[:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(slot_mapping, self.block_size)
 

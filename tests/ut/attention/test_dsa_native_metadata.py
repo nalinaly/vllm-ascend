@@ -128,8 +128,8 @@ def test_unused_c4_plans_do_not_prepare_host_kwargs_or_lengths(monkeypatch, nati
     assert result.sas_metadata is None and result.qli_metadata is None
 
 
-@pytest.mark.parametrize("ratio,defer", [(4, True), (4, False), (0, True), (128, True)])
-def test_c4_decode_does_not_format_unconsumed_slots(monkeypatch, native_ops, ratio, defer):
+@pytest.mark.parametrize("ratio,defer", [(4, True), (4, False), (0, True), (0, False), (128, True), (128, False)])
+def test_compressed_decode_does_not_format_unconsumed_slots(monkeypatch, native_ops, ratio, defer):
     builder = make_builder(monkeypatch, ratio=ratio, defer=defer)
     builder.slot_mapping.fill_(-91)
     cache = builder.decode_ratio_to_sas_metadata
@@ -147,8 +147,8 @@ def test_c4_decode_does_not_format_unconsumed_slots(monkeypatch, native_ops, rat
     result = builder.build(0, common, num_reqs_actual=2, block_size=32,
                            prefill_ratio_to_sas_metadata={}, decode_ratio_to_sas_metadata=cache,
                            common_ratio_to_sas_metadata=common_cache, defer_native_csa_metadata=defer)
-    assert format_slots.call_count == int(not (defer and ratio == 4))
-    if defer and ratio == 4:
+    assert format_slots.call_count == int(ratio <= 1)
+    if ratio > 1:
         assert result.decode.slot_mapping is None
         assert (builder.slot_mapping == -91).all()
         # Real Native fallback consumes the lazy plans and CompressorMetadata,
@@ -264,6 +264,7 @@ def test_graph_replay_prepares_current_step_only_for_native(monkeypatch, native_
     wrapper.is_debugging_mode = False
     wrapper.enable_enpu = True
     wrapper.use_eagle = False
+    wrapper.requires_replay_sync = True
     monkeypatch.setattr(acl_graph, "get_forward_context", lambda: context)
     monkeypatch.setattr(acl_graph, "_EXTRA_CTX", NS(is_draft_model=False))
     assert wrapper() == "output" and events == ["replay"]
