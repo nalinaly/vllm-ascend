@@ -32,7 +32,9 @@
     "HCCL_DETERMINISTIC": false,
     "HCCL_OP_EXPANSION_MODE": "AIV",
     "HCCL_BUFFSIZE": 1800,
-    "gpu_memory_utilization": 0.92
+    "gpu_memory_utilization": 0.92,
+    "torch_compile_dynamic": false,
+    "torch_compile_evidence": "csa-repro-20261024-current/vllm/vllm/compilation/wrapper.py:148，fullgraph=True, dynamic=False；vLLM仍显式标记其需要的符号维度"
   },
   "synchronization": "事件在生成前预热；不在计时forward内新增同步。整批提交前及整轮请求结束后的客户端等齐不计入target。"
 }

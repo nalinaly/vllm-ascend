@@ -24582,3 +24582,30 @@ rank0全部轮次自然平均接受数Native 3.73187、PTO 3.73443，二者并�
 `task_20261031_020254_1002097726`、PTO任务
 `task_20261031_020331_101930622580`已按原输入及配置排队，复用各自缓存。
 后续须核对T96的实际静态/SK覆盖和新的最慢rank结果，不以单卡通过外推整网。
+
+### 2026-10-31：Native真实attention静态补编译取得4.64ms最慢rank收益
+
+修复版Native任务`task_20261031_020254_1002097726`完成（exit=0），实际
+安装4份静态包。T96捕图前新增的selected输入包含Compressor、QLI、SAS、
+QKV/O投影、CompressorMetadata等；不是只打开SK开关。独立三步trace
+每步主图有582个SK任务（旧版223个），每步43组MoE dispatch/combine；
+21次QLI及43次attention已出现在真实SK任务中。融合任务首尾名称不能
+穷举其内部算子，不能把SK计数变化直接换算成性能收益。
+
+16rank各10个有效样本中最慢rank10 mean=59.63463ms，较旧版最慢rank6
+64.27285ms减少4.63822ms；rank0 mean 63.56889→59.50630ms。
+新Native全样本P95=60.03614ms、max=60.62598ms。数据见
+[csa_aclnn_host_20261030/native_capture_static_baseline.json](csa_aclnn_host_20261030/native_capture_static_baseline.json)。
+新增离线trace汇总脚本保留主图/metadata/SK覆盖和原始kernel名称；不在运行
+路径增加检查，不把多流kernel总和或含等待的MoE融合任务当作纯通信时间。
+
+两次Native均使用确定性0和相同运行配置；rank0的16个192-token输出中
+5个逐token一致，自然平均接受数3.73187→3.80000。不能仅据这组数据将
+差异归因于静态策略或归约不确定性，也不把结果写成精度一致。这里使用
+现有性能输出做披露，没有扩大精度测试矩阵。
+
+另核对实际vLLM编译入口`compilation/wrapper.py:148`：调用
+torch.compile(fullgraph=True, dynamic=False)，同时由vLLM显式标记需要的
+符号维度；动态维度日志不等于dynamic=True。该事实已补进计时口径文件。
+PTO同一v3源码任务仍在运行，未用新Native与旧PTO跨静态覆盖计算收益，
+48ms目标保持未完成。
