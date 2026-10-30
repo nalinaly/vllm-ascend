@@ -109,9 +109,9 @@
 - [ ] 核对本机实际导入源码/wheel、启动脚本、计时区间及约50 ms基线。
 - [ ] 对齐后置ACLNN版本；确认业务不走旧Host选档包或Simpler/Python调用。
 - [ ] 梳理Worker、图包装器、CSA service及Torch包装中的稳态额外处理，标出删除点。
-- [ ] 删除后置ACLNN的8K/长度Host门槛、逐层签名和policy多图逻辑。
-- [ ] 删除无Native消费者的QLI/C4 SAS推导及其冗余准备。
-- [ ] 精简绑定/包装热路径，将必要静态合同检查移入已有准备或重建阶段。
+- [x] 删除后置ACLNN的8K/长度Host门槛、逐层签名和policy多图逻辑。
+- [x] 删除无Native消费者的QLI/C4 SAS推导及其冗余准备。
+- [x] 精简绑定/包装热路径，将必要静态合同检查移入已有准备或重建阶段。
 - [ ] 单卡验证短历史、混长、padding、同容量跨长度replay及受影响状态写回。
 - [ ] 验证静态编译和与Native等价的SK融合覆盖；记录实际执行证据。
 - [ ] 在本机启动真实16-worker服务，重取同口径Native/PTO对照及Host/Device时间线。

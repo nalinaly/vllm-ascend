@@ -1,0 +1,113 @@
+{
+  "source_base": "a0e05cf71",
+  "compile_task": "task_20261030_233455_283671213",
+  "runtime_task": "task_20261030_233814_1579227844",
+  "compile": {
+    "command": [
+      "op_compiler",
+      "-p",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/target_v1/static_aclnn/3549982_opcompile",
+      "-v",
+      "Ascend910_9391",
+      "-j",
+      "64",
+      "-o",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v3",
+      "-f",
+      "true",
+      "-l",
+      "info",
+      "--enable_super_kernel"
+    ],
+    "returncode": 0,
+    "wall_s": 149.966712762136,
+    "packages": [
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v3/static_kernel_261030233500655324_28625.run"
+    ]
+  },
+  "single_card": {
+    "passed": true,
+    "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收",
+    "stage": "complete",
+    "static_package": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v3/static_kernel_261030233500655324_28625.run",
+    "device": 0,
+    "histories": [
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072
+    ],
+    "queries": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+    ],
+    "tokens": 96,
+    "requests": 16,
+    "native_output_comparison": {
+      "max_abs": 0.0390625,
+      "relative_rmse": 0.004364285618066788,
+      "finite": true,
+      "bit_equal": false
+    },
+    "guards": {
+      "total": 31,
+      "passed": 31
+    },
+    "superkernel_optimize_returned": true,
+    "padding_cache_unchanged": {
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    },
+    "replay_bit_equal": {
+      "output": true,
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    },
+    "no_python_redispatch": true,
+    "no_simpler": {
+      "forbidden_calls": [],
+      "kernel_state": "uninitialized",
+      "worker_created": false,
+      "kernel_config_bound": false,
+      "generated_kernel_configs": [],
+      "passed": true
+    }
+  },
+  "limitations": [
+    "私有编译扩展尚未集成到可分发ACLNN wheel的自动静态编译流程",
+    "super_kernel_optimize返回成功且replay正确，但尚未采集真实SK dispatch及融合范围证据",
+    "没有16卡target网络计时；未达到目标验收条件"
+  ]
+}

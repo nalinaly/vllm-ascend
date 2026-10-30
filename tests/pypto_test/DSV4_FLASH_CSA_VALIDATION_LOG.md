@@ -24382,3 +24382,26 @@ CompressorMetadata的Init参数缺const兼容。已保留参数dump、缓存和�
 后续修复这两处，不能把普通ACLNN图通过当作静态/SK验收。
 
 本阶段未测16卡target网络，尚无≤48ms结论；不把以上单卡功能通过记作目标完成。
+
+
+### 2026-10-30：94策略ACLNN静态/SK编译的私有验证
+
+在前一阶段Host精简提交`a0e05cf71`上继续处理运行门槛。公共SDK/CANN保持
+原样：只在私有编译子进程补齐策略链接；普通入口合入全部策略对象，SK按核
+合入对应策略并局部化包装函数，避免CANN复制split对象时发生重复符号。
+Native CompressorMetadata的Init仅读取tiling，参数改为const指针以兼容
+静态模板；设备侧数值计算和页表语义未改变。
+
+初次修复后7/7输入编译成功，打包因公共OPP目录无写权限失败；随后复用
+既有`dsv4_hca_prepare_opp.py`建立私有OPP，7/7静态/SK编译及.run打包成功，
+总墙钟149.97秒。没有反复测试94档，也没有重建188份数学对象。
+
+把该包安装到另一个私有OPP后，128K/B16实际service完成eager、全padding
+capture、super_kernel_optimize及真实请求replay。输出/五组cache状态与
+同输入eager逐bit一致，保护区保持；仍未初始化Simpler。
+
+这是静态包构建及单卡正确性证据。**尚未核对真实SK dispatch和与Native
+等价的融合范围，不能将优化API正常返回当作SK覆盖已验收。** 编译扩展
+目前由私有构建脚本启用，尚需合入正式ACLNN包的自动编译流程。16卡target
+forward性能仍未测，48ms目标未完成。精简证据见
+[csa_aclnn_host_20261030/static_validation.json](csa_aclnn_host_20261030/static_validation.json)。

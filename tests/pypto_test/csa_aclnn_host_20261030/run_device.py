@@ -4,6 +4,8 @@
 import argparse
 import json
 import os
+import subprocess
+import sys
 import traceback
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +20,7 @@ def main():
     parser.add_argument("--device", type=int)
     parser.add_argument("--target", action="store_true", help="128K/B16；默认为短历史混长边界")
     parser.add_argument("--dump-static", action="store_true", help="只采集静态编译输入，离线CPU编译不占卡")
+    parser.add_argument("--static-package", type=Path, help="装入私有OPP并验证静态核和真实SK图优化")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     report = {"passed": False, "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收"}
@@ -28,6 +31,20 @@ def main():
         print(stage, flush=True)
 
     save("imports")
+    if args.static_package:
+        here = Path(__file__).resolve().parent
+        os.environ["ASCEND_OPP_PATH"] = subprocess.check_output(
+            [
+                sys.executable,
+                str(here.parent / "dsv4_hca_prepare_opp.py"),
+                "--destination",
+                str(args.output / "private_opp"),
+            ],
+            text=True,
+        ).strip()
+        with (args.output / "static_install.log").open("w") as stream:
+            subprocess.run([str(args.static_package.resolve())], check=True, stdout=stream, stderr=subprocess.STDOUT)
+        report["static_package"] = str(args.static_package)
     try:
         from contextlib import contextmanager
 
@@ -214,6 +231,10 @@ def main():
             assert entry.csa_tnd_contracts is None
             assert not entry.csa_native_metadata_prefixes
             captures = runtime.submissions
+            if args.static_package:
+                save("superkernel_optimize")
+                entry.aclgraph.super_kernel_optimize()
+                report["superkernel_optimize_returned"] = True
             restore(fixture)
             call(True)
             report["padding_cache_unchanged"] = {
