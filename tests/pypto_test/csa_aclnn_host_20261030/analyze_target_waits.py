@@ -73,14 +73,20 @@ def host_intervals(directory):
         window, = record["steady_window"]
         if not window["sufficient"] or len(window["forward"]["samples_us"]) != 10:
             raise ValueError(f"{directory}: rank{rank}缺少10个有效稳态样本")
+        elapsed = dict(zip(window["steady_step_indices"], window["forward"]["samples_us"]))
         for step in window["host_diagnostics"]["steps"]:
+            step = {**step, "forward_elapsed_ms": elapsed[step["step"]] / 1000}
             events.append((step["forward_entry"]["monotonic_ns"], rank, step))
             for label, first, last in (
                 ("inputs", "inputs_begin", "inputs_end"),
                 ("batch_coordination", "batch_coordination_begin", "batch_coordination_end"),
                 ("metadata", "attention_metadata_begin", "attention_metadata_end"),
                 ("forward_submit", "event_record_ready", "forward_submitted"),
+                ("dp_sync", "dp_sync_begin", "dp_sync_end"),
+                ("dp_all_reduce", "dp_all_reduce_begin", "dp_all_reduce_end"),
             ):
+                if first not in step or last not in step:
+                    continue
                 for clock in ("monotonic_ns", "thread_cpu_ns"):
                     intervals[f"{label}_{clock}"].append((step[last][clock] - step[first][clock]) / 1e6)
     # 同机monotonic时钟聚类；不直接假定各rank第N个样本是同一个全局step。
@@ -90,16 +96,22 @@ def host_intervals(directory):
             groups.append([])
         groups[-1].append(event)
     aligned = []
+    step_maxima = []
     for group in groups:
         if len(group) != 16 or len({rank for _, rank, _ in group}) != 16:
             raise ValueError(f"{directory}: Host时钟聚类不能匹配完整16rank，需人工核对")
+        step_maxima.append(max(s["forward_elapsed_ms"] for _, _, s in group))
         aligned.append({key: (max(s[key]["monotonic_ns"] for _, _, s in group)
                               - min(s[key]["monotonic_ns"] for _, _, s in group)) / 1e6
                         for key in ("execute_entry", "inputs_end", "batch_coordination_end",
-                                    "attention_metadata_end", "forward_entry", "forward_submitted")})
+                                    "attention_metadata_end", "forward_entry", "forward_submitted",
+                                    "dp_all_reduce_begin", "dp_all_reduce_end", "dp_sync_end")
+                        if all(key in s for _, _, s in group)})
     return {"intervals_ms": {key: stats(values) for key, values in intervals.items()},
             "aligned_step_spreads_ms": aligned,
             "spread_summary_ms": {key: stats([row[key] for row in aligned]) for key in aligned[0]},
+            "aligned_step_max_forward_ms": step_maxima,
+            "aligned_step_max_summary_ms": stats(step_maxima),
             "alignment": "同机monotonic_ns按20ms自然间隔分组，每组恰好16个不同rank；未改计时或增加屏障。"}
 
 

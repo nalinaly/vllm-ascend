@@ -15,6 +15,7 @@ class ForwardHostDiagnostics:
         self.runner = None
         self.original_methods = []
         self.metadata_entry = None
+        self.dp_sync_entry = None
         self.metadata_builders = []
         self.callback = self._gc_event
         gc.callbacks.append(self.callback)
@@ -72,6 +73,39 @@ class ForwardHostDiagnostics:
             if callable(original):
                 install(name, timed(original, label), original)
 
+        original_dp_sync = getattr(runner, "_sync_metadata_across_dp", None)
+        if callable(original_dp_sync):
+            import torch.distributed as dist
+
+            original_all_reduce = dist.all_reduce
+
+            def all_reduce(*args, **kwargs):
+                entry = self.dp_sync_entry
+                if entry is None:
+                    return original_all_reduce(*args, **kwargs)
+                self.mark(entry, "dp_all_reduce_begin")
+                try:
+                    return original_all_reduce(*args, **kwargs)
+                finally:
+                    self.mark(entry, "dp_all_reduce_end")
+
+            def dp_sync(*args, **kwargs):
+                draft = kwargs.get("is_draft_model", args[1] if len(args) > 1 else False)
+                entry = None if draft else active_entry()
+                if entry is None:
+                    return original_dp_sync(*args, **kwargs)
+                previous = self.dp_sync_entry
+                self.dp_sync_entry = entry
+                self.mark(entry, "dp_sync_begin")
+                try:
+                    return original_dp_sync(*args, **kwargs)
+                finally:
+                    self.mark(entry, "dp_sync_end")
+                    self.dp_sync_entry = previous
+
+            install("all_reduce", all_reduce, original_all_reduce, dist)
+            install("_sync_metadata_across_dp", dp_sync, original_dp_sync)
+
         # The decode harness uses builder 0 (no microbatching). Resolve builders
         # once when attaching, outside measured steps; never inspect tensors here.
         seen_builders = {}
@@ -118,6 +152,7 @@ class ForwardHostDiagnostics:
         self.original_methods.clear()
         self.runner = None
         self.metadata_entry = None
+        self.dp_sync_entry = None
         gc.callbacks.remove(self.callback)
         return {"scope": "主机观测单独列出，不从设备forward耗时中扣除；未改变GC配置、未新增设备同步。",
                 "gc_enabled": self.gc_enabled, "gc_threshold": self.gc_threshold,

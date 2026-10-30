@@ -115,7 +115,7 @@
 - [x] 删除无Native消费者的QLI/C4 SAS推导及其冗余准备。
 - [x] 精简绑定/包装热路径，将必要静态合同检查移入已有准备或重建阶段。
 - [x] 单卡验证短历史、混长、padding、同容量跨长度replay及受影响状态写回。
-- [ ] 验证静态编译和与Native等价的SK融合覆盖；记录实际执行证据。
+- [x] 验证静态编译和与Native等价的SK融合覆盖；记录实际执行证据。
 - [x] 在本机启动真实16-worker服务，重取同口径Native/PTO对照及Host/Device时间线。
 - [ ] 达到≤48 ms，并给出21层kernel收益、metadata消除、Host变化与端到端结果的对应关系。
 
@@ -188,3 +188,19 @@ padding→真实请求replay通过，输出/五组cache状态逐bit对齐eager�
 batch协调结束时仅均值0.412ms、最大0.691ms。后续沿metadata准备及下发
 偏差排查通信等待，不新增CSA专属Host校验、不换计时边界，也不把关联当因果。
 正常ACLNN热路径只保留必要参数传递与派发；现有旧后端合同不进入后置ACLNN。
+
+2026-10-31后续：删除PTO纯decode中没有消费者的C4 slot转换，以及公共metadata
+已经完成后的第二次RoPE gather/copy。单卡实际Native builder/service/replay及
+16项CPU回归通过。16卡任务正常完成，metadata准备均值4.040→3.523ms；但
+出现一次DP协调返回时的约9.70ms rank偏差，forward入口扩大到10.404ms。
+最新候选最慢rank mean **54.364ms**、max **63.236ms**，不能认定整网改善；
+历史0.4.0基线53.979ms仍保留，不删除长尾或调整48ms目标。
+
+SK证据已补强：同一T96/T6图的优化前后dump均显示21个静态CSA全部合入SK，
+按保留的Stream/Task ID逐个列出成员，见
+[sk_capture_members.json](csa_aclnn_host_20261030/sk_capture_members.json)。
+沿用与Native相同的完整forward捕获/优化边界；debug_dump占位时间不用于性能。
+
+后续优先细分真实模型中DP all_reduce等待/唤醒及返回后处理。纯CPU16rank
+迟到输入实验未复现10ms偏差，主动轮询没有收益且明显增加CPU消耗，已排除。
+不新增barrier，不跳过DP协调，不将当前Host准备改善等同于整网验收。

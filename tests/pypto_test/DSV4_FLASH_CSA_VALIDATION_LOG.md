@@ -24700,3 +24700,74 @@ CSA层区间包括相邻HCpost/HCpre、attention及router，不是纯CSA核；Mo
 allows_replay/graph_signature/Host policy匹配，绑定复用跳过55Tensor扫描，
 Torch Run只保留TensorList参数个数这类直接索引所需检查；真实replay不重新
 执行Python/C++包装。旧后端保留的合同未进入这条路径，没有换位置增加校验。
+
+### 2026-10-31：消除未消费C4 slots与重复RoPE准备，Host减轻但整网长尾尚未解决
+
+进一步沿实际metadata消费者核对，发现两段重复工作：
+
+1. C4的main/indexer builder仍将原始slot做除法、取余、stack和copy，但C4返回
+   `slot_mapping=None`，真正使用的是forward中CompressorMetadata生成的紧凑slots。
+   PTO纯decode跳过此转换；Native、prefill、SWA/state路径保留原行为。
+2. 公共builder已经按输入容量gather RoPE并写入固定buffer，decode builder又对
+   其有效前缀重复gather/copy。PTO纯decode直接复用公共RoPE，仍在返回时按
+   实际decode行切片，padding容量继续初始化。混合prefill保持原路径。
+
+没有添加Host签名、长度检查、设备读回、额外同步或新数学策略。单卡先验证
+slots省略，再验证两项合并；最终任务`task_20261031_034343_148462026083`
+exit=0，128K/B16实际builder→service→全padding/真实请求replay的输出及五组
+cache/state逐bit一致，保护区正常，两个未消费slot缓冲保持原值。Native对照
+relative RMSE仍为0.0043642856、max_abs仍为0.0390625，没有新增数值差异。
+受影响CPU回归16项通过，含Native回退、SWA、HCA、S1/S6及padding前缀。
+证据：[metadata_reuse_validation.json](csa_aclnn_host_20261030/metadata_reuse_validation.json)。
+
+原仅slots的16卡任务尚在排队时主动取消，合并两项后只跑一轮整机验收，避免
+重复占卡。合并任务`task_20261031_034445_150607425981`正常完成，独立源码
+`model_decode_source_metadata_reuse_v1`复用0.4.0 wheel、公共SDK和相同固定请求。
+两张图捕获375秒、图内存0.88GiB；16个rank均未执行Simpler。
+
+| 指标 | 0.4.0原基线 | metadata复用候选 |
+| --- | ---: | ---: |
+| metadata准备均值，ms | 4.039873 | 3.522776 |
+| 最慢rank target mean，ms | 53.978516（rank10） | 54.364098（rank6） |
+| 160样本整体mean，ms | 53.535945 | 53.500496 |
+| 160样本P95，ms | 54.974499 | 54.536961 |
+| 全样本max，ms | 55.642559 | 63.235741 |
+| 每个对齐step取16rank最大值后的mean，ms | 54.023916 | 54.399437 |
+
+**这轮不能认定整网改善，48ms目标仍未达到。** 所有有效样本保留，P95改善
+不能掩盖最大值恶化；仅汇总160个rank样本会稀释一个全局step的多卡长尾。
+逐rank、全部10步及Host时间戳分析见
+[metadata_reuse_timing.json](csa_aclnn_host_20261030/metadata_reuse_timing.json)。
+
+异常step中，rank4/5/6/7/3/8先从DP协调返回，其余rank晚约9.70ms返回；到
+forward入口差异扩大至10.404ms，先进入网络的若干rank耗时约63.2ms，而后进
+入者约52.8～53.7ms。偏差在本次修改的metadata准备之前已经出现。该step的
+协调区间CPU执行仅约0.3～0.6ms、墙钟8～72ms，且没有GC重叠；目前只能
+收窄到协调等待/唤醒，不能把全部时间直接归因于Gloo算法或Python处理。
+
+另核对历史基线：Native/PTO AICore频率均1850MHz，各rank正确绑定不同NPU
+对应CPU区间，未见metadata阶段与GC重叠，见
+[host_hypotheses.json](csa_aclnn_host_20261030/host_hypotheses.json)。未据猜测改GC、
+绑核策略或核频。
+
+### 2026-10-31：实际SK成员审计与DP协调诊断的下一步
+
+在上述16卡任务初始化期，仅rank0对同一NPUGraph保存SK前后dump，不在replay
+增加回调。T96/Model49、T6/Model48均为优化前21个静态CSA，优化后全部并入SK：
+T96有1组CompressorMetadata→CSA→HcPre→RmsNorm，19组
+HcPost→CSA→HcPre→RmsNorm，最后1组CSA→HcPre→RmsNorm。
+保留的Stream/Task ID给出了被合并的原始连续成员，消除了仅看profiling首尾
+名字无法确定中间CSA的歧义。`debug_dump`的ts/dur是显示占位，不是耗时。
+证据：[sk_capture_members.json](csa_aclnn_host_20261030/sk_capture_members.json)。
+
+不占NPU的16rank Gloo诊断`task_20261031_040201_24723158612`已完成。交替比较
+blocking与异步完成标志轮询，包含rank8迟到60ms的场景。blocking返回偏差
+均值0.429ms/max0.527ms，poll为0.445ms/max0.565ms；线程CPU均值却从
+0.059ms增至59.300ms。未复现模型的10ms偏差，也不支持采用忙等，故不接入
+生产，原始样本见[gloo_release_diagnostic.json](csa_aclnn_host_20261030/gloo_release_diagnostic.json)。
+
+下一轮任务`task_20261031_040904_276985524625`使用独立冻结源码，只在已有
+Host诊断里给`_sync_metadata_across_dp`及其原`all_reduce`前后增加时间戳；
+不改变collective、输入或同步行为，跳过draft诊断并在结束后恢复所有钩子。
+3项CPU回归确认原返回值、异常、调用次数与恢复行为。目的为区分真实模型中
+collective等待/返回与后处理，不能把尚未完成的该任务当成性能结果。

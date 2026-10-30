@@ -128,6 +128,56 @@ def test_unused_c4_plans_do_not_prepare_host_kwargs_or_lengths(monkeypatch, nati
     assert result.sas_metadata is None and result.qli_metadata is None
 
 
+@pytest.mark.parametrize("ratio,defer", [(4, True), (4, False), (0, True), (128, True)])
+def test_c4_decode_does_not_format_unconsumed_slots(monkeypatch, native_ops, ratio, defer):
+    builder = make_builder(monkeypatch, ratio=ratio, defer=defer)
+    builder.slot_mapping.fill_(-91)
+    cache = builder.decode_ratio_to_sas_metadata
+    common_cache = {
+        "num_decodes": 3, "num_prefills": 0, "num_decode_tokens": 7, "num_prefill_tokens": 0,
+        "input_positions": cache["input_positions"], "cos": cache["cos"], "sin": cache["sin"],
+        "seq_lens": builder.seq_lens, "query_lens": cache["query_start_loc_cpu"].diff(),
+    }
+    common = NS(num_reqs=3, num_actual_tokens=7, num_input_tokens=12, graph_pad_size=12,
+                query_start_loc=cache["query_start_loc"], slot_mapping=torch.arange(12),
+                block_table_tensor=builder.block_table, attn_state=None, max_query_len=6)
+    builder.metadata_cls = dsa.AscendDSAMetadata
+    format_slots = Mock(side_effect=lambda slots, block: torch.stack((slots // block, slots % block), dim=-1))
+    monkeypatch.setattr(dsa.DeviceOperator, "format_dsa_slot_mapping", format_slots)
+    result = builder.build(0, common, num_reqs_actual=2, block_size=32,
+                           prefill_ratio_to_sas_metadata={}, decode_ratio_to_sas_metadata=cache,
+                           common_ratio_to_sas_metadata=common_cache, defer_native_csa_metadata=defer)
+    assert format_slots.call_count == int(not (defer and ratio == 4))
+    if defer and ratio == 4:
+        assert result.decode.slot_mapping is None
+        assert (builder.slot_mapping == -91).all()
+        # Real Native fallback consumes the lazy plans and CompressorMetadata,
+        # rather than the unused uncompressed slot buffer.
+        result.decode.ensure_native_metadata()
+        assert [op.call_count for op in native_ops] == [1, 1]
+    elif ratio <= 1:
+        slots = torch.arange(7)
+        assert torch.equal(result.decode.slot_mapping[:7], torch.stack((slots // 32, slots % 32), dim=-1))
+
+
+def test_pto_decode_reuses_common_rope_for_real_rows_and_padding(monkeypatch, native_ops):
+    builder = make_builder(monkeypatch, cache={})
+    query = torch.tensor([0, 1, 7, 12], dtype=torch.int32)
+    positions = torch.arange(12)
+    cos = torch.arange(12 * 64, dtype=torch.float32).view(12, 64)
+    sin = -cos
+    builder.common_ratio_to_sas_metadata = {"input_positions": positions, "cos": cos, "sin": sin}
+    common = NS(query_start_loc=query, query_start_loc_cpu=query, positions=positions,
+                _seq_lens_cpu=builder.seq_lens, max_query_len=6)
+    monkeypatch.setattr(dsa, "get_cos_and_sin_dsa", lambda *a, **kw: pytest.fail("不能重复gather已准备的RoPE"))
+    result = builder.build_decode_metadata(0, common, 2)
+    assert torch.equal(result.cos, cos[:7]) and torch.equal(result.sin, sin[:7])
+    assert result.cos.data_ptr() == cos.data_ptr()
+    assert builder.decode_ratio_to_sas_metadata["cos"].shape[0] == 12
+    assert torch.equal(result.input_positions, positions[:7])
+    assert result.start_pos[-1] == 0  # padding request仍屏蔽。
+
+
 def test_native_fallback_prepares_and_records_real_consumers(monkeypatch, native_ops):
     from vllm_ascend.ops import dsv4_csa
 

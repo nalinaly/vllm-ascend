@@ -32,6 +32,7 @@ def make_fixture(
     physical_request_capacity=None,
     allow_unassigned_tail=False,
     cache_template=None,
+    defer_native_metadata=False,
 ):
     """按实际本轮长度构造Native输入；Dspark配置上限与本轮有效长度分开。
 
@@ -190,6 +191,7 @@ def make_fixture(
             common_ratio_to_sas_metadata=common_cache,
             prefill_ratio_to_sas_metadata=prefill_cache,
             decode_ratio_to_sas_metadata=decode_cache,
+            defer_native_csa_metadata=defer_native_metadata,
         )
         group.update(table=table, common=common)
     compact = {

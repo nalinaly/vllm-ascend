@@ -6,10 +6,17 @@ workspace=$(dirname "$repo")
 stage=${1:?suffix或native或pto或profile_native或profile_pto}
 label=${2:?独立结果目录名}
 shift 2
-if [[ ${1:-} == --device ]]; then shift 2; fi
+source_name=model_decode_source_v3
+while (($#)); do
+    case "$1" in
+        --source-name) source_name=${2:?需要冻结源码目录名}; shift 2 ;;
+        --device) shift 2 ;;
+        *) echo "Unknown argument: $1" >&2; exit 2 ;;
+    esac
+done
 source "$workspace/env-dsv4-0251rc1.sh"
 source "$repo/tests/pypto_test/csa_shared_toolchain/env.sh"
-frozen="$here/results/model_decode_source_v3"
+frozen="$here/results/$source_name"
 site="$here/results/aclnn_site"
 side=${stage##*_}
 cache_side=$side

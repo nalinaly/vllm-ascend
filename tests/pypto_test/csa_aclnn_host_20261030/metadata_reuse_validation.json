@@ -1,0 +1,99 @@
+{
+  "passed": true,
+  "stage": "complete",
+  "histories": [
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072,
+    131072
+  ],
+  "queries": [
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6,
+    6
+  ],
+  "tokens": 96,
+  "requests": 16,
+  "unused_c4_slot_buffer_unchanged": {
+    "compressed": true,
+    "indexer": true
+  },
+  "native_output_comparison": {
+    "max_abs": 0.0390625,
+    "relative_rmse": 0.004364285618066788,
+    "finite": true,
+    "bit_equal": false
+  },
+  "padding_cache_unchanged": {
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "replay_bit_equal": {
+    "output": true,
+    "swa": true,
+    "compressed": true,
+    "state": true,
+    "indexer": true,
+    "indexer_state": true
+  },
+  "no_python_redispatch": true,
+  "no_simpler": {
+    "forbidden_calls": [],
+    "kernel_state": "uninitialized",
+    "worker_created": false,
+    "kernel_config_bound": false,
+    "generated_kernel_configs": [],
+    "passed": true
+  },
+  "cpu_tests": {
+    "passed": 16,
+    "file": "tests/ut/attention/test_dsa_native_metadata.py"
+  },
+  "device_task": "task_20261031_034343_148462026083",
+  "model_task": "task_20261031_034445_150607425981",
+  "model_status": "completed exit=0",
+  "source": "results/model_decode_source_metadata_reuse_v1",
+  "scope": "PTO纯decode删除未消费C4 slots及重复RoPE gather/copy；Native/prefill保持；整网性能待验收",
+  "timing": "metadata_reuse_timing.json",
+  "sk_members": "sk_capture_members.json",
+  "performance_accepted": false,
+  "performance_reason": "Host准备均值降低0.517ms，但一次DP协调返回偏差放大长尾；最慢rank均值及最大值均未改善。",
+  "slot_only_device_task": "task_20261031_033834_132919623242",
+  "cancelled_pending_model": "task_20261031_034041_140667921361",
+  "native_baseline": "native_capture_static_baseline.json",
+  "all_16_ranks_no_simpler": true,
+  "cpu_gloo_probe": {
+    "task": "task_20261031_040201_24723158612",
+    "status": "completed exit=0",
+    "result": "未复现10ms返回偏差；poll没有改善且显著增加CPU占用，不接入生产。",
+    "evidence": "gloo_release_diagnostic.json"
+  }
+}

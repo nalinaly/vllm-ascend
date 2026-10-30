@@ -100,7 +100,7 @@
   ],
   "config_replace_regression_task": "task_20261031_013304_406685927401",
   "static_coverage": {
-    "status": "真实metadata补编译后Native/PTO均完成16卡；21层CSA捕获、无普通CSA dispatch；SK内部精确成员仍不能由端点名称穷举",
+    "status": "Native同边界完整静态基线；PTO T96/T6均21个静态CSA全部合入SK，初始化dump按保留task ID给出成员",
     "evidence": "static_capture_gap.json",
     "cpu_regression_task": "task_20261031_014550_49503228330",
     "cpu_regression_passed": 3,
@@ -108,7 +108,8 @@
     "device_validation_status": "completed exit=0",
     "next": "定位剩余约5.98ms，目标尚未达成",
     "device_validation_evidence": "capture_static_validation.json",
-    "paired_evidence": "target_capture_static_comparison.json"
+    "paired_evidence": "target_capture_static_comparison.json",
+    "membership_evidence": "sk_capture_members.json"
   },
   "descriptor_fix": {
     "scope": "CSA私有ACLNN wrapper的连续ND转换等价表示；NZ保持原样，设备94模板不改",
@@ -117,5 +118,24 @@
     "static_cache": "results/decode_cache_pto_ndptr"
   },
   "remaining_target_gap_ms": 5.978516006469725,
-  "next": "使用已有Host和Device记录定位下发偏差及通信等待；不新增CSA稳态校验，不扩大测试矩阵"
+  "next": "定位DP协调返回的约9.70ms跨rank偏差；新候选最慢rank54.364ms，历史0.4.0基线53.979ms均未达48ms。",
+  "metadata_reuse": {
+    "device_task": "task_20261031_034343_148462026083",
+    "device_status": "completed exit=0",
+    "cpu_passed": 16,
+    "model_task": "task_20261031_034445_150607425981",
+    "model_status": "completed exit=0",
+    "source": "results/model_decode_source_metadata_reuse_v1",
+    "evidence": "metadata_reuse_validation.json",
+    "sk_audit": "初始化期rank0保存SK前后真实图，不增加稳态处理",
+    "timing": "metadata_reuse_timing.json",
+    "performance_accepted": false,
+    "next": "真实模型中细分DP all_reduce等待/唤醒与后处理；不删除长尾、不增加barrier或跳过协调。"
+  },
+  "dp_release_diagnostic": {
+    "task": "task_20261031_040904_276985524625",
+    "status": "queued",
+    "source": "results/model_decode_source_dp_diagnostic_v1",
+    "purpose": "只在已有Host诊断中细分all_reduce调用与后处理，不改collective、不增加同步；3项CPU钩子回归通过。"
+  }
 }

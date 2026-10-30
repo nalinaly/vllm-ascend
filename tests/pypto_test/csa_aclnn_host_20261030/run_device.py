@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--capture-static", action="store_true", help="验证捕图前自动补齐静态核及metadata生产者")
     parser.add_argument("--profile", action="store_true", help="仅采集3次真实图重放以确认SK设备dispatch")
     parser.add_argument("--package-site", type=Path, help="待验证的独立ACLNN包目录")
+    parser.add_argument("--defer-native-metadata", action="store_true", help="使用真实PTO metadata准备，覆盖未消费C4 slots的省略")
     args = parser.parse_args()
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
@@ -160,7 +161,14 @@ def main():
                 history_lengths=histories,
                 token_capacity=tokens,
                 request_capacity=requests,
+                defer_native_metadata=args.defer_native_metadata,
             )
+            if args.defer_native_metadata:
+                report["unused_c4_slot_buffer_unchanged"] = {
+                    name: not bool(fixture["groups"][name]["builder"].slot_mapping.count_nonzero().item())
+                    for name in ("compressed", "indexer")
+                }
+                assert all(report["unused_c4_slot_buffer_unchanged"].values())
             output = torch.empty_like(fixture["hidden"])
             actual = sum(queries)
             descriptor = BatchDescriptor(tokens, num_reqs=requests, uniform=False)

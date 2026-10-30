@@ -691,8 +691,13 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
             self.seq_lens = self.common_ratio_to_sas_metadata["seq_lens"]
             self.query_lens = self.common_ratio_to_sas_metadata["query_lens"]
 
-        slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
-        self.slot_mapping[:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(slot_mapping, self.block_size)
+        self.defer_native_csa_metadata = kwargs.get("defer_native_csa_metadata", False) and not self.num_prefills
+        # C4 decode returns slot_mapping=None; its real compressed slots come
+        # from CompressorMetadata in forward. Avoid launching division/remainder,
+        # stack and copy for an unused buffer on the PTO route.
+        if not (self.defer_native_csa_metadata and self.compressor_ratio == 4):
+            slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
+            self.slot_mapping[:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(slot_mapping, self.block_size)
 
         self.graph_pad_size = common_attn_metadata.graph_pad_size
         block_table_size = self.get_block_table_size(common_attn_metadata, BUILD_METADATA_STEP_PREFILL)
@@ -707,9 +712,6 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
             )
 
         decode_metadata = None
-        # capture的Native回退仍需在图外准备；普通PTO decode推迟到真实消费者。
-        self.defer_native_csa_metadata = kwargs.get("defer_native_csa_metadata", False) and not self.num_prefills
-
         if self.num_decodes > 0:
             decode_metadata = self.build_decode_metadata(common_prefix_len, common_attn_metadata, num_reqs_actual)
 
@@ -964,9 +966,17 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
         if self.decode_ratio_to_sas_metadata.get("query_start_loc", None) is None:
             query_start_loc = common_attn_metadata.query_start_loc[: self.num_decodes + 1]
             self.decode_ratio_to_sas_metadata["query_start_loc"] = query_start_loc
-            input_positions = common_attn_metadata.positions[: self.num_decode_tokens].long()
+            if getattr(self, "defer_native_csa_metadata", False):
+                # Pure PTO decode already gathered RoPE into stable buffers in
+                # build(). Its decode rows are a prefix of that padded capacity.
+                # Reuse it instead of gathering/copying the same rows again.
+                shared = self.common_ratio_to_sas_metadata
+                input_positions = shared["input_positions"][: self.num_decode_tokens]
+                cos, sin = shared["cos"], shared["sin"]
+            else:
+                input_positions = common_attn_metadata.positions[: self.num_decode_tokens].long()
+                cos, sin = get_cos_and_sin_dsa(input_positions, use_cache=True)
             self.decode_ratio_to_sas_metadata["input_positions"] = input_positions
-            cos, sin = get_cos_and_sin_dsa(input_positions, use_cache=True)
             self.decode_ratio_to_sas_metadata["cos"] = cos
             self.decode_ratio_to_sas_metadata["sin"] = sin
 
