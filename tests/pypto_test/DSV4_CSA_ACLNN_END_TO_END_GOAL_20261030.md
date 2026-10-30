@@ -225,3 +225,8 @@ max。22项CPU回归和单卡replay通过，两侧使用同一冻结源码成对
 输入准备事件不变。CPU9项与单卡静态/SK连续异步replay通过，两组不同输入
 输出和五组状态均逐bit对齐各自eager。真实16卡同配置对照已排队，尚不宣称
 性能收益或长尾解决，证据见`csa_aclnn_host_20261030/replay_async_validation.json`。
+
+后续PTO整网完成：去除Host同步后提交mean0.580→0.181ms，但target最慢rank
+mean为53.259ms（前一轮53.014ms），不能认定整网改善。256个192-token请求及
+DSpark统计与前一轮一致；Native同源对照运行中。event mode=0作为独立候选已
+排队，其余配置和固定输入保持不变，尚不替换默认mode=1。48ms目标仍未完成。

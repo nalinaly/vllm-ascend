@@ -24862,3 +24862,24 @@ Native误差仍为relative RMSE0.0043642856、max_abs0.0390625，未改变算术
 `task_20261031_052739_1892558148`已排队，沿用event mode=1及全部既定配置。
 当前只有功能通过，整网性能仍待结果，见
 [replay_async_validation.json](csa_aclnn_host_20261030/replay_async_validation.json)。
+
+上述PTO整网任务已正常结束（exit=0）。最慢rank4 mean **53.258596ms**，
+160样本mean53.026107ms、P95 **53.810219ms**、max **54.276600ms**。相对紧邻
+上一轮53.014426ms均值没有改善，不能把本次Host缩短写成整网性能收益。
+Host提交mean **0.579570→0.180987ms**、max **1.182892→0.349734ms**；metadata
+准备mean3.216408ms，基本不变。forward入口rank偏差mean1.325ms、max1.689ms，
+说明还有metadata准备之后的入场不齐，而去掉同步没有消除此处偏差。
+
+复用现有完整输出核对，16rank共256请求、每请求192token在修改前后全部一致，
+独立profile输出和各rank DSpark统计也一致；不新增正确性跑次，不将结果扩张
+为内部浮点bit一致。rank0/4三步profile仍各有332个SK及43对MoE dispatch/combine；
+rank0的21个CSA层attention+router区间合计mean18.908ms，MoE dispatch融合区间
+mean13.643ms、combine区间mean7.691ms。融合区间包含计算和等待，不能称为纯
+通信；profile窗口与稳态10步不同，不能用这些数字直接减出48ms性能下界。
+
+Native同源任务仍在运行。下一项独立实验`task_20261031_053726_249854610230`
+使用同一冻结源码、输入、通信及SK配置，只显式设event mode=0，验证旧Python/
+Simpler对照遗留的强制mode=1在纯ACLNN中是否仍合适。尚未有结果，不改变当前
+默认值；只有该实验改善才补同模式Native对照。已核对本机固定请求分配是
+16rank各重复同一组16题（共256请求、16种内容），向用户询问客户50ms负载的
+分配规则；在答复前不自行改输入来追求目标值，也不认定重复输入已造成性能差。
