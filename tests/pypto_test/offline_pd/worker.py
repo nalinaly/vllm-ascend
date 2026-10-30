@@ -13,6 +13,12 @@ from vllm_ascend.worker.worker import NPUWorker
 
 class OfflineNPUWorker(NPUWorker):
     def __init__(self, vllm_config, *args, **kwargs):
+        self._offline_no_pto_execution = None
+        if os.environ.get("VLLM_ASCEND_PTO_CSA_BACKEND") == "aclnn":
+            from csa_aclnn_backend_20261028.checks import NoPtoExecution
+
+            self._offline_no_pto_execution = NoPtoExecution()
+            self._offline_no_pto_execution.install()
         level = vllm_config.additional_config["offline_deterministic_level"]
         if level not in (0, 1):
             raise ValueError("offline_deterministic_level must be 0 or 1")
@@ -60,11 +66,17 @@ class OfflineNPUWorker(NPUWorker):
         engine = self.vllm_config
         # 记录实际安装证据；同机多卡只有 Gloo 组长安装包，其余 rank 共享安装结果。
         static = (sys.modules.get("npugraph_ex._acl_concrete_graph.static_kernel")
-                  or sys.modules.get("torch_npu.dynamo.npugraph_ex._acl_concrete_graph.static_kernel"))
+                  or sys.modules.get("torch_npu.dynamo.npugraph_ex._acl_concrete_graph.static_kernel")
+                  or sys.modules.get("torchair._acl_concrete_graph.static_kernel")
+                  or sys.modules.get("torch_npu.dynamo.torchair._acl_concrete_graph.static_kernel"))
         print(f"OFFLINE_STATIC_KERNEL local_world_size={os.environ.get('LOCAL_WORLD_SIZE')} "
               f"module_loaded={static is not None} "
               f"installed_packages={len(getattr(static, '_installed_run_pkgs', ()))}", flush=True)
         return {
+            "no_pypto_execution": (
+                self._offline_no_pto_execution.report(os.environ.get("PYPTO_PROG_BUILD_DIR", "/nonexistent"))
+                if self._offline_no_pto_execution is not None else None
+            ),
             "requested_deterministic_level": self._offline_requested_deterministic_level,
             "deterministic_level": torch_npu.npu._get_deterministic_level(),
             "torch_deterministic": torch.are_deterministic_algorithms_enabled(),
@@ -74,7 +86,7 @@ class OfflineNPUWorker(NPUWorker):
             "decode_optimizations": {
                 "ascend_compilation_config": {
                     name: getattr(ascend.ascend_compilation_config, name)
-                    for name in ("enable_npugraph_ex", "enable_static_kernel", "fuse_norm_quant")
+                    for name in ("enable_npugraph_ex", "enable_static_kernel", "enable_super_kernel", "fuse_norm_quant")
                 },
                 "enable_cpu_binding": ascend.enable_cpu_binding,
                 "multistream_overlap_shared_expert": ascend.multistream_overlap_shared_expert,

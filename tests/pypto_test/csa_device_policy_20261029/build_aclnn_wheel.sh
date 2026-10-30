@@ -5,5 +5,5 @@ repo=$(cd "$here/../../.." && pwd)
 workspace=$(dirname "$repo")
 source "$workspace/env-dsv4-0251rc1.sh"
 source "$repo/tests/pypto_test/csa_shared_toolchain/env.sh"
-cd "$here/probe/aclnn_package_v1"
+cd "${1:-$here/probe/aclnn_package_v1}"
 exec python setup.py bdist_wheel

@@ -1,0 +1,141 @@
+{
+  "status": "PASS_SINGLE_CARD_SK_DISPATCH",
+  "scope": "128K/B16真实CSA service单层；不是16卡target验收",
+  "package_source": "results/package_v4",
+  "compile_task": "task_20261030_235711_83750118504",
+  "runtime_task": "task_20261030_235841_91674624681",
+  "compile": {
+    "command": [
+      "op_compiler",
+      "-p",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/target_v1/static_aclnn/3549982_opcompile",
+      "-v",
+      "Ascend910_9391",
+      "-j",
+      "64",
+      "-o",
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v5",
+      "-f",
+      "true",
+      "-l",
+      "info",
+      "--enable_super_kernel"
+    ],
+    "returncode": 0,
+    "wall_s": 29.676888931076974,
+    "packages": [
+      "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v5/static_kernel_261030235716211155_837837.run"
+    ],
+    "compile_errors": [],
+    "passed": true
+  },
+  "kernel_binary_bytes": 99235552,
+  "dispatch_csv": "tests/pypto_test/csa_aclnn_host_20261030/results/target_static_profile_v3/profile/liteserver-hps-365a-00001_916957_20261030235915512_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+  "sk_csa_tasks": [
+    {
+      "name": "sk_1_none_start_static_kernel_CompressorMetadata_ea7a2e8b4702f67cfac0c989c18121735f2171366f990fcffdd2b835bc15272c_837837_d1__kernel0_end_static_kernel_CsaSpmdTndDevicePto_d623d3722f9d704d899ea707b6d06f2217da88968e3bfbe249a31e315c5dc42b_837837_d1",
+      "us": 762.1
+    },
+    {
+      "name": "sk_1_none_start_static_kernel_CompressorMetadata_ea7a2e8b4702f67cfac0c989c18121735f2171366f990fcffdd2b835bc15272c_837837_d1__kernel0_end_static_kernel_CsaSpmdTndDevicePto_d623d3722f9d704d899ea707b6d06f2217da88968e3bfbe249a31e315c5dc42b_837837_d1",
+      "us": 759.58
+    },
+    {
+      "name": "sk_1_none_start_static_kernel_CompressorMetadata_ea7a2e8b4702f67cfac0c989c18121735f2171366f990fcffdd2b835bc15272c_837837_d1__kernel0_end_static_kernel_CsaSpmdTndDevicePto_d623d3722f9d704d899ea707b6d06f2217da88968e3bfbe249a31e315c5dc42b_837837_d1",
+      "us": 755.78
+    }
+  ],
+  "resolvedNum": 4,
+  "isFusible": true,
+  "checks": {
+    "passed": true,
+    "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收",
+    "stage": "complete",
+    "static_package": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/static_v5/static_kernel_261030235716211155_837837.run",
+    "device": 0,
+    "histories": [
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072,
+      131072
+    ],
+    "queries": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+    ],
+    "tokens": 96,
+    "requests": 16,
+    "native_output_comparison": {
+      "max_abs": 0.0390625,
+      "relative_rmse": 0.004364285618066788,
+      "finite": true,
+      "bit_equal": false
+    },
+    "superkernel_optimize_returned": true,
+    "padding_cache_unchanged": {
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    },
+    "replay_bit_equal": {
+      "output": true,
+      "swa": true,
+      "compressed": true,
+      "state": true,
+      "indexer": true,
+      "indexer_state": true
+    },
+    "no_python_redispatch": true,
+    "profile": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/target_static_profile_v3/profile",
+    "no_simpler": {
+      "forbidden_calls": [],
+      "kernel_state": "uninitialized",
+      "worker_created": false,
+      "kernel_config_bound": false,
+      "generated_kernel_configs": [],
+      "passed": true
+    }
+  },
+  "limitations": [
+    "Native等价整模型SK覆盖仍待16卡验证",
+    "没有target forward ≤48ms证据"
+  ],
+  "cpu_regression": {
+    "task": "task_20261031_000847_12528032660",
+    "passed": 51
+  },
+  "wheel": {
+    "task": "task_20261031_001341_139279625360",
+    "path": "results/package_v4/dist/csa_device_pto_ops-0.3.0-cp310-cp310-linux_aarch64.whl",
+    "source": "results/package_v4",
+    "pip_install_validation": "待在模型环境的私有target安装；单卡使用相同包内容验证"
+  }
+}

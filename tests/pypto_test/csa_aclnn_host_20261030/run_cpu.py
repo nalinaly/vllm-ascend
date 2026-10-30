@@ -14,6 +14,7 @@ raise SystemExit(
             "tests/ut/attention/test_dsa_native_metadata.py",
             "tests/ut/ops/test_csa_aclnn_backend.py",
             "tests/ut/ops/test_csa_aclnn_native_graph.py",
+        "tests/ut/ops/test_csa_superkernel_config.py",
         ]
     )
 )

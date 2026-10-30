@@ -1,0 +1,23 @@
+{
+  "goal": "真实128K/B16 DP16/TP1 target forward ≤48ms",
+  "bank_status": "生成中，禁止作为已验收KV使用",
+  "source": "results/model_source",
+  "prefill_attempts": [
+    {
+      "task": "task_20261031_000638_11924548051",
+      "status": "terminated exit=130",
+      "cause": "task-submit默认max-time=300秒，收到SIGTERM后worker清理退出",
+      "log": "results/model_prefill",
+      "next": "同源码/同输入/同编译缓存，max-time=3600重试"
+    },
+    {
+      "task": "task_20261031_002641_166464832606",
+      "status": "queued_or_running",
+      "max_time_seconds": 3600,
+      "log": "results/model_prefill_retry1",
+      "source": "results/model_source",
+      "same_input_bank": true,
+      "reuse_compile_cache": "results/model_prefill"
+    }
+  ]
+}

@@ -21,6 +21,8 @@ def main():
     parser.add_argument("--target", action="store_true", help="128K/B16；默认为短历史混长边界")
     parser.add_argument("--dump-static", action="store_true", help="只采集静态编译输入，离线CPU编译不占卡")
     parser.add_argument("--static-package", type=Path, help="装入私有OPP并验证静态核和真实SK图优化")
+    parser.add_argument("--profile", action="store_true", help="仅采集3次真实图重放以确认SK设备dispatch")
+    parser.add_argument("--package-site", type=Path, help="待验证的独立ACLNN包目录")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     report = {"passed": False, "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收"}
@@ -31,6 +33,17 @@ def main():
         print(stage, flush=True)
 
     save("imports")
+    if args.package_site:
+        sys.path.insert(0, str(args.package_site.resolve()))
+        vendor = args.package_site.resolve() / "csa_device_pto_ops/ascend/vendors/csa_spmd_tnd_device_pto"
+        paths = [
+            p for p in os.environ.get("ASCEND_CUSTOM_OPP_PATH", "").split(":") if "csa_spmd_tnd_device_pto" not in p
+        ]
+        os.environ["ASCEND_CUSTOM_OPP_PATH"] = ":".join([str(vendor), *paths])
+    if args.profile:
+        os.environ["ASCEND_GLOBAL_LOG_LEVEL"] = "1"
+        os.environ["ASCEND_PROCESS_LOG_PATH"] = str((args.output / "ascend/log").resolve())
+        (args.output / "ascend/log").mkdir(parents=True)
     if args.static_package:
         here = Path(__file__).resolve().parent
         os.environ["ASCEND_OPP_PATH"] = subprocess.check_output(
@@ -167,6 +180,9 @@ def main():
             prepare_csa_model(SimpleNamespace(model=SimpleNamespace(layers=[layer])))
             runtime = layer.self_attn.dsa_attn._pto_csa_runtime
             assert runtime.native_graph_lifecycle and config._pto_csa_device_policy
+            if args.static_package:
+                torch.npu.set_compile_mode(jit_compile=False)
+                torch_npu.npu._aclnn_reselect_static_kernel()
 
             def forbidden(*_):
                 raise AssertionError("后置ACLNN不允许重算Host graph signature")
@@ -254,6 +270,25 @@ def main():
             assert all(report["replay_bit_equal"].values())
             assert runtime.submissions == captures
             report["no_python_redispatch"] = True
+            if args.profile:
+                save("profile_three_replays")
+                restore(fixture)
+                torch.npu.synchronize()
+                with torch_npu.profiler.profile(
+                    activities=[torch_npu.profiler.ProfilerActivity.CPU, torch_npu.profiler.ProfilerActivity.NPU],
+                    record_shapes=False,
+                    profile_memory=False,
+                    with_stack=False,
+                    experimental_config=torch_npu.profiler._ExperimentalConfig(
+                        profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                    ),
+                    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(str(args.output / "profile")),
+                ):
+                    for step in range(3):
+                        with torch.autograd.profiler.record_function(f"CSA_REPLAY_{step}"):
+                            entry.aclgraph.replay()
+                    torch.npu.synchronize()
+                report["profile"] = str(args.output / "profile")
             report["no_simpler"] = guard.report(args.output / "unused_build")
             assert report["no_simpler"]["passed"]
             report["passed"] = True

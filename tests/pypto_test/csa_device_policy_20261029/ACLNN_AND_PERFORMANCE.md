@@ -97,3 +97,21 @@ task-submit --device auto 'bash tests/pypto_test/csa_device_policy_20261029/run_
 
 两次构建脚本适配错误（namespace与函数同名、policy_state形状变量命名）已修正；
 不计作SDK缺陷。ACLNN的188对象成功编译228.31秒，未改变共享SDK。
+
+
+## 2026-10-31 当前包：0.3.0与自动静态编译
+
+优先使用本轮`csa_aclnn_host_20261030/results/package_v4/dist/`下的0.3.0 wheel。
+新Torch库删除逐调用55个Tensor重复校验；包含自动静态链接需要的策略对象
+和同版PTO-ISA头文件。运行仍是单个后置选档ACLNN，Host tiling key恒为0。
+服务进程须在NPU初始化前把包内`ascend/vendors/csa_spmd_tnd_device_pto`
+加入ASCEND_CUSTOM_OPP_PATH，与普通自定义ACLNN安装方式相同。
+
+本版本已获得128K/B16真实SK dispatch和replay正确性证据，详见
+[SK验证](../csa_aclnn_host_20261030/sk_dispatch_validation.json)。
+原静态包因对象元信息及巨大调试段导致加载回退，不能再作为静态执行证据。
+本验证不代表全部94档、16卡全模型或48ms目标完成。
+
+模型测试应同时设置`enable_static_kernel=true`与`enable_super_kernel=true`，
+Native/PTO使用同一完整图边界；旧默认不变。私有静态编译产物使用独立OPP目录，
+不能往其他session共用的CANN安装目录写入。

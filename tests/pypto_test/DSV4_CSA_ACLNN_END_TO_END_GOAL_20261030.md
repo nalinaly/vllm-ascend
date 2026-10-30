@@ -148,3 +148,11 @@ padding和同图跨长度验证；这些不能当作当前真实整网目标已�
 
 第二阶段保留目标：缩短初始化静态/SK编译、减少重复编译并完善部署复现。
 依赖第一阶段功能与端到端收益验收；不以第二阶段工作替代本轮稳态Host精简。
+
+2026-10-31进展：正式包内自动静态编译与单卡真实SK dispatch已通过，CSA
+resolvedNum=4/isFusible=1，实际融合CompressorMetadata→CSA并正确replay。
+旧包API成功但普通核回退的情况已撤回为静态证据。51项CPU回归通过，0.3.0
+wheel已构建。真实128K KV bank正在重建；首个16卡任务被队列默认300秒
+超时终止，重试已改为3600秒并复用编译缓存。尚无16卡target forward时间，
+整模型SK范围与≤48ms均保持待验收，详见本轮sk_dispatch_validation.json
+及model_progress.json。

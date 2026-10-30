@@ -505,6 +505,7 @@ class AscendCompilationConfig:
         enable_static_kernel: bool = False,
         fuse_norm_quant: bool = True,
         fuse_qknorm_rope: bool = True,
+        enable_super_kernel: bool = False,
         **kwargs,
     ):
         """
@@ -525,6 +526,9 @@ class AscendCompilationConfig:
             fuse_norm_quant (bool): Whether to enable norm and quant fusion optimization.
                 When set to True, the system will optimize norm and quant operations.
                 Default: True
+            enable_super_kernel (bool): Compile SK-capable static kernels and optimize
+                the complete Native ACL graph after capture. Requires static kernels.
+                Default: False
             fuse_qknorm_rope (bool): Whether to enable qknorm and rope fusion optimization.
                 Default: True
             **kwargs: Additional optional parameters for forward compatibility and configuration extension.
@@ -540,14 +544,18 @@ class AscendCompilationConfig:
                 )
             enable_npugraph_ex = False
             enable_static_kernel = False
+            enable_super_kernel = False
 
         self.fuse_norm_quant = fuse_norm_quant
         self.fuse_qknorm_rope = fuse_qknorm_rope
         self.enable_npugraph_ex = enable_npugraph_ex
         self.enable_static_kernel = enable_static_kernel
+        self.enable_super_kernel = enable_super_kernel
         self.fuse_muls_add = kwargs.get("fuse_muls_add", True)
         if self.enable_static_kernel:
             assert self.enable_npugraph_ex, "Static kernel generation requires npugraph_ex to be enabled."
+        if self.enable_super_kernel and not self.enable_static_kernel:
+            raise ValueError("SuperKernel requires enable_static_kernel=True")
 
 
 class AscendFusionConfig:

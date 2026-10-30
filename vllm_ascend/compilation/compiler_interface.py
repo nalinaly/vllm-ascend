@@ -85,6 +85,7 @@ def _configure_backend(
     vllm_config: VllmConfig,
     process_kwargs_options: Callable | None = None,
 ) -> None:
+    super_kernel = getattr(ascend_compilation_config, "enable_super_kernel", False)
     if ascend_compilation_config.enable_static_kernel:
         # npugraph_ex's static_kernel requires LOCAL_WORLD_SIZE to determine the
         # physical node topology for creating per-node Gloo groups, which
@@ -112,10 +113,10 @@ def _configure_backend(
         # It maps flat option names to nested config paths for old versions,
         # and directly setattr for new versions with flat CompilerConfig.
         # force_eager=True: execute FX graph in eager mode before graph capture.
-        # inplace_pass=False: disable reinplace pass to avoid gelu fallback to CPU.
+        # Keep the legacy inplace default; the explicit SK path enables inplace.
         options: dict[str, Any] = {
             "force_eager": True,
-            "inplace_pass": False,
+            "inplace_pass": super_kernel,
             "clone_input": False,
             "clone_output": False,
         }
@@ -125,6 +126,7 @@ def _configure_backend(
                 scope="global",
             )
             options["static_kernel_compile"] = True
+            options["super_kernel_optimize"] = super_kernel
             # Set sym_range to limit static kernel compilation to specified batch sizes.
             options["_vllm_aclnn_static_kernel_sym_range"] = _compute_decode_cudagraph_batch_sizes(vllm_config)
         process_kwargs_options(config, {"options": options})
@@ -133,14 +135,15 @@ def _configure_backend(
         # mode="reduce-overhead": use aclgraph mode, avoid fx graph to Ascend IR transformation.
         config.mode = "reduce-overhead"
         config.debug.run_eagerly = True
-        # Disable reinplace pass to avoid gelu fallback to CPU causing host-device copy error.
-        config.debug.aclgraph.disable_reinplace_inplaceable_ops_pass = True
+        # Match the npugraph_ex branch; legacy mode keeps its original behavior.
+        config.debug.aclgraph.disable_reinplace_inplaceable_ops_pass = not super_kernel
         if ascend_compilation_config.enable_static_kernel:
             logger.info_once(
                 "enable_static_kernel is enabled, static shape kernel will be used to accelerate aclgraph execution.",
                 scope="global",
             )
             config.experimental_config.aclgraph._aclnn_static_shape_kernel = True
+            config.experimental_config.aclgraph._super_kernel_optimize = super_kernel
             config.experimental_config.aclgraph._aclnn_static_shape_kernel_sym_value_range = (
                 _compute_decode_cudagraph_batch_sizes(vllm_config)
             )
@@ -244,6 +247,7 @@ class AscendCompiler(CompilerInterface):
             "torch_npu_version": torch_npu.__version__,
             "enable_npugraph_ex": ascend_compilation_config.enable_npugraph_ex,
             "enable_static_kernel": ascend_compilation_config.enable_static_kernel,
+            "enable_super_kernel": ascend_compilation_config.enable_super_kernel,
         }
         logger.info("AscendCompiler hash factors: %s", factors)
         return sha256(str(factors).encode(), usedforsecurity=False).hexdigest()[:10]

@@ -102,6 +102,8 @@ class ACLGraphWrapper:
         self.vllm_config = vllm_config
         self.runtime_mode = runtime_mode
         self.compilation_config = vllm_config.compilation_config
+        additional = getattr(vllm_config, "additional_config", None) or {}
+        self.enable_super_kernel = additional.get("ascend_compilation_config", {}).get("enable_super_kernel", False)
 
         self.first_run_finished = False
         self.is_debugging_mode = envs.VLLM_LOGGING_LEVEL == "DEBUG"
@@ -236,6 +238,10 @@ class ACLGraphWrapper:
                             f"Original error:\n{exc}"
                         ) from exc
                     raise
+
+            if self.enable_super_kernel:
+                # Native/PTO使用同一完整图边界；编译与优化只在capture阶段发生。
+                aclgraph.super_kernel_optimize()
 
             # here we always use weak ref for the workspaces
             # to save memory

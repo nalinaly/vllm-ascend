@@ -24405,3 +24405,55 @@ capture、super_kernel_optimize及真实请求replay。输出/五组cache状态�
 目前由私有构建脚本启用，尚需合入正式ACLNN包的自动编译流程。16卡target
 forward性能仍未测，48ms目标未完成。精简证据见
 [csa_aclnn_host_20261030/static_validation.json](csa_aclnn_host_20261030/static_validation.json)。
+
+
+## 2026-10-31：确认并修复CSA静态核回退，取得真实SK dispatch
+
+上轮`static_v3`包的API调用和replay虽通过，真实日志进一步证明CSA静态
+二进制加载失败，随后回退普通核；`resolvedNum=0 / BINDMAP_INIT_EMPTY`。
+因此旧包的正确性结果不能作为“静态CSA已经执行”的证据，已在
+`static_validation.json`中明确标为被后续证据替代。
+
+失败产物约3,886,038,032字节。188个独立__aicore__函数对象含大量DWARF/
+局部调试符号及全局.ascend.meta核类型记录，被SK split重复合入。打包时
+只保留函数计算/重定位所需内容：去调试与无用局部符号，移除这些非入口
+对象的全局核类型记录；真正入口与SK绑定元信息仍由CANN生成。
+计算C++及94档tile/流水不变。策略对象总量约949MiB→21MiB，静态CSA
+二进制降为99,235,552字节。不能把缩小体积直接写成稳态提速。
+
+正式包现在自带编译扩展、188个策略对象及公共同版PTO-ISA include/pkg_inc，
+由CANN的算子编译入口自动使用，finally恢复编译进程临时替换的函数。
+不再依赖服务环境sitecustomize，也不修改公共SDK/CANN。首次打包遗漏
+PTO-ISA pkg_inc后补齐；同时修正验证脚本：op_compiler可能部分失败仍
+返回0并打.run包，因此必须同时检查compile_error日志，不能只看exit=0。
+
+包内自动编译验证：任务task_20261030_235711_83750118504，7/7通过、
+29.68秒，无外部policy-link环境。三步真图profiling任务
+task_20261030_235841_91674624681：CSA resolvedNum=4、isFusible=1，
+实际Type=SuperKernel，包含前驱CompressorMetadata和CSA；对应带profiling
+的三个区间为762.10/759.58/755.78us，只用于确认执行覆盖，不当作正式
+稳态或整网性能。全padding捕图→真实128K/B16请求replay，输出与五组
+cache/state逐bit对齐同输入eager，保护区正常，未初始化Simpler。证据：
+[csa_aclnn_host_20261030/sk_dispatch_validation.json](csa_aclnn_host_20261030/sk_dispatch_validation.json)。
+
+修复profiling解析使用的本用户目录缺失：从同一CANN9.2安装复制39MiB
+profiler工具到公共env已声明的用户缓存路径，没有改外部CANN属主/权限。
+图重放缺少普通aclnn逐算子Host flow的解析警告仍如实保留，设备task CSV
+和SK运行日志均有真实记录，不用空trace冒充设备结果。
+
+本地vLLM图配置此前只有static开关，新增显式enable_super_kernel（默认
+false），Native/PTO沿同一完整ACLGraphWrapper捕获边界优化；npugraph_ex
+及TorchAir fallback均生成SK-capable静态核，显式SK路径打开inplace pass。
+配置计入编译cache键，保留原位置参数兼容；51项CPU回归通过。真实整模型
+融合范围仍须通过后续16卡记录确认，不能由本单层结果外推。
+
+0.3.0 wheel已构建，位于results/package_v4/dist/。旧的真实128K bank
+`.repro/csa-20261021-clean/kv-repro/mixed128k_fixed`已不存在，所以重新
+冻结源码并生成4个真实128K前缀计划。首个16卡Native prefill任务
+task_20261031_000638_11924548051漏设max-time，被默认300秒上限终止
+（exit=130/SIGTERM；部分rank刚完成模型初始化），不是非法访存。旧任务
+已终止、已知worker进程消失，保留所有日志与编译缓存，按max-time=3600
+重新排队task_20261031_002641_166464832606。KV尚未审计，不记作已可用。
+
+本轮没有16卡target forward性能结果，≤48ms目标仍未达成；后续必须
+使用同一真实缓存和配置比较Native/PTO，并记录通信等待及最慢rank。
