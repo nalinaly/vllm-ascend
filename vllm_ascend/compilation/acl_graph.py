@@ -109,6 +109,7 @@ class ACLGraphWrapper:
         *,
         use_eagle: bool = False,
         enable_enpu: bool = False,
+        requires_replay_sync: bool = True,
     ):
         self.runnable = runnable
         self.vllm_config = vllm_config
@@ -134,6 +135,7 @@ class ACLGraphWrapper:
         self.concrete_aclgraph_entries: dict[BatchDescriptor, ACLGraphEntry] = {}
         self.enable_enpu = enable_enpu
         self.use_eagle = use_eagle
+        self.requires_replay_sync = requires_replay_sync
         _acl_graph_wrappers.add(self)
 
     def __getattr__(self, key: str):
@@ -347,7 +349,9 @@ class ACLGraphWrapper:
         # When enable_enpu is on, model_runner orders update vs replay; skip here.
         # When FULL + EAGLE draft (merge path), replay does not need this barrier.
         is_draft_eagle = _EXTRA_CTX.is_draft_model and self.use_eagle
-        need_sync = self.runtime_mode == CUDAGraphMode.FULL and not is_draft_eagle
+        # DSV4 has no update_attn_params path. Its input copies and replay are
+        # ordered on the same stream, so it does not need this host barrier.
+        need_sync = self.requires_replay_sync and self.runtime_mode == CUDAGraphMode.FULL and not is_draft_eagle
         if not self.enable_enpu and need_sync:
             torch.npu.current_stream().synchronize()
         entry.aclgraph.replay()

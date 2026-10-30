@@ -39,7 +39,10 @@ def test_superkernel_does_not_reinterpret_existing_positional_arguments(monkeypa
     assert not config.enable_super_kernel
 
 
-def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(monkeypatch):
+@pytest.mark.parametrize("requires_replay_sync,enable_enpu", [(None, False), (False, False), (True, True)])
+def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(
+    monkeypatch, requires_replay_sync, enable_enpu
+):
     from contextlib import nullcontext
     from unittest.mock import Mock
 
@@ -77,13 +80,18 @@ def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(mo
     monkeypatch.setattr(acl_graph.current_platform, "get_global_graph_pool", lambda: None)
     monkeypatch.setattr(torch.npu, "NPUGraph", lambda: graph)
     monkeypatch.setattr(torch.npu, "graph", lambda *args, **kwargs: nullcontext())
+    monkeypatch.setattr(torch.npu, "current_stream", lambda: NS(synchronize=lambda: steps.append("synchronize")))
     monkeypatch.setattr("vllm.model_executor.offloader.base.get_offloader", lambda: Mock())
     engine = NS(compilation_config=NS(), additional_config={"ascend_compilation_config": {"enable_super_kernel": True}})
-    wrapper = acl_graph.ACLGraphWrapper(run, engine, CUDAGraphMode.FULL, enable_enpu=True)
+    options = {} if requires_replay_sync is None else {"requires_replay_sync": requires_replay_sync}
+    wrapper = acl_graph.ACLGraphWrapper(run, engine, CUDAGraphMode.FULL, enable_enpu=enable_enpu, **options)
     wrapper.is_debugging_mode = False
     assert wrapper() is result
     context.capturing = False
     context.additional_kwargs = {"num_actual_tokens": 96}
     assert wrapper() is result
-    assert steps == ["compile_warmup", "capture", "optimize", "replay"]
+    expected = ["compile_warmup", "capture", "optimize"]
+    if requires_replay_sync is not False and not enable_enpu:
+        expected.append("synchronize")
+    assert steps == [*expected, "replay"]
     compile_call.assert_called_once()

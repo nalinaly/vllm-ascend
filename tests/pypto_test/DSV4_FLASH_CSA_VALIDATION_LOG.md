@@ -24821,3 +24821,44 @@ builder/service/replay，输出和五组cache/state逐bit对齐eager，Native误
 任务索引见[empty_prep_validation.json](csa_aclnn_host_20261030/empty_prep_validation.json)。
 尚无这组整网性能结论，不改48ms目标；MoE配置保持原样，是否允许测试会关闭
 shared-expert多流重叠的现有融合路径已询问用户，未在未答复时切换。
+
+### 2026-10-31：满批空操作清理完成整网对照；删除DSV4无消费者的replay前Host等待
+
+上节成对任务均正常结束，保持相同冻结源码、输入和通信配置，所有160个
+稳态样本均保留。Native最慢rank7 mean **61.338090ms**、P95 **68.592796ms**、
+max **69.124924ms**；PTO最慢rank11 mean **53.014426ms**、P95 **54.100101ms**、
+max **54.269859ms**。PTO仍比48ms目标慢 **5.014426ms**。Native本次存在长尾，
+不能把两侧均值差扩大部分都归因于CSA优化；此前59.635ms Native结果仍保留。
+PTO metadata准备mean降至3.220405ms，Native为4.160258ms。完整逐rank采样和
+Host区间见[empty_prep_validation.json](csa_aclnn_host_20261030/empty_prep_validation.json)。
+
+复用既有PTO三步profile，关联`MODEL_EXECUTE`与同connectionId的
+`aclmdlRIExecuteAsync`，再按统一整数ns时钟对齐16rank：图启动偏差分别为
+1.326/1.526/1.261ms，首MoE dispatch入口偏差1.353/1.536/1.277ms；首combine
+结束后缩小到0.012/0.014/0.016ms。说明启动迟到确实传到首个MoE等待，但不能
+把这份偏差乘21当作每层收益。独立profile有初始化与采集扰动，不能作为稳态
+性能下界。来源及可重跑分析见
+[rank_launch_diagnostic.json](csa_aclnn_host_20261030/rank_launch_diagnostic.json)、
+[analyze_rank_launch.py](csa_aclnn_host_20261030/analyze_rank_launch.py)。
+
+Native本次rank14有一次forward提交墙钟9.651ms、线程CPU仅0.322ms且无GC。
+代码审查发现一处确定无消费者的Host同步：`ACLGraphWrapper`在FULL图replay前
+为了attention参数更新调用`current_stream().synchronize()`，但DSV4
+`use_compress`已经跳过`_update_full_graph_params_if_needed`，DSA的
+`update_graph_params`本身也是空实现。该等待的原保护对象在此路径不存在。
+尚未隔离证明这一次9.651ms全部来自该同步，不将推断写成已测因果。
+
+新增初始化时的`requires_replay_sync`配置，普通模型默认保持True；DSV4 Native
+和PTO都设False，只去除这一处Host等待。输入准备的生命周期事件、设备同流
+顺序、跨流依赖及MoE通信配置均保留，不新增稳态参数检查，不将等待挪出计时。
+9项相关CPU回归通过；单卡`task_20261031_052639_187487928405`使用正式0.4.0
+包和既有真实静态核/SK通过全padding捕图→真实请求replay。两组不同输入连续
+提交，中间仅有同流设备copy/replay/结果copy，无Host同步；两次输出和五组
+cache/state均逐bit对齐各自eager结果，Python重派发计数不增加，Simpler未初始化。
+Native误差仍为relative RMSE0.0043642856、max_abs0.0390625，未改变算术。
+
+整网冻结源码为`model_decode_source_replay_async_v1`。PTO任务
+`task_20261031_052739_189248217091`、Native任务
+`task_20261031_052739_1892558148`已排队，沿用event mode=1及全部既定配置。
+当前只有功能通过，整网性能仍待结果，见
+[replay_async_validation.json](csa_aclnn_host_20261030/replay_async_validation.json)。

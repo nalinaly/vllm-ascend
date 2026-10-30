@@ -24,7 +24,9 @@ def main():
     parser.add_argument("--capture-static", action="store_true", help="验证捕图前自动补齐静态核及metadata生产者")
     parser.add_argument("--profile", action="store_true", help="仅采集3次真实图重放以确认SK设备dispatch")
     parser.add_argument("--package-site", type=Path, help="待验证的独立ACLNN包目录")
-    parser.add_argument("--defer-native-metadata", action="store_true", help="使用真实PTO metadata准备，覆盖未消费C4 slots的省略")
+    parser.add_argument(
+        "--defer-native-metadata", action="store_true", help="使用真实PTO metadata准备，覆盖未消费C4 slots的省略"
+    )
     args = parser.parse_args()
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
@@ -224,7 +226,7 @@ def main():
                 torch.ops.vllm.dsv4_csa_forward(hidden, positions, target, layer.self_attn.dsa_attn.prefix)
                 return target
 
-            wrapper = ACLGraphWrapper(forward, config, CUDAGraphMode.FULL)
+            wrapper = ACLGraphWrapper(forward, config, CUDAGraphMode.FULL, requires_replay_sync=False)
 
             def call(graph=False):
                 with context(graph):
@@ -297,6 +299,39 @@ def main():
             assert all(report["replay_bit_equal"].values())
             assert runtime.submissions == captures
             report["no_python_redispatch"] = True
+            # 两组不同输入连续排队；准备、replay、结果副本之间不插入Host同步。
+            # 初始cache先传到设备，避免CPU->NPU copy自身的阻塞掩盖排序问题。
+            save("queued_replay_without_host_barrier")
+            original_hidden = fixture["hidden"].clone()
+            changed_hidden = original_hidden * 0.5
+            fixture["hidden"].copy_(changed_hidden)
+            restore(fixture)
+            call()
+            changed_expected = snapshot()
+            captures = runtime.submissions
+            initial_device = {
+                name: group["initial"].to(device) for name, group in fixture["groups"].items()
+            }
+            queued = []
+            for hidden in (original_hidden, changed_hidden):
+                for name, group in fixture["groups"].items():
+                    group["allocation"].copy_(initial_device[name])
+                fixture["hidden"].copy_(hidden)
+                with context(True):
+                    wrapper(fixture["hidden"], fixture["positions"], output)
+                queued.append({
+                    "output": output.clone(),
+                    **{name: group["allocation"].clone() for name, group in fixture["groups"].items()},
+                })
+            torch.npu.synchronize()
+            report["queued_replay_bit_equal"] = [
+                {name: torch.equal(value.cpu(), reference[name]) for name, value in actual_state.items()}
+                for actual_state, reference in zip(queued, (expected, changed_expected))
+            ]
+            assert all(all(row.values()) for row in report["queued_replay_bit_equal"])
+            assert runtime.submissions == captures
+            fixture["hidden"].copy_(original_hidden)
+            del queued, initial_device
             if args.profile:
                 save("profile_three_replays")
                 restore(fixture)

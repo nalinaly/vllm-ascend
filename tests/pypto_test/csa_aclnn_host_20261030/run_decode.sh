@@ -7,9 +7,16 @@ stage=${1:?suffix或native或pto或profile_native或profile_pto}
 label=${2:?独立结果目录名}
 shift 2
 source_name=model_decode_source_v3
+event_work_mode=1
 while (($#)); do
     case "$1" in
         --source-name) source_name=${2:?需要冻结源码目录名}; shift 2 ;;
+        --event-work-mode)
+            case "${2:-}" in
+                0|1) event_work_mode=$2; shift 2 ;;
+                *) echo "event-work-mode必须是0或1" >&2; exit 2 ;;
+            esac
+            ;;
         --device) shift 2 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
@@ -41,7 +48,7 @@ export VLLM_CACHE_ROOT="$cache/vllm" ASCEND_CACHE_PATH="$cache/ascend"
 mkdir -p "$ASCEND_PROCESS_LOG_PATH" "$VLLM_CACHE_ROOT" "$ASCEND_CACHE_PATH" "$cache/compile"
 export ASCEND_OPP_PATH=$(python "$repo/tests/pypto_test/dsv4_hca_prepare_opp.py" --destination "$cache/private_opp")
 args=(--host 192.168.0.106 --nic enp23s0f3 --decode-dp 16 --batch 16 --mixed-requests
-      --gpu-memory-utilization 0.92 --weight-nz-mode 2 --event-work-mode 1 --port 30881
+      --gpu-memory-utilization 0.92 --weight-nz-mode 2 --event-work-mode "$event_work_mode" --port 30881
       --output "$output" --pto-attention csa)
 case "$stage" in
     suffix)

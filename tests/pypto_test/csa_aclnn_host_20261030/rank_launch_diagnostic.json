@@ -1,0 +1,108 @@
+{
+  "scope": "已有三步独立profiling，非稳态十步计时；首步含profiling初始化扰动。Host API通过connectionId关联MODEL_EXECUTE；整数ns沿profiler归一化时钟对齐。MoE融合task包含计算和通信等待，不能把持续时间或rank差异全部解释为通信。after_first_dispatch保留后续完整设备链，只作诊断，不能作为无profiler性能下界。",
+  "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_dp_diagnostic_v1/rank_launch_analysis.json",
+  "steps": [
+    {
+      "step": 0,
+      "host_launch_entry_spread_ms": 1.07859,
+      "host_launch_exit_spread_ms": 1.31534,
+      "device_graph_entry_spread_ms": 1.325726,
+      "device_graph_exit_spread_ms": 0.017639,
+      "graph_span_ms": {
+        "min": 55.04248,
+        "mean": 55.8650115625,
+        "max": 56.37522
+      },
+      "after_first_dispatch_ms": {
+        "min": 54.09364,
+        "mean": 54.1962345,
+        "max": 54.2392
+      },
+      "first_moe": {
+        "layer": 0,
+        "dispatch_entry_spread_ms": 1.353128,
+        "dispatch_exit_spread_ms": 0.14971,
+        "dispatch_fused_duration_ms": {
+          "min": 0.361767,
+          "mean": 1.170497875,
+          "max": 1.66138
+        },
+        "combine_entry_spread_ms": 0.14973,
+        "combine_exit_spread_ms": 0.012264,
+        "combine_duration_ms": {
+          "min": 0.0635,
+          "mean": 0.165682375,
+          "max": 0.20204
+        }
+      }
+    },
+    {
+      "step": 1,
+      "host_launch_entry_spread_ms": 1.51633,
+      "host_launch_exit_spread_ms": 1.51333,
+      "device_graph_entry_spread_ms": 1.526111,
+      "device_graph_exit_spread_ms": 0.019373,
+      "graph_span_ms": {
+        "min": 55.414367,
+        "mean": 56.4124865,
+        "max": 56.935717
+      },
+      "after_first_dispatch_ms": {
+        "min": 54.52132,
+        "mean": 54.605049125,
+        "max": 54.676078
+      },
+      "first_moe": {
+        "layer": 0,
+        "dispatch_entry_spread_ms": 1.536232,
+        "dispatch_exit_spread_ms": 0.160345,
+        "dispatch_fused_duration_ms": {
+          "min": 0.269785,
+          "mean": 1.313049375,
+          "max": 1.848797
+        },
+        "combine_entry_spread_ms": 0.160945,
+        "combine_exit_spread_ms": 0.013646,
+        "combine_duration_ms": {
+          "min": 0.06662,
+          "mean": 0.1590899375,
+          "max": 0.227754
+        }
+      }
+    },
+    {
+      "step": 2,
+      "host_launch_entry_spread_ms": 1.25835,
+      "host_launch_exit_spread_ms": 1.25433,
+      "device_graph_entry_spread_ms": 1.260728,
+      "device_graph_exit_spread_ms": 0.022503,
+      "graph_span_ms": {
+        "min": 54.55293,
+        "mean": 55.2915031875,
+        "max": 55.80718
+      },
+      "after_first_dispatch_ms": {
+        "min": 53.60714,
+        "mean": 53.712815375,
+        "max": 53.78898
+      },
+      "first_moe": {
+        "layer": 0,
+        "dispatch_entry_spread_ms": 1.277058,
+        "dispatch_exit_spread_ms": 0.18395,
+        "dispatch_fused_duration_ms": {
+          "min": 0.328586,
+          "mean": 1.0781859375,
+          "max": 1.61544
+        },
+        "combine_entry_spread_ms": 0.18381,
+        "combine_exit_spread_ms": 0.016007,
+        "combine_duration_ms": {
+          "min": 0.0649,
+          "mean": 0.1666560625,
+          "max": 0.24152
+        }
+      }
+    }
+  ]
+}

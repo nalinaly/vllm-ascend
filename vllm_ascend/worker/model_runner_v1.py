@@ -3601,6 +3601,9 @@ class NPUModelRunner(GPUModelRunner):
                 runtime_mode=CUDAGraphMode.FULL,
                 use_eagle=self.use_eagle,
                 enable_enpu=self.enable_enpu,
+                # DSV4 skips _update_full_graph_params_if_needed for both
+                # Native and PTO; no update-stream event needs a host barrier.
+                requires_replay_sync=not self.use_compress,
             )
 
         if self.compilation_config.cudagraph_mode != CUDAGraphMode.NONE:
