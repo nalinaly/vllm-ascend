@@ -204,3 +204,14 @@ SK证据已补强：同一T96/T6图的优化前后dump均显示21个静态CSA全
 后续优先细分真实模型中DP all_reduce等待/唤醒及返回后处理。纯CPU16rank
 迟到输入实验未复现10ms偏差，主动轮询没有收益且明显增加CPU消耗，已排除。
 不新增barrier，不跳过DP协调，不将当前Host准备改善等同于整网验收。
+
+2026-10-31细分诊断已完成：同一metadata复用候选的最慢rank mean为
+**53.230ms**、P95 **53.656ms**、max **54.206ms**，仍差48ms约**5.230ms**。
+本次all_reduce返回的rank偏差最大0.462ms，未复现上一轮约9.70ms偏差；
+不得将“本次没有出现”写成“长尾已修复”。详见
+[dp_sync_diagnostic.json](csa_aclnn_host_20261030/dp_sync_diagnostic.json)。
+
+进一步省略满批start_pos被立即覆盖的填零、空padding切片fill及重复CPU长度
+max。22项CPU回归和单卡replay通过，两侧使用同一冻结源码成对排队验证；
+不提前使用旧Native基线宣称这部分通用修改的收益。原有模型、输入及通信
+配置保持，MoE融合路径是否纳入下一阶段已询问用户，答复前不切换该配置。

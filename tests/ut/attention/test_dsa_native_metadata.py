@@ -178,6 +178,22 @@ def test_pto_decode_reuses_common_rope_for_real_rows_and_padding(monkeypatch, na
     assert result.start_pos[-1] == 0  # padding request仍屏蔽。
 
 
+@pytest.mark.parametrize("actual,capacity", [(3, 3), (3, 5), (2, 5)])
+@pytest.mark.parametrize("defer", [False, True])
+def test_start_positions_keep_real_rows_and_zero_only_padding(monkeypatch, native_ops, actual, capacity, defer):
+    builder = make_builder(monkeypatch, defer=defer)
+    builder.seq_lens[-1] = 20
+    builder.decode_ratio_to_sas_metadata["start_pos_decode"][-1] = 15
+    backing = torch.full((capacity + 2,), -33, dtype=torch.int32)
+    builder.start_pos_decode = backing[1:-1]
+    result = builder.build_decode_metadata(0, NS(max_query_len=6), actual)
+    expected = torch.zeros(capacity, dtype=torch.int32)
+    expected[:actual] = torch.tensor([131072, 131072, 15], dtype=torch.int32)[:actual]
+    assert torch.equal(builder.start_pos_decode, expected)
+    assert torch.equal(result.start_pos, expected[:3])
+    assert backing[0] == -33 and backing[-1] == -33
+
+
 def test_native_fallback_prepares_and_records_real_consumers(monkeypatch, native_ops):
     from vllm_ascend.ops import dsv4_csa
 

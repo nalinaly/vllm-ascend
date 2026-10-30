@@ -118,7 +118,7 @@
     "static_cache": "results/decode_cache_pto_ndptr"
   },
   "remaining_target_gap_ms": 5.978516006469725,
-  "next": "定位DP协调返回的约9.70ms跨rank偏差；新候选最慢rank54.364ms，历史0.4.0基线53.979ms均未达48ms。",
+  "next": "保持CSA/Host范围，继续排查剩余约5.23ms；是否允许测试会关闭shared-expert重叠的现有MoE融合路径已询问用户，未经答复不更改该配置。",
   "metadata_reuse": {
     "device_task": "task_20261031_034343_148462026083",
     "device_status": "completed exit=0",
@@ -134,8 +134,17 @@
   },
   "dp_release_diagnostic": {
     "task": "task_20261031_040904_276985524625",
-    "status": "queued",
+    "status": "completed exit=0",
     "source": "results/model_decode_source_dp_diagnostic_v1",
-    "purpose": "只在已有Host诊断中细分all_reduce调用与后处理，不改collective、不增加同步；3项CPU钩子回归通过。"
+    "purpose": "只在已有Host诊断中细分all_reduce调用与后处理，不改collective、不增加同步；3项CPU钩子回归通过。",
+    "evidence": "dp_sync_diagnostic.json",
+    "result": "最慢rank mean53.230ms；all_reduce返回偏差最大0.462ms，没有复现历史10ms异常。"
+  },
+  "empty_prep": {
+    "pto_task": "task_20261031_044724_414833917043",
+    "native_task": "task_20261031_044724_41482896188",
+    "source": "results/model_decode_source_empty_prep_v1",
+    "evidence": "empty_prep_validation.json",
+    "status": "queued"
   }
 }

@@ -24771,3 +24771,53 @@ Host诊断里给`_sync_metadata_across_dp`及其原`all_reduce`前后增加时�
 不改变collective、输入或同步行为，跳过draft诊断并在结束后恢复所有钩子。
 3项CPU回归确认原返回值、异常、调用次数与恢复行为。目的为区分真实模型中
 collective等待/返回与后处理，不能把尚未完成的该任务当成性能结果。
+
+### 2026-10-31：细分DP协调诊断完成，未复现10ms偏差；继续清理满批空操作
+
+任务`task_20261031_040904_276985524625`正常完成（exit=0）。本次保持metadata
+复用候选的数学、输入、0.4.0 ACLNN、静态/SK与并行配置，仅在既有诊断里记录
+原DP同步和原all_reduce的前后时间，不新增同步。十步/16rank全部保留：
+
+- 最慢rank4 mean **53.230230ms**，160样本mean52.938468ms；
+  P95 **53.656441ms**、max **54.205719ms**。尚未达到48ms，缺口5.230230ms。
+- metadata准备mean3.527371ms，保持上一轮3.522776ms附近；原0.4.0为4.039873ms。
+- DP all_reduce墙钟mean14.202802ms、max118.166521ms，但线程CPU平均仅0.076137ms。
+  一步输入到达差114.703ms，all_reduce完成后的rank偏差为0.356ms，说明此处
+  包含等待其他rank的必要协调，不能将整个等待时长算作多余Host计算并直接删掉。
+- 十步all_reduce返回偏差最大0.462125ms，整个DP同步返回偏差最大0.465625ms。
+  后处理没有再制造约10ms偏差；本次没有复现上一轮异常，不能据此宣布长尾解决。
+- forward入口的rank偏差均值1.015244ms、最大1.470146ms。
+
+完整逐rank样本和区间统计见
+[dp_sync_diagnostic.json](csa_aclnn_host_20261030/dp_sync_diagnostic.json)。这些结果
+不能用于丢弃上一轮63.236ms长尾；历史三次PTO记录分别保留。
+
+复用现有输出进一步核对：metadata清理前后，16rank共256个192-token请求
+全部逐token一致，16rank的DSpark累计计数也完全一致。该比较不等于内部浮点
+或router逐bit检查，也不消除Native/PTO原有复杂问题差异，见
+[metadata_reuse_tokens.json](csa_aclnn_host_20261030/metadata_reuse_tokens.json)。
+诊断期间读到的任务cgroup CPU quota=-1、throttle计数0，不能将本次问题归因于
+CPU配额节流；内核未提供PSI，不伪造CPU pressure结论，见
+[dp_cpu_control.json](csa_aclnn_host_20261030/dp_cpu_control.json)。
+
+继续沿现有CSA/Host范围清理三处无效工作：
+
+1. `start_pos_decode`有效行会被完整覆盖，改为先写有效行、只将padding及尾部清零。
+   满批不再额外调用整buffer fill；尾批、空请求及原始存储边界仍保留正确零值。
+2. Worker仅在实际存在token/request padding时调用对应fill，避免满批对空切片
+   仍走PyTorch/ACLNN入口。不改变padding值、页表、slot或有效请求容量。
+3. 同一CPU长度数组已经计算max_seq_lens，max_seqlen_kv直接复用，不再次规约。
+
+这些通用修改同时影响Native/PTO。22项CPU回归通过，新增用例覆盖两侧满批、
+尾批、padding及边界保护。单卡`task_20261031_044247_405281617537`通过实际
+builder/service/replay，输出和五组cache/state逐bit对齐eager，Native误差
+仍为relative RMSE0.0043642856/max_abs0.0390625。CPU max复用是在该单卡之后
+补的等值标量复用，下一轮成对整网也包含它；不将单卡结果扩张为Worker全模型验收。
+
+冻结源码`model_decode_source_empty_prep_v1`：PTO任务
+`task_20261031_044724_414833917043`、Native任务
+`task_20261031_044724_41482896188`已成对排队。因为Native也受到通用代码
+修改，必须同源对照，不直接拿新PTO与旧Native计算这部分收益。功能证据及
+任务索引见[empty_prep_validation.json](csa_aclnn_host_20261030/empty_prep_validation.json)。
+尚无这组整网性能结论，不改48ms目标；MoE配置保持原样，是否允许测试会关闭
+shared-expert多流重叠的现有融合路径已询问用户，未在未答复时切换。

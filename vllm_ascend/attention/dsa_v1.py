@@ -996,7 +996,7 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
             self.decode_ratio_to_sas_metadata["max_seq_lens"] = max_seq_lens
             self.decode_ratio_to_sas_metadata["seq_lens_list"] = seq_lens_list
 
-            max_seqlen_kv = torch.max(_seq_lens_cpu[: self.num_decodes]).item()
+            max_seqlen_kv = max_seq_lens
             max_seqlen_q = torch.max(query_start_loc_cpu[1:] - query_start_loc_cpu[:-1]).item()
             self.decode_ratio_to_sas_metadata["max_seqlen_kv"] = max_seqlen_kv
             self.decode_ratio_to_sas_metadata["max_seqlen_q"] = max_seqlen_q
@@ -1021,13 +1021,15 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
         cp_seq_len, batch_seq_mask = None, None
 
         assert self.start_pos_decode is not None
-        self.start_pos_decode.fill_(0)
+        num_decodes_actual = min(num_reqs_actual, self.num_decodes) if num_reqs_actual is not None else self.num_decodes
         self.start_pos_decode[: self.num_decodes] = start_pos_decode
+        # Valid rows are completely overwritten above. Only padding/tail rows
+        # need zeroing; full batches do not need a separate fill kernel.
+        if num_decodes_actual < self.start_pos_decode.shape[0]:
+            self.start_pos_decode[num_decodes_actual:].fill_(0)
 
         if num_reqs_actual is not None and num_reqs_actual < self.num_decodes:
-            self.start_pos_decode[num_reqs_actual:].fill_(0)
             self.block_table[num_reqs_actual : self.num_decodes, ...].fill_(0)
-        num_decodes_actual = min(num_reqs_actual, self.num_decodes) if num_reqs_actual is not None else self.num_decodes
 
         layer_name = f"c{self.compressor_ratio}"
         full_compress_cos, full_compress_sin = None, None

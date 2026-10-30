@@ -2887,8 +2887,10 @@ class NPUModelRunner(GPUModelRunner):
                 blk_table_tensor = blk_table.get_device_tensor()[:num_reqs_padded]
                 # Fill unused with -1. Needed for reshape_and_cache in full cuda
                 # graph mode. `blk_table_tensor` -1 to match mamba PAD_SLOT_ID
-                slot_mapping[num_tokens:num_tokens_padded].fill_(-1)
-                blk_table_tensor[num_reqs:num_reqs_padded].fill_(0)
+                if num_tokens < num_tokens_padded:
+                    slot_mapping[num_tokens:num_tokens_padded].fill_(-1)
+                if num_reqs < num_reqs_padded:
+                    blk_table_tensor[num_reqs:num_reqs_padded].fill_(0)
             if self.model_config.enable_return_routed_experts and kv_cache_gid == 0:
                 if self.routed_experts_initialized:
                     # snapshot slot_mapping into a private device
