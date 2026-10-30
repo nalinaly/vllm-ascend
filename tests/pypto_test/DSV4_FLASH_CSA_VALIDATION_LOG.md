@@ -24489,3 +24489,31 @@ Native首个性能任务`task_20261031_010516_2630287515`在初始化图融合�
 用户再次明确普通ACLNN调用口径：稳态不额外加入CSA专属Host检查层。
 设备后置路径已绕过逐层签名、policy匹配与重复tensor校验，初始化ABI检查
 不放回调用循环。整网SK范围、通信时间和≤48ms仍待本轮真实记录验收。
+
+### 2026-10-31：取得16卡Native基线，修复PTO初始化标记与DSpark配置复制的冲突
+
+Native任务`task_20261031_011706_327472213106`完成（exit=0）。两档真图
+捕获约187秒，安装两份静态包。16个rank均取得10个有效B16/T96 target样本：
+rank0 min/mean/max=62.814/63.569/64.671ms；最慢rank6为
+63.397/64.273/65.379ms；全样本P95=64.982ms。完整逐rank样本和配置见
+[csa_aclnn_host_20261030/native_target_baseline.json](csa_aclnn_host_20261030/native_target_baseline.json)。
+这比客户提供的约50ms高，不能把两个环境的数字混作A/B，也不能据此降低48ms目标。
+
+独立三步profile已离线导出rank0和最慢rank6，不占NPU。rank0主图Model Id=49，
+三次MODEL_EXECUTE，每次21个QLI、43个attention和43组MoE dispatch/combine；
+三步合计669个真实SK任务，确认整图重放及SK存在。profile包含开销，不用于
+替代上述独立事件计时，也不能简单相加多流任务时长。Native rank0在预热、
+计时和profile全部轮次的平均接受数为3.73187/5，是自然混合接受结果。
+
+PTO首轮`task_20261031_012602_3895420355`在加载草稿模型时失败，未进入
+设备计算或性能采样。根因是本轮精简Host时将`_pto_csa_device_policy`
+挂在VllmConfig实例上，而DSpark使用`vllm.config.utils.replace`枚举实例
+字段并核对dataclass定义，未声明属性触发Field not found。现在把同一个
+初始化缓存标记放入已有additional_config字典；Worker/图捕获只读取该
+布尔值，不重新查包、构造policy或扫描Tensor。Native无该键时保持原行为。
+
+回归直接调用实际prepare_csa_model和vLLM配置复制函数，使用轻量场景替代
+真实权重；连同原有路由/padding三项共4项CPU测试通过。没有新增Device测试
+矩阵。冻结新模型源码`model_decode_source_v2`，16卡PTO重试任务
+`task_20261031_013328_40748925923`沿原wheel、输入和编译缓存排队。
+此前Native基线仍保留，当前没有PTO稳定态结果，目标保持未完成。

@@ -147,7 +147,9 @@ def prepare_csa_model(model):
     operators = CSAOperators.register() if CSAOperators is not None else None
     config = get_current_vllm_config()
     # 仅在模型准备时识别一次；Worker稳态不再逐层查包/构造策略。
-    config._pto_csa_device_policy = backend == "aclnn" and uses_device_policy()
+    # DSpark用vllm.config.utils.replace复制VllmConfig，不能挂未声明的dataclass字段。
+    device_policy = backend == "aclnn" and uses_device_policy()
+    config.additional_config["_pto_csa_device_policy"] = device_policy
     max_num_seqs = config.scheduler_config.max_num_seqs
     count = 0
     for layer in model.model.layers:
@@ -157,7 +159,7 @@ def prepare_csa_model(model):
             count += 1
     if not count:
         raise ValueError("No target C4 attention layers found for PTO CSA")
-    if variant in ("spmd_tnd", "mpmd_tnd") and not config._pto_csa_device_policy:
+    if variant in ("spmd_tnd", "mpmd_tnd") and not device_policy:
         from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd.service_config import (
             MAX_SEQUENCE_LENGTH,
             minimum_sequence_length,

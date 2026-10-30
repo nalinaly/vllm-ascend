@@ -179,7 +179,7 @@ def main():
             install_csa_forward(layer)
             prepare_csa_model(SimpleNamespace(model=SimpleNamespace(layers=[layer])))
             runtime = layer.self_attn.dsa_attn._pto_csa_runtime
-            assert runtime.native_graph_lifecycle and config._pto_csa_device_policy
+            assert runtime.native_graph_lifecycle and config.additional_config["_pto_csa_device_policy"]
             if args.static_package:
                 torch.npu.set_compile_mode(jit_compile=False)
                 torch_npu.npu._aclnn_reselect_static_kernel()

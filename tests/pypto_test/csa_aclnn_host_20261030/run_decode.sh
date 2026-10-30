@@ -9,7 +9,7 @@ shift 2
 if [[ ${1:-} == --device ]]; then shift 2; fi
 source "$workspace/env-dsv4-0251rc1.sh"
 source "$repo/tests/pypto_test/csa_shared_toolchain/env.sh"
-frozen="$here/results/model_decode_source"
+frozen="$here/results/model_decode_source_v2"
 site="$here/results/aclnn_site"
 output="$here/results/$label"
 bank="$here/results/kv/mixed128k_fixed"

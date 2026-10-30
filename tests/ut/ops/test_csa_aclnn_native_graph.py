@@ -44,3 +44,37 @@ def test_native_prefill_routing_is_preserved():
     runtime.prefixes = {"compressed": "c4"}
     context = NS(attn_metadata={"c4": NS(num_prefills=1, decode=NS())}, is_draft_model=False)
     assert not runtime.eligible(context, None, None)
+
+
+def test_model_preparation_keeps_config_replace_compatible(monkeypatch):
+    from dataclasses import dataclass, field
+
+    from vllm.config.utils import replace
+
+    from vllm_ascend.models.pypto_deepseek_v4 import prepare_csa_model
+    from vllm_ascend.ops.pypto import variant
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa import nz_mode
+    from vllm_ascend.ops.pypto.deepseek_v4_flash_csa_spmd_tnd import backend, service
+
+    @dataclass
+    class Config:
+        additional_config: dict = field(default_factory=dict)
+        scheduler_config: object = field(default_factory=lambda: NS(max_num_seqs=16))
+
+    config = Config()
+    monkeypatch.setattr("vllm.config.get_current_vllm_config", lambda: config)
+    monkeypatch.setattr("vllm_ascend.ascend_config.get_ascend_config", lambda: NS(weight_nz_mode=2))
+    monkeypatch.setattr(variant, "selected_variant", lambda: "spmd_tnd")
+    monkeypatch.setattr(variant, "selected_csa_backend", lambda: "aclnn")
+    monkeypatch.setattr(variant, "csa_runtime", lambda: "tensormap_and_ringbuffer")
+    monkeypatch.setattr(variant, "variant_package", lambda: service.__package__)
+    monkeypatch.setattr(backend, "validate_backend_installation", lambda: None)
+    monkeypatch.setattr(backend, "uses_device_policy", lambda: True)
+    monkeypatch.setattr(nz_mode, "root_weight_layouts", lambda _: {})
+    monkeypatch.setattr(service, "CSAServiceRuntime", lambda *args: NS(native_graph_lifecycle=True))
+    layer = NS(self_attn=NS(compress_ratio=4, dsa_attn=NS()))
+    prepare_csa_model(NS(model=NS(layers=[layer])))
+    # 与DSpark相同的复制函数：旧版挂载私有字段时，这一步会报Field not found。
+    copied = replace(config)
+    assert copied.additional_config["_pto_csa_device_policy"] is True
+    assert "_pto_csa_device_policy" not in vars(config)

@@ -162,7 +162,7 @@ class ACLGraphWrapper:
             # 也覆盖运行中首次遇到新图档位的情况：若随后回退Native，AICPU计划
             # 必须在进入capture前准备。纯PTO图的后续replay不会再走此处。
             metadata = getattr(forward_context, "attn_metadata", None)
-            if isinstance(metadata, dict) and not getattr(self.vllm_config, "_pto_csa_device_policy", False):
+            if isinstance(metadata, dict) and not self.vllm_config.additional_config.get("_pto_csa_device_policy", False):
                 pending = tuple(
                     prefix for prefix, item in metadata.items()
                     if getattr(getattr(item, "decode", None), "native_metadata_factory", None) is not None

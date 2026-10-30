@@ -39,9 +39,27 @@
     {
       "backend": "native",
       "task": "task_20261031_011706_327472213106",
-      "status": "pending",
+      "status": "completed exit=0",
       "change": "补入已有CANN9.2 csa_template_transformer vendor；复用原编译缓存，未改模型源码或输入",
-      "output": "results/native_perf_v2"
+      "output": "results/native_perf_v2",
+      "evidence": "native_target_baseline.json"
+    },
+    {
+      "backend": "pto",
+      "task": "task_20261031_012602_3895420355",
+      "status": "completed exit=1",
+      "source": "results/model_decode_source",
+      "cause": "DSpark复制VllmConfig时拒绝私有未声明字段_pto_csa_device_policy",
+      "output": "results/pto_perf_v1"
+    },
+    {
+      "backend": "pto",
+      "task": "task_20261031_013328_40748925923",
+      "status": "pending",
+      "source": "results/model_decode_source_v2",
+      "change": "缓存标记移到additional_config，四项CPU回归通过；保持原输入、wheel、缓存和性能配置",
+      "output": "results/pto_perf_v2"
     }
-  ]
+  ],
+  "config_replace_regression_task": "task_20261031_013304_406685927401"
 }

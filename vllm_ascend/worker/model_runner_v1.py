@@ -2716,7 +2716,7 @@ class NPUModelRunner(GPUModelRunner):
         )
         has_lora = num_active_loras > 0 if force_has_lora is None else force_has_lora
 
-        device_csa_graph = getattr(self.vllm_config, "_pto_csa_device_policy", False)
+        device_csa_graph = self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
         if force_uniform_decode is None and not device_csa_graph and is_tnd_csa_model(self.vllm_config):
             # Native eager uses effective TND rows. Unsupported real batches
             # must return to eager before graph padding adds dummy Q endpoints.
@@ -2992,7 +2992,7 @@ class NPUModelRunner(GPUModelRunner):
                     # 设备选档ACLNN在capture期间也不预生成无消费者的QLI/C4 SAS。
                     # Native实际消费者仍可调用ensure_native_metadata获取计划。
                     defer_native_csa_metadata=is_csa_model(self.vllm_config) and (
-                        not for_cudagraph_capture or getattr(self.vllm_config, "_pto_csa_device_policy", False)
+                        not for_cudagraph_capture or self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
                     ),
                 )
 
