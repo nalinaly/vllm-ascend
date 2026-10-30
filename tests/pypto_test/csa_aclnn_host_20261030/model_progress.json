@@ -1,6 +1,6 @@
 {
   "goal": "真实128K/B16 DP16/TP1 target forward ≤48ms",
-  "bank_status": "生成中，禁止作为已验收KV使用",
+  "bank_status": "PASS：真实prefix四组TP副本与40个TP1真实后缀cache均已审计",
   "source": "results/model_source",
   "prefill_attempts": [
     {
@@ -12,12 +12,36 @@
     },
     {
       "task": "task_20261031_002641_166464832606",
-      "status": "queued_or_running",
+      "status": "completed exit=0",
       "max_time_seconds": 3600,
       "log": "results/model_prefill_retry1",
       "source": "results/model_source",
       "same_input_bank": true,
       "reuse_compile_cache": "results/model_prefill"
+    }
+  ],
+  "prefix_audit_task": "task_20261031_004808_21647916594",
+  "suffix_task": "task_20261031_005221_223972821268",
+  "fixed_audit_task": "task_20261031_010259_25813235130",
+  "mixed_cpu_test": "task_20261031_004129_20243542914",
+  "wheel_install_validation": "results/aclnn_site/install_validation.json",
+  "fixed_bank": "results/kv/mixed128k_fixed",
+  "configuration": "measurement_protocol.json",
+  "decode_source": "results/model_decode_source",
+  "performance_attempts": [
+    {
+      "backend": "native",
+      "task": "task_20261031_010516_2630287515",
+      "status": "completed exit=1",
+      "cause": "Native图融合规则注册缺少aclnnAddRmsNormBias；尚未进入计时",
+      "output": "results/native_perf_v1"
+    },
+    {
+      "backend": "native",
+      "task": "task_20261031_011706_327472213106",
+      "status": "pending",
+      "change": "补入已有CANN9.2 csa_template_transformer vendor；复用原编译缓存，未改模型源码或输入",
+      "output": "results/native_perf_v2"
     }
   ]
 }

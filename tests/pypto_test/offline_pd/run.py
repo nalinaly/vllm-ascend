@@ -345,11 +345,9 @@ def generate_round(llm, args, case, limit, stagger=False):
     """每轮都用同一个 offline_key 重新提交，缓存由 connector 从同一 bank 初态恢复。"""
     from vllm import SamplingParams
 
-    tokens = json.loads((args.bank / case["tokens"]).read_text())
-
-    def make(max_tokens):
+    def make(max_tokens, key=case["key"]):
         return SamplingParams(temperature=0, max_tokens=max_tokens, ignore_eos=True,
-                              extra_args={"kv_transfer_params": {"offline_key": case["key"]}})
+                              extra_args={"kv_transfer_params": {"offline_key": key}})
 
     submitted = args.rank_batch if args.rank_batch is not None else args.batch
     limits = stagger_limits(submitted, limit) if stagger else None
@@ -361,13 +359,29 @@ def generate_round(llm, args, case, limit, stagger=False):
         # 真实空 rank 要用 --rank-decode-tokens 让某个 rank 的请求提前跑完，
         # 其余 rank 继续推进，那时它的引擎才会在有 DP 协调的前提下空转。
         return {"elapsed_seconds": 0.0, "max_tokens_per_request": [], "output_token_ids": []}
-    prompts = [{"prompt_token_ids": tokens}] * submitted
+    mixed = getattr(args, "mixed_performance_cases", None)
+    if mixed is not None:
+        # 预热、计时及profile使用相同的逐请求输入，不把B16复制成16个同题请求。
+        if len(mixed) != submitted:
+            raise ValueError("混合性能场景须为每个请求提供独立的固定KV前缀")
+        prompts = [{"prompt_token_ids": json.loads((args.bank / row["tokens"]).read_text())} for row in mixed]
+        params = [make(value, row["key"]) for row, value in zip(mixed, limits or [limit] * submitted)]
+    else:
+        tokens = json.loads((args.bank / case["tokens"]).read_text())
+        prompts = [{"prompt_token_ids": tokens}] * submitted
     if args.command in ("performance", "moe-routing"):
         from offline_pd.batch import generate_aligned_batch
 
         result = generate_aligned_batch(llm, prompts, params)
     else:
         result = llm.generate(prompts, params, use_tqdm=False)
+    if mixed is not None:
+        from low_acceptance_20261001.mixed import wait_for_generation_peers
+
+        # 仅在整轮请求完成后等齐客户端；EngineCore继续参与EP，不在target中加同步。
+        round_index = getattr(args, "mixed_generation_index", 0)
+        wait_for_generation_peers(args.output, args.rank, f"performance_{round_index}")
+        args.mixed_generation_index = round_index + 1
     return {"elapsed_seconds": time.perf_counter() - start,
             "max_tokens_per_request": limits or [limit] * submitted,
             "output_token_ids": [list(r.outputs[0].token_ids) for r in result]}
@@ -406,6 +420,10 @@ def diagnose(args, llm, cases):
     from vllm_ascend.ops.pypto.deepseek_v4_flash_csa.service_config import QUERY_TOKENS
 
     case = cases[0]
+    if args.mixed_requests:
+        args.mixed_performance_cases = cases[:args.batch]
+        if len(args.mixed_performance_cases) != args.batch:
+            raise ValueError("混合性能bank的固定请求数不足batch")
     # 按 rank 的 decode 步数：让某个 rank 提前跑完，其余继续推进，
     # 那个 rank 的引擎才会在有 DP 协调的前提下空转（D04 / T1.6）。
     if args.rank_decode_token is not None:
@@ -422,6 +440,8 @@ def diagnose(args, llm, cases):
               "max_num_batched_tokens": args.max_num_batched_tokens,
               "submitted": args.rank_batch if args.rank_batch is not None else args.batch,
               "key": case["key"], "history": case["history"],
+              "request_keys": [row["key"] for row in getattr(args, "mixed_performance_cases", [case])],
+              "request_histories": [row["history"] for row in getattr(args, "mixed_performance_cases", [case])],
               "warmup_rounds": args.warmup_rounds, "warmup_tokens": args.warmup_tokens,
               "requested_steady_cycles": args.steady_cycles,
               "warmup_elapsed_seconds": warmup, "expected_tokens": expected_tokens,
@@ -1279,9 +1299,9 @@ def main():
             parser.error("扩展bank只允许Native、eager、B1或显式混合批次、单个输出token、DP/EP16")
         if args.save_extended_bank.resolve() == args.bank.resolve():
             parser.error("扩展bank不能覆盖输入bank")
-    if args.mixed_requests and (args.command != "decode" or args.decode_dp != 16
+    if args.mixed_requests and (args.command not in ("decode", "performance", "profile") or args.decode_dp != 16
                                or args.rank_batches or args.rank_decode_tokens):
-        parser.error("混合请求诊断要求decode、DP/EP16、各rank统一batch及生成长度")
+        parser.error("混合请求要求decode/performance/profile、DP/EP16、各rank统一batch及生成长度")
     if args.pto_attention in ("hca", "both") and args.command not in ("decode", "performance"):
         parser.error("HCA 与联合入口只支持 decode、performance，不沿用 CSA 专有诊断钩子")
     if args.decode_dp != 16 and (args.command != "decode" or args.pto_attention not in ("hca", "both")):

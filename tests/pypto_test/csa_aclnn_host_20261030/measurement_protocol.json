@@ -1,0 +1,38 @@
+{
+  "scenario": "128K公共前缀+固定40问题中的前16题；每rank B16，TP1/DP=EP16，DSpark出5验6",
+  "input_policy": "Native/PTO只读同一mixed128k_fixed；精确history按每请求记录，不调整问题或筛选有利样本",
+  "target_boundary": "model_runner._model_forward设备事件首尾，仅target主模型验证forward，不含draft、接受拒绝、logits和请求全周期",
+  "sampling": {
+    "warmup_round_tokens": 96,
+    "new_round_drop_steps": 8,
+    "measured_valid_steps": 10,
+    "token_capacity": 96,
+    "requests": 16,
+    "profile_steps": 3
+  },
+  "primary": "记录每rank 10个有效step的min/mean/max；本机按最慢rank mean≤48ms保守验收，同时完整报告rank0、跨rank统计及长尾",
+  "configuration": {
+    "CANN": "9.2.0-beta.2",
+    "backend": "后置94策略ACLNN",
+    "Simpler_execution": false,
+    "weight_nz_mode": 2,
+    "EPLB": false,
+    "graph": "FULL_DECODE_ONLY",
+    "capture_sizes": [
+      6,
+      96
+    ],
+    "static_kernel": true,
+    "super_kernel": true,
+    "inplace_pass": true,
+    "cpu_binding": true,
+    "shared_expert_overlap": true,
+    "recompute_scheduler": false,
+    "deterministic_level": 0,
+    "HCCL_DETERMINISTIC": false,
+    "HCCL_OP_EXPANSION_MODE": "AIV",
+    "HCCL_BUFFSIZE": 1800,
+    "gpu_memory_utilization": 0.92
+  },
+  "synchronization": "事件在生成前预热；不在计时forward内新增同步。整批提交前及整轮请求结束后的客户端等齐不计入target。"
+}

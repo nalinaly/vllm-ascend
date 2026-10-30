@@ -21,6 +21,7 @@ export VLLM_CACHE_ROOT="$cache/vllm_cache" ASCEND_CACHE_PATH="$cache/ascend_cach
 mkdir -p "$ASCEND_PROCESS_LOG_PATH" "$VLLM_CACHE_ROOT" "$ASCEND_CACHE_PATH"
 case "$job" in
     plan) args=(plan --histories 131072) ;;
+    audit) args=(audit) ;;
     prefill*)
         : "${TASK_DEVICE:?需要队列分配16卡}"
         args=(prefill --output "$output" --host 192.168.0.106 --nic enp23s0f3

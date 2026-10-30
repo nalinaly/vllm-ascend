@@ -24457,3 +24457,35 @@ task_20261031_000638_11924548051漏设max-time，被默认300秒上限终止
 
 本轮没有16卡target forward性能结果，≤48ms目标仍未达成；后续必须
 使用同一真实缓存和配置比较Native/PTO，并记录通信等待及最慢rank。
+
+### 2026-10-31：真实KV重建完成，冻结B16 target计时输入
+
+前缀重试`task_20261031_002641_166464832606`完成，4个真实131072-token
+前缀的4份TP副本通过覆盖检查。沿用已有40问题清单，Native TP1/DP16生成
+40个真实问题后缀及191组target/draft cache，任务
+`task_20261031_005221_223972821268`完成，固定bank覆盖检查通过。
+不重复全数据hash；各问题的准确历史包含追加的后缀，单独保留在bank清单。
+
+offline_pd性能入口新增混合请求支持：固定前16题分别提交自己的KV key，
+warmup、计时和profile使用相同输入。整轮请求结束后只在客户端等齐，
+EngineCore继续参与EP；不在target forward内加同步。受影响CPU用例
+`test_csa_mixed_performance.py`通过，验证逐请求key、两轮输入和生成后等齐。
+
+采样口径在取得结果前写入`csa_aclnn_host_20261030/measurement_protocol.json`：
+Native/PTO相同NZ2、静态编译、SK、inplace、CPU绑定、共享专家重叠，无EPLB；
+128K公共前缀加固定问题后缀、每rank B16、DP/EP16，出5验6。
+预热96输出token，另轮跳过8个有效满批step，采10个target `_model_forward`
+设备事件区间，之后独立采3步profile。报告各rank min/mean/max及长尾，
+最慢rank mean作为本机保守验收；不把草稿、接受拒绝、logits或请求周期
+混入target，也不因CPU准备位于事件之前就忽略它造成的跨rank通信等待。
+
+Native首个性能任务`task_20261031_010516_2630287515`在初始化图融合规则时
+失败：测试OPP路径只有attention vendor，缺少`aclnnAddRmsNormBias`。
+尚未进入采样，没有性能结果或非法访存。补入已经存在、使用CANN9.2构建的
+`csa_template_transformer` vendor，Native/PTO共用这项依赖；没有关闭
+融合规则或改模型计算。重试`task_20261031_011706_327472213106`复用
+`decode_cache_native`，保持请求、冻结源码、静态/SK配置不变。
+
+用户再次明确普通ACLNN调用口径：稳态不额外加入CSA专属Host检查层。
+设备后置路径已绕过逐层签名、policy匹配与重复tensor校验，初始化ABI检查
+不放回调用循环。整网SK范围、通信时间和≤48ms仍待本轮真实记录验收。
