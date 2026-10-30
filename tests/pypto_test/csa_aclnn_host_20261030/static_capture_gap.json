@@ -1,0 +1,203 @@
+{
+  "finding": "首次profile无真实attention metadata但占用T96的符号shape编译记录，实际decode同shape未补齐attention静态核",
+  "compiler_source": "torch_npu/dynamo/npugraph_ex/_acl_concrete_graph/acl_graph.py:run_eagerly_compile",
+  "sides": {
+    "native": [
+      {
+        "directory": "results/decode_cache_native/compile/static_kernel_compile_outputs/ts20261031012141278097_pid3329000_outputs",
+        "selected_ops": {
+          "Sigmoid": 1,
+          "MatMulV2": 1,
+          "Add": 4,
+          "Cast": 8,
+          "TensorMove": 3,
+          "Tile": 1,
+          "SelectV2": 1,
+          "DynamicQuant": 1,
+          "GroupedMatmulSwigluQuant": 1,
+          "Slice": 1,
+          "QuantBatchMatmulV3": 2,
+          "Equal": 1,
+          "MoeGatingTopKHash": 2,
+          "Rsqrt": 1,
+          "MoeDistributeCombineV2": 1,
+          "GroupedMatmul": 1,
+          "ReduceMean": 2,
+          "RmsNorm": 1,
+          "MatMulV3": 1,
+          "Fill": 2,
+          "MoeDistributeDispatchV2": 1,
+          "HcPost": 1,
+          "Sort": 1,
+          "Mul": 3,
+          "HcPre": 1,
+          "DequantSwigluQuant": 1,
+          "Pows": 1
+        },
+        "selected_shapes": [
+          {
+            "op": "HcPre",
+            "shape": [
+              96,
+              4,
+              4096
+            ],
+            "count": 1
+          }
+        ]
+      },
+      {
+        "directory": "results/decode_cache_native/compile/static_kernel_compile_outputs/ts20261031012231385657_pid3329000_outputs",
+        "selected_ops": {
+          "VllmQuantLightningIndexer": 20,
+          "Compressor": 61,
+          "Pows": 1,
+          "Sigmoid": 1,
+          "SparseAttnSharedkv": 42,
+          "DynamicQuant": 4,
+          "Equal": 1,
+          "Mul": 3,
+          "MatMulV3": 2,
+          "Cast": 9,
+          "ScatterNdUpdateV2": 5,
+          "ReduceMean": 2,
+          "Tile": 1,
+          "InplacePartialRotaryMul": 3,
+          "SelectV2": 1,
+          "MoeGatingTopKHash": 2,
+          "Add": 4,
+          "MatMulV2": 5,
+          "DequantSwigluQuant": 1,
+          "QuantBatchMatmulV3": 5,
+          "Muls": 3,
+          "TransposeBatchMatMul": 1,
+          "Neg": 1,
+          "Rsqrt": 1,
+          "RmsNorm": 2,
+          "CompressorMetadata": 2,
+          "HcPost": 1,
+          "GroupedMatmulSwigluQuant": 1,
+          "HcPre": 1,
+          "MoeDistributeCombineV2": 1,
+          "GroupedMatmul": 1,
+          "RmsNormDynamicQuant": 1,
+          "MoeDistributeDispatchV2": 1
+        },
+        "selected_shapes": [
+          {
+            "op": "HcPre",
+            "shape": [
+              6,
+              4,
+              4096
+            ],
+            "count": 1
+          }
+        ]
+      }
+    ],
+    "pto": [
+      {
+        "directory": "results/decode_cache_pto/compile/static_kernel_compile_outputs/ts20261031013700516096_pid4094772_outputs",
+        "selected_ops": {
+          "Pows": 1,
+          "TensorMove": 4,
+          "Cast": 8,
+          "Add": 4,
+          "QuantBatchMatmulV3": 2,
+          "HcPre": 1,
+          "SelectV2": 1,
+          "DynamicQuant": 1,
+          "GroupedMatmulSwigluQuant": 1,
+          "Tile": 1,
+          "MoeDistributeCombineV2": 1,
+          "DequantSwigluQuant": 1,
+          "MoeGatingTopKHash": 2,
+          "Slice": 1,
+          "Mul": 3,
+          "MatMulV2": 1,
+          "MatMulV3": 1,
+          "Rsqrt": 1,
+          "GroupedMatmul": 1,
+          "Fill": 2,
+          "Equal": 1,
+          "HcPost": 1,
+          "Sort": 1,
+          "Sigmoid": 1,
+          "ReduceMean": 2,
+          "MoeDistributeDispatchV2": 1,
+          "RmsNorm": 1
+        },
+        "selected_shapes": [
+          {
+            "op": "HcPre",
+            "shape": [
+              96,
+              4,
+              4096
+            ],
+            "count": 1
+          }
+        ]
+      },
+      {
+        "directory": "results/decode_cache_pto/compile/static_kernel_compile_outputs/ts20261031013753416922_pid4094772_outputs",
+        "selected_ops": {
+          "CsaSpmdTndDevicePto": 21,
+          "DynamicQuant": 2,
+          "InplacePartialRotaryMul": 2,
+          "RmsNormDynamicQuant": 1,
+          "Compressor": 20,
+          "SparseAttnSharedkv": 21,
+          "RmsNorm": 2,
+          "SelectV2": 2,
+          "MatMulV2": 2,
+          "MoeDistributeDispatchV2": 1,
+          "Pows": 1,
+          "DequantSwigluQuant": 1,
+          "Greater": 1,
+          "Equal": 1,
+          "Add": 4,
+          "MoeDistributeCombineV2": 1,
+          "Cast": 7,
+          "ReduceMean": 2,
+          "Mul": 3,
+          "TransposeBatchMatMul": 1,
+          "HcPost": 1,
+          "GroupedMatmulSwigluQuant": 1,
+          "Rsqrt": 1,
+          "MoeGatingTopKHash": 2,
+          "QuantBatchMatmulV3": 4,
+          "GroupedMatmul": 1,
+          "ScatterNdUpdateV2": 2,
+          "MatMulV3": 2,
+          "Sigmoid": 1,
+          "CompressorMetadata": 2,
+          "Neg": 1,
+          "Fill": 1,
+          "HcPre": 1,
+          "Tile": 1
+        },
+        "selected_shapes": [
+          {
+            "op": "CsaSpmdTndDevicePto",
+            "shape": [
+              6,
+              16384
+            ],
+            "count": 21
+          },
+          {
+            "op": "HcPre",
+            "shape": [
+              6,
+              4,
+              4096
+            ],
+            "count": 1
+          }
+        ]
+      }
+    ]
+  }
+}

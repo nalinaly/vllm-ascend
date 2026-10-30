@@ -1,5 +1,5 @@
 {
-  "status": "MEASURED_NATIVE_BASELINE_ONLY",
+  "status": "MEASURED_WITH_INCOMPLETE_T96_ATTENTION_STATIC_COVERAGE",
   "task": "task_20261031_011706_327472213106",
   "exit_code": 0,
   "scenario": "128K公共前缀+固定前16题后缀，DP/EP16 TP1，逐rank B16/T96",
@@ -426,6 +426,7 @@
   },
   "limits": [
     "当前Native本机均值约63.3–64.3ms，高于客户提供约50ms，不能混作同环境对照。",
-    "PTO尚未得到稳定态结果，目标48ms未达成。"
+    "PTO尚未得到稳定态结果，目标48ms未达成。",
+    "后续查明：T96首次profile未收集attention静态核；已有SK仅证明部分范围生效，不能作为要求的完整静态/SK Native基线。需补齐后重测，见static_capture_gap.json。"
   ]
 }

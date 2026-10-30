@@ -46,6 +46,18 @@ def _is_old_hdk_capture_error(exc: RuntimeError) -> bool:
     return any(marker in message for marker in _OLD_HDK_CAPTURE_ERROR_MARKERS)
 
 
+def _compile_capture_kernels(runnable, args, kwargs):
+    # The earlier memory-profile run has no attention metadata. Its symbolic
+    # shape can already be marked compiled while attention kernels are absent.
+    # CANN deduplicates the actual operator JSONs and compiles only missing ones.
+    try:
+        from npugraph_ex._acl_concrete_graph.static_kernel import compile_static_kernel
+    except ImportError:
+        from torchair._acl_concrete_graph.static_kernel import compile_static_kernel
+
+    compile_static_kernel(runnable, *args, super_kernel_optimize=True, **kwargs)
+
+
 @dataclasses.dataclass
 class ACLGraphEntry:
     batch_descriptor: BatchDescriptor
@@ -162,7 +174,9 @@ class ACLGraphWrapper:
             # 也覆盖运行中首次遇到新图档位的情况：若随后回退Native，AICPU计划
             # 必须在进入capture前准备。纯PTO图的后续replay不会再走此处。
             metadata = getattr(forward_context, "attn_metadata", None)
-            if isinstance(metadata, dict) and not self.vllm_config.additional_config.get("_pto_csa_device_policy", False):
+            if isinstance(metadata, dict) and not self.vllm_config.additional_config.get(
+                "_pto_csa_device_policy", False
+            ):
                 pending = tuple(
                     prefix for prefix, item in metadata.items()
                     if getattr(getattr(item, "decode", None), "native_metadata_factory", None) is not None
@@ -196,6 +210,17 @@ class ACLGraphWrapper:
                     stack.enter_context(patch("torch.npu.empty_cache", lambda: None))
 
                 # mind-exploding: carefully manage the reference and memory.
+
+                if self.enable_super_kernel:
+                    # Compile with this capture's real metadata before graph
+                    # recording. Do not let warmup's per-forward caches suppress
+                    # device metadata producers during the following capture.
+                    capture_kwargs = forward_context.additional_kwargs
+                    forward_context.additional_kwargs = dict(capture_kwargs)
+                    try:
+                        _compile_capture_kernels(self.runnable, args, kwargs)
+                    finally:
+                        forward_context.additional_kwargs = capture_kwargs
 
                 # Sync offloader's copy stream before capture.
                 # Ensure any pre-capture prefetches from offloader are complete.

@@ -21,9 +21,11 @@ def main():
     parser.add_argument("--target", action="store_true", help="128K/B16；默认为短历史混长边界")
     parser.add_argument("--dump-static", action="store_true", help="只采集静态编译输入，离线CPU编译不占卡")
     parser.add_argument("--static-package", type=Path, help="装入私有OPP并验证静态核和真实SK图优化")
+    parser.add_argument("--capture-static", action="store_true", help="验证捕图前自动补齐静态核及metadata生产者")
     parser.add_argument("--profile", action="store_true", help="仅采集3次真实图重放以确认SK设备dispatch")
     parser.add_argument("--package-site", type=Path, help="待验证的独立ACLNN包目录")
     args = parser.parse_args()
+    args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     report = {"passed": False, "scope": "单卡实际service/ACLGraphWrapper，不代表整模型验收"}
 
@@ -44,7 +46,7 @@ def main():
         os.environ["ASCEND_GLOBAL_LOG_LEVEL"] = "1"
         os.environ["ASCEND_PROCESS_LOG_PATH"] = str((args.output / "ascend/log").resolve())
         (args.output / "ascend/log").mkdir(parents=True)
-    if args.static_package:
+    if args.static_package or args.capture_static:
         here = Path(__file__).resolve().parent
         os.environ["ASCEND_OPP_PATH"] = subprocess.check_output(
             [
@@ -55,9 +57,19 @@ def main():
             ],
             text=True,
         ).strip()
-        with (args.output / "static_install.log").open("w") as stream:
-            subprocess.run([str(args.static_package.resolve())], check=True, stdout=stream, stderr=subprocess.STDOUT)
-        report["static_package"] = str(args.static_package)
+        if args.static_package:
+            with (args.output / "static_install.log").open("w") as stream:
+                subprocess.run(
+                    [str(args.static_package.resolve())], check=True, stdout=stream, stderr=subprocess.STDOUT
+                )
+            report["static_package"] = str(args.static_package)
+        if args.capture_static:
+            repo = here.parents[2]
+            os.environ["ASCEND_CUSTOM_OPP_PATH"] = os.environ["ASCEND_CUSTOM_OPP_PATH"].replace(
+                str(repo / ".cache/csa/csa-native-ops-install/vendors/custom_transformer"),
+                str(here / "results/static_vendor/custom_transformer"),
+            )
+            os.chdir(args.output)
     try:
         from contextlib import contextmanager
 
@@ -105,6 +117,13 @@ def main():
             speculative_config={"method": "dspark", "num_speculative_tokens": 5, "enforce_eager": True},
             additional_config={"weight_nz_mode": 2, "enable_kv_nz": False, "enable_dsa_cp": False},
         ).create_engine_config()
+        if args.capture_static:
+            config.additional_config["ascend_compilation_config"] = {
+                "enable_static_kernel": True,
+                "enable_super_kernel": True,
+            }
+            torch.npu.set_compile_mode(jit_compile=False)
+            report["capture_static"] = True
         histories = [131072] * 16 if args.target else [0, 0, 2046, 8190]
         queries = [6] * 16 if args.target else [1, 6, 3, 1]
         tokens, requests = (96, 16) if args.target else (24, 5)

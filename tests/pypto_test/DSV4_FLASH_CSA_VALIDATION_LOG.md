@@ -24517,3 +24517,32 @@ PTO首轮`task_20261031_012602_3895420355`在加载草稿模型时失败，未�
 矩阵。冻结新模型源码`model_decode_source_v2`，16卡PTO重试任务
 `task_20261031_013328_40748925923`沿原wheel、输入和编译缓存排队。
 此前Native基线仍保留，当前没有PTO稳定态结果，目标保持未完成。
+
+### 2026-10-31：撤回“已有基线足以证明完整静态覆盖”的解释，补齐真实metadata下的捕图编译
+
+继续核对CANN实际选中的编译输入，发现Native/PTO都有同一个覆盖缺口：
+T96首次出现在显存profile阶段，此时没有真实attention metadata，收集到的
+只有HC_pre、FFN等算子，没有完整attention；npugraph_ex的
+`run_eagerly_compile`按符号shape把T96加入compiled_shape。之后真实T96
+warmup/capture被认为已经编译，未收集遗漏算子。T6则在真实metadata下
+首次出现，确实收集到了attention；PTO的selected清单含21份T6 CSA，
+没有T96 CSA。输入清单摘要和源目录保存在
+[csa_aclnn_host_20261030/static_capture_gap.json](csa_aclnn_host_20261030/static_capture_gap.json)。
+
+因此前述63.3–64.3ms仍是真实Native计时，但**不是目标要求的完整attention
+静态/SK基线**；已在native_target_baseline.json降格标注，后续需要补齐后
+重取。三步669个SK任务只证明部分图段已融合，不能证明全部语义范围覆盖。
+
+修复放在已有ACLGraphWrapper首次capture分支，仅显式开启SK时，在真实
+metadata上下文中执行CANN compile_static_kernel，再开始图记录；Native/PTO
+同样处理。CANN按实际算子参数去重补缺，不新增policy图键或每步Host检查，
+既有图replay不经过这段代码。编译预热使用临时additional_kwargs字典，
+随后恢复捕图字典，避免把预热产生的compact metadata缓存带进capture，
+造成设备生产者没有录入图。公共PyPTO/PTOAS/Simpler/CANN均未改。
+
+3项受影响CPU回归通过，新增用例验证“补编译→capture→SK优化→replay”
+顺序、仅首次调用编译、捕图重新执行metadata生产者。真实单卡128K/B16
+验证已排队`task_20261031_014640_51236831811`，尚未执行，不能先记通过。
+旧PTO 16卡任务仍活跃，当前已完成算子编译，正在以单线程gzip压缩约22GiB
+静态交付目录；未将观察等待当作进程退出，也未重启该任务。启动期重复编译/
+打包成本仍属后续阶段；当前先确保完整静态/SK执行及稳态验收。

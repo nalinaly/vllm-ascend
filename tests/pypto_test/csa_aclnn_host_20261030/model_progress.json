@@ -55,11 +55,20 @@
     {
       "backend": "pto",
       "task": "task_20261031_013328_40748925923",
-      "status": "pending",
+      "status": "running：静态算子已编译，正在gzip打包",
       "source": "results/model_decode_source_v2",
       "change": "缓存标记移到additional_config，四项CPU回归通过；保持原输入、wheel、缓存和性能配置",
       "output": "results/pto_perf_v2"
     }
   ],
-  "config_replace_regression_task": "task_20261031_013304_406685927401"
+  "config_replace_regression_task": "task_20261031_013304_406685927401",
+  "static_coverage": {
+    "status": "发现T96 attention缺失，不能按完整静态SK基线验收",
+    "evidence": "static_capture_gap.json",
+    "cpu_regression_task": "task_20261031_014550_49503228330",
+    "cpu_regression_passed": 3,
+    "device_validation_task": "task_20261031_014640_51236831811",
+    "device_validation_status": "pending",
+    "next": "单卡补编译/metadata捕图通过后，两侧重取完整静态SK基线"
+  }
 }

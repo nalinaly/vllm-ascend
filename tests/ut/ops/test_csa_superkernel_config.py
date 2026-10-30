@@ -37,3 +37,53 @@ def test_superkernel_does_not_reinterpret_existing_positional_arguments(monkeypa
     config = AscendCompilationConfig(True, False, True, False)
     assert config.fuse_norm_quant and not config.fuse_qknorm_rope
     assert not config.enable_super_kernel
+
+
+def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(monkeypatch):
+    from contextlib import nullcontext
+    from unittest.mock import Mock
+
+    import torch
+    from vllm.config import CUDAGraphMode
+    from vllm.forward_context import BatchDescriptor
+
+    from vllm_ascend.compilation import acl_graph
+
+    context = NS(
+        batch_descriptor=BatchDescriptor(num_tokens=96),
+        cudagraph_runtime_mode=CUDAGraphMode.FULL,
+        attn_metadata={},
+        additional_kwargs={"num_actual_tokens": 96},
+        capturing=False,
+    )
+    steps = []
+    result = torch.empty(1)
+    graph = NS(replay=lambda: steps.append("replay"), super_kernel_optimize=lambda: steps.append("optimize"))
+
+    def run():
+        # The metadata producer must be recorded again, not reused from warmup.
+        assert "compact_metadata" not in context.additional_kwargs
+        context.additional_kwargs["compact_metadata"] = object()
+        steps.append("capture" if context.capturing else "compile_warmup")
+        return result
+
+    compile_call = Mock(side_effect=lambda runnable, args, kwargs: runnable(*args, **kwargs))
+    monkeypatch.setattr(acl_graph, "_compile_capture_kernels", compile_call)
+    monkeypatch.setattr(acl_graph, "get_forward_context", lambda: context)
+    monkeypatch.setattr(acl_graph, "_EXTRA_CTX", NS(is_draft_model=False))
+    monkeypatch.setattr(acl_graph, "validate_cudagraph_capturing_enabled", lambda: None)
+    monkeypatch.setattr(acl_graph, "weak_ref_tensors", lambda value: value)
+    monkeypatch.setattr(acl_graph, "weak_ref_workspaces", lambda _: None)
+    monkeypatch.setattr(acl_graph.current_platform, "get_global_graph_pool", lambda: None)
+    monkeypatch.setattr(torch.npu, "NPUGraph", lambda: graph)
+    monkeypatch.setattr(torch.npu, "graph", lambda *args, **kwargs: nullcontext())
+    monkeypatch.setattr("vllm.model_executor.offloader.base.get_offloader", lambda: Mock())
+    engine = NS(compilation_config=NS(), additional_config={"ascend_compilation_config": {"enable_super_kernel": True}})
+    wrapper = acl_graph.ACLGraphWrapper(run, engine, CUDAGraphMode.FULL, enable_enpu=True)
+    wrapper.is_debugging_mode = False
+    assert wrapper() is result
+    context.capturing = False
+    context.additional_kwargs = {"num_actual_tokens": 96}
+    assert wrapper() is result
+    assert steps == ["compile_warmup", "capture", "optimize", "replay"]
+    compile_call.assert_called_once()
