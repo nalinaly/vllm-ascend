@@ -55,10 +55,27 @@
     {
       "backend": "pto",
       "task": "task_20261031_013328_40748925923",
-      "status": "running：静态算子已编译，正在gzip打包",
+      "status": "completed exit=0",
       "source": "results/model_decode_source_v2",
       "change": "缓存标记移到additional_config，四项CPU回归通过；保持原输入、wheel、缓存和性能配置",
-      "output": "results/pto_perf_v2"
+      "output": "results/pto_perf_v2",
+      "evidence": "target_partial_static_comparison.json"
+    },
+    {
+      "backend": "native",
+      "task": "task_20261031_020254_1002097726",
+      "status": "pending",
+      "source": "results/model_decode_source_v3",
+      "change": "每个捕图容量在真实metadata下补齐静态核，replay不增加处理",
+      "output": "results/native_perf_v3"
+    },
+    {
+      "backend": "pto",
+      "task": "task_20261031_020331_101930622580",
+      "status": "pending",
+      "source": "results/model_decode_source_v3",
+      "change": "每个捕图容量在真实metadata下补齐静态核，replay不增加处理",
+      "output": "results/pto_perf_v3"
     }
   ],
   "config_replace_regression_task": "task_20261031_013304_406685927401",
@@ -68,7 +85,8 @@
     "cpu_regression_task": "task_20261031_014550_49503228330",
     "cpu_regression_passed": 3,
     "device_validation_task": "task_20261031_014640_51236831811",
-    "device_validation_status": "pending",
-    "next": "单卡补编译/metadata捕图通过后，两侧重取完整静态SK基线"
+    "device_validation_status": "completed exit=0",
+    "next": "重测两侧完整静态SK的16卡target forward",
+    "device_validation_evidence": "capture_static_validation.json"
   }
 }

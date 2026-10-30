@@ -109,8 +109,8 @@
 ## 5. 近期任务与顺序
 
 - [ ] 核对本机实际导入源码/wheel、启动脚本、计时区间及约50 ms基线。
-- [ ] 对齐后置ACLNN版本；确认业务不走旧Host选档包或Simpler/Python调用。
-- [ ] 梳理Worker、图包装器、CSA service及Torch包装中的稳态额外处理，标出删除点。
+- [x] 对齐后置ACLNN版本；确认业务不走旧Host选档包或Simpler/Python调用。
+- [x] 梳理Worker、图包装器、CSA service及Torch包装中的稳态额外处理，标出删除点。
 - [x] 删除后置ACLNN的8K/长度Host门槛、逐层签名和policy多图逻辑。
 - [x] 删除无Native消费者的QLI/C4 SAS推导及其冗余准备。
 - [x] 精简绑定/包装热路径，将必要静态合同检查移入已有准备或重建阶段。
@@ -164,3 +164,14 @@ wheel已构建。真实128K KV bank正在重建；首个16卡任务被队列默�
 不将追加问题后缀后的长度误写为恰好131072。Native整网初次启动在图融合
 规则注册时缺少AddRmsNormBias，未进入计时；已补入既有CANN9.2算子vendor，
 复用缓存重试。仍没有16卡target性能结论。
+
+2026-10-31阶段结果：两侧16卡旧版同配置对照已完成，最慢rank mean为
+Native 64.273ms、PTO 56.411ms（下降12.23%）。真实trace确认QLI metadata
+消失、C4 SAS减少，21层使用后置ACLNN且未运行Simpler。但两侧T96首次
+profile缺少真实attention metadata，编译器提前将该shape标为已编译，
+导致T96 attention静态覆盖不完整；上述数字只作诊断，不能作为最终SK验收。
+
+捕图前使用真实metadata补齐静态核的修复已提交，CPU及单卡128K/B16
+padding→真实请求replay通过，输出/五组cache状态逐bit对齐eager。
+两侧已冻结同一修复版源码重新排队，48ms、完整SK范围与通信收益仍待验收。
+详见本轮validation log及`csa_aclnn_host_20261030/model_progress.json`。

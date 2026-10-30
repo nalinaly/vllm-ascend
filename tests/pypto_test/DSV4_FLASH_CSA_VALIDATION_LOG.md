@@ -24546,3 +24546,39 @@ metadata上下文中执行CANN compile_static_kernel，再开始图记录；Nati
 旧PTO 16卡任务仍活跃，当前已完成算子编译，正在以单线程gzip压缩约22GiB
 静态交付目录；未将观察等待当作进程退出，也未重启该任务。启动期重复编译/
 打包成本仍属后续阶段；当前先确保完整静态/SK执行及稳态验收。
+
+### 2026-10-31：旧静态覆盖下整网已有12.23%收益，补齐静态核的单卡验证通过
+
+旧PTO任务`task_20261031_013328_40748925923`完成（exit=0），捕图约1260秒。
+慢点定位为228份约99MB的CSA静态二进制，交付目录22,705,113,801字节，
+gzip后的.run为10,571,903,994字节；单线程压缩后还有解压安装。抽查同rank
+相邻两层参数，差异只在5组cache/state输入输出的storage offset。此事实
+留作第二阶段初始化优化依据，未据此改动核或在稳态增加处理。
+
+旧版两侧实际Worker配置在16个rank逐项相同；各rank均有10个有效B16/T96
+target forward样本。最慢rank均为rank6，Native mean 64.27285ms，PTO
+56.41084ms，下降12.23%；PTO全样本P95=56.98761ms、max=57.16290ms。
+rank0 min/mean/max为Native 62.814/63.569/64.671ms，PTO
+55.694/56.342/57.160ms。仍缺T96 attention完整静态覆盖，因此仅作诊断
+对照，**不是最终SK验收结果，且尚未达到48ms**。全部逐rank样本见
+[csa_aclnn_host_20261030/target_partial_static_comparison.json](csa_aclnn_host_20261030/target_partial_static_comparison.json)。
+
+PTO的21层均捕获ACLNN，稳态B16走FULL_tokens96图，未初始化Simpler。
+独立三步rank0 trace中CSA 63次，均为普通后置ACLNN、没有CSA SK，
+对应min/mean/max=767.36/783.788/799.50us。与Native同窗口相比，QLI
+metadata 3→0，SAS metadata 13→10，CompressorMetadata 186→66。
+SAS剩余消费者包括HCA和draft，没有全局删除；compact metadata在CSA层间
+复用，使CompressorMetadata每步减少40次。不同流区间不能机械相加成网络收益。
+rank0全部轮次自然平均接受数Native 3.73187、PTO 3.73443，二者并非逐项
+相同；此处不宣称Native/PTO数值或token完全一致。
+
+补编译修复`da3b238c0`的真实单卡任务`task_20261031_014640_51236831811`
+完成：128K/B16，在真实metadata上下文自动编译后再捕图，全padding→真实
+请求重放的output及5组cache/state与eager逐bit相同；全padding不改cache，
+保护区正常，没有Python重新派发，没有Simpler执行。CPU回归3项通过。
+证据见[csa_aclnn_host_20261030/capture_static_validation.json](csa_aclnn_host_20261030/capture_static_validation.json)。
+
+两侧模型源码冻结为`model_decode_source_v3`，Native任务
+`task_20261031_020254_1002097726`、PTO任务
+`task_20261031_020331_101930622580`已按原输入及配置排队，复用各自缓存。
+后续须核对T96的实际静态/SK覆盖和新的最慢rank结果，不以单卡通过外推整网。
