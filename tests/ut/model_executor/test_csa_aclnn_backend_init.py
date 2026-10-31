@@ -73,7 +73,11 @@ def model_preparation(monkeypatch):
     root = object()
     layout = Mock(return_value={"wkv": "NZ"})
     nz_check = Mock()
-    fake_module(_TND_PACKAGE + ".backend", validate_backend_installation=install_check)
+    fake_module(
+        _TND_PACKAGE + ".backend",
+        validate_backend_installation=install_check,
+        uses_device_policy=Mock(return_value=False),
+    )
     fake_module(_TND_PACKAGE + ".service", CSAServiceRuntime=Service)
     fake_module(_TND_PACKAGE + ".entry", decode_csa_spmd=root)
     fake_module(
@@ -86,6 +90,7 @@ def model_preparation(monkeypatch):
     monkeypatch.setattr(pypto_deepseek_v4, "init_pto_runtime", runtime_init)
     monkeypatch.setattr(vllm_ascend.ascend_config, "get_ascend_config", lambda: SimpleNamespace(weight_nz_mode=2))
     config = SimpleNamespace(
+        additional_config={},
         scheduler_config=SimpleNamespace(max_num_seqs=16),
         model_config=SimpleNamespace(max_model_len=131072),
     )

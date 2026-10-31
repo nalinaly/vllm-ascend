@@ -25125,3 +25125,24 @@ Native、prefill、主图和DBO不复用Event。六项公共CPU边界测试通�
 逐层Host检查。0.120880ms只记录为本轮观察，不计作已证明的稳定独立收益；不为
 这个微小差异反复占16卡。详细证据见
 [draft_events_validation.json](csa_aclnn_host_20261030/draft_events_validation.json)。
+
+### 2026-10-31：按用户要求先整合累积提交再推送
+
+用户明确要求先push再继续优化。原分支19个本地提交与远端3个短历史提交分叉；
+在独立稀疏工作区将19个提交rebase到`79ea6d3c8`，未出现冲突。保留远端SPMD
+短历史支持、MPMD原能力边界，以及本地设备后置ACLNN不依赖Host policy的路径。
+代码序列对照仅出现远端新增接口带来的上下文变化，不丢弃既有Host清理或数值策略。
+
+合并后发现旧CPU测试的模拟配置缺少`additional_config`，模拟后端缺少
+`uses_device_policy`；补齐测试对象，未修改业务逻辑。按共享SDK和实际NZ2环境
+运行短历史策略、后端初始化、ACLNN合同、图生命周期、Native metadata、slot
+及Event边界回归，**298项全部通过**，没有新增设备测试。
+
+60个改动Python文件ruff通过；源码和文档的diff空白检查通过，归档`.patch`中
+单空格上下文行属于补丁格式，保留。AGENTS所述`format.sh`已不在当前Git树，
+实际调用报告文件不存在，不将它写成已通过。独立工作区测试复用现有构建元信息，
+未重建或修改共享SDK。重放映射及验证记录见
+[rebase_20261031.json](csa_aclnn_host_20261030/rebase_20261031.json)。
+
+主工作区42984项既有未暂存删除及未提交实验文件保持原样，不夹带入本次提交。
+推送采用正常快进，不强制覆盖远端历史；完成后再继续性能工作。
