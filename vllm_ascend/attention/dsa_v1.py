@@ -552,6 +552,7 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
         # Note(qcs): we use two dimension slot_mapping for kvcache with shape
         # [block_nums, block_size, head_num, head_dim]
         self.slot_mapping = torch.zeros(self.slot_mapping_shape, dtype=torch.int32, device=self.device)
+        self.slot_mapping_precomputed = False
 
     @classmethod
     def get_cudagraph_support(
@@ -695,8 +696,11 @@ class AscendDSAMetadataBuilder(AttentionMetadataBuilder[AscendDSAMetadata]):
         # Compressed decode entries return slot_mapping=None. Both Native and
         # PTO obtain real compressed slots from CompressorMetadata in forward;
         # this raw slot buffer has no consumer for C4 or C128 decode.
-        # Keep prefill and the SWA/state buffers on their existing path.
-        if self.num_prefills or self.compressor_ratio <= 1:
+        # Prefill and SWA/state still need slots; the real input-preparation
+        # kernel may already have filled their original two-dimensional buffer.
+        if (self.num_prefills or self.compressor_ratio <= 1) and not kwargs.get(
+            "slot_mapping_precomputed", False
+        ):
             slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
             self.slot_mapping[:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(slot_mapping, self.block_size)
 

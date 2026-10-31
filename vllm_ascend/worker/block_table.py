@@ -96,6 +96,8 @@ class BlockTable:
         self.num_blocks_per_row = np.zeros(max_num_reqs, dtype=np.int32)
         self.slot_mapping = self._make_buffer(self.max_num_batched_tokens + 2 * self.max_num_reqs, dtype=torch.int32)
 
+        self.dsa_slot_mappings: tuple[torch.Tensor, ...] = ()
+
         self.kernel_sizes = kernel_sizes
         self.cp_kv_cache_interleave_size = cp_kv_cache_interleave_size
 
@@ -139,6 +141,16 @@ class BlockTable:
 
         self.block_table.np[[src, tgt]] = self.block_table.np[[tgt, src]]
 
+    def bind_dsa_slot_mappings(self, outputs: tuple[torch.Tensor, ...]) -> bool:
+        """Reuse builders' buffers; validate the supported layout once at init."""
+        if self.dcp_world_size != 1 or self.use_hybrid_blocks or not 1 <= len(outputs) <= 2:
+            return False
+        if any(x.dtype != torch.int32 or x.ndim != 2 or x.shape[1] != 2
+               or x.shape[0] < self.max_num_batched_tokens or not x.is_contiguous() for x in outputs):
+            return False
+        self.dsa_slot_mappings = outputs
+        return True
+
     def compute_slot_mapping(
         self,
         num_reqs: int,
@@ -146,6 +158,18 @@ class BlockTable:
         positions: torch.Tensor,
     ) -> None:
         num_tokens = positions.shape[0]
+        if self.dsa_slot_mappings:
+            from vllm_ascend.ops.triton.dsa_slot_mapping import compute_dsa_slot_mapping_kernel
+
+            first = self.dsa_slot_mappings[0]
+            second = self.dsa_slot_mappings[-1]
+            compute_dsa_slot_mapping_kernel[(num_reqs + 1,)](
+                num_tokens, self.max_num_batched_tokens, query_start_loc, positions,
+                self.block_table.gpu, self.block_table.gpu.stride(0), self.slot_mapping.gpu,
+                first, second, CACHE_BLOCK_SIZE=self.block_size, BLOCK_SIZE=512,
+                WRITE_SECOND=len(self.dsa_slot_mappings) == 2,
+            )
+            return
         total_cp_world_size = self.dcp_world_size
         total_cp_rank = self.dcp_rank
         if self.dcp_world_size > 1:

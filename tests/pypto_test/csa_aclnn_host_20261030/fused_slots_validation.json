@@ -1,0 +1,2855 @@
+{
+  "passed": true,
+  "device": 0,
+  "scope": "单卡对照现有slot kernel和Native格式；只做整数功能验证，不声称整网收益。",
+  "cases": [
+    {
+      "case": "B16_S6_128K",
+      "block_size": 2,
+      "tokens": 96,
+      "capacity": 112,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "mixed_and_padding",
+      "block_size": 2,
+      "tokens": 11,
+      "capacity": 32,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "long_prefill_loop",
+      "block_size": 2,
+      "tokens": 1042,
+      "capacity": 1056,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "empty",
+      "block_size": 2,
+      "tokens": 0,
+      "capacity": 16,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "B16_S6_128K",
+      "block_size": 32,
+      "tokens": 96,
+      "capacity": 112,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "mixed_and_padding",
+      "block_size": 32,
+      "tokens": 11,
+      "capacity": 32,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "long_prefill_loop",
+      "block_size": 32,
+      "tokens": 1042,
+      "capacity": 1056,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "empty",
+      "block_size": 32,
+      "tokens": 0,
+      "capacity": 16,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "B16_S6_128K",
+      "block_size": 128,
+      "tokens": 96,
+      "capacity": 112,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "mixed_and_padding",
+      "block_size": 128,
+      "tokens": 11,
+      "capacity": 32,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "long_prefill_loop",
+      "block_size": 128,
+      "tokens": 1042,
+      "capacity": 1056,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    },
+    {
+      "case": "empty",
+      "block_size": 128,
+      "tokens": 0,
+      "capacity": 16,
+      "flat_exact": true,
+      "native_parts_exact": true,
+      "flat_guard_unchanged": true,
+      "parts_guard_unchanged": true,
+      "secondary_exact": true,
+      "secondary_guard_unchanged": true
+    }
+  ],
+  "through_block_table": true,
+  "cpu_tests": 31,
+  "standalone_task": "task_20261031_071053_306460528961",
+  "integration_task": "task_20261031_071807_31830158658",
+  "model_task": "task_20261031_072638_331273526041",
+  "model_source": "results/model_decode_source_fused_slots_v1",
+  "model_status": "PTO completed exit=0；仍未达48ms",
+  "public_path_status": "已接入，仅后置PTO ACLNN初始化绑定；Native、DBO及不支持几何保留原路径。",
+  "prior_attempts": [
+    {
+      "task": "task_20261031_065417_24777046727",
+      "outcome": "测试导入路径错误，NPU未执行；已改为device.device_op.DeviceOperator"
+    },
+    {
+      "task": "task_20261031_070308_294348528814",
+      "outcome": "测试入口遗漏bootstrap注入的--device参数，NPU未执行；已补齐"
+    },
+    {
+      "task": "task_20261031_070456_29732921567",
+      "outcome": "1024元素块在Triton编译期UB溢出，需1966080 bits、可用1572864 bits；改512后通过，无SDK修改"
+    }
+  ],
+  "timing": {
+    "ranks": [
+      {
+        "rank": 0,
+        "min_ms": 52.17134094238281,
+        "mean_ms": 52.7894905090332,
+        "max_ms": 53.72999954223633,
+        "samples_ms": [
+          53.058021545410156,
+          53.303558349609375,
+          52.8525390625,
+          53.72999954223633,
+          52.510101318359375,
+          52.58766174316406,
+          52.468299865722656,
+          52.40108108520508,
+          52.17134094238281,
+          52.81230163574219
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank0.performance.json"
+      },
+      {
+        "rank": 1,
+        "min_ms": 51.94449996948242,
+        "mean_ms": 52.59368209838867,
+        "max_ms": 53.62392044067383,
+        "samples_ms": [
+          52.80445861816406,
+          53.06652069091797,
+          52.59980010986328,
+          53.62392044067383,
+          52.25859832763672,
+          52.364200592041016,
+          52.524681091308594,
+          52.16944122314453,
+          51.94449996948242,
+          52.5806999206543
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank1.performance.json"
+      },
+      {
+        "rank": 2,
+        "min_ms": 51.97241973876953,
+        "mean_ms": 52.58166770935058,
+        "max_ms": 53.418739318847656,
+        "samples_ms": [
+          52.82680130004883,
+          53.09960174560547,
+          52.629638671875,
+          53.418739318847656,
+          52.30057907104492,
+          52.39693832397461,
+          52.41413879394531,
+          52.18313980102539,
+          51.97241973876953,
+          52.57468032836914
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank2.performance.json"
+      },
+      {
+        "rank": 3,
+        "min_ms": 52.16318130493164,
+        "mean_ms": 52.76255989074707,
+        "max_ms": 53.56808090209961,
+        "samples_ms": [
+          53.01163864135742,
+          53.2812614440918,
+          52.809200286865234,
+          53.56808090209961,
+          52.50587844848633,
+          52.57773971557617,
+          52.53937911987305,
+          52.38554000854492,
+          52.16318130493164,
+          52.78369903564453
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank3.performance.json"
+      },
+      {
+        "rank": 4,
+        "min_ms": 51.9321403503418,
+        "mean_ms": 52.570166015625,
+        "max_ms": 53.08781814575195,
+        "samples_ms": [
+          52.8332405090332,
+          53.08781814575195,
+          52.60927963256836,
+          52.92424011230469,
+          52.30030059814453,
+          52.37432098388672,
+          52.83852005004883,
+          52.18830108642578,
+          51.9321403503418,
+          52.61349868774414
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank4.performance.json"
+      },
+      {
+        "rank": 5,
+        "min_ms": 51.927059173583984,
+        "mean_ms": 52.5367977142334,
+        "max_ms": 53.05598068237305,
+        "samples_ms": [
+          52.820980072021484,
+          53.05598068237305,
+          52.5897216796875,
+          52.91889953613281,
+          52.273738861083984,
+          52.34627914428711,
+          52.69327926635742,
+          52.1457405090332,
+          51.927059173583984,
+          52.59629821777344
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank5.performance.json"
+      },
+      {
+        "rank": 6,
+        "min_ms": 52.15816116333008,
+        "mean_ms": 52.76873245239258,
+        "max_ms": 53.37860107421875,
+        "samples_ms": [
+          53.03942108154297,
+          53.306880950927734,
+          52.83108139038086,
+          53.37860107421875,
+          52.50831985473633,
+          52.600460052490234,
+          52.65053939819336,
+          52.405479431152344,
+          52.15816116333008,
+          52.808380126953125
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank6.performance.json"
+      },
+      {
+        "rank": 7,
+        "min_ms": 52.12873840332031,
+        "mean_ms": 52.755393981933594,
+        "max_ms": 53.48366165161133,
+        "samples_ms": [
+          53.00397872924805,
+          53.274261474609375,
+          52.812320709228516,
+          53.48366165161133,
+          52.49869918823242,
+          52.59049987792969,
+          52.59897994995117,
+          52.38859939575195,
+          52.12873840332031,
+          52.774200439453125
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank7.performance.json"
+      },
+      {
+        "rank": 8,
+        "min_ms": 51.947120666503906,
+        "mean_ms": 52.537027740478514,
+        "max_ms": 53.19084167480469,
+        "samples_ms": [
+          52.79787826538086,
+          53.07123947143555,
+          52.60795974731445,
+          53.19084167480469,
+          52.281761169433594,
+          52.37009811401367,
+          52.38357925415039,
+          52.160858154296875,
+          51.947120666503906,
+          52.55894088745117
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank8.performance.json"
+      },
+      {
+        "rank": 9,
+        "min_ms": 52.007118225097656,
+        "mean_ms": 52.59651184082031,
+        "max_ms": 53.20766067504883,
+        "samples_ms": [
+          52.89487838745117,
+          53.161800384521484,
+          52.7098388671875,
+          53.20766067504883,
+          52.31066131591797,
+          52.45075988769531,
+          52.36701965332031,
+          52.23041915893555,
+          52.007118225097656,
+          52.624961853027344
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank9.performance.json"
+      },
+      {
+        "rank": 10,
+        "min_ms": 52.1963996887207,
+        "mean_ms": 52.81751174926758,
+        "max_ms": 53.69432067871094,
+        "samples_ms": [
+          53.04985809326172,
+          53.32164001464844,
+          52.842140197753906,
+          53.69432067871094,
+          52.548221588134766,
+          52.61943817138672,
+          52.61613845825195,
+          52.437679290771484,
+          52.1963996887207,
+          52.849281311035156
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank10.performance.json"
+      },
+      {
+        "rank": 11,
+        "min_ms": 51.99283981323242,
+        "mean_ms": 52.62776184082031,
+        "max_ms": 53.72285842895508,
+        "samples_ms": [
+          52.822021484375,
+          53.12937927246094,
+          52.628440856933594,
+          53.72285842895508,
+          52.32305908203125,
+          52.410160064697266,
+          52.46961975097656,
+          52.20711898803711,
+          51.99283981323242,
+          52.572120666503906
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank11.performance.json"
+      },
+      {
+        "rank": 12,
+        "min_ms": 52.20396041870117,
+        "mean_ms": 52.719268035888675,
+        "max_ms": 53.27898025512695,
+        "samples_ms": [
+          52.904640197753906,
+          53.27898025512695,
+          52.86882019042969,
+          53.1761589050293,
+          52.498600006103516,
+          52.61233901977539,
+          52.39276123046875,
+          52.422340393066406,
+          52.20396041870117,
+          52.83407974243164
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank12.performance.json"
+      },
+      {
+        "rank": 13,
+        "min_ms": 51.94860076904297,
+        "mean_ms": 52.59154739379883,
+        "max_ms": 53.55253982543945,
+        "samples_ms": [
+          52.858638763427734,
+          53.06269836425781,
+          52.594818115234375,
+          53.55253982543945,
+          52.27547836303711,
+          52.357540130615234,
+          52.530059814453125,
+          52.153499603271484,
+          51.94860076904297,
+          52.581600189208984
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank13.performance.json"
+      },
+      {
+        "rank": 14,
+        "min_ms": 52.20677947998047,
+        "mean_ms": 52.62013168334961,
+        "max_ms": 52.99824142456055,
+        "samples_ms": [
+          52.99824142456055,
+          52.81769943237305,
+          52.589481353759766,
+          52.78145980834961,
+          52.55339813232422,
+          52.64051818847656,
+          52.34067916870117,
+          52.43006134033203,
+          52.20677947998047,
+          52.84299850463867
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank14.performance.json"
+      },
+      {
+        "rank": 15,
+        "min_ms": 52.148101806640625,
+        "mean_ms": 52.5902961730957,
+        "max_ms": 53.02431869506836,
+        "samples_ms": [
+          53.02431869506836,
+          52.814178466796875,
+          52.59920120239258,
+          52.786380767822266,
+          52.48114013671875,
+          52.56560134887695,
+          52.32073974609375,
+          52.3809814453125,
+          52.148101806640625,
+          52.782318115234375
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/rank15.performance.json"
+      }
+    ],
+    "slowest_rank": 10,
+    "slowest_rank_mean_ms": 52.81751174926758,
+    "pooled_mean_ms": 52.65365917682648,
+    "pooled_p95_ms": 53.37860107421875,
+    "pooled_max_ms": 53.72999954223633
+  },
+  "host": {
+    "intervals_ms": {
+      "inputs_monotonic_ns": {
+        "min": 2.455787,
+        "mean": 24.22107434375,
+        "max": 30.971368
+      },
+      "inputs_thread_cpu_ns": {
+        "min": 2.44652,
+        "mean": 24.1326473125,
+        "max": 30.90544
+      },
+      "batch_coordination_monotonic_ns": {
+        "min": 3.630949,
+        "mean": 8.85131281875,
+        "max": 59.985106
+      },
+      "batch_coordination_thread_cpu_ns": {
+        "min": 0.29252,
+        "mean": 0.365837625,
+        "max": 0.62816
+      },
+      "metadata_monotonic_ns": {
+        "min": 2.050443,
+        "mean": 2.33254641875,
+        "max": 3.081563
+      },
+      "metadata_thread_cpu_ns": {
+        "min": 2.05006,
+        "mean": 2.2848398125,
+        "max": 2.87505
+      },
+      "forward_submit_monotonic_ns": {
+        "min": 0.154422,
+        "mean": 0.198294775,
+        "max": 0.556216
+      },
+      "forward_submit_thread_cpu_ns": {
+        "min": 0.15475,
+        "mean": 0.189914625,
+        "max": 0.44752
+      },
+      "dp_sync_monotonic_ns": {
+        "min": 3.472468,
+        "mean": 8.72375231875,
+        "max": 59.868325
+      },
+      "dp_sync_thread_cpu_ns": {
+        "min": 0.18673,
+        "mean": 0.238307125,
+        "max": 0.41905
+      },
+      "dp_all_reduce_monotonic_ns": {
+        "min": 3.295726,
+        "mean": 8.5648722375,
+        "max": 59.720843
+      },
+      "dp_all_reduce_thread_cpu_ns": {
+        "min": 0.05387,
+        "mean": 0.07940125,
+        "max": 0.1364
+      }
+    },
+    "aligned_step_spreads_ms": [
+      {
+        "execute_entry": 2.597238,
+        "inputs_end": 0.443205,
+        "batch_coordination_end": 0.444035,
+        "attention_metadata_end": 0.91199,
+        "forward_entry": 0.684057,
+        "forward_submitted": 0.701668,
+        "dp_all_reduce_begin": 0.563696,
+        "dp_all_reduce_end": 0.453895,
+        "dp_sync_end": 0.447525
+      },
+      {
+        "execute_entry": 2.320286,
+        "inputs_end": 0.428165,
+        "batch_coordination_end": 0.340194,
+        "attention_metadata_end": 1.241913,
+        "forward_entry": 1.136782,
+        "forward_submitted": 1.200533,
+        "dp_all_reduce_begin": 0.576397,
+        "dp_all_reduce_end": 0.319794,
+        "dp_sync_end": 0.330213
+      },
+      {
+        "execute_entry": 2.645489,
+        "inputs_end": 0.382934,
+        "batch_coordination_end": 0.185072,
+        "attention_metadata_end": 1.115872,
+        "forward_entry": 1.104112,
+        "forward_submitted": 1.130732,
+        "dp_all_reduce_begin": 0.505026,
+        "dp_all_reduce_end": 0.176652,
+        "dp_sync_end": 0.179022
+      },
+      {
+        "execute_entry": 71.526822,
+        "inputs_end": 56.136074,
+        "batch_coordination_end": 0.336744,
+        "attention_metadata_end": 0.754938,
+        "forward_entry": 0.92334,
+        "forward_submitted": 1.001631,
+        "dp_all_reduce_begin": 56.168394,
+        "dp_all_reduce_end": 0.343443,
+        "dp_sync_end": 0.327003
+      },
+      {
+        "execute_entry": 2.053582,
+        "inputs_end": 0.260643,
+        "batch_coordination_end": 0.169292,
+        "attention_metadata_end": 0.415105,
+        "forward_entry": 0.990531,
+        "forward_submitted": 0.85357,
+        "dp_all_reduce_begin": 0.345873,
+        "dp_all_reduce_end": 0.186172,
+        "dp_sync_end": 0.173651
+      },
+      {
+        "execute_entry": 2.592678,
+        "inputs_end": 0.244962,
+        "batch_coordination_end": 0.245093,
+        "attention_metadata_end": 0.91754,
+        "forward_entry": 0.941851,
+        "forward_submitted": 0.748908,
+        "dp_all_reduce_begin": 0.338664,
+        "dp_all_reduce_end": 0.251403,
+        "dp_sync_end": 0.245852
+      },
+      {
+        "execute_entry": 16.870714,
+        "inputs_end": 9.796717,
+        "batch_coordination_end": 0.238493,
+        "attention_metadata_end": 0.455945,
+        "forward_entry": 0.500405,
+        "forward_submitted": 0.530685,
+        "dp_all_reduce_begin": 9.852577,
+        "dp_all_reduce_end": 0.220512,
+        "dp_sync_end": 0.228652
+      },
+      {
+        "execute_entry": 2.900272,
+        "inputs_end": 0.282843,
+        "batch_coordination_end": 0.429815,
+        "attention_metadata_end": 0.747109,
+        "forward_entry": 0.565177,
+        "forward_submitted": 0.575116,
+        "dp_all_reduce_begin": 0.383784,
+        "dp_all_reduce_end": 0.433715,
+        "dp_sync_end": 0.430245
+      },
+      {
+        "execute_entry": 2.016262,
+        "inputs_end": 0.211492,
+        "batch_coordination_end": 0.365574,
+        "attention_metadata_end": 0.446465,
+        "forward_entry": 0.341533,
+        "forward_submitted": 0.339083,
+        "dp_all_reduce_begin": 0.285333,
+        "dp_all_reduce_end": 0.388194,
+        "dp_sync_end": 0.371854
+      },
+      {
+        "execute_entry": 1.697769,
+        "inputs_end": 0.139312,
+        "batch_coordination_end": 0.201532,
+        "attention_metadata_end": 0.256303,
+        "forward_entry": 0.540786,
+        "forward_submitted": 0.407694,
+        "dp_all_reduce_begin": 0.171982,
+        "dp_all_reduce_end": 0.209972,
+        "dp_sync_end": 0.207452
+      }
+    ],
+    "spread_summary_ms": {
+      "execute_entry": {
+        "min": 1.697769,
+        "mean": 10.722111199999999,
+        "max": 71.526822
+      },
+      "inputs_end": {
+        "min": 0.139312,
+        "mean": 6.8326347,
+        "max": 56.136074
+      },
+      "batch_coordination_end": {
+        "min": 0.169292,
+        "mean": 0.2955844,
+        "max": 0.444035
+      },
+      "attention_metadata_end": {
+        "min": 0.256303,
+        "mean": 0.726318,
+        "max": 1.241913
+      },
+      "forward_entry": {
+        "min": 0.341533,
+        "mean": 0.7728574,
+        "max": 1.136782
+      },
+      "forward_submitted": {
+        "min": 0.339083,
+        "mean": 0.748962,
+        "max": 1.200533
+      },
+      "dp_all_reduce_begin": {
+        "min": 0.171982,
+        "mean": 6.9191726,
+        "max": 56.168394
+      },
+      "dp_all_reduce_end": {
+        "min": 0.176652,
+        "mean": 0.2983752,
+        "max": 0.453895
+      },
+      "dp_sync_end": {
+        "min": 0.173651,
+        "mean": 0.2941469,
+        "max": 0.447525
+      }
+    },
+    "aligned_step_max_forward_ms": [
+      53.058021545410156,
+      53.32164001464844,
+      52.86882019042969,
+      53.72999954223633,
+      52.55339813232422,
+      52.64051818847656,
+      52.83852005004883,
+      52.437679290771484,
+      52.20677947998047,
+      52.849281311035156
+    ],
+    "aligned_step_max_summary_ms": {
+      "min": 52.20677947998047,
+      "mean": 52.85046577453613,
+      "max": 53.72999954223633
+    },
+    "alignment": "同机monotonic_ns按20ms自然间隔分组，每组恰好16个不同rank；未改计时或增加屏障。"
+  },
+  "model_checks": [
+    {
+      "rank": 0,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 1,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 2,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 3,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 4,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 5,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 6,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 7,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 8,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 9,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 10,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 11,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 12,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 13,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 14,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    },
+    {
+      "rank": 15,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ],
+      "exact_requests": 16,
+      "requests": 16,
+      "spec_counters_equal": true,
+      "no_simpler": true
+    }
+  ],
+  "native_task": "task_20261031_075603_898532825",
+  "native_status": "completed exit=0",
+  "profile_export_task": "task_20261031_075603_8989623922",
+  "profile_export": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/profile_export.json",
+  "slot_trace_counts": [
+    {
+      "rank": "rank0",
+      "trace": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/trace/rank0/liteserver-hps-365a-00001_3326178_20261031073813599_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "fused_slot_device_tasks": 12
+    },
+    {
+      "rank": "rank10",
+      "trace": "/data/pyptouser/qinchuanyu/pto-eager/vllm-ascend-dsv4-pto-0251rc1/tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/trace/rank10/liteserver-hps-365a-00001_3326164_20261031073813599_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "fused_slot_device_tasks": 12
+    }
+  ],
+  "native_timing": {
+    "ranks": [
+      {
+        "rank": 0,
+        "min_ms": 59.25978088378906,
+        "mean_ms": 60.22537002563477,
+        "max_ms": 61.063560485839844,
+        "samples_ms": [
+          60.4522590637207,
+          60.595699310302734,
+          60.63998031616211,
+          60.765960693359375,
+          60.063621520996094,
+          61.063560485839844,
+          59.80548095703125,
+          59.759498596191406,
+          59.84785842895508,
+          59.25978088378906
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank0.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 1,
+        "min_ms": 59.201881408691406,
+        "mean_ms": 60.18683204650879,
+        "max_ms": 61.02907943725586,
+        "samples_ms": [
+          60.47526168823242,
+          60.528141021728516,
+          60.56769943237305,
+          60.766700744628906,
+          60.02207946777344,
+          61.02907943725586,
+          59.73191833496094,
+          59.734798431396484,
+          59.810760498046875,
+          59.201881408691406
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank1.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 2,
+        "min_ms": 59.23493957519531,
+        "mean_ms": 60.123748016357425,
+        "max_ms": 61.035919189453125,
+        "samples_ms": [
+          60.49420166015625,
+          60.568641662597656,
+          60.56167984008789,
+          60.27033996582031,
+          59.772918701171875,
+          61.035919189453125,
+          59.752559661865234,
+          59.72787857055664,
+          59.81840133666992,
+          59.23493957519531
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank2.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 3,
+        "min_ms": 59.27524185180664,
+        "mean_ms": 60.17666244506836,
+        "max_ms": 61.074039459228516,
+        "samples_ms": [
+          60.5299186706543,
+          60.58414077758789,
+          60.59648132324219,
+          60.23841857910156,
+          60.07786178588867,
+          61.074039459228516,
+          59.777679443359375,
+          59.748321533203125,
+          59.86452102661133,
+          59.27524185180664
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank3.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 4,
+        "min_ms": 59.2387809753418,
+        "mean_ms": 60.18892631530762,
+        "max_ms": 60.98649978637695,
+        "samples_ms": [
+          60.46889877319336,
+          60.524620056152344,
+          60.56338119506836,
+          60.81037902832031,
+          60.03348159790039,
+          60.98649978637695,
+          59.725921630859375,
+          59.7258186340332,
+          59.81148147583008,
+          59.2387809753418
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank4.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 5,
+        "min_ms": 59.191558837890625,
+        "mean_ms": 59.95017623901367,
+        "max_ms": 60.98194122314453,
+        "samples_ms": [
+          60.2905387878418,
+          60.0986213684082,
+          60.49382019042969,
+          59.38616180419922,
+          59.91400146484375,
+          60.98194122314453,
+          59.69425964355469,
+          59.68238067626953,
+          59.76847839355469,
+          59.191558837890625
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank5.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 6,
+        "min_ms": 59.29726028442383,
+        "mean_ms": 60.26586799621582,
+        "max_ms": 61.11643981933594,
+        "samples_ms": [
+          60.55910110473633,
+          60.63383865356445,
+          60.637001037597656,
+          60.800079345703125,
+          60.118839263916016,
+          61.11643981933594,
+          59.798641204833984,
+          59.82183837890625,
+          59.875640869140625,
+          59.29726028442383
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank6.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 7,
+        "min_ms": 59.179100036621094,
+        "mean_ms": 60.16240234375,
+        "max_ms": 60.984439849853516,
+        "samples_ms": [
+          60.428321838378906,
+          60.518821716308594,
+          60.57487869262695,
+          60.73360061645508,
+          60.00205993652344,
+          60.984439849853516,
+          59.7247200012207,
+          59.697479248046875,
+          59.780601501464844,
+          59.179100036621094
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank7.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 8,
+        "min_ms": 59.2381591796875,
+        "mean_ms": 60.222507858276366,
+        "max_ms": 61.03303909301758,
+        "samples_ms": [
+          60.4847412109375,
+          60.54494094848633,
+          60.60490036010742,
+          60.9815788269043,
+          60.0313606262207,
+          61.03303909301758,
+          59.75101852416992,
+          59.73064041137695,
+          59.82469940185547,
+          59.2381591796875
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank8.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 9,
+        "min_ms": 59.312740325927734,
+        "mean_ms": 60.265597915649415,
+        "max_ms": 61.10108184814453,
+        "samples_ms": [
+          60.552101135253906,
+          60.62683868408203,
+          60.67097854614258,
+          60.903900146484375,
+          60.08884048461914,
+          61.10108184814453,
+          59.77363967895508,
+          59.782318115234375,
+          59.84354019165039,
+          59.312740325927734
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank9.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 10,
+        "min_ms": 59.29616165161133,
+        "mean_ms": 60.25083999633789,
+        "max_ms": 61.05807876586914,
+        "samples_ms": [
+          60.51327896118164,
+          60.5966796875,
+          60.641300201416016,
+          60.87425994873047,
+          60.07320022583008,
+          61.05807876586914,
+          59.81642150878906,
+          59.7869987487793,
+          59.852020263671875,
+          59.29616165161133
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank10.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 11,
+        "min_ms": 59.234981536865234,
+        "mean_ms": 60.23718032836914,
+        "max_ms": 61.09307861328125,
+        "samples_ms": [
+          60.49440002441406,
+          60.56949996948242,
+          60.56420135498047,
+          61.09307861328125,
+          60.05419921875,
+          61.04425811767578,
+          59.75680160522461,
+          59.74494171142578,
+          59.8154411315918,
+          59.234981536865234
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank11.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 12,
+        "min_ms": 59.25315856933594,
+        "mean_ms": 59.84372177124023,
+        "max_ms": 60.31752014160156,
+        "samples_ms": [
+          59.822818756103516,
+          60.123741149902344,
+          60.21656036376953,
+          59.77320098876953,
+          59.626338958740234,
+          60.31752014160156,
+          59.73740005493164,
+          59.74515914916992,
+          59.821319580078125,
+          59.25315856933594
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank12.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 13,
+        "min_ms": 58.51464080810547,
+        "mean_ms": 58.7311466217041,
+        "max_ms": 58.9511604309082,
+        "samples_ms": [
+          58.83100128173828,
+          58.9511604309082,
+          58.72568130493164,
+          58.67340087890625,
+          58.51464080810547,
+          58.619258880615234,
+          58.81275939941406,
+          58.841800689697266,
+          58.54024124145508,
+          58.80152130126953
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank13.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 14,
+        "min_ms": 59.17660140991211,
+        "mean_ms": 59.74747581481934,
+        "max_ms": 60.31296157836914,
+        "samples_ms": [
+          59.856998443603516,
+          59.66825866699219,
+          60.31296157836914,
+          60.01342010498047,
+          59.6619987487793,
+          60.026039123535156,
+          59.69070053100586,
+          59.696659088134766,
+          59.37112045288086,
+          59.17660140991211
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank14.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      },
+      {
+        "rank": 15,
+        "min_ms": 59.22233963012695,
+        "mean_ms": 59.824402236938475,
+        "max_ms": 60.31856155395508,
+        "samples_ms": [
+          60.0880012512207,
+          59.4798583984375,
+          60.31856155395508,
+          60.0323600769043,
+          59.72328186035156,
+          60.156959533691406,
+          59.73244094848633,
+          59.71141815185547,
+          59.77880096435547,
+          59.22233963012695
+        ],
+        "source": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/rank15.performance.json",
+        "stage": "measured",
+        "request_keys": [
+          "h131072_q00",
+          "h131072_q01",
+          "h131072_q02",
+          "h131072_q03",
+          "h131072_q04",
+          "h131072_q05",
+          "h131072_q06",
+          "h131072_q07",
+          "h131072_q08",
+          "h131072_q09",
+          "h131072_q10",
+          "h131072_q11",
+          "h131072_q12",
+          "h131072_q13",
+          "h131072_q14",
+          "h131072_q15"
+        ],
+        "request_histories": [
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131104,
+          131273,
+          131290,
+          131273,
+          131346,
+          131290,
+          131106,
+          131273,
+          131290,
+          131273,
+          131346
+        ],
+        "spec_decode": {
+          "counters": {
+            "num_drafts": 1615,
+            "num_draft_tokens": 8075,
+            "num_accepted_tokens": 6137
+          },
+          "num_accepted_tokens_per_pos": [
+            1508,
+            1399,
+            1193,
+            1071,
+            966
+          ],
+          "accepted_per_draft": 3.8,
+          "advance_per_step": 4.8,
+          "draft_tokens_per_draft": 5.0,
+          "acceptance_rate": 0.76,
+          "acceptance_rate_per_pos": [
+            0.9337461300309597,
+            0.8662538699690403,
+            0.7386996904024767,
+            0.6631578947368421,
+            0.5981424148606811
+          ],
+          "sufficient": true
+        }
+      }
+    ],
+    "slowest_rank": 6,
+    "slowest_rank_mean_ms": 60.26586799621582,
+    "pooled_mean_ms": 60.025178623199466,
+    "pooled_p95_ms": 61.03303909301758,
+    "pooled_max_ms": 61.11643981933594
+  },
+  "native_host": {
+    "intervals_ms": {
+      "inputs_monotonic_ns": {
+        "min": 2.329416,
+        "mean": 32.5717499125,
+        "max": 37.401817
+      },
+      "inputs_thread_cpu_ns": {
+        "min": 2.31784,
+        "mean": 32.4161553125,
+        "max": 37.26706
+      },
+      "batch_coordination_monotonic_ns": {
+        "min": 3.421857,
+        "mean": 12.13027128125,
+        "max": 98.888287
+      },
+      "batch_coordination_thread_cpu_ns": {
+        "min": 0.29706,
+        "mean": 0.3606385,
+        "max": 0.63685
+      },
+      "metadata_monotonic_ns": {
+        "min": 2.680629,
+        "mean": 3.21412861875,
+        "max": 5.008165
+      },
+      "metadata_thread_cpu_ns": {
+        "min": 2.66295,
+        "mean": 2.965926375,
+        "max": 3.93403
+      },
+      "forward_submit_monotonic_ns": {
+        "min": 0.149801,
+        "mean": 0.18120764375,
+        "max": 0.452955
+      },
+      "forward_submit_thread_cpu_ns": {
+        "min": 0.15008,
+        "mean": 0.1735684375,
+        "max": 0.23594
+      },
+      "dp_sync_monotonic_ns": {
+        "min": 3.285235,
+        "mean": 11.99569443125,
+        "max": 98.766386
+      },
+      "dp_sync_thread_cpu_ns": {
+        "min": 0.1846,
+        "mean": 0.2271041875,
+        "max": 0.40311
+      },
+      "dp_all_reduce_monotonic_ns": {
+        "min": 3.120634,
+        "mean": 11.83915125,
+        "max": 98.621834
+      },
+      "dp_all_reduce_thread_cpu_ns": {
+        "min": 0.05017,
+        "mean": 0.072621875,
+        "max": 0.13886
+      }
+    },
+    "aligned_step_spreads_ms": [
+      {
+        "execute_entry": 8.458092,
+        "inputs_end": 0.554196,
+        "batch_coordination_end": 0.308123,
+        "attention_metadata_end": 2.216344,
+        "forward_entry": 2.442867,
+        "forward_submitted": 2.446237,
+        "dp_all_reduce_begin": 0.648377,
+        "dp_all_reduce_end": 0.290513,
+        "dp_sync_end": 0.300653
+      },
+      {
+        "execute_entry": 9.1371,
+        "inputs_end": 0.673097,
+        "batch_coordination_end": 0.320334,
+        "attention_metadata_end": 1.7907,
+        "forward_entry": 2.052942,
+        "forward_submitted": 2.147034,
+        "dp_all_reduce_begin": 0.866649,
+        "dp_all_reduce_end": 0.281933,
+        "dp_sync_end": 0.310063
+      },
+      {
+        "execute_entry": 8.968118,
+        "inputs_end": 0.625437,
+        "batch_coordination_end": 0.378104,
+        "attention_metadata_end": 2.266234,
+        "forward_entry": 2.523967,
+        "forward_submitted": 2.581988,
+        "dp_all_reduce_begin": 0.742758,
+        "dp_all_reduce_end": 0.376374,
+        "dp_sync_end": 0.374194
+      },
+      {
+        "execute_entry": 116.121735,
+        "inputs_end": 95.096656,
+        "batch_coordination_end": 0.430755,
+        "attention_metadata_end": 2.001952,
+        "forward_entry": 2.368416,
+        "forward_submitted": 2.497337,
+        "dp_all_reduce_begin": 95.304789,
+        "dp_all_reduce_end": 0.416194,
+        "dp_sync_end": 0.416914
+      },
+      {
+        "execute_entry": 8.640055,
+        "inputs_end": 0.551126,
+        "batch_coordination_end": 0.243662,
+        "attention_metadata_end": 1.618337,
+        "forward_entry": 1.82471,
+        "forward_submitted": 2.107393,
+        "dp_all_reduce_begin": 0.674238,
+        "dp_all_reduce_end": 0.225452,
+        "dp_sync_end": 0.234643
+      },
+      {
+        "execute_entry": 8.464462,
+        "inputs_end": 0.635627,
+        "batch_coordination_end": 0.438445,
+        "attention_metadata_end": 2.594468,
+        "forward_entry": 2.905592,
+        "forward_submitted": 2.974862,
+        "dp_all_reduce_begin": 0.808038,
+        "dp_all_reduce_end": 0.378854,
+        "dp_sync_end": 0.414124
+      },
+      {
+        "execute_entry": 8.483952,
+        "inputs_end": 0.410364,
+        "batch_coordination_end": 0.250472,
+        "attention_metadata_end": 1.798669,
+        "forward_entry": 1.87087,
+        "forward_submitted": 1.962262,
+        "dp_all_reduce_begin": 0.471015,
+        "dp_all_reduce_end": 0.229582,
+        "dp_sync_end": 0.230443
+      },
+      {
+        "execute_entry": 7.194648,
+        "inputs_end": 0.363494,
+        "batch_coordination_end": 0.317963,
+        "attention_metadata_end": 1.454436,
+        "forward_entry": 1.644188,
+        "forward_submitted": 1.695708,
+        "dp_all_reduce_begin": 0.409625,
+        "dp_all_reduce_end": 0.316353,
+        "dp_sync_end": 0.316774
+      },
+      {
+        "execute_entry": 6.776023,
+        "inputs_end": 0.483536,
+        "batch_coordination_end": 0.330154,
+        "attention_metadata_end": 1.609927,
+        "forward_entry": 1.85253,
+        "forward_submitted": 1.988542,
+        "dp_all_reduce_begin": 0.655448,
+        "dp_all_reduce_end": 0.306454,
+        "dp_sync_end": 0.326844
+      },
+      {
+        "execute_entry": 6.947885,
+        "inputs_end": 0.345833,
+        "batch_coordination_end": 0.266823,
+        "attention_metadata_end": 1.515176,
+        "forward_entry": 1.371025,
+        "forward_submitted": 1.448165,
+        "dp_all_reduce_begin": 0.369954,
+        "dp_all_reduce_end": 0.261003,
+        "dp_sync_end": 0.263703
+      }
+    ],
+    "spread_summary_ms": {
+      "execute_entry": {
+        "min": 6.776023,
+        "mean": 18.919207,
+        "max": 116.121735
+      },
+      "inputs_end": {
+        "min": 0.345833,
+        "mean": 9.9739366,
+        "max": 95.096656
+      },
+      "batch_coordination_end": {
+        "min": 0.243662,
+        "mean": 0.3284835,
+        "max": 0.438445
+      },
+      "attention_metadata_end": {
+        "min": 1.454436,
+        "mean": 1.8866243,
+        "max": 2.594468
+      },
+      "forward_entry": {
+        "min": 1.371025,
+        "mean": 2.0857107,
+        "max": 2.905592
+      },
+      "forward_submitted": {
+        "min": 1.448165,
+        "mean": 2.1849528,
+        "max": 2.974862
+      },
+      "dp_all_reduce_begin": {
+        "min": 0.369954,
+        "mean": 10.0950891,
+        "max": 95.304789
+      },
+      "dp_all_reduce_end": {
+        "min": 0.225452,
+        "mean": 0.3082712,
+        "max": 0.416194
+      },
+      "dp_sync_end": {
+        "min": 0.230443,
+        "mean": 0.3188355,
+        "max": 0.416914
+      }
+    },
+    "aligned_step_max_forward_ms": [
+      60.55910110473633,
+      60.63383865356445,
+      60.67097854614258,
+      61.09307861328125,
+      60.118839263916016,
+      61.11643981933594,
+      59.81642150878906,
+      59.82183837890625,
+      59.875640869140625,
+      59.312740325927734
+    ],
+    "aligned_step_max_summary_ms": {
+      "min": 59.312740325927734,
+      "mean": 60.30189170837402,
+      "max": 61.11643981933594
+    },
+    "alignment": "同机monotonic_ns按20ms自然间隔分组，每组恰好16个不同rank；未改计时或增加屏障。"
+  },
+  "native_checks": [
+    {
+      "rank": 0,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 1,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 2,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 3,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 4,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 5,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 6,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 7,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 8,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 9,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 10,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 11,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 12,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 13,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 14,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "rank": 15,
+      "exact_requests": 16,
+      "requests": 16,
+      "steady_tokens_equal": true,
+      "spec_counters_equal": true,
+      "bindings": [
+        [
+          0,
+          0,
+          1,
+          1,
+          2,
+          1
+        ]
+      ]
+    }
+  ],
+  "public_cpu_tests": 33,
+  "native_decision": "整数/输出/接受统计通过，但Native候选未见target收益，不启用Native融合，不把其变慢算作PTO收益。"
+}

@@ -1,0 +1,198 @@
+--- a/vllm_ascend/worker/block_table.py
++++ b/vllm_ascend/worker/block_table.py
+@@ -96,6 +96,8 @@
+         self.num_blocks_per_row = np.zeros(max_num_reqs, dtype=np.int32)
+         self.slot_mapping = self._make_buffer(self.max_num_batched_tokens + 2 * self.max_num_reqs, dtype=torch.int32)
+ 
++        self.dsa_slot_mappings: tuple[torch.Tensor, ...] = ()
++
+         self.kernel_sizes = kernel_sizes
+         self.cp_kv_cache_interleave_size = cp_kv_cache_interleave_size
+ 
+@@ -139,6 +141,16 @@
+ 
+         self.block_table.np[[src, tgt]] = self.block_table.np[[tgt, src]]
+ 
++    def bind_dsa_slot_mappings(self, outputs: tuple[torch.Tensor, ...]) -> bool:
++        """Reuse builders' buffers; validate the supported layout once at init."""
++        if self.dcp_world_size != 1 or self.use_hybrid_blocks or not 1 <= len(outputs) <= 2:
++            return False
++        if any(x.dtype != torch.int32 or x.ndim != 2 or x.shape[1] != 2
++               or x.shape[0] < self.max_num_batched_tokens or not x.is_contiguous() for x in outputs):
++            return False
++        self.dsa_slot_mappings = outputs
++        return True
++
+     def compute_slot_mapping(
+         self,
+         num_reqs: int,
+@@ -146,6 +158,18 @@
+         positions: torch.Tensor,
+     ) -> None:
+         num_tokens = positions.shape[0]
++        if self.dsa_slot_mappings:
++            from vllm_ascend.ops.triton.dsa_slot_mapping import compute_dsa_slot_mapping_kernel
++
++            first = self.dsa_slot_mappings[0]
++            second = self.dsa_slot_mappings[-1]
++            compute_dsa_slot_mapping_kernel[(num_reqs + 1,)](
++                num_tokens, self.max_num_batched_tokens, query_start_loc, positions,
++                self.block_table.gpu, self.block_table.gpu.stride(0), self.slot_mapping.gpu,
++                first, second, CACHE_BLOCK_SIZE=self.block_size, BLOCK_SIZE=512,
++                WRITE_SECOND=len(self.dsa_slot_mappings) == 2,
++            )
++            return
+         total_cp_world_size = self.dcp_world_size
+         total_cp_rank = self.dcp_rank
+         if self.dcp_world_size > 1:
+--- a/vllm_ascend/worker/model_runner_v1.py
++++ b/vllm_ascend/worker/model_runner_v1.py
+@@ -1994,6 +1994,7 @@
+                     num_scheduled_tokens=scheduler_output.num_scheduled_tokens,
+                     num_scheduled_tokens_np=num_scheduled_tokens_np,
+                     cascade_attn_prefix_lens=cascade_attn_prefix_lens,
++                    slot_mapping_precomputed=True,
+                 )
+ 
+                 self._sanitize_placeholder_input_ids_for_forward(
+@@ -2821,6 +2822,7 @@
+         num_scheduled_tokens: dict[str, int] | None = None,
+         num_scheduled_tokens_np: np.ndarray | None = None,
+         cascade_attn_prefix_lens: list[list[int]] | None = None,
++        slot_mapping_precomputed: bool = False,
+     ) -> tuple[PerLayerAttnMetadata, CommonAttentionMetadata | None]:
+         """
+         :return: tuple[attn_metadata, spec_decode_common_attn_metadata]
+@@ -2995,6 +2997,10 @@
+                     # Native实际消费者仍可调用ensure_native_metadata获取计划。
+                     defer_native_csa_metadata=is_csa_model(self.vllm_config) and (
+                         not for_cudagraph_capture or self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
++                    ),
++                    slot_mapping_precomputed=(
++                        slot_mapping_precomputed and not for_cudagraph_capture and ubid is None
++                        and type(builder) is AscendDSAMetadataBuilder and builder.slot_mapping_precomputed
+                     ),
+                 )
+ 
+@@ -3630,6 +3636,20 @@
+ 
+         self.debugger.step(**kwargs)
+ 
++    def _bind_dsa_slot_mappings(self) -> None:
++        # Bind existing metadata buffers once. No allocation or parameter scan
++        # is added to a replay or an individual attention layer.
++        if not self.use_compress or self.parallel_config.enable_dbo:
++            return
++        for group_id, groups in enumerate(self.attn_groups):
++            builders = [group.get_metadata_builder(0) for group in groups]
++            builders = [builder for builder in builders
++                        if type(builder) is AscendDSAMetadataBuilder and builder.compressor_ratio <= 1]
++            table = self.input_batch.block_table[group_id]
++            if table.bind_dsa_slot_mappings(tuple(builder.slot_mapping for builder in builders)):
++                for builder in builders:
++                    builder.slot_mapping_precomputed = True
++
+     def initialize_kv_cache(self, kv_cache_config: KVCacheConfig) -> None:
+         """
+         Initialize KV cache based on `kv_cache_config`.
+@@ -3652,6 +3672,7 @@
+         )
+ 
+         self.may_reinitialize_input_batch(kv_cache_config)
++        self._bind_dsa_slot_mappings()
+         kv_caches = self.initialize_kv_cache_tensors(kv_cache_config)
+         # TODO: refactor the logic of attention
+         if (
+--- a/vllm_ascend/attention/dsa_v1.py
++++ b/vllm_ascend/attention/dsa_v1.py
+@@ -552,6 +552,7 @@
+         # Note(qcs): we use two dimension slot_mapping for kvcache with shape
+         # [block_nums, block_size, head_num, head_dim]
+         self.slot_mapping = torch.zeros(self.slot_mapping_shape, dtype=torch.int32, device=self.device)
++        self.slot_mapping_precomputed = False
+ 
+     @classmethod
+     def get_cudagraph_support(
+@@ -696,7 +697,9 @@
+         # PTO obtain real compressed slots from CompressorMetadata in forward;
+         # this raw slot buffer has no consumer for C4 or C128 decode.
+         # Keep prefill and the SWA/state buffers on their existing path.
+-        if self.num_prefills or self.compressor_ratio <= 1:
++        if (self.num_prefills or self.compressor_ratio <= 1) and not kwargs.get(
++            "slot_mapping_precomputed", False
++        ):
+             slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
+             self.slot_mapping[:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(slot_mapping, self.block_size)
+ 
+--- /dev/null
++++ b/vllm_ascend/ops/triton/dsa_slot_mapping.py
+@@ -0,0 +1,57 @@
++# SPDX-License-Identifier: Apache-2.0
++"""Emit the existing flat slot and DSA page/offset in the same kernel.
++
++This entry is for unsplit physical blocks and CP=1. Other block-table paths
++keep the upstream implementation. The flat output and Native padding values
++are preserved; consumers do not need a cache-layout conversion.
++"""
++
++from vllm.triton_utils import tl, triton
++
++
++@triton.jit
++def compute_dsa_slot_mapping_kernel(
++    num_tokens,
++    max_num_tokens,
++    query_start_loc_ptr,
++    positions_ptr,
++    block_table_ptr,
++    block_table_stride,
++    slot_mapping_ptr,
++    dsa_slot_mapping_ptr,
++    secondary_slot_mapping_ptr,
++    CACHE_BLOCK_SIZE: tl.constexpr,
++    BLOCK_SIZE: tl.constexpr,
++    WRITE_SECOND: tl.constexpr,
++):
++    request = tl.program_id(0)
++    if request == tl.num_programs(0) - 1:
++        for start in range(num_tokens, max_num_tokens, BLOCK_SIZE):
++            offsets = start + tl.arange(0, BLOCK_SIZE)
++            mask = offsets < max_num_tokens
++            tl.store(slot_mapping_ptr + offsets, -1, mask=mask)
++            # Native format_dsa_slot_mapping(-1, K) is [-1, K-1].
++            tl.store(dsa_slot_mapping_ptr + 2 * offsets, -1, mask=mask)
++            tl.store(dsa_slot_mapping_ptr + 2 * offsets + 1, CACHE_BLOCK_SIZE - 1, mask=mask)
++            if WRITE_SECOND:
++                tl.store(secondary_slot_mapping_ptr + 2 * offsets, -1, mask=mask)
++                tl.store(secondary_slot_mapping_ptr + 2 * offsets + 1, CACHE_BLOCK_SIZE - 1, mask=mask)
++        return
++
++    begin = tl.load(query_start_loc_ptr + request).to(tl.int64)
++    end = tl.load(query_start_loc_ptr + request + 1).to(tl.int64)
++    for start in range(begin, end, BLOCK_SIZE):
++        offsets = start + tl.arange(0, BLOCK_SIZE)
++        mask = offsets < end
++        positions = tl.load(positions_ptr + offsets, mask=mask, other=0)
++        columns = positions // CACHE_BLOCK_SIZE
++        pages = tl.load(
++            block_table_ptr + request * block_table_stride + columns, mask=mask, other=0
++        ).to(tl.int64)
++        within_page = positions - columns * CACHE_BLOCK_SIZE
++        tl.store(slot_mapping_ptr + offsets, pages * CACHE_BLOCK_SIZE + within_page, mask=mask)
++        tl.store(dsa_slot_mapping_ptr + 2 * offsets, pages, mask=mask)
++        tl.store(dsa_slot_mapping_ptr + 2 * offsets + 1, within_page, mask=mask)
++        if WRITE_SECOND:
++            tl.store(secondary_slot_mapping_ptr + 2 * offsets, pages, mask=mask)
++            tl.store(secondary_slot_mapping_ptr + 2 * offsets + 1, within_page, mask=mask)
+--- a/tests/pypto_test/offline_pd/worker.py
++++ b/tests/pypto_test/offline_pd/worker.py
+@@ -84,6 +84,9 @@
+             "dynamic_eplb": self.model_runner.dynamic_eplb,
+             "cann_event_work_mode": get_event_work_mode() if torch_npu.npu.is_initialized() else None,
+             "task_queue_enable": get_task_queue_enable(),
++            "dsa_fused_slot_outputs_per_group": [
++                len(table.dsa_slot_mappings) for table in self.model_runner.input_batch.block_table.block_tables
++            ],
+             "decode_optimizations": {
+                 "ascend_compilation_config": {
+                     name: getattr(ascend.ascend_compilation_config, name)

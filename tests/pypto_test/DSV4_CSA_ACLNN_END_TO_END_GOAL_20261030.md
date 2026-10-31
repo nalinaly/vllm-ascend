@@ -108,7 +108,8 @@
 
 ## 5. 近期任务与顺序
 
-- [ ] 核对本机实际导入源码/wheel、启动脚本、计时区间及约50 ms基线。
+- [x] 核对本机实际导入源码/wheel、启动脚本及target设备事件计时区间。
+- [ ] 核对客户约50 ms记录对应的输入分配和版本；当前不将本机基线等同于客户约数。
 - [x] 对齐后置ACLNN版本；确认业务不走旧Host选档包或Simpler/Python调用。
 - [x] 梳理Worker、图包装器、CSA service及Torch包装中的稳态额外处理，标出删除点。
 - [x] 删除后置ACLNN的8K/长度Host门槛、逐层签名和policy多图逻辑。
@@ -138,113 +139,48 @@
 
 ## 7. 当前事实与后续阶段
 
-本目标建立时，本地HEAD为`60ceaf69c`。已有后置94档ACLNN的单卡业务入口、混长/
-padding和同图跨长度验证；这些不能当作当前真实整网目标已完成。
+截至2026-10-31，**48ms目标尚未完成**。运行时为0.4.0统一设备选档ACLNN，
+真实16-worker测试未调用Simpler/Python算子。T96/T6正常静态编译、捕获与replay，
+21层CSA均已合入SK；范围证据见
+[sk_capture_members.json](csa_aclnn_host_20261030/sk_capture_members.json)。
+逐层签名/Host policy、8K与DSpark接入门槛、无消费者QLI/C4 SAS及其重复准备已清理。
 
-目标建立时仍有逐层 `allows_replay → graph_signature`，Worker会计算最大长度并据此
-强制eager；QLI/C4 SAS已有按需准备框架，但仍有冗余准备及捕图开销。
-2026-10-30第一阶段已在后置ACLNN路径移除以上检查，短历史混长和128K/B16的
-真实单层service/ACLGraphWrapper验证通过。证据见
-[csa_aclnn_host_20261030/validation.json](csa_aclnn_host_20261030/validation.json)。
-现有单卡验证没有证明SuperKernel/整模型性能达标，不能继承为本轮验收结论。
+固定输入是Native生成的128K公共前缀加问题后缀，准确历史为131104～131346，
+每rank固定相同16题，共256请求；不误写为每请求恰好131072，也不通过换题追求48ms。
+主指标为预热后连续10个满批T96 target `_model_forward`的设备事件均值，报告最慢rank；
+P95/max取16rank全部160样本，保留长尾。独立三步profile只解释原因，不混入验收均值。
+
+| 已完成对照（ms） | Native最慢rank mean | PTO最慢rank mean | PTO P95 | PTO max |
+| --- | ---: | ---: | ---: | ---: |
+| 移除无用途replay前Host等待，event=1 | 59.645 | 53.259 | 53.810 | 54.277 |
+| 同源码，event=0 | 60.624 | 52.617 | 53.238 | 53.499 |
+| 再删未消费压缩slot准备，event=0 | 59.678 | 53.040 | 53.792 | 54.349 |
+| PTO二维slot融合，Native沿用上一行 | 59.678 | 52.818 | 53.379 | 53.730 |
+
+最新公共代码为第四行；此前52.617ms只是已有最好结果，不能把单次波动当稳定收益。
+两侧各自与前一版的256请求token及接受统计保持一致；这不消除原有Native/PTO复杂
+问题差异。完整样本分别见
+[replay_async_validation.json](csa_aclnn_host_20261030/replay_async_validation.json)、
+[event_mode0_validation.json](csa_aclnn_host_20261030/event_mode0_validation.json)、
+[unused_compressed_slots_validation.json](csa_aclnn_host_20261030/unused_compressed_slots_validation.json)。
+
+本轮接入：在原slot kernel内同时写出Native二维slot，复用原builder buffer，
+保留一维输出，减少DP协调后重复拆分及copy。单卡整数/保护区对照及31项CPU回归
+通过。冻结`model_decode_source_fused_slots_v1`的16卡PTO任务
+`task_20261031_072638_331273526041`已通过，metadata准备mean为2.333ms，
+target最慢rank mean为52.818ms、P95为53.379ms、max为53.730ms。全部256请求
+token及16rank接受统计与上一版一致；相对紧邻基线53.040ms小幅下降，仍未优于
+历史最好52.617ms，也未达到48ms。不能将Host省下的0.803ms直接计作网络收益。
+Native兼容性对照`task_20261031_075603_898532825`也通过，但target为60.266ms，
+未优于原版59.678ms。因此公共接入仅在后置PTO ACLNN初始化时启用，Native保持
+原路径；不将Native候选变慢算作PTO收益。公共接入33项CPU回归通过。
+证据见[fused_slots_validation.json](csa_aclnn_host_20261030/fused_slots_validation.json)。
+
+已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
+通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、
+改共享工具链或将Host错误断言为DSpark设备越界。原始负面证据、旧版部分静态覆盖
+等被撤回结论均保留在[验证日志](DSV4_FLASH_CSA_VALIDATION_LOG.md)，不再在本目标
+文档重复过时的排队/验收状态。
 
 第二阶段保留目标：缩短初始化静态/SK编译、减少重复编译并完善部署复现。
 依赖第一阶段功能与端到端收益验收；不以第二阶段工作替代本轮稳态Host精简。
-
-2026-10-31进展：正式包内自动静态编译与单卡真实SK dispatch已通过，CSA
-resolvedNum=4/isFusible=1，实际融合CompressorMetadata→CSA并正确replay。
-旧包API成功但普通核回退的情况已撤回为静态证据。51项CPU回归通过，0.3.0
-wheel已构建。真实128K KV bank正在重建；首个16卡任务被队列默认300秒
-超时终止，重试已改为3600秒并复用编译缓存。尚无16卡target forward时间，
-整模型SK范围与≤48ms均保持待验收，详见本轮sk_dispatch_validation.json
-及model_progress.json。
-
-2026-10-31后续：真实128K前缀和40个不同问题的Native后缀KV已生成并通过
-覆盖检查。性能取固定前16题，两侧复用相同输入；记录逐请求准确历史，
-不将追加问题后缀后的长度误写为恰好131072。Native整网初次启动在图融合
-规则注册时缺少AddRmsNormBias，未进入计时；已补入既有CANN9.2算子vendor，
-复用缓存重试。仍没有16卡target性能结论。
-
-2026-10-31阶段结果：两侧16卡旧版同配置对照已完成，最慢rank mean为
-Native 64.273ms、PTO 56.411ms（下降12.23%）。真实trace确认QLI metadata
-消失、C4 SAS减少，21层使用后置ACLNN且未运行Simpler。但两侧T96首次
-profile缺少真实attention metadata，编译器提前将该shape标为已编译，
-导致T96 attention静态覆盖不完整；上述数字只作诊断，不能作为最终SK验收。
-
-捕图前使用真实metadata补齐静态核的修复已提交，CPU及单卡128K/B16
-padding→真实请求replay通过，输出/五组cache状态逐bit对齐eager。
-两侧已冻结同一修复版源码重新排队，48ms、完整SK范围与通信收益仍待验收。
-详见本轮validation log及`csa_aclnn_host_20261030/model_progress.json`。
-
-2026-10-31最新：0.4.0包用等价的连续ND描述符消除了逐层重复静态二进制及
-程序显存OOM；T96/T6图均完成捕获。相同v3模型源码、真实输入和配置下，
-最慢rank mean为Native **59.635ms**、PTO **53.979ms**，下降**9.48%**，
-距离48ms仍差**5.979ms**。完整原始采样与局限见
-[target_capture_static_comparison.json](csa_aclnn_host_20261030/target_capture_static_comparison.json)。
-21层均捕获后置ACLNN，三步主图没有普通CSA派发；多数CSA位于SK名称中间，
-不能仅用端点名字穷举融合组成员，精确SK范围审计仍保留待办。
-
-现有稳态Host记录显示，PTO的16rank下发前时间差均值1.512ms、最大3.088ms，
-batch协调结束时仅均值0.412ms、最大0.691ms。后续沿metadata准备及下发
-偏差排查通信等待，不新增CSA专属Host校验、不换计时边界，也不把关联当因果。
-正常ACLNN热路径只保留必要参数传递与派发；现有旧后端合同不进入后置ACLNN。
-
-2026-10-31后续：删除PTO纯decode中没有消费者的C4 slot转换，以及公共metadata
-已经完成后的第二次RoPE gather/copy。单卡实际Native builder/service/replay及
-16项CPU回归通过。16卡任务正常完成，metadata准备均值4.040→3.523ms；但
-出现一次DP协调返回时的约9.70ms rank偏差，forward入口扩大到10.404ms。
-最新候选最慢rank mean **54.364ms**、max **63.236ms**，不能认定整网改善；
-历史0.4.0基线53.979ms仍保留，不删除长尾或调整48ms目标。
-
-SK证据已补强：同一T96/T6图的优化前后dump均显示21个静态CSA全部合入SK，
-按保留的Stream/Task ID逐个列出成员，见
-[sk_capture_members.json](csa_aclnn_host_20261030/sk_capture_members.json)。
-沿用与Native相同的完整forward捕获/优化边界；debug_dump占位时间不用于性能。
-
-后续优先细分真实模型中DP all_reduce等待/唤醒及返回后处理。纯CPU16rank
-迟到输入实验未复现10ms偏差，主动轮询没有收益且明显增加CPU消耗，已排除。
-不新增barrier，不跳过DP协调，不将当前Host准备改善等同于整网验收。
-
-2026-10-31细分诊断已完成：同一metadata复用候选的最慢rank mean为
-**53.230ms**、P95 **53.656ms**、max **54.206ms**，仍差48ms约**5.230ms**。
-本次all_reduce返回的rank偏差最大0.462ms，未复现上一轮约9.70ms偏差；
-不得将“本次没有出现”写成“长尾已修复”。详见
-[dp_sync_diagnostic.json](csa_aclnn_host_20261030/dp_sync_diagnostic.json)。
-
-进一步省略满批start_pos被立即覆盖的填零、空padding切片fill及重复CPU长度
-max。22项CPU回归和单卡replay通过，两侧使用同一冻结源码成对排队验证；
-不提前使用旧Native基线宣称这部分通用修改的收益。原有模型、输入及通信
-配置保持，MoE融合路径是否纳入下一阶段已询问用户，答复前不切换该配置。
-
-2026-10-31最新成对结果：满批空操作清理后，Native最慢rank均值61.338ms
-（本次有69.125ms长尾），PTO **53.014ms**、P95 **54.100ms**、max **54.270ms**。
-不丢弃长尾，也不把Native本次波动全算作优化收益；距离48ms仍差5.014ms。
-
-发现并移除DSV4图replay前为不存在的attention参数更新设置的Host同步；
-普通模型默认行为保留，DSV4 Native/PTO同改。同流输入更新、跨流设备依赖和
-输入准备事件不变。CPU9项与单卡静态/SK连续异步replay通过，两组不同输入
-输出和五组状态均逐bit对齐各自eager。真实16卡同配置对照已排队，尚不宣称
-性能收益或长尾解决，证据见`csa_aclnn_host_20261030/replay_async_validation.json`。
-
-后续PTO整网完成：去除Host同步后提交mean0.580→0.181ms，但target最慢rank
-mean为53.259ms（前一轮53.014ms），不能认定整网改善。256个192-token请求及
-DSpark统计与前一轮一致；Native同源对照运行中。event mode=0作为独立候选已
-排队，其余配置和固定输入保持不变，尚不替换默认mode=1。48ms目标仍未完成。
-
-最新同源mode=1对照完成：Native最慢rank mean59.645ms，PTO53.259ms，PTO下降
-10.71%；两侧各自与修改前的输出及接受统计均一致。event mode=0独立候选进一步
-得到PTO **52.617ms**、P95 **53.238ms**、max **53.499ms**，实际16worker均为
-mode=0且未运行Simpler，输出和接受统计不变。距离48ms仍差4.617ms；同模式
-Native任务已排队，未完成前不混用mode=1基线。三步trace中的迟到已定位到
-局部设备任务间隙，不能归为逐层Python检查，具体证据保存在本轮validation log。
-
-Native mode=0对照完成，最慢rank均值60.624ms；相比mode=1的59.645ms更慢。
-PTO mode=0为52.617ms，较自身mode=1改善0.642ms，不将Native的回退包装成PTO
-新增收益。二级Host队列在单卡捕图即被SDK明确拒绝，已停止该候选；只继续
-单卡验证一级队列下的per-stream队列隔离，未对生产或共享SDK做未验证切换。
-
-Host队列隔离在16卡初始化出现`rtEventDestroy`相关Host堆错误，未进入性能
-采样，已停止该候选并恢复原队列；没有删除SDK检查或改共享工具链。进一步
-省略纯decode时C4/C128未被消费的原始slot格式化，保留SWA/state及prefill，
-24项CPU回归和单卡真实静态/SK异步replay通过。新一轮Native/PTO同源对照已
-排队，尚无性能结论，已有最好结果52.617ms及48ms目标保持不变。

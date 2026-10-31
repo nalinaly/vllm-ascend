@@ -25000,3 +25000,72 @@ Native输出误差仍为relative RMSE0.0043642856/max_abs0.0390625，Simpler未�
 `task_20261031_063824_145563014817`使用相同源码与原队列/event mode=0成对验证。
 由于此次同时减少Native的无效工作，待两侧完成再计算相对收益。此前PTO最慢
 rank均值52.616798ms仍是已有最好结果，48ms目标未完成。
+
+### 2026-10-31：压缩slot清理完成整网对照；私有候选融合二维slot输出
+
+上节Native/PTO任务均正常结束。Native最慢rank8 mean **59.678016ms**、
+P95 **59.962021ms**、max **60.358540ms**；PTO最慢
+rank8 mean **53.040220ms**、P95 **53.792240ms**、max **54.348518ms**。
+PTO本次没有优于前一轮52.616798ms，不能把删除无用操作直接写成整网收益。
+PTO metadata准备mean3.135520ms，Native为3.787789ms；两侧各自的256个
+192-token输出及16rank DSpark统计与前一轮一致。数据已补入
+[unused_compressed_slots_validation.json](csa_aclnn_host_20261030/unused_compressed_slots_validation.json)。
+
+下一个候选针对仍必要但重复执行的slot格式转换：现有上游slot kernel已算出
+物理页号和页内偏移，先写成一维slot后，DSA builder又启动除法、取模、stack
+和copy拆成二维。新增原型在同一次kernel中保留原一维输出，并把页号/偏移
+直接写入builder已有的一个或两个独立buffer，不共享或移动这些buffer的地址，
+也不改变KV布局。二维数据随真实`_prepare_inputs`在DP协调前生成，后续builder
+可省去重复下发；dummy/capture/draft仍用原格式化流程。
+
+支持域是CP=1、无hybrid physical block的DSV4 SWA/state输入；初始化时绑定
+原buffer，不增加CSA逐层校验或工作区。其余后端、CP/hybrid和不兼容的目标
+保持上游路径。接入修改只在私有源码`model_decode_source_fused_slots_v1`，公共
+BlockTable/ModelRunner尚未切换。候选补丁与准备脚本分别为
+[fused_slots_integration.patch](csa_aclnn_host_20261030/fused_slots_integration.patch)、
+[prepare_fused_slots_source.py](csa_aclnn_host_20261030/prepare_fused_slots_source.py)。
+
+单卡原型`task_20261031_071053_306460528961`通过12个固定整数场景：页大小
+2/32/128各覆盖128K/B16/S6、混长/padding、超过1024行的循环及空请求；包含
+负slot和非连续页表行stride。旧上游kernel的一维结果、Native二维格式、两个
+独立输出及保护区全部精确一致。随后
+`task_20261031_071807_31830158658`通过实际BlockTable绑定/派发入口再次验证。
+私有源码下31项CPU回归通过，检查原buffer身份保持、CP/hybrid/A5形状回退、
+准备完毕时不重复格式化，以及既有metadata/replay行为。
+
+原型过程中两次测试启动错误（导入路径、遗漏bootstrap的`--device`参数）均在
+NPU执行前结束，已纠正。1024元素块随后在编译期超过UB：需要1966080 bits、
+可用1572864 bits；改512后通过，无SDK修改、无设备非法访问。这里只是功能
+验证，不给出孤立小kernel收益来替代整网结果。完整记录见
+[fused_slots_validation.json](csa_aclnn_host_20261030/fused_slots_validation.json)。
+
+16卡PTO候选`task_20261031_072638_331273526041`正常结束，继续使用固定输入、
+event mode=0和原一级Host队列。最慢rank10 mean **52.817512ms**，全rank
+P95 **53.378601ms**、max **53.730000ms**；紧邻基线分别为53.040220、
+53.792240、54.348518ms。metadata准备mean **3.135520→2.332546ms**，
+forward入口跨rank偏差mean **0.984301→0.772857ms**、max
+**1.784519→1.136782ms**。保留全部样本；不能将Host省下的0.803ms直接计作
+target收益，52.817512ms仍未优于历史最好52.616798ms，48ms目标未完成。
+
+全部256请求的192-token输出及16rank DSpark统计与上一版精确一致，所有worker
+均确认Simpler未执行。初始化绑定记录在每rank均为`[0,0,1,1,2,1]`，即四组写出
+五个原有独立二维buffer。已有三步profile仅导出rank0/10，任务
+`task_20261031_075603_8989623922`正常结束；rank0可见12次融合slot设备kernel，
+对应每步四组。其余未绑定组仍执行原slot kernel，未改变主图SK计算范围。
+
+同源码Native兼容性对照`task_20261031_075603_898532825`正常结束：256请求
+输出和稳态输出、16rank DSpark统计均与原版精确一致。metadata准备mean
+**3.787789→3.214129ms**，但target最慢rank6 mean **60.265868ms**、
+P95 **61.033039ms**、max **61.116440ms**，没有优于上一版59.678016ms。
+因此最终接入**只在后置PTO ACLNN模式初始化绑定二维slot输出**；Native保持原
+slot kernel及格式化路径，不将这个未受益候选扩展到Native。此选择也不把Native
+变慢的0.588ms计作PTO优化。支持域之外的CP/hybrid/DBO继续走原实现。
+
+公共接入复用已验证的kernel和调用位置，仅新增初始化阶段的模式选择；PTO运行
+内容与已完成的16卡候选一致。公共路径33项CPU回归通过，包括Native/DBO不绑定、
+原buffer身份保持、已准备slot不重复格式化及原metadata/replay行为。单卡整数和
+整网验证已覆盖该数据路径，不为纯初始化开关重复整套NPU矩阵。没有新增CSA
+逐层Host扫描、额外设备工作区或同步。完整结果仍见上述JSON。
+
+目标文档已整理为当前状态与有效约束，历史排队、负面结论和旧版静态覆盖缺口
+继续保留在本日志及既有JSON，不在目标文档重复过时状态。

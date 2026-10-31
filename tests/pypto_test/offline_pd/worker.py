@@ -84,6 +84,9 @@ class OfflineNPUWorker(NPUWorker):
             "dynamic_eplb": self.model_runner.dynamic_eplb,
             "cann_event_work_mode": get_event_work_mode() if torch_npu.npu.is_initialized() else None,
             "task_queue_enable": get_task_queue_enable(),
+            "dsa_fused_slot_outputs_per_group": [
+                len(table.dsa_slot_mappings) for table in self.model_runner.input_batch.block_table.block_tables
+            ],
             "decode_optimizations": {
                 "ascend_compilation_config": {
                     name: getattr(ascend.ascend_compilation_config, name)

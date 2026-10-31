@@ -1994,6 +1994,7 @@ class NPUModelRunner(GPUModelRunner):
                     num_scheduled_tokens=scheduler_output.num_scheduled_tokens,
                     num_scheduled_tokens_np=num_scheduled_tokens_np,
                     cascade_attn_prefix_lens=cascade_attn_prefix_lens,
+                    slot_mapping_precomputed=True,
                 )
 
                 self._sanitize_placeholder_input_ids_for_forward(
@@ -2821,6 +2822,7 @@ class NPUModelRunner(GPUModelRunner):
         num_scheduled_tokens: dict[str, int] | None = None,
         num_scheduled_tokens_np: np.ndarray | None = None,
         cascade_attn_prefix_lens: list[list[int]] | None = None,
+        slot_mapping_precomputed: bool = False,
     ) -> tuple[PerLayerAttnMetadata, CommonAttentionMetadata | None]:
         """
         :return: tuple[attn_metadata, spec_decode_common_attn_metadata]
@@ -2994,7 +2996,12 @@ class NPUModelRunner(GPUModelRunner):
                     # 设备选档ACLNN在capture期间也不预生成无消费者的QLI/C4 SAS。
                     # Native实际消费者仍可调用ensure_native_metadata获取计划。
                     defer_native_csa_metadata=is_csa_model(self.vllm_config) and (
-                        not for_cudagraph_capture or self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
+                        not for_cudagraph_capture
+                        or self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
+                    ),
+                    slot_mapping_precomputed=(
+                        slot_mapping_precomputed and not for_cudagraph_capture and ubid is None
+                        and type(builder) is AscendDSAMetadataBuilder and builder.slot_mapping_precomputed
                     ),
                 )
 
@@ -3630,6 +3637,21 @@ class NPUModelRunner(GPUModelRunner):
 
         self.debugger.step(**kwargs)
 
+    def _bind_dsa_slot_mappings(self) -> None:
+        # Bind existing metadata buffers once. No allocation or parameter scan
+        # is added to a replay or an individual attention layer.
+        if (not self.use_compress or self.parallel_config.enable_dbo
+                or not self.vllm_config.additional_config.get("_pto_csa_device_policy", False)):
+            return
+        for group_id, groups in enumerate(self.attn_groups):
+            builders = [group.get_metadata_builder(0) for group in groups]
+            builders = [builder for builder in builders
+                        if type(builder) is AscendDSAMetadataBuilder and builder.compressor_ratio <= 1]
+            table = self.input_batch.block_table[group_id]
+            if table.bind_dsa_slot_mappings(tuple(builder.slot_mapping for builder in builders)):
+                for builder in builders:
+                    builder.slot_mapping_precomputed = True
+
     def initialize_kv_cache(self, kv_cache_config: KVCacheConfig) -> None:
         """
         Initialize KV cache based on `kv_cache_config`.
@@ -3652,6 +3674,7 @@ class NPUModelRunner(GPUModelRunner):
         )
 
         self.may_reinitialize_input_batch(kv_cache_config)
+        self._bind_dsa_slot_mappings()
         kv_caches = self.initialize_kv_cache_tensors(kv_cache_config)
         # TODO: refactor the logic of attention
         if (
