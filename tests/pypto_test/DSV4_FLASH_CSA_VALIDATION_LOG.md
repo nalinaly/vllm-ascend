@@ -25212,3 +25212,33 @@ dynamic=False、event=0、NZ2、同一权重及固定请求；不混用此前的
 样本用于计时，另采三步profile确认真实SK覆盖；同时核对同后端的token和接受统计。
 四组任务已提交，当前未完成，任务ID和协议见
 [sk_ab_validation.json](csa_aclnn_host_20261030/sk_ab_validation.json)。
+
+### 2026-10-31：四组SK对照已完成，静态编译全部保留
+
+上述四组任务在队列资源释放后均正常完成，exit=0。用户要求汇总结果，本轮只读取
+已有16rank事件记录并离线解析已有rank0三步profile，没有新增NPU测试。沿用同一
+固定请求、冻结代码、CANN9.2、static=True、inplace=True、dynamic=False和event=0。
+均值取最慢rank的10个满批B16/T96 target样本；min/P95/max取全部160个样本，不删长尾。
+
+| 后端 | SK | min/ms | 最慢rank mean/ms | P95/ms | max/ms | 最慢rank |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Native | 关 | 63.689419 | 65.862919 | 66.274803 | 66.458702 | 4 |
+| Native | 开 | 58.765598 | 59.653314 | 59.952301 | 60.118221 | 1 |
+| PTO ACLNN | 关 | 55.432720 | 56.186922 | 56.702862 | 56.836342 | 5 |
+| PTO ACLNN | 开 | 51.849541 | 52.538645 | 53.123741 | 53.440102 | 13 |
+
+开启SK后，Native减少6.209605ms（9.43%），PTO减少3.648278ms（6.49%）。
+同SK设置下PTO均快于Native：SK关减少9.675996ms（14.69%），SK开减少
+7.114669ms（11.93%）。PTO的SK1结果距离48ms仍差4.538645ms，目标未达成。
+本轮不把整网差值直接归因于某一个Host或核内改动，也不与客户约50ms混算收益。
+
+四组worker记录均确认静态编译及期望SK开关，rank0日志有实际静态编译与四个
+静态包安装记录。rank0三步主图中，SK0两侧每步SK任务数都为0，SK1的Native/PTO
+分别为582/332；PTO SK0每步有21个直接命名的CSA核。SK1名称只显示融合组首尾，
+不能通过CSA命名任务数推断全部融合成员。PTO两组禁止Python PTO/Simpler执行的
+检查通过。同后端SK0/SK1的256请求全部输出token、稳态输出和16rank的DSpark统计
+分别完全一致；这不表示Native与PTO的复杂问题输出差异已消失。
+
+汇总与原始记录路径见
+[SK_AB_RESULTS_20261031.md](csa_aclnn_host_20261030/SK_AB_RESULTS_20261031.md)，
+精简结果见[sk_ab_results.json](csa_aclnn_host_20261030/sk_ab_results.json)。

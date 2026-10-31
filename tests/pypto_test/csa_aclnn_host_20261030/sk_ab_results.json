@@ -1,0 +1,119 @@
+{
+  "protocol": "sk_ab_validation.json",
+  "timing_scope": "均值为最慢rank的10步均值；P95/max取全部160样本。这里只验证实际配置和计时，静态核重选及SK执行覆盖仍须结合独立三步profile，不能由配置推断。",
+  "cases": {
+    "native_sk0": {
+      "directory": "tests/pypto_test/csa_aclnn_host_20261030/results/native_sk0_ab_v1",
+      "task": "task_20261031_092939_370954116762",
+      "slowest_rank": 4,
+      "slowest_rank_mean_ms": 65.86291885375977,
+      "pooled_mean_ms": 65.43058788776398,
+      "pooled_p95_ms": 66.2748031616211,
+      "pooled_max_ms": 66.45870208740234,
+      "pooled_min_ms": 63.68941879272461,
+      "rank0_profile_sk_tasks": [
+        0,
+        0,
+        0
+      ],
+      "rank0_profile_trace": "tests/pypto_test/csa_aclnn_host_20261030/results/native_sk0_ab_v1/trace/rank0/liteserver-hps-365a-00001_2674354_20261031125856587_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "rank0_static_install_log": [
+        "(Worker_DP0_EP0 pid=2674354) OFFLINE_STATIC_KERNEL local_world_size=16 module_loaded=True installed_packages=4"
+      ]
+    },
+    "pto_sk0": {
+      "directory": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_sk0_ab_v1",
+      "task": "task_20261031_092939_370961728492",
+      "slowest_rank": 5,
+      "slowest_rank_mean_ms": 56.18692245483398,
+      "pooled_mean_ms": 56.057173657417295,
+      "pooled_p95_ms": 56.70286178588867,
+      "pooled_max_ms": 56.836341857910156,
+      "pooled_min_ms": 55.43272018432617,
+      "rank0_profile_sk_tasks": [
+        0,
+        0,
+        0
+      ],
+      "rank0_profile_trace": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_sk0_ab_v1/trace/rank0/liteserver-hps-365a-00001_3504898_20261031130749472_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "rank0_static_install_log": [
+        "(Worker_DP0_EP0 pid=3504898) OFFLINE_STATIC_KERNEL local_world_size=16 module_loaded=True installed_packages=4"
+      ]
+    },
+    "pto_sk1": {
+      "directory": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_sk1_ab_v1",
+      "task": "task_20261031_092939_3709736127",
+      "slowest_rank": 13,
+      "slowest_rank_mean_ms": 52.538644790649414,
+      "pooled_mean_ms": 52.45155305862427,
+      "pooled_p95_ms": 53.123741149902344,
+      "pooled_max_ms": 53.440101623535156,
+      "pooled_min_ms": 51.84954071044922,
+      "rank0_profile_sk_tasks": [
+        332,
+        332,
+        332
+      ],
+      "rank0_profile_trace": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_sk1_ab_v1/trace/rank0/liteserver-hps-365a-00001_4132981_20261031131910781_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "rank0_static_install_log": [
+        "(Worker_DP0_EP0 pid=4132981) OFFLINE_STATIC_KERNEL local_world_size=16 module_loaded=True installed_packages=4"
+      ]
+    },
+    "native_sk1": {
+      "directory": "tests/pypto_test/csa_aclnn_host_20261030/results/native_sk1_ab_v1",
+      "task": "task_20261031_092939_370977631553",
+      "slowest_rank": 1,
+      "slowest_rank_mean_ms": 59.653314208984376,
+      "pooled_mean_ms": 59.37083468437195,
+      "pooled_p95_ms": 59.952301025390625,
+      "pooled_max_ms": 60.118221282958984,
+      "pooled_min_ms": 58.76559829711914,
+      "rank0_profile_sk_tasks": [
+        582,
+        582,
+        582
+      ],
+      "rank0_profile_trace": "tests/pypto_test/csa_aclnn_host_20261030/results/native_sk1_ab_v1/trace/rank0/liteserver-hps-365a-00001_656875_20261031133228775_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+      "rank0_static_install_log": [
+        "(Worker_DP0_EP0 pid=656875) OFFLINE_STATIC_KERNEL local_world_size=16 module_loaded=True installed_packages=4"
+      ]
+    }
+  },
+  "within_backend_sk_comparison": {
+    "native": {
+      "sk_saved_ms": 6.209604644775389,
+      "sk_saved_percent": 9.428073873499333,
+      "output_checks": {
+        "requests": 256,
+        "matching_requests": 256,
+        "all_output_tokens_equal": true,
+        "all_steady_tokens_equal": true,
+        "all_dspark_counters_equal": true
+      }
+    },
+    "pto": {
+      "sk_saved_ms": 3.648277664184569,
+      "sk_saved_percent": 6.493108190998087,
+      "output_checks": {
+        "requests": 256,
+        "matching_requests": 256,
+        "all_output_tokens_equal": true,
+        "all_steady_tokens_equal": true,
+        "all_dspark_counters_equal": true
+      }
+    }
+  },
+  "same_sk_backend_comparison": {
+    "sk0": {
+      "pto_saved_ms": 9.675996398925783,
+      "pto_saved_percent": 14.691113857875171,
+      "pto_timing_threshold_met": false
+    },
+    "sk1": {
+      "pto_saved_ms": 7.114669418334962,
+      "pto_saved_percent": 11.92669596430138,
+      "pto_timing_threshold_met": false
+    }
+  },
+  "new_npu_tests": false
+}

@@ -199,8 +199,13 @@ mean累计降低1.282ms（2.37%，包含event模式调整），仍未达到48ms�
 当前按用户新要求补充Native/PTO × SK0/1四组同源码实验：四组均保留静态编译、
 inplace=True、dynamic=False及现有业务配置。先解开inplace和真实metadata静态
 补编译与SK的耦合；14项CPU回归及单卡static=True/SK=False真实CSA重放验证已
-通过。四组16卡任务仍待结果，不能用旧SK记录冒充新对照，见
-[sk_ab_validation.json](csa_aclnn_host_20261030/sk_ab_validation.json)。
+通过。四组16卡任务已全部完成；2026-10-31按用户要求仅汇总已有数据，没有新增
+NPU测试。Native的SK0/SK1 target最慢rank mean为65.862919/59.653314ms，
+PTO为56.186922/52.538645ms。两侧SK都受益；SK开启时PTO低11.93%，仍距48ms
+差4.538645ms。同后端SK开关的256请求token和16rank接受统计均一致。三步profile
+确认SK0无SK任务，SK1的Native/PTO每步分别582/332个；静态编译均保留。
+完整口径、长尾和证据见
+[SK_AB_RESULTS_20261031.md](csa_aclnn_host_20261030/SK_AB_RESULTS_20261031.md)。
 
 已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
 通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、
