@@ -32,6 +32,27 @@ def test_superkernel_requires_static_and_propagates_to_both_compilers(monkeypatc
     assert AscendCompilationConfig().enable_super_kernel is False
 
 
+@pytest.mark.parametrize("super_kernel", [False, True])
+def test_explicit_inplace_and_static_kernel_do_not_follow_sk(monkeypatch, super_kernel):
+    monkeypatch.setattr("vllm_ascend.utils.is_310p", lambda: False)
+    monkeypatch.setenv("LOCAL_WORLD_SIZE", "1")
+    config = AscendCompilationConfig(
+        enable_static_kernel=True, enable_super_kernel=super_kernel, inplace_pass=True
+    )
+    engine = NS(speculative_config=NS(num_speculative_tokens=5), scheduler_config=NS(max_num_seqs=16),
+                compilation_config=NS(cudagraph_capture_sizes=[6, 96]))
+    received = {}
+    _configure_backend(NS(), config, engine, lambda _, kwargs: received.update(kwargs["options"]))
+    assert received["static_kernel_compile"] is True
+    assert received["inplace_pass"] is True
+    assert received["super_kernel_optimize"] is super_kernel
+    fallback = NS(debug=NS(aclgraph=NS()), experimental_config=NS(aclgraph=NS()))
+    _configure_backend(fallback, config, engine)
+    assert fallback.experimental_config.aclgraph._aclnn_static_shape_kernel is True
+    assert fallback.experimental_config.aclgraph._super_kernel_optimize is super_kernel
+    assert fallback.debug.aclgraph.disable_reinplace_inplaceable_ops_pass is False
+
+
 def test_superkernel_does_not_reinterpret_existing_positional_arguments(monkeypatch):
     monkeypatch.setattr("vllm_ascend.utils.is_310p", lambda: False)
     config = AscendCompilationConfig(True, False, True, False)
@@ -40,8 +61,9 @@ def test_superkernel_does_not_reinterpret_existing_positional_arguments(monkeypa
 
 
 @pytest.mark.parametrize("requires_replay_sync,enable_enpu", [(None, False), (False, False), (True, True)])
+@pytest.mark.parametrize("super_kernel", [False, True])
 def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(
-    monkeypatch, requires_replay_sync, enable_enpu
+    monkeypatch, requires_replay_sync, enable_enpu, super_kernel
 ):
     from contextlib import nullcontext
     from unittest.mock import Mock
@@ -70,7 +92,7 @@ def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(
         steps.append("capture" if context.capturing else "compile_warmup")
         return result
 
-    compile_call = Mock(side_effect=lambda runnable, args, kwargs: runnable(*args, **kwargs))
+    compile_call = Mock(side_effect=lambda runnable, args, kwargs, **options: runnable(*args, **kwargs))
     monkeypatch.setattr(acl_graph, "_compile_capture_kernels", compile_call)
     monkeypatch.setattr(acl_graph, "get_forward_context", lambda: context)
     monkeypatch.setattr(acl_graph, "_EXTRA_CTX", NS(is_draft_model=False))
@@ -82,7 +104,9 @@ def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(
     monkeypatch.setattr(torch.npu, "graph", lambda *args, **kwargs: nullcontext())
     monkeypatch.setattr(torch.npu, "current_stream", lambda: NS(synchronize=lambda: steps.append("synchronize")))
     monkeypatch.setattr("vllm.model_executor.offloader.base.get_offloader", lambda: Mock())
-    engine = NS(compilation_config=NS(), additional_config={"ascend_compilation_config": {"enable_super_kernel": True}})
+    engine = NS(compilation_config=NS(), additional_config={"ascend_compilation_config": {
+        "enable_static_kernel": True, "enable_super_kernel": super_kernel,
+    }})
     options = {} if requires_replay_sync is None else {"requires_replay_sync": requires_replay_sync}
     wrapper = acl_graph.ACLGraphWrapper(run, engine, CUDAGraphMode.FULL, enable_enpu=enable_enpu, **options)
     wrapper.is_debugging_mode = False
@@ -90,8 +114,11 @@ def test_capture_completes_static_kernels_once_without_leaking_metadata_cache(
     context.capturing = False
     context.additional_kwargs = {"num_actual_tokens": 96}
     assert wrapper() is result
-    expected = ["compile_warmup", "capture", "optimize"]
+    expected = ["compile_warmup", "capture"]
+    if super_kernel:
+        expected.append("optimize")
     if requires_replay_sync is not False and not enable_enpu:
         expected.append("synchronize")
     assert steps == [*expected, "replay"]
     compile_call.assert_called_once()
+    assert compile_call.call_args.kwargs == {"super_kernel_optimize": super_kernel}

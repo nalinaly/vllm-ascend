@@ -1,0 +1,66 @@
+{
+  "source": "results/model_decode_source_sk_ab_v1",
+  "fixed": {
+    "history": "131104..131346（固定128K公共前缀及问题后缀）",
+    "batch_per_rank": 16,
+    "dp": 16,
+    "tp": 1,
+    "ep": 16,
+    "static_kernel": true,
+    "inplace_pass": true,
+    "dynamic": false,
+    "event_work_mode": 0,
+    "weight_nz_mode": 2,
+    "warmup_steps": 8,
+    "steady_steps": 10,
+    "profile_steps": 3
+  },
+  "cpu_tests": 14,
+  "single_card": {
+    "task": "task_20261031_092729_35847198138",
+    "result": "tests/pypto_test/csa_aclnn_host_20261030/results/sk_ab_single_nosk_v2/result.json",
+    "passed": true,
+    "super_kernel": false
+  },
+  "prior_attempts": [
+    {
+      "task": "task_20261031_090956_291456832631",
+      "outcome": "pending时取消；旧控制同时关闭inplace和真实metadata静态补编译，不能作纯SK对照。"
+    },
+    {
+      "task": "task_20261031_092453_34916413299",
+      "outcome": "单卡启动NZ环境为1而场景要求2，在PTO准备前退出；统一私有启动器NZ2后复测通过。"
+    }
+  ],
+  "cases": [
+    {
+      "backend": "native",
+      "sk": false,
+      "label": "native_sk0_ab_v1",
+      "task": "task_20261031_092939_370954116762",
+      "status": "pending"
+    },
+    {
+      "backend": "pto",
+      "sk": false,
+      "label": "pto_sk0_ab_v1",
+      "task": "task_20261031_092939_370961728492",
+      "status": "pending"
+    },
+    {
+      "backend": "pto",
+      "sk": true,
+      "label": "pto_sk1_ab_v1",
+      "task": "task_20261031_092939_3709736127",
+      "status": "pending"
+    },
+    {
+      "backend": "native",
+      "sk": true,
+      "label": "native_sk1_ab_v1",
+      "task": "task_20261031_092939_370977631553",
+      "status": "pending"
+    }
+  ],
+  "scope": "全部重新测量，不混用旧SK数据；稳态事件计时与独立三步profile分别解释。"
+}

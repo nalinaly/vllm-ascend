@@ -196,6 +196,12 @@ mean为52.889ms，高于保留版本52.697ms，因此未接入。完整正负结
 累计Host metadata准备mean从第一组完整静态/SK基线4.040ms降至2.324ms，target
 mean累计降低1.282ms（2.37%，包含event模式调整），仍未达到48ms。
 
+当前按用户新要求补充Native/PTO × SK0/1四组同源码实验：四组均保留静态编译、
+inplace=True、dynamic=False及现有业务配置。先解开inplace和真实metadata静态
+补编译与SK的耦合；14项CPU回归及单卡static=True/SK=False真实CSA重放验证已
+通过。四组16卡任务仍待结果，不能用旧SK记录冒充新对照，见
+[sk_ab_validation.json](csa_aclnn_host_20261030/sk_ab_validation.json)。
+
 已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
 通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、
 改共享工具链或将Host错误断言为DSpark设备越界。原始负面证据、旧版部分静态覆盖

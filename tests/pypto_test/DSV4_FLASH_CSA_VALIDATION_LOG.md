@@ -25185,3 +25185,30 @@ Host少0.076539ms而target未受益，**不接入公共实现，不重复16卡�
 **53.978516→52.696632ms（−2.37%）**，P95 **54.974499→53.272419ms**，max
 **55.642559→53.579659ms**，Host metadata **4.039873→2.323975ms**。这不是
 单项改动的因果分解，也不是与客户约50ms做对照。48ms尚差4.696632ms。
+
+### 2026-10-31：Native/PTO各测SK开关，静态编译与inplace独立保留
+
+用户要求Native与PTO ACLNN都做SK开/关实验，四组均保留静态编译。核对发现原
+实现有两处耦合：`inplace_pass`跟随SK开关；真实metadata的静态补编译也只在SK
+开启时执行。直接关闭SK会同时改变另两项条件，旧排队任务
+`task_20261031_090956_291456832631`因此在执行前取消，没有产生有效对照数据。
+
+新增可显式配置的`AscendCompilationConfig.inplace_pass`，默认仍沿用原值，实验
+四组统一设True；npugraph_ex与TorchAir fallback均一致传递。图捕获前补齐静态
+核改为由`enable_static_kernel`控制，并把实际SK布尔值传给编译器；只有SK开启
+才调用整图`super_kernel_optimize()`。这些操作均在编译/捕获期，不增加逐步Host
+扫描、签名检查或同步。14项配置及图生命周期CPU回归通过。
+
+先做单卡真实CSA、128K/B16、static=True/SK=False验证。第一次任务
+`task_20261031_092453_34916413299`的私有启动器沿用了NZ1环境，场景配置要求NZ2，
+在PTO准备阶段退出；补齐启动器NZ2后，任务`task_20261031_092729_35847198138`
+通过正常静态编译、全padding捕图、真实请求重放，以及两组不同输入连续异步重放。
+输出和五组cache/state均逐bit对齐各自eager结果，无Python重派发，Simpler未执行。
+相对Native的既有误差保持relative RMSE0.0043642856、max_abs0.0390625，未改算术。
+
+四组冻结为同一`model_decode_source_sk_ab_v1`，保持静态编译、inplace=True、
+dynamic=False、event=0、NZ2、同一权重及固定请求；不混用此前的SK计时。
+顺序为Native SK0、PTO SK0、PTO SK1、Native SK1。预热后10个满批T96 target
+样本用于计时，另采三步profile确认真实SK覆盖；同时核对同后端的token和接受统计。
+四组任务已提交，当前未完成，任务ID和协议见
+[sk_ab_validation.json](csa_aclnn_host_20261030/sk_ab_validation.json)。

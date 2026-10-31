@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--dump-static", action="store_true", help="只采集静态编译输入，离线CPU编译不占卡")
     parser.add_argument("--static-package", type=Path, help="装入私有OPP并验证静态核和真实SK图优化")
     parser.add_argument("--capture-static", action="store_true", help="验证捕图前自动补齐静态核及metadata生产者")
+    parser.add_argument("--no-super-kernel", action="store_true", help="保留静态核但不进行SK融合")
     parser.add_argument("--profile", action="store_true", help="仅采集3次真实图重放以确认SK设备dispatch")
     parser.add_argument("--package-site", type=Path, help="待验证的独立ACLNN包目录")
     parser.add_argument(
@@ -127,10 +128,12 @@ def main():
         if args.capture_static:
             config.additional_config["ascend_compilation_config"] = {
                 "enable_static_kernel": True,
-                "enable_super_kernel": True,
+                "enable_super_kernel": not args.no_super_kernel,
+                "inplace_pass": True,
             }
             torch.npu.set_compile_mode(jit_compile=False)
             report["capture_static"] = True
+            report["super_kernel"] = not args.no_super_kernel
         histories = [131072] * 16 if args.target else [0, 0, 2046, 8190]
         queries = [6] * 16 if args.target else [1, 6, 3, 1]
         tokens, requests = (96, 16) if args.target else (24, 5)
@@ -280,7 +283,7 @@ def main():
             assert entry.csa_tnd_contracts is None
             assert not entry.csa_native_metadata_prefixes
             captures = runtime.submissions
-            if args.static_package:
+            if args.static_package and not args.no_super_kernel:
                 save("superkernel_optimize")
                 entry.aclgraph.super_kernel_optimize()
                 report["superkernel_optimize_returned"] = True

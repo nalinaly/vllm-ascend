@@ -86,6 +86,9 @@ def _configure_backend(
     process_kwargs_options: Callable | None = None,
 ) -> None:
     super_kernel = getattr(ascend_compilation_config, "enable_super_kernel", False)
+    inplace_pass = getattr(ascend_compilation_config, "inplace_pass", None)
+    if inplace_pass is None:
+        inplace_pass = super_kernel
     if ascend_compilation_config.enable_static_kernel:
         # npugraph_ex's static_kernel requires LOCAL_WORLD_SIZE to determine the
         # physical node topology for creating per-node Gloo groups, which
@@ -113,10 +116,10 @@ def _configure_backend(
         # It maps flat option names to nested config paths for old versions,
         # and directly setattr for new versions with flat CompilerConfig.
         # force_eager=True: execute FX graph in eager mode before graph capture.
-        # Keep the legacy inplace default; the explicit SK path enables inplace.
+        # Keep the legacy default unless inplace is explicitly configured.
         options: dict[str, Any] = {
             "force_eager": True,
-            "inplace_pass": super_kernel,
+            "inplace_pass": inplace_pass,
             "clone_input": False,
             "clone_output": False,
         }
@@ -136,7 +139,7 @@ def _configure_backend(
         config.mode = "reduce-overhead"
         config.debug.run_eagerly = True
         # Match the npugraph_ex branch; legacy mode keeps its original behavior.
-        config.debug.aclgraph.disable_reinplace_inplaceable_ops_pass = not super_kernel
+        config.debug.aclgraph.disable_reinplace_inplaceable_ops_pass = not inplace_pass
         if ascend_compilation_config.enable_static_kernel:
             logger.info_once(
                 "enable_static_kernel is enabled, static shape kernel will be used to accelerate aclgraph execution.",

@@ -46,7 +46,7 @@ def _is_old_hdk_capture_error(exc: RuntimeError) -> bool:
     return any(marker in message for marker in _OLD_HDK_CAPTURE_ERROR_MARKERS)
 
 
-def _compile_capture_kernels(runnable, args, kwargs):
+def _compile_capture_kernels(runnable, args, kwargs, *, super_kernel_optimize=True):
     # The earlier memory-profile run has no attention metadata. Its symbolic
     # shape can already be marked compiled while attention kernels are absent.
     # CANN deduplicates the actual operator JSONs and compiles only missing ones.
@@ -55,7 +55,7 @@ def _compile_capture_kernels(runnable, args, kwargs):
     except ImportError:
         from torchair._acl_concrete_graph.static_kernel import compile_static_kernel
 
-    compile_static_kernel(runnable, *args, super_kernel_optimize=True, **kwargs)
+    compile_static_kernel(runnable, *args, super_kernel_optimize=super_kernel_optimize, **kwargs)
 
 
 @dataclasses.dataclass
@@ -116,7 +116,9 @@ class ACLGraphWrapper:
         self.runtime_mode = runtime_mode
         self.compilation_config = vllm_config.compilation_config
         additional = getattr(vllm_config, "additional_config", None) or {}
-        self.enable_super_kernel = additional.get("ascend_compilation_config", {}).get("enable_super_kernel", False)
+        compile_options = additional.get("ascend_compilation_config", {})
+        self.enable_super_kernel = compile_options.get("enable_super_kernel", False)
+        self.enable_static_kernel = compile_options.get("enable_static_kernel", False)
 
         self.first_run_finished = False
         self.is_debugging_mode = envs.VLLM_LOGGING_LEVEL == "DEBUG"
@@ -213,14 +215,16 @@ class ACLGraphWrapper:
 
                 # mind-exploding: carefully manage the reference and memory.
 
-                if self.enable_super_kernel:
+                if self.enable_static_kernel:
                     # Compile with this capture's real metadata before graph
                     # recording. Do not let warmup's per-forward caches suppress
                     # device metadata producers during the following capture.
                     capture_kwargs = forward_context.additional_kwargs
                     forward_context.additional_kwargs = dict(capture_kwargs)
                     try:
-                        _compile_capture_kernels(self.runnable, args, kwargs)
+                        _compile_capture_kernels(
+                            self.runnable, args, kwargs, super_kernel_optimize=self.enable_super_kernel
+                        )
                     finally:
                         forward_context.additional_kwargs = capture_kwargs
 

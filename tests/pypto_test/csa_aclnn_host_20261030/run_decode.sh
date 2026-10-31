@@ -8,9 +8,11 @@ label=${2:?独立结果目录名}
 shift 2
 source_name=model_decode_source_v3
 event_work_mode=1
+super_kernel=1
 while (($#)); do
     case "$1" in
         --source-name) source_name=${2:?需要冻结源码目录名}; shift 2 ;;
+        --no-super-kernel) super_kernel=0; shift ;;
         --event-work-mode)
             case "${2:-}" in
                 0|1) event_work_mode=$2; shift 2 ;;
@@ -64,7 +66,8 @@ case "$stage" in
         [[ "$stage" == profile_* ]] && command=profile
         args+=(--backend "$side" --decode-tokens 192 --warmup-tokens 96 --warmup-steps 8
                --steady-cycles 10 --profile-steps 3 --graph-mode full_decode_only
-               --static-kernel --super-kernel --capture-sizes 6 96)
+               --static-kernel --capture-sizes 6 96)
+        ((super_kernel)) && args+=(--super-kernel)
         [[ "$command" == performance ]] && args+=(--forward-host-diagnostics)
         ;;
     *) exit 2 ;;

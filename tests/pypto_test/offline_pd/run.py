@@ -40,6 +40,7 @@ def decode_additional_config(args):
             "enable_npugraph_ex": graph,
             "enable_static_kernel": graph and args.static_kernel,
             "enable_super_kernel": graph and args.static_kernel and getattr(args, "super_kernel", False),
+            "inplace_pass": True,
             "fuse_norm_quant": True,
             **({} if not args.capture_sizes else {"align_decode_capture_sizes": False}),
         },

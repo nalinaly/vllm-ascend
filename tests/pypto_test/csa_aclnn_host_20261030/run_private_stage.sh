@@ -8,6 +8,7 @@ script=${2:?本目录脚本名}
 shift 2
 source "$workspace/env-dsv4-0251rc1.sh"
 source "$repo/tests/pypto_test/csa_shared_toolchain/env.sh"
+export VLLM_ASCEND_ENABLE_NZ=2
 frozen="$here/results/$source_name"
 export PYTHONPATH="$frozen:$frozen/tests/pypto_test:$repo/tests/pypto_test:$workspace/csa-repro-20261024-current/vllm:$PYTHONPATH"
 cd "$repo"

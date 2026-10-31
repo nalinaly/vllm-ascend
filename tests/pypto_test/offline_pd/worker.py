@@ -90,7 +90,8 @@ class OfflineNPUWorker(NPUWorker):
             "decode_optimizations": {
                 "ascend_compilation_config": {
                     name: getattr(ascend.ascend_compilation_config, name)
-                    for name in ("enable_npugraph_ex", "enable_static_kernel", "enable_super_kernel", "fuse_norm_quant")
+                    for name in ("enable_npugraph_ex", "enable_static_kernel", "enable_super_kernel",
+                                 "inplace_pass", "fuse_norm_quant")
                 },
                 "enable_cpu_binding": ascend.enable_cpu_binding,
                 "multistream_overlap_shared_expert": ascend.multistream_overlap_shared_expert,
