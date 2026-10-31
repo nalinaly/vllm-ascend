@@ -176,6 +176,14 @@ Native兼容性对照`task_20261031_075603_898532825`也通过，但target为60.
 原路径；不将Native候选变慢算作PTO收益。公共接入33项CPU回归通过。
 证据见[fused_slots_validation.json](csa_aclnn_host_20261030/fused_slots_validation.json)。
 
+同源码三步profile中，rank0的CSA层区间节约6.723ms、完整主图节约6.815ms，
+说明这组本地记录已能看到CSA收益进入整图；不是仍被逐层签名吞掉。区间含相邻
+计算，不能当作纯CSA kernel。分段证据见
+[fused_slots_profile_comparison.json](csa_aclnn_host_20261030/fused_slots_profile_comparison.json)。
+当前仅私有候选为eager MTP prolog的六个Event复用，不改流依赖、主图Event或通信
+配置；四项CPU边界及单卡连续入队整数结果通过，16卡任务
+`task_20261031_081056_96543129763`运行中，尚无模型收益结论。
+
 已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
 通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、
 改共享工具链或将Host错误断言为DSpark设备越界。原始负面证据、旧版部分静态覆盖

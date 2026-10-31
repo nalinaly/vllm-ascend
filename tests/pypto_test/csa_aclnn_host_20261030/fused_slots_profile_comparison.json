@@ -1,0 +1,233 @@
+{
+  "scope": "同一冻结fused_slots源码、event=0的三步独立profile，非稳态十步事件计时。CSA层区间是前层combine结束到本层dispatch开始，含HC/attention/router等相邻计算，不是纯CSA内核。Native融合slot候选最终未启用，原始正负结果保留。所有区间互斥，未累加重叠task。",
+  "ranks": [
+    {
+      "rank": 0,
+      "native": {
+        "rank": 0,
+        "trace": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/trace/rank0/liteserver-hps-365a-00001_103795_20261031080943523_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "model_id": 49,
+        "steps": [
+          {
+            "span_ms": 62.57202,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.60994,
+              "dispatch_fused_compute_and_wait": 12.86128,
+              "dispatch_to_combine": 0.13308,
+              "combine_compute_and_wait": 7.72232,
+              "csa_layer_attention_and_router": 25.96378,
+              "tail": 0.28162
+            },
+            "first_dispatch_ms": 0.95542
+          },
+          {
+            "span_ms": 62.33086,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.6028,
+              "dispatch_fused_compute_and_wait": 12.26574,
+              "dispatch_to_combine": 0.13108,
+              "combine_compute_and_wait": 8.07068,
+              "csa_layer_attention_and_router": 25.9774,
+              "tail": 0.28316
+            },
+            "first_dispatch_ms": 0.79714
+          },
+          {
+            "span_ms": 62.2931,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.55806,
+              "dispatch_fused_compute_and_wait": 12.80968,
+              "dispatch_to_combine": 0.13002,
+              "combine_compute_and_wait": 7.54872,
+              "csa_layer_attention_and_router": 25.9633,
+              "tail": 0.28332
+            },
+            "first_dispatch_ms": 0.92986
+          }
+        ],
+        "mean_parts_ms": {
+          "other_layer_attention_and_router": 15.590266666666666,
+          "dispatch_fused_compute_and_wait": 12.645566666666667,
+          "dispatch_to_combine": 0.13139333333333333,
+          "combine_compute_and_wait": 7.780573333333333,
+          "csa_layer_attention_and_router": 25.96816,
+          "tail": 0.2827
+        }
+      },
+      "pto": {
+        "rank": 0,
+        "trace": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/trace/rank0/liteserver-hps-365a-00001_3326178_20261031073813599_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "model_id": 49,
+        "steps": [
+          {
+            "span_ms": 55.78974,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.68978,
+              "dispatch_fused_compute_and_wait": 12.35664,
+              "dispatch_to_combine": 0.12734,
+              "combine_compute_and_wait": 8.15574,
+              "csa_layer_attention_and_router": 19.23604,
+              "tail": 0.2242
+            },
+            "first_dispatch_ms": 1.05094
+          },
+          {
+            "span_ms": 55.51492,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.74078,
+              "dispatch_fused_compute_and_wait": 12.48182,
+              "dispatch_to_combine": 0.12938,
+              "combine_compute_and_wait": 7.61124,
+              "csa_layer_attention_and_router": 19.33214,
+              "tail": 0.21956
+            },
+            "first_dispatch_ms": 0.75762
+          },
+          {
+            "span_ms": 55.4456,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.65296,
+              "dispatch_fused_compute_and_wait": 12.907,
+              "dispatch_to_combine": 0.12898,
+              "combine_compute_and_wait": 7.36948,
+              "csa_layer_attention_and_router": 19.16616,
+              "tail": 0.22102
+            },
+            "first_dispatch_ms": 1.0254
+          }
+        ],
+        "mean_parts_ms": {
+          "other_layer_attention_and_router": 15.694506666666667,
+          "dispatch_fused_compute_and_wait": 12.58182,
+          "dispatch_to_combine": 0.12856666666666666,
+          "combine_compute_and_wait": 7.712153333333333,
+          "csa_layer_attention_and_router": 19.24478,
+          "tail": 0.22159333333333334
+        }
+      },
+      "saved_ms": {
+        "other_layer_attention_and_router": -0.10424000000000078,
+        "dispatch_fused_compute_and_wait": 0.06374666666666684,
+        "dispatch_to_combine": 0.0028266666666666718,
+        "combine_compute_and_wait": 0.0684199999999997,
+        "csa_layer_attention_and_router": 6.723380000000002,
+        "tail": 0.06110666666666667
+      },
+      "graph_saved_ms": 6.815240000000001
+    },
+    {
+      "rank": 10,
+      "native": {
+        "rank": 10,
+        "trace": "tests/pypto_test/csa_aclnn_host_20261030/results/native_fused_slots_v1/trace/rank10/liteserver-hps-365a-00001_103812_20261031080943523_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "model_id": 49,
+        "steps": [
+          {
+            "span_ms": 63.4204865,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.445427,
+              "dispatch_fused_compute_and_wait": 13.704034,
+              "dispatch_to_combine": 0.128881,
+              "combine_compute_and_wait": 8.1181615,
+              "csa_layer_attention_and_router": 25.7431575,
+              "tail": 0.2808255
+            },
+            "first_dispatch_ms": 1.758975
+          },
+          {
+            "span_ms": 62.5048885,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.4728475,
+              "dispatch_fused_compute_and_wait": 12.63663,
+              "dispatch_to_combine": 0.128603,
+              "combine_compute_and_wait": 8.1595055,
+              "csa_layer_attention_and_router": 25.827717,
+              "tail": 0.2795855
+            },
+            "first_dispatch_ms": 1.01534
+          },
+          {
+            "span_ms": 62.0031185,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.5254475,
+              "dispatch_fused_compute_and_wait": 12.630871,
+              "dispatch_to_combine": 0.126625,
+              "combine_compute_and_wait": 7.660333,
+              "csa_layer_attention_and_router": 25.7814965,
+              "tail": 0.2783455
+            },
+            "first_dispatch_ms": 0.748115
+          }
+        ],
+        "mean_parts_ms": {
+          "other_layer_attention_and_router": 15.481240666666666,
+          "dispatch_fused_compute_and_wait": 12.990511666666666,
+          "dispatch_to_combine": 0.12803633333333334,
+          "combine_compute_and_wait": 7.979333333333333,
+          "csa_layer_attention_and_router": 25.784123666666666,
+          "tail": 0.2795855
+        }
+      },
+      "pto": {
+        "rank": 10,
+        "trace": "tests/pypto_test/csa_aclnn_host_20261030/results/pto_fused_slots_v1/trace/rank10/liteserver-hps-365a-00001_3326164_20261031073813599_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "model_id": 49,
+        "steps": [
+          {
+            "span_ms": 55.964578,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.649892,
+              "dispatch_fused_compute_and_wait": 12.964558,
+              "dispatch_to_combine": 0.131901,
+              "combine_compute_and_wait": 7.811617,
+              "csa_layer_attention_and_router": 19.1875255,
+              "tail": 0.2190845
+            },
+            "first_dispatch_ms": 1.256505
+          },
+          {
+            "span_ms": 55.51593,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.732839,
+              "dispatch_fused_compute_and_wait": 12.359506,
+              "dispatch_to_combine": 0.131822,
+              "combine_compute_and_wait": 7.8911165,
+              "csa_layer_attention_and_router": 19.176462,
+              "tail": 0.2241845
+            },
+            "first_dispatch_ms": 0.7847555
+          },
+          {
+            "span_ms": 55.5116495,
+            "parts_ms": {
+              "other_layer_attention_and_router": 15.55271,
+              "dispatch_fused_compute_and_wait": 13.1059795,
+              "dispatch_to_combine": 0.1409465,
+              "combine_compute_and_wait": 7.3330485,
+              "csa_layer_attention_and_router": 19.1588205,
+              "tail": 0.2201445
+            },
+            "first_dispatch_ms": 1.1469625
+          }
+        ],
+        "mean_parts_ms": {
+          "other_layer_attention_and_router": 15.645147,
+          "dispatch_fused_compute_and_wait": 12.8100145,
+          "dispatch_to_combine": 0.13488983333333332,
+          "combine_compute_and_wait": 7.678594,
+          "csa_layer_attention_and_router": 19.174269333333335,
+          "tail": 0.22113783333333334
+        }
+      },
+      "saved_ms": {
+        "other_layer_attention_and_router": -0.16390633333333327,
+        "dispatch_fused_compute_and_wait": 0.18049716666666704,
+        "dispatch_to_combine": -0.006853499999999985,
+        "combine_compute_and_wait": 0.3007393333333326,
+        "csa_layer_attention_and_router": 6.609854333333331,
+        "tail": 0.05844766666666665
+      },
+      "graph_saved_ms": 6.978778666666664
+    }
+  ]
+}

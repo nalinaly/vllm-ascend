@@ -25069,3 +25069,40 @@ slot kernel及格式化路径，不将这个未受益候选扩展到Native。此
 
 目标文档已整理为当前状态与有效约束，历史排队、负面结论和旧版静态覆盖缺口
 继续保留在本日志及既有JSON，不在目标文档重复过时状态。
+
+### 2026-10-31：同源码主图分段确认CSA收益；私有候选验证草稿Event复用
+
+二维slot候选的Native/PTO三步profile均已导出rank0/10；Native导出任务
+`task_20261031_081121_97497018882`正常结束。按同一主流43组MoE dispatch/combine
+边界做互斥分段，rank0的21个CSA层区间为 **25.968160→19.244780ms**，节约
+**6.723380ms**；完整主图节约 **6.815240ms**。rank10相应节约
+**6.609854ms**、**6.978779ms**。这是已有三步profile，不与稳态十步事件数据混合。
+CSA层区间含相邻HC/attention/router计算，不称作纯CSA kernel耗时；MoE task含
+计算与等待，不称作纯通信时间。详见
+[fused_slots_profile_comparison.json](csa_aclnn_host_20261030/fused_slots_profile_comparison.json)。
+
+这一组本地记录已显示CSA层收益基本体现在完整主图中，不能继续将48ms缺口归因
+于已经删除的逐层签名。当前本地Native约60ms，与客户约50ms的版本/输入分配差异
+仍未确认；不更换固定请求集或计时边界来追48ms。Native融合slot候选最终未启用，
+这里保留其同源码分段证据，不将它较原Native变慢的部分算成PTO优化。
+
+下一候选只减少eager MTP prolog的Event生命周期开销：三段双流原先每次新建六个
+Event，私有副本改为复用实例内的六个Event。record/wait的流、先后位置和数学运算
+保持不变，target图、prefill及非eager draft保留原Event生命周期。没有变更Host队列、
+MoE配置或共享SDK，也没有删除设备依赖或在计时内增加Host同步。官方
+[aclrtRecordEvent说明](https://www.hiascend.com/doc_center/source/zh/CANNCommunityEdition/910beta2/API/runtimeapi/aclcppdevg_03_0083.html)
+说明重复record不会修改此前已提交wait所等待的那一代任务；TorchNPU对应实现见
+[NPUEvent.cpp](https://raw.githubusercontent.com/Ascend/pytorch/v2.10.0/torch_npu/csrc/core/npu/NPUEvent.cpp)。
+
+四项CPU边界检查通过。初次CPU测试遗漏对未加载Native算子的mock声明，测试尚未
+执行候选函数即退出；修正测试mock后通过，不归类为算子功能失败。单卡任务
+`task_20261031_080935_93993719400`在event=0、原一级队列下通过：分别连续提交
+64轮三段双流，复用前后各384对record/wait；仅末尾同步，所有4096元素及每轮输出
+精确一致。原待执行任务`task_20261031_080741_87681017688`在开始前取消，补充
+显式event=0后重新排队，没有执行两次设备试验。
+
+私有源码`model_decode_source_draft_events_v1`基于已验证fused_slots副本，16卡PTO
+任务`task_20261031_081056_96543129763`正在验证。这里只验证功能机制，尚无模型
+性能收益结论，不切换公共Event实现。源码补丁、准备脚本和单卡检查分别保存在
+`csa_aclnn_host_20261030/draft_events_integration.patch`、`prepare_draft_events_source.py`
+及`check_reused_events.py`。

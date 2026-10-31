@@ -1,0 +1,43 @@
+{
+  "scope": "私有eager MTP三段prolog Event复用；公共运行路径尚未修改。",
+  "cpu_tests": 4,
+  "single_card_task": "task_20261031_080935_93993719400",
+  "single_card": {
+    "device": 0,
+    "event_work_mode": 0,
+    "checks": [
+      {
+        "reuse": false,
+        "rounds": 64,
+        "event_objects": 384,
+        "record_wait_pairs": 384,
+        "all_outputs_exact": true
+      },
+      {
+        "reuse": true,
+        "rounds": 64,
+        "event_objects": 6,
+        "record_wait_pairs": 384,
+        "all_outputs_exact": true
+      }
+    ],
+    "scope": "仅验证Event代际与流依赖，不代表CSA/模型性能；不增加循环内Host同步。"
+  },
+  "model_task": "task_20261031_081056_96543129763",
+  "model_source": "results/model_decode_source_draft_events_v1",
+  "model_result": "running；不能声称已有整网收益",
+  "prior_attempts": [
+    {
+      "kind": "CPU mock setup",
+      "outcome": "遗漏对未加载Native算子的mock声明，未执行候选；修正后4项通过。"
+    },
+    {
+      "task": "task_20261031_080741_87681017688",
+      "outcome": "pending时取消，明确event=0后重新提交，未占卡执行。"
+    }
+  ],
+  "references": [
+    "https://www.hiascend.com/doc_center/source/zh/CANNCommunityEdition/910beta2/API/runtimeapi/aclcppdevg_03_0083.html",
+    "https://raw.githubusercontent.com/Ascend/pytorch/v2.10.0/torch_npu/csrc/core/npu/NPUEvent.cpp"
+  ]
+}
