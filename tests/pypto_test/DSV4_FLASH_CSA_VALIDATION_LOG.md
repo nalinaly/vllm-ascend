@@ -25146,3 +25146,42 @@ Native、prefill、主图和DBO不复用Event。六项公共CPU边界测试通�
 
 主工作区42984项既有未暂存删除及未提交实验文件保持原样，不夹带入本次提交。
 推送采用正常快进，不强制覆盖远端历史；完成后再继续性能工作。
+
+### 2026-10-31：拒绝仅改善RoPE下发、未改善target的候选
+
+继续检查`pto_draft_events_v1`已有三步数据：离线导出全部16rank，任务
+`task_20261031_082647_163800828733`正常结束。48个target窗口内均未发现其他图或
+eager计算kernel重叠（按`COMPUTE_TASK_INFO`识别，包含modelId为空的情况）；这
+不排除DMA或Runtime调度干扰。个别层间空隙约0.619、0.331、1.009ms，其中一处
+发生在Host已同步等待期间，不能将全部空隙归因为Host正在下发。细节见
+[draft_events_rank_gaps.json](csa_aclnn_host_20261030/draft_events_rank_gaps.json)。
+
+RoPE候选使用标准`torch.index_select(..., out=原缓冲)`，替代先索引临时Tensor
+再copy，既有缓冲地址和FP32值不变。仅在后置PTO metadata准备选择该路径；
+真实vLLM position IDs非负，padding为0，普通getter的默认负索引语义未改变。
+该候选未修改共享SDK。单卡任务`task_20261031_083619_178735610997`通过9个
+目标/草稿场景和两次不同输入的graph replay，输出逐bit一致、另一代草稿缓冲及
+保护区保持不变。单个配置的40次Host下发均值为前后基线81.916/82.306μs、候选
+29.734μs。此微型结果只解释准备开销，不能代表真实内存压力或整网收益；24项
+相关CPU回归也通过。
+
+真实16卡任务`task_20261031_083801_18136079072`正常结束。所有worker的目标及
+草稿builder均实际启用了直接写出，256请求token、稳态输出和16rank接受统计与
+前版一致，Simpler未执行。但性能如下（ms，保留全部160个样本）：
+
+| 指标 | 保留版本 | RoPE候选 |
+| --- | ---: | ---: |
+| target最慢rank mean | 52.696632 | 52.888842 |
+| target P95 | 53.272419 | 53.482922 |
+| target max | 53.579659 | 53.682899 |
+| Host metadata准备mean | 2.323975 | 2.247436 |
+
+Host少0.076539ms而target未受益，**不接入公共实现，不重复16卡追逐此微小差异**。
+冻结代码、补丁和结果保留供审查，见
+[rope_out_validation.json](csa_aclnn_host_20261030/rope_out_validation.json)。
+
+用户询问累计效果时，使用本地第一组完整静态/SK基线`pto_perf_v5`对照当前保留
+版本`pto_draft_events_v1`，含event mode由1改0的累计变化：target最慢rank mean
+**53.978516→52.696632ms（−2.37%）**，P95 **54.974499→53.272419ms**，max
+**55.642559→53.579659ms**，Host metadata **4.039873→2.323975ms**。这不是
+单项改动的因果分解，也不是与客户约50ms做对照。48ms尚差4.696632ms。

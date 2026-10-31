@@ -1,0 +1,91 @@
+--- a/vllm_ascend/ops/rope_dsv4.py
++++ b/vllm_ascend/ops/rope_dsv4.py
+@@ -84,6 +84,7 @@
+     positions: torch.Tensor | dict[str, torch.Tensor],
+     use_cache: bool = False,
+     draft_index: int | None = None,
++    write_cache_directly: bool = False,
+ ):
+     if isinstance(positions, torch.Tensor):
+         pos_map = {"default": positions}
+@@ -101,6 +102,26 @@
+ 
+         for group_name, pos_tensor in pos_map.items():
+             if group_name not in registered_groups:
++                continue
++
++            if use_cache and write_cache_directly:
++                group_buffers = (
++                    _ROPE_STATE.runtime_buffer.get(config_key, {}).get(group_name)
++                    if draft_index is None
++                    else _ROPE_STATE.spec_runtime_buffer.get(config_key, {}).get(group_name)
++                )
++                if group_buffers is None:
++                    continue
++                buf_cos, buf_sin = group_buffers
++                if draft_index is not None:
++                    buf_cos, buf_sin = buf_cos[draft_index - 1], buf_sin[draft_index - 1]
++                num_tokens = pos_tensor.size(0)
++                curr_cos, curr_sin = buf_cos[:num_tokens], buf_sin[:num_tokens]
++                # vLLM position IDs (including zero-filled padding) are nonnegative.
++                # Standard index_select writes directly into the existing graph inputs.
++                torch.index_select(full_rope_cos, 0, pos_tensor, out=curr_cos)
++                torch.index_select(full_rope_sin, 0, pos_tensor, out=curr_sin)
++                batch_result[config_key][group_name] = (curr_cos, curr_sin)
+                 continue
+ 
+             curr_cos = full_rope_cos[pos_tensor]
+--- a/vllm_ascend/attention/dsa_v1.py
++++ b/vllm_ascend/attention/dsa_v1.py
+@@ -553,6 +553,9 @@
+         # [block_nums, block_size, head_num, head_dim]
+         self.slot_mapping = torch.zeros(self.slot_mapping_shape, dtype=torch.int32, device=self.device)
+         self.slot_mapping_precomputed = False
++        self.write_rope_cache_directly = vllm_config.additional_config.get(
++            "_pto_csa_device_policy", False
++        )
+ 
+     @classmethod
+     def get_cudagraph_support(
+@@ -668,7 +671,9 @@
+             if self.num_prefills:
+                 cos, sin = get_cos_and_sin_dsa(input_positions)
+             else:
+-                cos, sin = get_cos_and_sin_dsa(input_positions, True)
++                cos, sin = get_cos_and_sin_dsa(
++                    input_positions, True, write_cache_directly=self.write_rope_cache_directly
++                )
+             self.common_ratio_to_sas_metadata["cos"] = cos
+             self.common_ratio_to_sas_metadata["sin"] = sin
+             self.seq_lens = common_attn_metadata.seq_lens[:num_reqs]
+@@ -1198,7 +1203,10 @@
+         else:
+             # disable use_cache, otherwise, draft_index>0 will override draft_index=0
+             # take care of this, if full graph is needed then rope cache is inevitable
+-            cos, sin = get_cos_and_sin_dsa(input_positions, use_cache=True, draft_index=draft_index)
++            cos, sin = get_cos_and_sin_dsa(
++                input_positions, use_cache=True, draft_index=draft_index,
++                write_cache_directly=self.write_rope_cache_directly,
++            )
+ 
+         slot_mapping = common_attn_metadata.slot_mapping[:num_input_tokens]
+         self.spec_slot_mapping[draft_index - 1][:num_input_tokens] = DeviceOperator.format_dsa_slot_mapping(  # type: ignore[index]
+--- a/tests/pypto_test/offline_pd/worker.py
++++ b/tests/pypto_test/offline_pd/worker.py
+@@ -84,6 +84,16 @@
+             "dynamic_eplb": self.model_runner.dynamic_eplb,
+             "cann_event_work_mode": get_event_work_mode() if torch_npu.npu.is_initialized() else None,
+             "task_queue_enable": get_task_queue_enable(),
++            "rope_direct_output": {
++                "target": [
++                    [getattr(group.get_metadata_builder(0), "write_rope_cache_directly", False) for group in groups]
++                    for groups in self.model_runner.attn_groups
++                ],
++                "draft": [
++                    getattr(group.get_metadata_builder(0), "write_rope_cache_directly", False)
++                    for group in self.model_runner.drafter.draft_attn_groups
++                ],
++            },
+             "dsa_fused_slot_outputs_per_group": [
+                 len(table.dsa_slot_mappings) for table in self.model_runner.input_batch.block_table.block_tables
+             ],

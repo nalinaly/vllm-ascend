@@ -152,13 +152,14 @@ P95/max取16rank全部160样本，保留长尾。独立三步profile只解释原
 
 | 已完成对照（ms） | Native最慢rank mean | PTO最慢rank mean | PTO P95 | PTO max |
 | --- | ---: | ---: | ---: | ---: |
+| 本地第一组完整静态/SK基线，event=1 | 59.635 | 53.979 | 54.974 | 55.643 |
 | 移除无用途replay前Host等待，event=1 | 59.645 | 53.259 | 53.810 | 54.277 |
 | 同源码，event=0 | 60.624 | 52.617 | 53.238 | 53.499 |
 | 再删未消费压缩slot准备，event=0 | 59.678 | 53.040 | 53.792 | 54.349 |
 | PTO二维slot融合，Native沿用上一行 | 59.678 | 52.818 | 53.379 | 53.730 |
 | 再复用PTO eager草稿Event | 59.678 | 52.697 | 53.272 | 53.580 |
 
-最新公共代码为第五行；此前52.617ms只是已有最好结果，不能把单次波动当稳定收益。
+最新公共代码为末行；此前52.617ms只是已有最好结果，不能把单次波动当稳定收益。
 两侧各自与前一版的256请求token及接受统计保持一致；这不消除原有Native/PTO复杂
 问题差异。完整样本分别见
 [replay_async_validation.json](csa_aclnn_host_20261030/replay_async_validation.json)、
@@ -188,6 +189,12 @@ PTO的eager草稿启用，主图、Native、prefill和DBO保留原生命周期�
 边界检查通过。mean仅下降0.121ms，尚不能排除波动，不称为稳定独立收益；48ms
 目标未完成，不为该微小差异重复整网矩阵。详见
 [draft_events_validation.json](csa_aclnn_host_20261030/draft_events_validation.json)。
+
+RoPE直接写入缓冲的私有候选虽单卡功能通过、Host metadata略减，但16卡target
+mean为52.889ms，高于保留版本52.697ms，因此未接入。完整正负结果见
+[rope_out_validation.json](csa_aclnn_host_20261030/rope_out_validation.json)。
+累计Host metadata准备mean从第一组完整静态/SK基线4.040ms降至2.324ms，target
+mean累计降低1.282ms（2.37%，包含event模式调整），仍未达到48ms。
 
 已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
 通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、
