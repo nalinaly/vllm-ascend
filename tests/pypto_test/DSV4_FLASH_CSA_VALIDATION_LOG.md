@@ -25082,8 +25082,8 @@ CSA层区间含相邻HC/attention/router计算，不称作纯CSA kernel耗时；
 [fused_slots_profile_comparison.json](csa_aclnn_host_20261030/fused_slots_profile_comparison.json)。
 
 这一组本地记录已显示CSA层收益基本体现在完整主图中，不能继续将48ms缺口归因
-于已经删除的逐层签名。当前本地Native约60ms，与客户约50ms的版本/输入分配差异
-仍未确认；不更换固定请求集或计时边界来追48ms。Native融合slot候选最终未启用，
+于已经删除的逐层签名。客户约50ms对应的后端、版本与输入分配仍未确认，不能把
+它直接当作本机Native基线，也不更换固定请求集或计时边界来追48ms。Native融合slot候选最终未启用，
 这里保留其同源码分段证据，不将它较原Native变慢的部分算成PTO优化。
 
 下一候选只减少eager MTP prolog的Event生命周期开销：三段双流原先每次新建六个
@@ -25106,3 +25106,22 @@ MoE配置或共享SDK，也没有删除设备依赖或在计时内增加Host同�
 性能收益结论，不切换公共Event实现。源码补丁、准备脚本和单卡检查分别保存在
 `csa_aclnn_host_20261030/draft_events_integration.patch`、`prepare_draft_events_source.py`
 及`check_reused_events.py`。
+
+上述16卡任务正常结束。最慢rank12 mean **52.696632ms**，全样本P95
+**53.272419ms**、max **53.579659ms**；紧邻基线为52.817512、53.378601、
+53.730000ms。256请求输出、稳态输出及全部16rank DSpark统计与基线精确一致，
+Simpler未执行。mean仅减少0.120880ms，尚不能排除波动，也未优于历史最好
+52.616798ms；48ms目标继续未完成。
+
+现有三步profile的rank0/12导出任务`task_20261031_082330_158729215698`正常结束。
+rank0的`record_event`/`wait_event`次数与基线保持**110/70**，`destroy_event`
+为**76→40**，`Dequeue@destroy_event`为**78→42**：对象生命周期开销确实减少，
+没有通过减少依赖达成变化。初始化RPC在真实预热前读取Event缓存，字段为空，
+不能用该字段宣称机制未生效或已生效；这里以已有执行trace核对，未再启动NPU试验。
+
+公共代码保留这一项减少重复创建的实现，但限定为后置PTO ACLNN的eager草稿；
+Native、prefill、主图和DBO不复用Event。六项公共CPU边界测试通过，record/wait
+对象及顺序保持一致。没有更换流或通信配置、改变算法、添加设备同步或CSA专属
+逐层Host检查。0.120880ms只记录为本轮观察，不计作已证明的稳定独立收益；不为
+这个微小差异反复占16卡。详细证据见
+[draft_events_validation.json](csa_aclnn_host_20261030/draft_events_validation.json)。

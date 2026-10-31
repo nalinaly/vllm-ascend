@@ -156,8 +156,9 @@ P95/max取16rank全部160样本，保留长尾。独立三步profile只解释原
 | 同源码，event=0 | 60.624 | 52.617 | 53.238 | 53.499 |
 | 再删未消费压缩slot准备，event=0 | 59.678 | 53.040 | 53.792 | 54.349 |
 | PTO二维slot融合，Native沿用上一行 | 59.678 | 52.818 | 53.379 | 53.730 |
+| 再复用PTO eager草稿Event | 59.678 | 52.697 | 53.272 | 53.580 |
 
-最新公共代码为第四行；此前52.617ms只是已有最好结果，不能把单次波动当稳定收益。
+最新公共代码为第五行；此前52.617ms只是已有最好结果，不能把单次波动当稳定收益。
 两侧各自与前一版的256请求token及接受统计保持一致；这不消除原有Native/PTO复杂
 问题差异。完整样本分别见
 [replay_async_validation.json](csa_aclnn_host_20261030/replay_async_validation.json)、
@@ -180,9 +181,13 @@ Native兼容性对照`task_20261031_075603_898532825`也通过，但target为60.
 说明这组本地记录已能看到CSA收益进入整图；不是仍被逐层签名吞掉。区间含相邻
 计算，不能当作纯CSA kernel。分段证据见
 [fused_slots_profile_comparison.json](csa_aclnn_host_20261030/fused_slots_profile_comparison.json)。
-当前仅私有候选为eager MTP prolog的六个Event复用，不改流依赖、主图Event或通信
-配置；四项CPU边界及单卡连续入队整数结果通过，16卡任务
-`task_20261031_081056_96543129763`运行中，尚无模型收益结论。
+eager MTP prolog的六个Event复用已完成单卡及16卡任务
+`task_20261031_081056_96543129763`。256请求输出及接受统计保持一致；trace中
+record/wait次数不变、Event销毁76→40，确认减少了重复创建。公共实现只在后置
+PTO的eager草稿启用，主图、Native、prefill和DBO保留原生命周期；六项公共CPU
+边界检查通过。mean仅下降0.121ms，尚不能排除波动，不称为稳定独立收益；48ms
+目标未完成，不为该微小差异重复整网矩阵。详见
+[draft_events_validation.json](csa_aclnn_host_20261030/draft_events_validation.json)。
 
 已停止的候选：二级Host队列被SDK明确拒绝用于图捕获；per-stream一级队列虽单卡
 通过，16卡初始化出现rtEventDestroy相关Host堆错误，未进入计时。没有删SDK保护、

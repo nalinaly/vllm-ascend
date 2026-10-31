@@ -1521,6 +1521,7 @@ class AscendDSAImpl(DSAAttentionImpl):
         ascend_config = get_ascend_config()
         self.multistream_dsv4_dsa_overlap = ascend_config.multistream_dsv4_dsa_overlap
         self.vllm_config = get_current_vllm_config()
+        self._eager_draft_prolog_events = None
 
         # indexer param
         if self.indexer is not None:
@@ -1853,22 +1854,35 @@ class AscendDSAImpl(DSAAttentionImpl):
         main_stream = torch.npu.current_stream()
         aux_stream = dsv4_dsa_overlap_stream()
 
+        # Only the device-policy CSA's eager drafter reuses events. Captured
+        # target graphs, prefill, Native and DBO keep independent lifetimes.
+        # The record/wait order is unchanged.
+        events = (None,) * 6
+        speculative = self.vllm_config.speculative_config
+        if (not is_prefill and speculative is not None and speculative.enforce_eager
+                and self.vllm_config.additional_config.get("_pto_csa_device_policy", False)
+                and not self.vllm_config.parallel_config.enable_dbo
+                and getattr(get_forward_context(), "is_draft_model", False)):
+            if self._eager_draft_prolog_events is None:
+                self._eager_draft_prolog_events = tuple(torch.npu.Event() for _ in range(6))
+            events = self._eager_draft_prolog_events
+
         is_w8a8 = _is_w8a8_dynamic(self.wq_b)
 
         # Part1: q_quant[V] -> q_a_down[C]  ||  kv_quant[V]
         q_quant, q_pertoken_scale = self.cv_wq_a.quantize(hidden_states)
 
-        e_q_quant_done = main_stream.record_event()
+        e_q_quant_done = main_stream.record_event(events[0])
 
         with npu_stream_switch(aux_stream, enabled=True):
             torch.npu.current_stream().wait_event(e_q_quant_done)
             kv_quant, kv_pertoken_scale = self.cv_wkv.quantize(hidden_states)
 
         wq_a_result = self.cv_wq_a.matmul(q_quant, q_pertoken_scale)
-        main_stream.wait_stream(aux_stream)
+        main_stream.wait_event(aux_stream.record_event(events[1]))
 
         # Part2: q_norm[V] + q_b_quant[V]  ||  kv_matmul[C]
-        e_part2_start = main_stream.record_event()
+        e_part2_start = main_stream.record_event(events[2])
 
         with npu_stream_switch(aux_stream, enabled=True):
             torch.npu.current_stream().wait_event(e_part2_start)
@@ -1888,10 +1902,10 @@ class AscendDSAImpl(DSAAttentionImpl):
             q_b_quant, q_b_scale = qr, None
             qr_pertoken_scale = None
 
-        main_stream.wait_stream(aux_stream)
+        main_stream.wait_event(aux_stream.record_event(events[3]))
 
         # Part3: q_b_matmul[C]  ||  kv_norm[V] + rope[V] + scatter[AIV]
-        e_part3_start = main_stream.record_event()
+        e_part3_start = main_stream.record_event(events[4])
 
         with npu_stream_switch(aux_stream, enabled=True):
             torch.npu.current_stream().wait_event(e_part3_start)
@@ -1922,7 +1936,7 @@ class AscendDSAImpl(DSAAttentionImpl):
             q = self.cv_wq_b.matmul(q_b_quant, q_b_scale).unflatten(-1, (self.n_local_heads, self.head_dim))
 
         # Serial tail: wait for auxiliary stream then execute q_rms[V] + rope[V]
-        main_stream.wait_stream(aux_stream)
+        main_stream.wait_event(aux_stream.record_event(events[5]))
 
         q = DeviceOperator.apply_dsa_q_rms(q, self.eps, self.q_norm_without_weight)
         torch.ops._C_ascend.inplace_partial_rotary_mul(
